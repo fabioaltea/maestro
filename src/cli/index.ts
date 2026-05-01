@@ -15,6 +15,7 @@ import { runReset } from './commands/reset.js';
 import { runStart } from './commands/start.js';
 import { runNextTask } from './commands/next-task.js';
 import { runMarkDone } from './commands/mark-done.js';
+import { runTaskContext } from './commands/task-context.js';
 
 const program = new Command();
 
@@ -57,6 +58,13 @@ program
   .description('print the id and execution context of the next ready task (used by claude)')
   .action(async () => {
     await runNextTask();
+  });
+
+program
+  .command('task-context <taskId>')
+  .description('print full execution context for a task (used by claude via /run)')
+  .action(async (taskId: string) => {
+    await runTaskContext(taskId);
   });
 
 program

@@ -1,0 +1,98 @@
+{
+  "name": "maestro-vscode",
+  "displayName": "Maestro",
+  "description": "Visualize Maestro agents and backlog inside VSCode",
+  "version": "0.1.0",
+  "publisher": "maestro",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "workspaceContains:.maestro/backlog.json",
+    "workspaceContains:.agents"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "maestro",
+          "title": "Maestro",
+          "icon": "$(organization)"
+        }
+      ]
+    },
+    "views": {
+      "maestro": [
+        {
+          "id": "maestro.agents",
+          "name": "Agents"
+        },
+        {
+          "id": "maestro.backlog",
+          "name": "Backlog"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "maestro.refresh",
+        "title": "Maestro: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "maestro.openAgent",
+        "title": "Open Agent File",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "maestro.openBacklog",
+        "title": "Maestro: Open backlog.json"
+      },
+      {
+        "command": "maestro.toggleBacklogGrouping",
+        "title": "Toggle Grouping (status / assignee)",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "maestro.chatAgent",
+        "title": "Chat with Agent",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "maestro.runTask",
+        "title": "Run Task",
+        "icon": "$(play)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        { "command": "maestro.refresh", "when": "view == maestro.agents", "group": "navigation" },
+        { "command": "maestro.refresh", "when": "view == maestro.backlog", "group": "navigation" },
+        { "command": "maestro.toggleBacklogGrouping", "when": "view == maestro.backlog", "group": "navigation" }
+      ],
+      "view/item/context": [
+        {
+          "command": "maestro.runTask",
+          "when": "view == maestro.backlog && viewItem == backlog.task.ready",
+          "group": "inline"
+        },
+        {
+          "command": "maestro.openAgent",
+          "when": "view == maestro.agents && (viewItem == agent.architect || viewItem == agent.engineer)",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -p . -w"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.7.2"
+  }
+}

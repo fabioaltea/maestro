@@ -201,17 +201,20 @@ export async function runInit(opts: InitOpts): Promise<void> {
 
   // 1. Directory tree
   mkdirSync(paths.docs, { recursive: true });
-  mkdirSync(paths.agents, { recursive: true });
-  mkdirSync(paths.agentsBase, { recursive: true });
-  mkdirSync(paths.agentsArchive, { recursive: true });
+  mkdirSync(paths.agents, { recursive: true });            // .claude/agents
+  mkdirSync(paths.claudeCommands, { recursive: true });    // .claude/commands
+  mkdirSync(paths.agentsBase, { recursive: true });        // .agents/_base
+  mkdirSync(paths.agentsArchive, { recursive: true });     // .agents/_archive
   mkdirSync(paths.maestroDir, { recursive: true });
   mkdirSync(paths.sessionsDir, { recursive: true });
 
   // 2. Templates → user project
   const tpl = templatesDir();
+  // Architect agent in claude-native location
   copyTemplate(join(tpl, 'architect.md'), join(paths.agents, 'architect.md'), {
     __CREATED_AT__: new Date().toISOString(),
   });
+  // Engineer template kept under .agents/_base for staffing-time generation
   copyTemplate(join(tpl, '_base', 'engineer.md'), join(paths.agentsBase, 'engineer.md'), {
     __CREATED_AT__: new Date().toISOString(),
     __NAME__: 'engineer-template',
@@ -219,6 +222,12 @@ export async function runInit(opts: InitOpts): Promise<void> {
   });
   copyFileSync(join(tpl, '_base', 'conventions.md'), join(paths.agentsBase, 'conventions.md'));
   copyFileSync(join(tpl, '_base', 'tools.md'), join(paths.agentsBase, 'tools.md'));
+  // Slash commands consumed by claude
+  const claudeCmdsTpl = join(tpl, '_claude', 'commands');
+  for (const file of ['run.md', 'next.md']) {
+    const src = join(claudeCmdsTpl, file);
+    if (existsSync(src)) copyFileSync(src, join(paths.claudeCommands, file));
+  }
 
   // 3. .gitignore for the user project (append .maestro/ if missing)
   ensureGitignoreEntry(opts.cwd, '.maestro/');

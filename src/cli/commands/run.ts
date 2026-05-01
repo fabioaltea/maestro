@@ -1,60 +1,19 @@
+import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
-import { existsSync, readFileSync } from 'node:fs';
-import { findProjectRoot, packageRoot, projectPathsFor, userGlobalConfigFile } from '../../utils/paths.js';
+import { findProjectRoot, projectPathsFor } from '../../utils/paths.js';
 import { BacklogManager } from '../../core/backlog-manager.js';
-import { TmuxSessionManager } from '../../tmux/session-manager.js';
-import { ProjectConfigSchema, GlobalConfigSchema } from '../../schemas/config.js';
-import YAML from 'yaml';
-
-function resolveMaestroBin(): string {
-  return join(packageRoot(), 'bin', 'maestro');
-}
 
 /**
- * Validate API key only when provider_mode is anthropic-api.
- * Default mode is claude-code (Pro/Max plan via claude CLI) — no API key needed.
+ * Run a task: spawn `claude --agent <assignee>` with positional prompt `/run <task-id>`.
+ * Claude reads the slash command, calls `maestro task-context <id>`, executes the task.
  */
-function validateProviderConfig(projectRoot: string): void {
-  const paths = projectPathsFor(projectRoot);
-  let providerMode = 'claude-code';
-  if (existsSync(paths.configFile)) {
-    try {
-      const cfg = ProjectConfigSchema.parse(YAML.parse(readFileSync(paths.configFile, 'utf8')));
-      providerMode = cfg.provider_mode ?? 'claude-code';
-    } catch {}
-  }
-
-  if (providerMode === 'anthropic-api') {
-    // API key required
-    if (process.env['ANTHROPIC_API_KEY']) return;
-    const cfgFile = userGlobalConfigFile();
-    if (existsSync(cfgFile)) {
-      try {
-        const cfg = GlobalConfigSchema.parse(YAML.parse(readFileSync(cfgFile, 'utf8')));
-        if (cfg.anthropic_api_key) return;
-      } catch {}
-    }
-    console.error(
-      '[maestro] provider_mode is anthropic-api but ANTHROPIC_API_KEY is not set.\n' +
-      '  Set it via: export ANTHROPIC_API_KEY=sk-ant-...\n' +
-      '  Or add it to ~/.maestro/config.yaml as: anthropic_api_key: sk-ant-...',
-    );
-    process.exit(1);
-  }
-  // claude-code mode: no API key needed — uses claude CLI auth (Pro/Max plan)
-}
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
 export async function runRun(taskId?: string): Promise<void> {
   const root = findProjectRoot();
   if (!root) {
     console.error('[maestro] Not in a maestro project. Run `maestro init` first.');
     process.exit(1);
   }
-
-  validateProviderConfig(root);
-
   const paths = projectPathsFor(root);
   const manager = new BacklogManager();
 
@@ -66,12 +25,11 @@ export async function runRun(taskId?: string): Promise<void> {
       process.exit(1);
     }
     if (task.status !== 'ready' && task.status !== 'in_progress') {
-      console.error(`[maestro] Task '${taskId}' has status '${task.status}'; must be 'ready' or 'in_progress' to run.`);
+      console.error(`[maestro] Task '${taskId}' has status '${task.status}'; must be 'ready' or 'in_progress'.`);
       process.exit(1);
     }
-    // Check prerequisites
-    const allTasks = manager.getTasks(paths);
-    const doneIds = new Set(allTasks.filter((t) => t.status === 'done').map((t) => t.id));
+    const all = manager.getTasks(paths);
+    const doneIds = new Set(all.filter((t) => t.status === 'done').map((t) => t.id));
     const unmet = task.prerequisites.filter((p) => !doneIds.has(p));
     if (unmet.length > 0) {
       console.error(`[maestro] Task '${taskId}' has unmet prerequisites: ${unmet.join(', ')}`);
@@ -80,28 +38,33 @@ export async function runRun(taskId?: string): Promise<void> {
   } else {
     task = manager.getReadyTask(paths);
     if (!task) {
-      console.log('[maestro] No ready tasks in backlog. Check `maestro backlog` for current state.');
-      process.exit(0);
+      console.log('[maestro] No ready tasks in backlog.');
+      return;
     }
   }
 
-  if (!TmuxSessionManager.isAvailable()) {
-    console.error('[maestro] tmux is not available. Please install tmux.');
+  const assignee = task.assignee;
+  const personaFile = join(paths.agents, `${assignee}.md`);
+  if (!existsSync(personaFile)) {
+    console.error(`[maestro] Agent '${assignee}' not found at ${personaFile}.`);
+    console.error(`           Run staffing (ARCH-005) first or fix the assignee field.`);
     process.exit(1);
   }
 
-  const sessionName = `agent-${task.assignee}`;
-  const tmux = new TmuxSessionManager();
-
-  if (!tmux.has(sessionName)) {
-    const nodeExe = process.execPath;
-    const maestroBin = resolveMaestroBin();
-    const argv = [nodeExe, maestroBin, '_run-agent', root, task.id];
-    tmux.create(sessionName, argv);
-    // Give the process a moment to start before we attach
-    await sleep(300);
+  const probe = spawnSync('claude', ['--help'], { stdio: 'pipe' });
+  if (probe.error && (probe.error as NodeJS.ErrnoException).code === 'ENOENT') {
+    console.error('[maestro] claude CLI not found on PATH. Install Claude Code first.');
+    process.exit(1);
   }
 
-  console.log(`[maestro] Attaching to session '${sessionName}' for task ${task.id}: ${task.title}`);
-  tmux.attachOrSwitch(sessionName);
+  console.log(`[maestro] Running ${task.id} (${task.title}) on agent '${assignee}'`);
+
+  const r = spawnSync('claude', ['--agent', assignee, `/run ${task.id}`], {
+    stdio: 'inherit',
+    cwd: root,
+  });
+  if (r.error) {
+    console.error('[maestro] failed to launch claude:', r.error.message);
+    process.exit(1);
+  }
 }
