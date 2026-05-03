@@ -30,7 +30,7 @@
     "postinstall": "node scripts/postinstall.js || true"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.92.0",
     "better-sqlite3": "^11.5.0",
     "commander": "^12.1.0",
     "gray-matter": "^4.0.3",

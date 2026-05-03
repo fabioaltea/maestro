@@ -319,6 +319,7 @@ async function runAnthropicApiMode(
       model,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
+      cachedTokens: result.cachedTokens,
       durationMs,
     });
 
