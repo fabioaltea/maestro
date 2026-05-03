@@ -1,5 +1,7 @@
 node_modules/
 dist/
+vscode-extension/dist/
+vscode-extension/out/
 *.log
 .DS_Store
 .env

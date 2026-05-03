@@ -16,9 +16,11 @@ import { MAESTRO_VERSION } from '../../types.js';
 import { StateStore } from '../../core/state-store.js';
 import { BacklogSchema, type Backlog, type Task } from '../../schemas/backlog.js';
 import { ProjectConfigSchema, type ProjectConfig } from '../../schemas/config.js';
-import { projectPathsFor, templatesDir, userGlobalConfigFile, agentFileName, type Provider } from '../../utils/paths.js';
+import { projectPathsFor, templatesDir, userGlobalConfigFile, agentFileName, packageRoot, type Provider } from '../../utils/paths.js';
+import { runtimeFilePath } from '../../utils/vscode-bridge.js';
 import { writeFileAtomic } from '../../utils/markdown.js';
 import { GlobalConfigSchema } from '../../schemas/config.js';
+import { log } from '../../utils/logger.js';
 
 void readdirSync; void statSync; // quiet unused warnings
 
@@ -39,8 +41,12 @@ type Prerequisite = {
   installHint: string;
 };
 
-/** spawnSync options that pick up the user's full shell PATH (avoids "not found" on macOS with Homebrew). */
-const SPAWN_OPTS = { stdio: 'pipe' as const, shell: true };
+// Augment PATH with common Homebrew/system dirs so probes work without shell:true.
+const PROBE_ENV = {
+  ...process.env,
+  PATH: `/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:${process.env.PATH ?? ''}`,
+};
+const SPAWN_OPTS = { stdio: 'pipe' as const, env: PROBE_ENV };
 
 function checkTmux(): CheckResult {
   const r = spawnSync('tmux', ['-V'], SPAWN_OPTS);
@@ -175,51 +181,51 @@ function ask(question: string): Promise<string> {
 }
 
 async function runPrerequisiteChecks(provider: Provider): Promise<void> {
-  console.log('[maestro] checking prerequisites...\n');
+  log.info('checking prerequisites...\n');
 
   for (const prereq of prerequisitesFor(provider)) {
     const result = prereq.check();
 
     if (result.ok) {
-      console.log(`  ✓  ${prereq.label}${result.version ? `  (${result.version})` : ''}`);
+      log.check(prereq.label, true, result.version);
       continue;
     }
 
-    // Not OK
-    const tag = prereq.required ? '✗' : '⚠';
-    const qualifier = prereq.required ? '' : ' (optional — needed for engineer agents)';
-    console.log(`  ${tag}  ${prereq.label} not found${qualifier}`);
+    const qualifier = prereq.required ? undefined : 'optional — needed for engineer agents';
+    if (prereq.required) {
+      log.check(`${prereq.label} not found`, false, qualifier);
+    } else {
+      log.warn_check(`${prereq.label} not found`, qualifier);
+    }
 
     const argv = prereq.installArgv();
 
     if (argv) {
-      // Can auto-install — offer to do it
       const cmd = argv.join(' ');
       const answer = await ask(`     Run \`${cmd}\` now? [Y/n] `);
       if (answer === '' || answer === 'y' || answer === 'yes') {
-        console.log(`     → running: ${cmd}`);
+        log.step(`running: ${cmd}`);
         try {
-          execFileSync(argv[0]!, argv.slice(1), { stdio: 'inherit' });
+          execFileSync(argv[0]!, argv.slice(1), { stdio: 'inherit', env: PROBE_ENV });
           const verify = prereq.check();
           if (verify.ok) {
-            console.log(`  ✓  ${prereq.label} installed${verify.version ? ` (${verify.version})` : ''}\n`);
+            log.check(`${prereq.label} installed`, true, verify.version);
             continue;
           } else {
-            console.error(`     Installation completed but ${prereq.label} still not detected.`);
+            log.warn(`installation completed but ${prereq.label} still not detected`);
           }
         } catch {
-          console.error(`     Installation failed. Please install manually:\n     ${prereq.installHint}`);
+          log.error(`installation failed — install manually:\n     ${prereq.installHint}`);
         }
       } else {
-        console.log(`     Skipped. Install manually:\n     ${prereq.installHint}`);
+        log.step(`skipped — install manually:\n     ${prereq.installHint}`);
       }
     } else {
-      // No auto-install available
-      console.log(`     ${prereq.installHint}`);
+      log.step(prereq.installHint);
     }
 
     if (prereq.required) {
-      console.error(`\n[maestro] Cannot initialize: ${prereq.label} is required.\n`);
+      log.error(`cannot initialize: ${prereq.label} is required`);
       process.exit(1);
     }
   }
@@ -259,13 +265,13 @@ export async function runInit(opts: InitOpts): Promise<void> {
 
   if (existsSync(paths.maestroDir)) {
     if (!opts.force) {
-      console.error(`[maestro] .maestro already exists at ${paths.maestroDir}. Use --force to reset state.`);
+      log.error(`.maestro already exists at ${paths.maestroDir} — use --force to reset`);
       process.exit(2);
     }
     rmSync(paths.maestroDir, { recursive: true, force: true });
   }
 
-  console.log(`[maestro] initializing project '${projectName}' at ${opts.cwd} (provider: ${provider})`);
+  log.info(`initializing '${projectName}'  (provider: ${provider})`);
 
   // 1. Directory tree
   mkdirSync(paths.docs, { recursive: true });
@@ -371,21 +377,57 @@ export async function runInit(opts: InitOpts): Promise<void> {
   // 8. empty events.log
   if (!existsSync(paths.eventsLog)) writeFileSync(paths.eventsLog, '', 'utf8');
 
+  // 8b. seed .runtime.json so CLI can route to VSCode extension immediately
+  //     (extension overwrites this with real PID on activate)
+  writeFileSync(runtimeFilePath(paths.maestroDir), JSON.stringify({ workspace: opts.cwd }), 'utf8');
+
+  // 8c. install VSCode-family extension if any editor CLI is available
+  installVscodeExtension();
+
   // 9. friendly summary
-  console.log(`
-[maestro] init complete.  (provider: ${provider})
+  log.ok(`init complete  (provider: ${provider})\n`);
+  console.log(
+    `  ${rel(opts.cwd, paths.docs)}/                  (project brain — versioned)\n` +
+    `  ${rel(opts.cwd, paths.agents)}/                (agent personas — versioned)\n` +
+    `    architect.md\n` +
+    `    _base/{engineer,conventions,tools}.md\n` +
+    `  ${rel(opts.cwd, paths.maestroDir)}/                (runtime state — gitignored)\n` +
+    `    config.yaml, state.db, backlog.json, events.log\n` +
+    `\nNext:\n` +
+    `  maestro backlog        # see initial ARCH-* tasks\n` +
+    `  maestro run            # start ARCH-001 (Functional Analysis)\n`,
+  );
+}
 
-  ${rel(opts.cwd, paths.docs)}/                  (project brain — versioned)
-  ${rel(opts.cwd, paths.agents)}/                (agent personas — versioned)
-    architect.md
-    _base/{engineer,conventions,tools}.md
-  ${rel(opts.cwd, paths.maestroDir)}/                (runtime state — gitignored)
-    config.yaml, state.db, backlog.json, events.log
+/** Locate the bundled .vsix inside the npm package, or return null. */
+function findBundledVsix(): string | null {
+  const dir = join(packageRoot(), 'vscode-extension', 'dist');
+  if (!existsSync(dir)) return null;
+  try {
+    const entries = readdirSync(dir).filter((f) => f.endsWith('.vsix'));
+    if (entries.length === 0) return null;
+    entries.sort();
+    return join(dir, entries[entries.length - 1]!);
+  } catch {
+    return null;
+  }
+}
 
-Next:
-  maestro backlog        # see initial ARCH-* tasks
-  maestro run            # start ARCH-001 (Functional Analysis)
-`);
+/** Try installing the bundled .vsix into every detected VSCode-family editor. */
+function installVscodeExtension(): void {
+  const vsix = findBundledVsix();
+  if (!vsix) return;
+  const editors = ['code', 'cursor', 'windsurf', 'codium'];
+  const installed: string[] = [];
+  for (const cli of editors) {
+    const probe = spawnSync(cli, ['--version'], SPAWN_OPTS);
+    if (probe.status !== 0 || probe.error) continue;
+    const r = spawnSync(cli, ['--install-extension', vsix, '--force'], SPAWN_OPTS);
+    if (r.status === 0 && !r.error) installed.push(cli);
+  }
+  if (installed.length > 0) {
+    log.ok(`VSCode extension installed in: ${installed.join(', ')}`);
+  }
 }
 
 function rel(root: string, p: string): string {

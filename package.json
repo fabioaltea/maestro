@@ -14,15 +14,20 @@
     "bin",
     "dist",
     "templates",
+    "scripts/postinstall.js",
+    "vscode-extension/dist/*.vsix",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:vsix": "cd vscode-extension && npm install --no-audit --no-fund && npm run compile && npx --yes @vscode/vsce package --out dist/ --skip-license",
     "dev": "tsx src/cli/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm run build:vsix",
+    "postinstall": "node scripts/postinstall.js || true"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

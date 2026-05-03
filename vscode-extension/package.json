@@ -10,7 +10,8 @@
   "categories": ["Other"],
   "activationEvents": [
     "workspaceContains:.maestro/backlog.json",
-    "workspaceContains:.agents"
+    "workspaceContains:.agents",
+    "onUri"
   ],
   "main": "./out/extension.js",
   "contributes": {

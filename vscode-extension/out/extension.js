@@ -45,6 +45,12 @@ function activate(context) {
     if (!workspace)
         return;
     const root = workspace.uri.fsPath;
+    const maestroDir = path.join(root, '.maestro');
+    const commandsDir = path.join(maestroDir, '.commands');
+    try {
+        fs.mkdirSync(commandsDir, { recursive: true });
+    }
+    catch { }
     const agents = new agents_provider_1.AgentsProvider(root);
     const backlog = new backlog_provider_1.BacklogProvider(root);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('maestro.agents', agents), vscode.window.registerTreeDataProvider('maestro.backlog', backlog));
@@ -183,6 +189,53 @@ function activate(context) {
             rec.terminal.sendText(`/run ${id}`, true);
         }
     }));
+    // CLI ↔ extension bridge: CLI drops JSON files in .maestro/.commands/,
+    // extension picks them up, dispatches the action, deletes the file.
+    const cmdWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(workspace, '.maestro/.commands/*.json'));
+    const handleCommandFile = async (uri) => {
+        const file = uri.fsPath;
+        let payload;
+        try {
+            payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+        }
+        catch {
+            try {
+                fs.unlinkSync(file);
+            }
+            catch { }
+            return;
+        }
+        try {
+            fs.unlinkSync(file);
+        }
+        catch { }
+        if (!payload || typeof payload.action !== 'string')
+            return;
+        switch (payload.action) {
+            case 'runTask':
+                await vscode.commands.executeCommand('maestro.runTask', {
+                    taskId: payload.taskId,
+                    taskStatus: payload.taskStatus,
+                    taskAssignee: payload.taskAssignee,
+                });
+                break;
+            case 'chatAgent':
+                await vscode.commands.executeCommand('maestro.chatAgent', payload.agentName);
+                break;
+        }
+    };
+    cmdWatcher.onDidCreate(handleCommandFile);
+    cmdWatcher.onDidChange(handleCommandFile);
+    context.subscriptions.push(cmdWatcher);
+    // Drain files that arrived before the watcher armed.
+    try {
+        for (const entry of fs.readdirSync(commandsDir)) {
+            if (entry.endsWith('.json')) {
+                void handleCommandFile(vscode.Uri.file(path.join(commandsDir, entry)));
+            }
+        }
+    }
+    catch { }
 }
 function deactivate() { }
 function shellQuote(s) {
