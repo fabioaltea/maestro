@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import Anthropic from '@anthropic-ai/sdk';
-import { projectPathsFor } from '../../utils/paths.js';
+import { projectPathsFor, agentFilePath } from '../../utils/paths.js';
 import { StateStore } from '../../core/state-store.js';
 import { EventBus } from '../../core/event-bus.js';
 import { BacklogManager } from '../../core/backlog-manager.js';
@@ -12,6 +12,7 @@ import { recordCall } from '../../llm/cost-tracker.js';
 import { ARCHITECT_TOOLS, handleArchitectTool, isGateResult } from './tools.js';
 import type { ToolContext } from './tools.js';
 import { PHASE_CONTEXTS } from './phases/functional.js';
+import type { ProviderMode } from '../../schemas/agent-frontmatter.js';
 import type { Task } from '../../schemas/backlog.js';
 import type { ProjectPaths } from '../../utils/paths.js';
 import { ProjectConfigSchema } from '../../schemas/config.js';
@@ -29,7 +30,7 @@ function makePrompt(q: string): Promise<string> {
   });
 }
 
-function resolveProviderMode(paths: ProjectPaths): 'claude-code' | 'anthropic-api' {
+function resolveProviderMode(paths: ProjectPaths): ProviderMode {
   if (existsSync(paths.configFile)) {
     try {
       const cfg = ProjectConfigSchema.parse(YAML.parse(readFileSync(paths.configFile, 'utf8')));
@@ -81,7 +82,7 @@ export async function runArchitectTask(projectRoot: string, taskId: string): Pro
   });
   bus.publish({ type: 'task.started', agent: 'architect', task_id: taskId, data: {} });
 
-  const agentFile = join(paths.agents, 'architect.md');
+  const agentFile = agentFilePath(paths, 'architect');
   if (!existsSync(agentFile)) {
     store.close();
     throw new Error(`architect.md not found at ${agentFile}`);
@@ -221,10 +222,10 @@ function verifyArtifacts(taskId: string, paths: ProjectPaths, manager: BacklogMa
       const tasks = manager.getTasks(paths);
       const engTasks = tasks.filter((t) => t.id.startsWith('ENG-'));
       const unassigned = engTasks.filter((t) => !t.assignee || t.assignee === 'architect' || t.assignee === 'unassigned');
-      // count engineer .md files (excluding architect.md and _base/)
+      // count engineer agent files (any .md or .agent.md, excluding architect*)
       const entries = existsSync(paths.agents) ? readdirSync(paths.agents) : [];
       const engineerFiles = entries.filter(
-        (n: string) => n.endsWith('.md') && n !== 'architect.md',
+        (n: string) => n.endsWith('.md') && !n.startsWith('architect'),
       );
       const missing: string[] = [];
       if (engineerFiles.length === 0) missing.push('engineer .md files in .agents/');

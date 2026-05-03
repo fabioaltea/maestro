@@ -5,6 +5,7 @@ import type { StateStore } from '../../core/state-store.js';
 import type { EventBus } from '../../core/event-bus.js';
 import type { BacklogManager } from '../../core/backlog-manager.js';
 import type { ProjectPaths } from '../../utils/paths.js';
+import { agentFilePath } from '../../utils/paths.js';
 import { appendUnderHeading } from '../../utils/markdown.js';
 import type { ToolDefinition } from '../../llm/provider.js';
 import type { Task } from '../../schemas/backlog.js';
@@ -189,15 +190,15 @@ export async function handleArchitectTool(
 
     case 'read_agent': {
       const name = String(input['name']);
-      const fullPath = join(paths.agents, `${name}.md`);
-      if (!existsSync(fullPath)) return `Agent file not found: .agents/${name}.md`;
+      const fullPath = agentFilePath(paths, name);
+      if (!existsSync(fullPath)) return `Agent file not found: ${fullPath}`;
       return readFileSync(fullPath, 'utf8');
     }
 
     case 'write_agent': {
       const name = String(input['name']);
       const content = String(input['content']);
-      const fullPath = join(paths.agents, `${name}.md`);
+      const fullPath = agentFilePath(paths, name);
       writeFileSync(fullPath, content, 'utf8');
       return 'ok';
     }

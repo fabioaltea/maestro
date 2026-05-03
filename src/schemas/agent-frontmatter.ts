@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ProviderModeSchema = z.enum(['claude-code', 'anthropic-api']);
+export const ProviderModeSchema = z.enum(['claude-code', 'anthropic-api', 'copilot', 'codex']);
 export const SenioritySchema = z.enum(['junior', 'mid', 'senior']);
 
 export const AgentFrontmatterSchema = z.object({
@@ -15,3 +15,4 @@ export const AgentFrontmatterSchema = z.object({
 });
 
 export type AgentFrontmatter = z.infer<typeof AgentFrontmatterSchema>;
+export type ProviderMode = z.infer<typeof ProviderModeSchema>;

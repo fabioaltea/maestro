@@ -1,10 +1,10 @@
-import { projectPathsFor } from '../../utils/paths.js';
+import { resolveProjectPaths } from '../../utils/paths.js';
 import { BacklogManager } from '../../core/backlog-manager.js';
 import { runArchitectTask } from '../../agents/architect/runner.js';
 
 export async function runAgentTask(projectRoot: string, taskId: string): Promise<void> {
   try {
-    const paths = projectPathsFor(projectRoot);
+    const paths = resolveProjectPaths(projectRoot);
     const manager = new BacklogManager();
     const task = manager.getTask(paths, taskId);
     if (!task) {

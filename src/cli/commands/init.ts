@@ -16,13 +16,13 @@ import { MAESTRO_VERSION } from '../../types.js';
 import { StateStore } from '../../core/state-store.js';
 import { BacklogSchema, type Backlog, type Task } from '../../schemas/backlog.js';
 import { ProjectConfigSchema, type ProjectConfig } from '../../schemas/config.js';
-import { projectPathsFor, templatesDir, userGlobalConfigFile } from '../../utils/paths.js';
+import { projectPathsFor, templatesDir, userGlobalConfigFile, agentFileName, type Provider } from '../../utils/paths.js';
 import { writeFileAtomic } from '../../utils/markdown.js';
 import { GlobalConfigSchema } from '../../schemas/config.js';
 
 void readdirSync; void statSync; // quiet unused warnings
 
-export type InitOpts = { cwd: string; force: boolean };
+export type InitOpts = { cwd: string; force: boolean; provider: Provider };
 
 // ---------------------------------------------------------------------------
 // Prerequisite checks + auto-install
@@ -39,8 +39,11 @@ type Prerequisite = {
   installHint: string;
 };
 
+/** spawnSync options that pick up the user's full shell PATH (avoids "not found" on macOS with Homebrew). */
+const SPAWN_OPTS = { stdio: 'pipe' as const, shell: true };
+
 function checkTmux(): CheckResult {
-  const r = spawnSync('tmux', ['-V'], { stdio: 'pipe' });
+  const r = spawnSync('tmux', ['-V'], SPAWN_OPTS);
   if (r.status !== 0 || r.error) return { ok: false };
   return { ok: true, version: r.stdout.toString().trim() };
 }
@@ -52,7 +55,19 @@ function checkNode(): CheckResult {
 }
 
 function checkClaudeCLI(): CheckResult {
-  const r = spawnSync('claude', ['--version'], { stdio: 'pipe' });
+  const r = spawnSync('claude', ['--version'], SPAWN_OPTS);
+  if (r.status !== 0 || r.error) return { ok: false };
+  return { ok: true, version: r.stdout.toString().trim() };
+}
+
+function checkCopilotCLI(): CheckResult {
+  const r = spawnSync('copilot', ['--version'], SPAWN_OPTS);
+  if (r.status !== 0 || r.error) return { ok: false };
+  return { ok: true, version: r.stdout.toString().trim() };
+}
+
+function checkCodexCLI(): CheckResult {
+  const r = spawnSync('codex', ['--version'], SPAWN_OPTS);
   if (r.status !== 0 || r.error) return { ok: false };
   return { ok: true, version: r.stdout.toString().trim() };
 }
@@ -72,27 +87,26 @@ function checkAnthropicKey(): CheckResult {
 /** Detect package manager and return tmux install argv, or null. */
 function tmuxInstallArgv(): string[] | null {
   if (process.platform === 'darwin') {
-    // Try brew
-    const brew = spawnSync('brew', ['--version'], { stdio: 'pipe' });
+    const brew = spawnSync('brew', ['--version'], SPAWN_OPTS);
     if (brew.status === 0 && !brew.error) return ['brew', 'install', 'tmux'];
-    // Try MacPorts
-    const port = spawnSync('port', ['version'], { stdio: 'pipe' });
+    const port = spawnSync('port', ['version'], SPAWN_OPTS);
     if (port.status === 0 && !port.error) return ['port', 'install', 'tmux'];
     return null;
   }
   if (process.platform === 'linux') {
-    const apt = spawnSync('apt-get', ['--version'], { stdio: 'pipe' });
+    const apt = spawnSync('apt-get', ['--version'], SPAWN_OPTS);
     if (apt.status === 0 && !apt.error) return ['apt-get', 'install', '-y', 'tmux'];
-    const dnf = spawnSync('dnf', ['--version'], { stdio: 'pipe' });
+    const dnf = spawnSync('dnf', ['--version'], SPAWN_OPTS);
     if (dnf.status === 0 && !dnf.error) return ['dnf', 'install', '-y', 'tmux'];
-    const pacman = spawnSync('pacman', ['--version'], { stdio: 'pipe' });
+    const pacman = spawnSync('pacman', ['--version'], SPAWN_OPTS);
     if (pacman.status === 0 && !pacman.error) return ['pacman', '-S', '--noconfirm', 'tmux'];
     return null;
   }
   return null;
 }
 
-const PREREQUISITES: Prerequisite[] = [
+/** Prerequisites always required regardless of provider. */
+const PREREQUISITES_COMMON: Prerequisite[] = [
   {
     label: 'Node.js >=22',
     required: true,
@@ -107,16 +121,48 @@ const PREREQUISITES: Prerequisite[] = [
     installArgv: tmuxInstallArgv,
     installHint: 'macOS: `brew install tmux`  |  Ubuntu/Debian: `sudo apt install tmux`',
   },
+];
+
+/** Prerequisites only required when using the claude provider. */
+const PREREQUISITES_CLAUDE: Prerequisite[] = [
   {
-    // Required for the Architect (Mode A default) and for engineer agents.
-    // If using Mode B (anthropic-api), ANTHROPIC_API_KEY is needed instead — validated at run time.
     label: 'claude CLI (Claude Code)',
     required: true,
     check: checkClaudeCLI,
     installArgv: () => null,
-    installHint: 'Install Claude Code: https://github.com/anthropics/claude-code\n     (needed for Architect + engineer agents in the default claude-code mode)',
+    installHint: 'Install Claude Code: https://github.com/anthropics/claude-code\n     (needed for Architect + engineer agents in the claude-code mode)',
   },
 ];
+
+/** Prerequisites only required when using the copilot provider. */
+const PREREQUISITES_COPILOT: Prerequisite[] = [
+  {
+    label: 'copilot CLI (GitHub Copilot)',
+    required: true,
+    check: checkCopilotCLI,
+    installArgv: () => null,
+    installHint: 'Install GitHub Copilot CLI: https://github.com/github/copilot-cli\n     (`npm install -g @githubnext/github-copilot-cli` or see the repo for details)',
+  },
+];
+
+/** Prerequisites only required when using the codex provider. */
+const PREREQUISITES_CODEX: Prerequisite[] = [
+  {
+    label: 'codex CLI (OpenAI Codex)',
+    required: true,
+    check: checkCodexCLI,
+    installArgv: () => null,
+    installHint: 'Install OpenAI Codex CLI: https://github.com/openai/codex\n     (`npm install -g @openai/codex` or see the repo for details)',
+  },
+];
+
+function prerequisitesFor(provider: Provider): Prerequisite[] {
+  switch (provider) {
+    case 'claude':  return [...PREREQUISITES_COMMON, ...PREREQUISITES_CLAUDE];
+    case 'copilot': return [...PREREQUISITES_COMMON, ...PREREQUISITES_COPILOT];
+    case 'codex':   return [...PREREQUISITES_COMMON, ...PREREQUISITES_CODEX];
+  }
+}
 
 function ask(question: string): Promise<string> {
   return new Promise((resolve) => {
@@ -128,10 +174,10 @@ function ask(question: string): Promise<string> {
   });
 }
 
-async function runPrerequisiteChecks(): Promise<void> {
+async function runPrerequisiteChecks(provider: Provider): Promise<void> {
   console.log('[maestro] checking prerequisites...\n');
 
-  for (const prereq of PREREQUISITES) {
+  for (const prereq of prerequisitesFor(provider)) {
     const result = prereq.check();
 
     if (result.ok) {
@@ -183,10 +229,32 @@ async function runPrerequisiteChecks(): Promise<void> {
 
 // ---------------------------------------------------------------------------
 
-export async function runInit(opts: InitOpts): Promise<void> {
-  await runPrerequisiteChecks();
+/** Maps Provider → provider_mode value stored in config.yaml. */
+const PROVIDER_MODE: Record<Provider, string> = {
+  claude:  'claude-code',
+  copilot: 'copilot',
+  codex:   'codex',
+};
 
-  const paths = projectPathsFor(opts.cwd);
+/** Maps Provider → default model. */
+const PROVIDER_DEFAULT_MODEL: Record<Provider, string> = {
+  claude:  'claude-sonnet-4-6',
+  copilot: 'gpt-4o',
+  codex:   'codex',
+};
+
+/** Maps Provider → architect template path relative to templatesDir(). */
+const PROVIDER_ARCHITECT_TEMPLATE: Record<Provider, string> = {
+  claude:  'architect.md',
+  copilot: join('_copilot', 'architect.md'),
+  codex:   join('_codex', 'architect.md'),
+};
+
+export async function runInit(opts: InitOpts): Promise<void> {
+  const { provider } = opts;
+  await runPrerequisiteChecks(provider);
+
+  const paths = projectPathsFor(opts.cwd, provider);
   const projectName = basename(opts.cwd);
 
   if (existsSync(paths.maestroDir)) {
@@ -197,21 +265,24 @@ export async function runInit(opts: InitOpts): Promise<void> {
     rmSync(paths.maestroDir, { recursive: true, force: true });
   }
 
-  console.log(`[maestro] initializing project '${projectName}' at ${opts.cwd}`);
+  console.log(`[maestro] initializing project '${projectName}' at ${opts.cwd} (provider: ${provider})`);
 
   // 1. Directory tree
   mkdirSync(paths.docs, { recursive: true });
-  mkdirSync(paths.agents, { recursive: true });            // .claude/agents
-  mkdirSync(paths.claudeCommands, { recursive: true });    // .claude/commands
+  mkdirSync(paths.agents, { recursive: true });
   mkdirSync(paths.agentsBase, { recursive: true });        // .agents/_base
   mkdirSync(paths.agentsArchive, { recursive: true });     // .agents/_archive
   mkdirSync(paths.maestroDir, { recursive: true });
   mkdirSync(paths.sessionsDir, { recursive: true });
+  // Slash commands directory — only relevant for the claude provider
+  if (provider === 'claude') {
+    mkdirSync(paths.claudeCommands, { recursive: true });
+  }
 
   // 2. Templates → user project
   const tpl = templatesDir();
-  // Architect agent in claude-native location
-  copyTemplate(join(tpl, 'architect.md'), join(paths.agents, 'architect.md'), {
+  // Architect agent in the provider-native location
+  copyTemplate(join(tpl, PROVIDER_ARCHITECT_TEMPLATE[provider]), join(paths.agents, agentFileName(provider, 'architect')), {
     __CREATED_AT__: new Date().toISOString(),
   });
   // Engineer template kept under .agents/_base for staffing-time generation
@@ -222,11 +293,13 @@ export async function runInit(opts: InitOpts): Promise<void> {
   });
   copyFileSync(join(tpl, '_base', 'conventions.md'), join(paths.agentsBase, 'conventions.md'));
   copyFileSync(join(tpl, '_base', 'tools.md'), join(paths.agentsBase, 'tools.md'));
-  // Slash commands consumed by claude
-  const claudeCmdsTpl = join(tpl, '_claude', 'commands');
-  for (const file of ['run.md', 'next.md']) {
-    const src = join(claudeCmdsTpl, file);
-    if (existsSync(src)) copyFileSync(src, join(paths.claudeCommands, file));
+  // Slash commands — only for the claude provider
+  if (provider === 'claude') {
+    const claudeCmdsTpl = join(tpl, '_claude', 'commands');
+    for (const file of ['run.md', 'next.md']) {
+      const src = join(claudeCmdsTpl, file);
+      if (existsSync(src)) copyFileSync(src, join(paths.claudeCommands, file));
+    }
   }
 
   // 3. .gitignore for the user project (append .maestro/ if missing)
@@ -239,8 +312,8 @@ export async function runInit(opts: InitOpts): Promise<void> {
   const projectConfig: ProjectConfig = ProjectConfigSchema.parse({
     project_name: projectName,
     maestro_version: MAESTRO_VERSION,
-    default_model: 'claude-sonnet-4-6',
-    provider_mode: 'claude-code',
+    default_model: PROVIDER_DEFAULT_MODEL[provider],
+    provider_mode: PROVIDER_MODE[provider],
     agents: {},
   });
   writeFileAtomic(paths.configFile, YAML.stringify(projectConfig));
@@ -300,7 +373,7 @@ export async function runInit(opts: InitOpts): Promise<void> {
 
   // 9. friendly summary
   console.log(`
-[maestro] init complete.
+[maestro] init complete.  (provider: ${provider})
 
   ${rel(opts.cwd, paths.docs)}/                  (project brain — versioned)
   ${rel(opts.cwd, paths.agents)}/                (agent personas — versioned)
@@ -311,7 +384,7 @@ export async function runInit(opts: InitOpts): Promise<void> {
 
 Next:
   maestro backlog        # see initial ARCH-* tasks
-  maestro run            # start ARCH-001 (Functional Analysis) — requires step 10+
+  maestro run            # start ARCH-001 (Functional Analysis)
 `);
 }
 

@@ -1,4 +1,4 @@
-import { findProjectRoot, projectPathsFor } from '../../utils/paths.js';
+import { findProjectRoot, resolveProjectPaths } from '../../utils/paths.js';
 import { BacklogManager } from '../../core/backlog-manager.js';
 import { StateStore } from '../../core/state-store.js';
 import { EventBus } from '../../core/event-bus.js';
@@ -10,7 +10,7 @@ export async function runTaskContext(taskId: string): Promise<void> {
     console.error('[maestro] Not in a maestro project.');
     process.exit(1);
   }
-  const paths = projectPathsFor(root);
+  const paths = resolveProjectPaths(root);
   const manager = new BacklogManager();
   const store = new StateStore(paths.stateDb);
   try {

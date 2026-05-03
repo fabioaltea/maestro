@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { findProjectRoot, projectPathsFor } from '../../utils/paths.js';
+import { findProjectRoot, resolveProjectPaths, agentFilePath } from '../../utils/paths.js';
 
 export async function runAgent(name: string): Promise<void> {
   const root = findProjectRoot();
@@ -8,8 +8,8 @@ export async function runAgent(name: string): Promise<void> {
     console.error('[maestro] Not in a maestro project. Run `maestro init` first.');
     process.exit(1);
   }
-  const paths = projectPathsFor(root);
-  const filePath = join(paths.agents, `${name}.md`);
+  const paths = resolveProjectPaths(root);
+  const filePath = agentFilePath(paths, name);
   if (!existsSync(filePath)) {
     console.error(`[maestro] Agent '${name}' not found at ${filePath}`);
     process.exit(1);

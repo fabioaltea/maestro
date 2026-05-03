@@ -4,6 +4,7 @@ import { BacklogManager } from './backlog-manager.js';
 import { StateStore } from './state-store.js';
 import { EventBus } from './event-bus.js';
 import type { ProjectPaths } from '../utils/paths.js';
+import { agentFilePath } from '../utils/paths.js';
 import { PHASE_CONTEXTS } from '../agents/architect/phases/functional.js';
 import type { Task } from '../schemas/backlog.js';
 
@@ -41,7 +42,7 @@ export function verifyArtifacts(taskId: string, paths: ProjectPaths, manager: Ba
         (t) => !t.assignee || t.assignee === 'architect' || t.assignee === 'unassigned',
       );
       const entries = existsSync(paths.agents) ? readdirSync(paths.agents) : [];
-      const engineerFiles = entries.filter((n) => n.endsWith('.md') && n !== 'architect.md');
+      const engineerFiles = entries.filter((n) => n.endsWith('.md') && !n.startsWith('architect'));
       const missing: string[] = [];
       if (engineerFiles.length === 0) missing.push('engineer .md files in .agents/');
       if (unassigned.length > 0) missing.push(`${unassigned.length} ENG-* tasks still unassigned`);
@@ -61,7 +62,7 @@ export function buildTaskContext(task: Task, paths: ProjectPaths): string {
 }
 
 function engineerTaskContext(task: Task, paths: ProjectPaths): string {
-  const personaFile = join(paths.agents, `${task.assignee}.md`);
+  const personaFile = agentFilePath(paths, task.assignee);
   const persona = existsSync(personaFile) ? readFileSync(personaFile, 'utf8') : '';
   const conventionsFile = join(paths.agentsBase, 'conventions.md');
   const conventions = existsSync(conventionsFile) ? readFileSync(conventionsFile, 'utf8') : '';

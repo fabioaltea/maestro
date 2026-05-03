@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { MAESTRO_VERSION } from '../types.js';
 import { runInit } from './commands/init.js';
+import { type Provider } from '../utils/paths.js';
 import { runStatus } from './commands/status.js';
 import { runBacklog } from './commands/backlog.js';
 import { runRun } from './commands/run.js';
@@ -28,8 +29,16 @@ program
   .command('init')
   .description('bootstrap a Maestro project in the current directory')
   .option('--force', 'overwrite existing .maestro directory if present', false)
+  .option('--provider <name>', 'AI provider to use: claude (default), copilot, codex', 'claude')
+  .option('--claude', 'shorthand for --provider claude')
+  .option('--copilot', 'shorthand for --provider copilot')
+  .option('--codex', 'shorthand for --provider codex')
   .action(async (opts) => {
-    await runInit({ cwd: process.cwd(), force: !!opts.force });
+    let provider: Provider = (opts.provider as Provider) ?? 'claude';
+    if (opts.claude) provider = 'claude';
+    if (opts.copilot) provider = 'copilot';
+    if (opts.codex) provider = 'codex';
+    await runInit({ cwd: process.cwd(), force: !!opts.force, provider });
   });
 
 program

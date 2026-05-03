@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { findProjectRoot, projectPathsFor } from '../../utils/paths.js';
+import { findProjectRoot, resolveProjectPaths } from '../../utils/paths.js';
 import { readMarkdown } from '../../utils/markdown.js';
 import { AgentFrontmatterSchema } from '../../schemas/agent-frontmatter.js';
 
@@ -15,7 +15,7 @@ export async function runAgents(): Promise<void> {
     console.error('[maestro] Not in a maestro project. Run `maestro init` first.');
     process.exit(1);
   }
-  const paths = projectPathsFor(root);
+  const paths = resolveProjectPaths(root);
 
   if (!existsSync(paths.agents)) {
     console.log('[maestro] No .agents/ directory found.');
@@ -40,7 +40,8 @@ export async function runAgents(): Promise<void> {
       // gray-matter parses YAML dates as Date objects; coerce to string
       if (data['created'] instanceof Date) data['created'] = (data['created'] as Date).toISOString();
       const fm = AgentFrontmatterSchema.safeParse(data);
-      const name = fm.success ? fm.data.name : entry.name.replace('.md', '');
+      const baseName = entry.name.replace(/\.agent\.md$/, '').replace(/\.md$/, '');
+      const name = fm.success ? fm.data.name : baseName;
       const model = fm.success ? fm.data.model : DIM + 'unknown' + RESET;
       const mode = fm.success ? fm.data.mode : 'unknown';
       const skills = fm.success && fm.data.skills.length ? fm.data.skills.join(', ') : DIM + 'none' + RESET;
