@@ -44,5 +44,3 @@ Read reference docs on demand. Do not start work outside the current task scope.
 ## Examples
 A short example of a typical task and approach.
 
-## Learnings
-<!-- append-only section, agent updates after each task -->
