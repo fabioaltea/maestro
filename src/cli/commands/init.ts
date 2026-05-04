@@ -440,7 +440,7 @@ function initialArchitectTasks(): Task[] {
     t(
       'ARCH-001',
       'Functional Analysis',
-      'Discovery conversation with the user. Capture target users, primary use cases, value proposition, critical flows, edge cases, and any compliance constraints. Produce docs/01-functional-analysis.md and request approval.',
+      'Discovery conversation. Cover: target users, use cases, value proposition, critical flows, edge cases, compliance constraints. Ask 1-2 questions at a time. Maintain assumptions with stable IDs (FA-A-1, ...). Write docs/01-functional-analysis.md (sections: Overview, Users, Use cases, Value proposition, Critical flows, Edge cases, Constraints, Assumptions). Ask user to approve or revise.',
       [],
       baseAcc('docs/01-functional-analysis.md'),
       'ready',
@@ -448,7 +448,7 @@ function initialArchitectTasks(): Task[] {
     t(
       'ARCH-002',
       'Technical Analysis',
-      'Capture stack preferences, hosting/deployment, auth, persistence, integrations, NFRs, team and budget. Produce docs/02-technical-analysis.md and request approval.',
+      'Technical discovery conversation. Read docs/01-functional-analysis.md first — skip items already answered. Cover: stack/frameworks, hosting, auth, persistence, integrations, NFRs (perf/scale/security), team, budget. Ask 1-2 questions at a time. Maintain assumptions (TA-A-1, ...). Write docs/02-technical-analysis.md. Ask approve/revise.',
       ['ARCH-001'],
       baseAcc('docs/02-technical-analysis.md'),
       'pending',
@@ -456,7 +456,7 @@ function initialArchitectTasks(): Task[] {
     t(
       'ARCH-003',
       'Architecture Design',
-      'Draft architecture, data model, and API contracts. Mostly autonomous; ask the user only on key trade-offs. Produce docs/03-architecture.md, docs/04-data-model.md, docs/05-api-contracts.md.',
+      'Autonomous. Read prior docs first. Draft: docs/03-architecture.md (components, boundaries, communication, deployment), docs/04-data-model.md (entities, relationships, storage), docs/05-api-contracts.md (endpoints, schemas, auth, errors). Only ask user on key tradeoffs with material impact — present 2-3 options with recommendation. When all three written, ask approve/revise.',
       ['ARCH-002'],
       [
         'docs/03-architecture.md exists and is approved by user',
@@ -468,7 +468,7 @@ function initialArchitectTasks(): Task[] {
     t(
       'ARCH-004',
       'Planning & Backlog',
-      'Decompose the architecture into ENG-* tasks with prerequisites, acceptance criteria, required_skills, complexity, and area. Update .maestro/backlog.json and produce docs/06-backlog.md. Light gate at the end.',
+      'Read all prior docs. Decompose architecture into ENG-* tasks in .maestro/backlog.json. Each task needs: id (ENG-NNN, zero-padded), title, description, acceptance_criteria, prerequisites, required_skills, area (frontend|backend|data|infra|test|docs|meta), complexity (S|M|L), assignee ("unassigned"), status ("pending"). Skill tags: typescript, javascript, python, go, react, nextjs, tailwind, fastapi, express, postgres, redis, docker, kubernetes, aws, gcp, jest, playwright, security, etc. Write docs/06-backlog.md (table by area). Ask approve/revise.',
       ['ARCH-003'],
       [
         'docs/06-backlog.md exists',
@@ -479,7 +479,7 @@ function initialArchitectTasks(): Task[] {
     t(
       'ARCH-005',
       'Staffing',
-      'Cluster ENG-* tasks by required-skills overlap. Generate engineer .md files in .agents/. Assign each task to an engineer. Pick default model per agent based on task complexity. Light gate at the end.',
+      'Load ENG-* tasks from .maestro/backlog.json. Cluster by required_skills overlap (>=70% shared tags). Name clusters (e.g. frontend-react, backend-fastapi). Generate .agents/<cluster>.md from .agents/_base/engineer.md — fill identity, skills, responsibilities. Model: L tasks or architect-grade → claude-opus-4-7; S tasks → claude-haiku-4-5; else → claude-sonnet-4-6. Set each ENG-* task assignee to its cluster name. Ask approve/revise.',
       ['ARCH-004'],
       [
         'engineer .md files exist in .agents/',

@@ -9,7 +9,7 @@ import { BacklogManager } from '../../core/backlog-manager.js';
 import { AnthropicProvider } from '../../llm/anthropic.js';
 import { ARCHITECT_TOOLS, handleArchitectTool, isGateResult } from './tools.js';
 import type { ToolContext } from './tools.js';
-import { PHASE_CONTEXTS } from './phases/functional.js';
+import { buildTaskContext } from '../../core/task-runtime.js';
 import type { ProviderMode } from '../../schemas/agent-frontmatter.js';
 import type { Task } from '../../schemas/backlog.js';
 import type { ProjectPaths } from '../../utils/paths.js';
@@ -81,11 +81,7 @@ export async function runArchitectTask(projectRoot: string, taskId: string): Pro
   }
   const systemPromptContent = readFileSync(agentFile, 'utf8');
 
-  const phaseContextFn = PHASE_CONTEXTS[taskId];
-  if (!phaseContextFn) {
-    throw new Error(`No phase context defined for task ${taskId}. Is this task supported?`);
-  }
-  const phaseContext = phaseContextFn(task, paths);
+  const phaseContext = buildTaskContext(task, paths);
 
   const providerMode = resolveProviderMode(paths);
   const model = resolveModel(paths, 'architect');

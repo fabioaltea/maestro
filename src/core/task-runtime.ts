@@ -1,10 +1,8 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { BacklogManager } from './backlog-manager.js';
 import { EventBus } from './event-bus.js';
 import type { ProjectPaths } from '../utils/paths.js';
-import { agentFilePath } from '../utils/paths.js';
-import { PHASE_CONTEXTS } from '../agents/architect/phases/functional.js';
 import type { Task } from '../schemas/backlog.js';
 
 export type ArtifactCheck = { ok: boolean; missing: string[]; details?: string };
@@ -53,65 +51,33 @@ export function verifyArtifacts(taskId: string, paths: ProjectPaths, manager: Ba
 }
 
 export function buildTaskContext(task: Task, paths: ProjectPaths): string {
-  const archCtx = PHASE_CONTEXTS[task.id];
-  if (archCtx) return archCtx(task, paths);
-  return engineerTaskContext(task, paths);
-}
+  const docsDir = join(paths.root, 'docs');
+  const existingDocs = existsSync(docsDir)
+    ? readdirSync(docsDir)
+        .filter((f) => f.endsWith('.md'))
+        .sort()
+        .map((f) => `- docs/${f}`)
+        .join('\n')
+    : '';
 
-function engineerTaskContext(task: Task, paths: ProjectPaths): string {
-  const personaFile = agentFilePath(paths, task.assignee);
-  const persona = existsSync(personaFile) ? readFileSync(personaFile, 'utf8') : '';
-  const conventionsFile = join(paths.agentsBase, 'conventions.md');
-  const conventions = existsSync(conventionsFile) ? readFileSync(conventionsFile, 'utf8') : '';
+  const docsSection = existingDocs
+    ? `\n## Reference docs (read before starting)\n${existingDocs}\n`
+    : '';
 
-  const docFiles = [
-    'docs/01-functional-analysis.md',
-    'docs/02-technical-analysis.md',
-    'docs/03-architecture.md',
-    'docs/04-data-model.md',
-    'docs/05-api-contracts.md',
-  ];
-  const refs = docFiles
-    .filter((f) => existsSync(join(paths.root, f)))
-    .map((f) => `- ${f}`)
-    .join('\n');
+  return `# Task: ${task.id} — ${task.title}
 
-  return `# Current task: ${task.id} — ${task.title}
+**Assignee:** ${task.assignee}
+**Area:** ${task.area}  **Complexity:** ${task.complexity}
 
-**Assignee:** ${task.assignee} (${task.area}, complexity ${task.complexity})
-**Description:** ${task.description}
+## Description
+${task.description}
 
-**Acceptance criteria:**
+## Acceptance criteria
 - ${task.acceptance_criteria.join('\n- ')}
 
-**Required skills:** ${task.required_skills.join(', ') || '(none)'}
-**Prerequisites (must be done):** ${task.prerequisites.join(', ') || '(none)'}
-
-## Reference docs in this project (read before coding)
-${refs || '(no project docs found)'}
-
-## Persona for this task
-
-${persona || '(no persona file found — fall back to base engineer template)'}
-
-## Project conventions
-
-${conventions || '(no conventions file found)'}
-
-## Task execution protocol
-
-You are running inside a single \`maestro\` autonomous loop. Each task is one
-focused unit of work.
-
-1. Read the reference docs listed above (they are the source of truth).
-2. Implement the task per its description and acceptance criteria.
-3. Use your native tools (Bash, Read, Write, Edit) to modify the codebase.
-4. Run tests where applicable.
-5. When you believe the acceptance criteria are met, call:
-   \`Bash: maestro mark-done ${task.id}\`
-6. The output of \`mark-done\` will contain the next task's context. Continue
-   the loop until \`maestro next-task\` reports no ready tasks remain.
-`;
+**Prerequisites:** ${task.prerequisites.join(', ') || 'none'}
+**Required skills:** ${task.required_skills.join(', ') || 'none'}
+${docsSection}`;
 }
 
 export type PromoteResult = { promoted: string[] };
