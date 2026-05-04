@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { BacklogManager } from './backlog-manager.js';
-import { StateStore } from './state-store.js';
 import { EventBus } from './event-bus.js';
 import type { ProjectPaths } from '../utils/paths.js';
 import { agentFilePath } from '../utils/paths.js';
@@ -49,8 +48,6 @@ export function verifyArtifacts(taskId: string, paths: ProjectPaths, manager: Ba
       return { ok: missing.length === 0, missing, details: `${engineerFiles.length} engineer agent(s)` };
     }
     default:
-      // ENG-* and any other task: rely on acceptance_criteria mentioning explicit file paths
-      // Not enforced strictly; engineer announces completion via mark-done.
       return { ok: true, missing: [] };
   }
 }
@@ -121,7 +118,6 @@ export type PromoteResult = { promoted: string[] };
 
 export function promoteReadyTasks(
   paths: ProjectPaths,
-  store: StateStore,
   bus: EventBus,
   manager: BacklogManager,
 ): PromoteResult {
@@ -130,7 +126,7 @@ export function promoteReadyTasks(
   const promoted: string[] = [];
   for (const t of all) {
     if (t.status === 'pending' && t.prerequisites.every((p) => doneIds.has(p))) {
-      manager.updateTask(paths, store, t.id, { status: 'ready' });
+      manager.updateTask(paths, t.id, { status: 'ready' });
       bus.publish({
         type: 'task.status_changed',
         agent: t.assignee,

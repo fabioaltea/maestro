@@ -1,6 +1,5 @@
 import { appendFileSync } from 'node:fs';
 import { EventEmitter } from 'node:events';
-import type { StateStore } from './state-store.js';
 import { EventSchema, type Event, type EventType } from '../schemas/events.js';
 
 type PublishPayload = Omit<Event, 'timestamp'> & { timestamp?: string };
@@ -8,10 +7,7 @@ type PublishPayload = Omit<Event, 'timestamp'> & { timestamp?: string };
 export class EventBus {
   private emitter = new EventEmitter();
 
-  constructor(
-    private readonly eventsLogPath: string,
-    private readonly store?: StateStore,
-  ) {
+  constructor(private readonly eventsLogPath: string) {
     this.emitter.setMaxListeners(50);
   }
 
@@ -20,21 +16,6 @@ export class EventBus {
     try {
       appendFileSync(this.eventsLogPath, JSON.stringify(full) + '\n', 'utf8');
     } catch {}
-    if (this.store) {
-      try {
-        this.store.raw
-          .prepare(
-            'INSERT INTO events (timestamp, type, agent, task_id, data_json) VALUES (?, ?, ?, ?, ?)',
-          )
-          .run(
-            full.timestamp,
-            full.type,
-            full.agent ?? null,
-            full.task_id ?? null,
-            JSON.stringify(full.data),
-          );
-      } catch {}
-    }
     this.emitter.emit(full.type, full);
     this.emitter.emit('*', full);
   }

@@ -1,7 +1,6 @@
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { dirname, join } from 'node:path';
-import type { StateStore } from '../../core/state-store.js';
 import type { EventBus } from '../../core/event-bus.js';
 import type { BacklogManager } from '../../core/backlog-manager.js';
 import type { ProjectPaths } from '../../utils/paths.js';
@@ -9,6 +8,8 @@ import { agentFilePath } from '../../utils/paths.js';
 import { appendUnderHeading } from '../../utils/markdown.js';
 import type { ToolDefinition } from '../../llm/provider.js';
 import type { Task } from '../../schemas/backlog.js';
+
+void createReadStream; // unused but kept for potential future streaming
 
 export const GATE_MARKER = '__maestro_gate__' as const;
 export type GateResult = { [GATE_MARKER]: true; task_id: string; summary: string };
@@ -18,7 +19,6 @@ export function isGateResult(x: unknown): x is GateResult {
 
 export type ToolContext = {
   paths: ProjectPaths;
-  store: StateStore;
   bus: EventBus;
   manager: BacklogManager;
 };
@@ -158,7 +158,7 @@ export async function handleArchitectTool(
   input: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<string | GateResult> {
-  const { paths, store, bus, manager } = ctx;
+  const { paths, bus, manager } = ctx;
 
   switch (toolName) {
     case 'read_doc': {
@@ -212,13 +212,13 @@ export async function handleArchitectTool(
       let count = 0;
       for (const op of operations) {
         if (op.type === 'add' && op.task) {
-          manager.addTask(paths, store, op.task as Task);
+          manager.addTask(paths, op.task as Task);
           count++;
         } else if (op.type === 'update' && op.id && op.task) {
-          manager.updateTask(paths, store, op.id, op.task);
+          manager.updateTask(paths, op.id, op.task);
           count++;
         } else if (op.type === 'remove' && op.id) {
-          manager.updateTask(paths, store, op.id, { status: 'done' });
+          manager.updateTask(paths, op.id, { status: 'done' });
           count++;
         }
       }
@@ -243,7 +243,7 @@ export async function handleArchitectTool(
     case 'set_phase_status': {
       const taskId = String(input['task_id']);
       const summary = String(input['summary']);
-      manager.updateTask(paths, store, taskId, { status: 'awaiting_approval' });
+      manager.updateTask(paths, taskId, { status: 'awaiting_approval' });
       bus.publish({
         type: 'phase.gate_opened',
         agent: 'architect',
@@ -256,7 +256,7 @@ export async function handleArchitectTool(
     case 'notify_failure': {
       const taskId = String(input['task_id']);
       const reason = String(input['reason']);
-      manager.updateTask(paths, store, taskId, { status: 'failed' });
+      manager.updateTask(paths, taskId, { status: 'failed' });
       bus.publish({
         type: 'task.failed',
         agent: 'architect',

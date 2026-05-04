@@ -13,7 +13,6 @@ import { spawnSync, execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import YAML from 'yaml';
 import { MAESTRO_VERSION } from '../../types.js';
-import { StateStore } from '../../core/state-store.js';
 import { BacklogSchema, type Backlog, type Task } from '../../schemas/backlog.js';
 import { ProjectConfigSchema, type ProjectConfig } from '../../schemas/config.js';
 import { projectPathsFor, templatesDir, userGlobalConfigFile, agentFileName, packageRoot, type Provider } from '../../utils/paths.js';
@@ -332,49 +331,7 @@ export async function runInit(opts: InitOpts): Promise<void> {
   });
   writeFileAtomic(paths.backlogJson, `${JSON.stringify(backlog, null, 2)}\n`);
 
-  // 7. SQLite init + load tasks
-  const store = new StateStore(paths.stateDb);
-  try {
-    const stmt = store.raw.prepare(`
-      INSERT OR REPLACE INTO tasks (
-        id, title, description, assignee, status, area, complexity, retry_count,
-        prerequisites_json, acceptance_criteria_json, required_skills_json,
-        metadata_json, parent_task, created_at, updated_at, started_at, completed_at
-      ) VALUES (
-        @id, @title, @description, @assignee, @status, @area, @complexity, @retry_count,
-        @prerequisites_json, @acceptance_criteria_json, @required_skills_json,
-        @metadata_json, @parent_task, @created_at, @updated_at, @started_at, @completed_at
-      )
-    `);
-    const insertMany = store.raw.transaction((tasks: Task[]) => {
-      for (const t of tasks) {
-        stmt.run({
-          id: t.id,
-          title: t.title,
-          description: t.description,
-          assignee: t.assignee,
-          status: t.status,
-          area: t.area,
-          complexity: t.complexity,
-          retry_count: t.retry_count,
-          prerequisites_json: JSON.stringify(t.prerequisites),
-          acceptance_criteria_json: JSON.stringify(t.acceptance_criteria),
-          required_skills_json: JSON.stringify(t.required_skills),
-          metadata_json: JSON.stringify(t.metadata),
-          parent_task: t.parent_task ?? null,
-          created_at: t.created_at ?? null,
-          updated_at: t.updated_at ?? null,
-          started_at: t.started_at ?? null,
-          completed_at: t.completed_at ?? null,
-        });
-      }
-    });
-    insertMany(backlog.tasks);
-  } finally {
-    store.close();
-  }
-
-  // 8. empty events.log
+  // 7. empty events.log
   if (!existsSync(paths.eventsLog)) writeFileSync(paths.eventsLog, '', 'utf8');
 
   // 8b. seed .runtime.json so CLI can route to VSCode extension immediately
@@ -392,7 +349,7 @@ export async function runInit(opts: InitOpts): Promise<void> {
     `    architect.md\n` +
     `    _base/{engineer,conventions,tools}.md\n` +
     `  ${rel(opts.cwd, paths.maestroDir)}/                (runtime state — gitignored)\n` +
-    `    config.yaml, state.db, backlog.json, events.log\n` +
+    `    config.yaml, backlog.json, events.log\n` +
     `\nNext:\n` +
     `  maestro backlog        # see initial ARCH-* tasks\n` +
     `  maestro run            # start ARCH-001 (Functional Analysis)\n`,

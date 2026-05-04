@@ -49,7 +49,6 @@ export class AnthropicProvider implements LLMProvider {
       toolUses,
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
-      cachedTokens: response.usage.cache_read_input_tokens ?? 0,
       stopReason: response.stop_reason ?? 'end_turn',
     };
   }
@@ -78,7 +77,6 @@ export class AnthropicProvider implements LLMProvider {
       toolUses,
       inputTokens: result.inputTokens,
       outputTokens: result.outputTokens,
-      cachedTokens: result.cachedTokens,
       stopReason: result.stopReason,
     };
   }
@@ -94,7 +92,6 @@ export class AnthropicProvider implements LLMProvider {
     content: Anthropic.ContentBlock[];
     inputTokens: number;
     outputTokens: number;
-    cachedTokens: number;
     stopReason: string;
   }> {
     const stream = this.client.messages.stream({
@@ -119,7 +116,6 @@ export class AnthropicProvider implements LLMProvider {
       content: final.content,
       inputTokens: final.usage.input_tokens,
       outputTokens: final.usage.output_tokens,
-      cachedTokens: final.usage.cache_read_input_tokens ?? 0,
       stopReason: final.stop_reason ?? 'end_turn',
     };
   }

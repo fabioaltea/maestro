@@ -1,5 +1,4 @@
 import { findProjectRoot, projectPathsFor } from '../../utils/paths.js';
-import { StateStore } from '../../core/state-store.js';
 import { BacklogManager } from '../../core/backlog-manager.js';
 import { TmuxSessionManager } from '../../tmux/session-manager.js';
 
@@ -10,25 +9,16 @@ export async function runStop(agent: string): Promise<void> {
     process.exit(1);
   }
   const paths = projectPathsFor(root);
-  const sessionName = `agent-${agent}`;
   const tmux = new TmuxSessionManager();
+  tmux.kill(`agent-${agent}`);
 
-  // Kill tmux session
-  tmux.kill(sessionName);
-
-  // Mark any in_progress task for this agent as failed
-  const store = new StateStore(paths.stateDb);
-  try {
-    const manager = new BacklogManager();
-    const tasks = manager.getTasks(paths);
-    const inProgress = tasks.filter((t) => t.assignee === agent && t.status === 'in_progress');
-    for (const task of inProgress) {
-      manager.updateTask(paths, store, task.id, { status: 'failed' });
-      console.log(`[maestro] Marked task ${task.id} as failed (stopped by user).`);
-    }
-  } finally {
-    store.close();
+  const manager = new BacklogManager();
+  const tasks = manager.getTasks(paths);
+  const inProgress = tasks.filter((t) => t.assignee === agent && t.status === 'in_progress');
+  for (const task of inProgress) {
+    manager.updateTask(paths, task.id, { status: 'failed' });
+    console.log(`[maestro] Marked task ${task.id} as failed (stopped by user).`);
   }
 
-  console.log(`[maestro] Session '${sessionName}' stopped.`);
+  console.log(`[maestro] Session 'agent-${agent}' stopped.`);
 }

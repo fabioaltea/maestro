@@ -1,6 +1,5 @@
 import { readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { StateStore } from './state-store.js';
 import { BacklogSchema, type Backlog, type Task } from '../schemas/backlog.js';
 import type { ProjectPaths } from '../utils/paths.js';
 
@@ -35,7 +34,6 @@ export class BacklogManager {
 
   updateTask(
     paths: ProjectPaths,
-    store: StateStore,
     id: string,
     changes: Partial<Omit<Task, 'id'>>,
   ): Task {
@@ -50,11 +48,10 @@ export class BacklogManager {
     } as Task;
     backlog.tasks[idx] = updated;
     this._saveBacklog(paths, backlog);
-    this.upsertTaskInDb(store, updated);
     return updated;
   }
 
-  addTask(paths: ProjectPaths, store: StateStore, task: Task): Task {
+  addTask(paths: ProjectPaths, task: Task): Task {
     const backlog = this.load(paths);
     if (backlog.tasks.some((t) => t.id === task.id)) {
       throw new Error(`Task ${task.id} already exists in backlog`);
@@ -67,42 +64,7 @@ export class BacklogManager {
     };
     backlog.tasks.push(full);
     this._saveBacklog(paths, backlog);
-    this.upsertTaskInDb(store, full);
     return full;
-  }
-
-  upsertTaskInDb(store: StateStore, task: Task): void {
-    store.raw
-      .prepare(
-        `INSERT OR REPLACE INTO tasks (
-          id, title, description, assignee, status, area, complexity, retry_count,
-          prerequisites_json, acceptance_criteria_json, required_skills_json,
-          metadata_json, parent_task, created_at, updated_at, started_at, completed_at
-        ) VALUES (
-          @id, @title, @description, @assignee, @status, @area, @complexity, @retry_count,
-          @prerequisites_json, @acceptance_criteria_json, @required_skills_json,
-          @metadata_json, @parent_task, @created_at, @updated_at, @started_at, @completed_at
-        )`,
-      )
-      .run({
-        id: task.id,
-        title: task.title,
-        description: task.description,
-        assignee: task.assignee,
-        status: task.status,
-        area: task.area,
-        complexity: task.complexity,
-        retry_count: task.retry_count,
-        prerequisites_json: JSON.stringify(task.prerequisites),
-        acceptance_criteria_json: JSON.stringify(task.acceptance_criteria),
-        required_skills_json: JSON.stringify(task.required_skills),
-        metadata_json: JSON.stringify(task.metadata),
-        parent_task: task.parent_task ?? null,
-        created_at: task.created_at ?? null,
-        updated_at: task.updated_at ?? null,
-        started_at: task.started_at ?? null,
-        completed_at: task.completed_at ?? null,
-      });
   }
 
   private _saveBacklog(paths: ProjectPaths, backlog: Backlog): void {

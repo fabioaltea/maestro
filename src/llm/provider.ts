@@ -30,7 +30,6 @@ export type LLMResponse = {
   toolUses: ToolUse[];
   inputTokens: number;
   outputTokens: number;
-  cachedTokens: number;
   stopReason: string;
 };
 

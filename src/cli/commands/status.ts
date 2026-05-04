@@ -1,9 +1,7 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import YAML from 'yaml';
 import { findProjectRoot, projectPathsFor } from '../../utils/paths.js';
-import { StateStore } from '../../core/state-store.js';
-import { getTotalCost } from '../../llm/cost-tracker.js';
+import { BacklogManager } from '../../core/backlog-manager.js';
 
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
@@ -42,55 +40,37 @@ function requireProjectRoot(): string {
 export async function runStatus(): Promise<void> {
   const root = requireProjectRoot();
   const paths = projectPathsFor(root);
-  const store = new StateStore(paths.stateDb);
+  const manager = new BacklogManager();
+  const tasks = manager.getTasks(paths);
 
-  try {
-    const tasks = store.raw.prepare('SELECT * FROM tasks').all() as Array<{
-      id: string; title: string; status: string; assignee: string;
-    }>;
-
-    let projectName = root;
-    if (existsSync(paths.configFile)) {
-      try {
-        const cfg = YAML.parse(readFileSync(paths.configFile, 'utf8')) as { project_name?: string };
-        projectName = cfg.project_name ?? root;
-      } catch {}
-    }
-
-    console.log(`\n${BOLD}Project:${RESET} ${projectName}\n`);
-
-    // Status counts
-    const counts: Record<string, number> = {};
-    for (const t of tasks) counts[t.status] = (counts[t.status] ?? 0) + 1;
-    console.log(`${BOLD}Backlog summary:${RESET}`);
-    for (const [status, count] of Object.entries(counts)) {
-      const padded = (status + ' ').padEnd(22, '.');
-      console.log(`  ${badge(status)}${' '.repeat(Math.max(0, 22 - status.length))}  ${count}`);
-    }
-
-    // Assignee breakdown
-    const byAssignee: Record<string, Record<string, number>> = {};
-    for (const t of tasks) {
-      byAssignee[t.assignee] ??= {};
-      const bucket = byAssignee[t.assignee]!;
-      bucket[t.status] = (bucket[t.status] ?? 0) + 1;
-    }
-    console.log(`\n${BOLD}Per-agent:${RESET}`);
-    for (const [assignee, statuses] of Object.entries(byAssignee)) {
-      const parts = Object.entries(statuses).map(([s, n]) => `${badge(s)}:${n}`).join('  ');
-      console.log(`  ${BOLD}${assignee}${RESET}  ${parts}`);
-    }
-
-    // Cost
-    const totalCost = getTotalCost(store);
-    console.log(`\n${BOLD}Total LLM cost:${RESET} $${totalCost.toFixed(4)}\n`);
-  } finally {
-    store.close();
+  let projectName = root;
+  if (existsSync(paths.configFile)) {
+    try {
+      const cfg = YAML.parse(readFileSync(paths.configFile, 'utf8')) as { project_name?: string };
+      projectName = cfg.project_name ?? root;
+    } catch {}
   }
-  // suppress unused import warnings
-  void readdirSync;
-  void statSync;
-  void join;
+
+  console.log(`\n${BOLD}Project:${RESET} ${projectName}\n`);
+
+  const counts: Record<string, number> = {};
+  for (const t of tasks) counts[t.status] = (counts[t.status] ?? 0) + 1;
+  console.log(`${BOLD}Backlog summary:${RESET}`);
+  for (const [status] of Object.entries(counts)) {
+    console.log(`  ${badge(status)}${' '.repeat(Math.max(0, 22 - status.length))}  ${counts[status]}`);
+  }
+
+  const byAssignee: Record<string, Record<string, number>> = {};
+  for (const t of tasks) {
+    byAssignee[t.assignee] ??= {};
+    const bucket = byAssignee[t.assignee]!;
+    bucket[t.status] = (bucket[t.status] ?? 0) + 1;
+  }
+  console.log(`\n${BOLD}Per-agent:${RESET}`);
+  for (const [assignee, statuses] of Object.entries(byAssignee)) {
+    const parts = Object.entries(statuses).map(([s, n]) => `${badge(s)}:${n}`).join('  ');
+    console.log(`  ${BOLD}${assignee}${RESET}  ${parts}`);
+  }
+
+  console.log('');
 }
-
-

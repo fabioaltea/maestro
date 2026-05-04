@@ -22,7 +22,6 @@ export type ProjectPaths = {
   claudeCommands: string;     // .claude/commands/
   maestroDir: string;
   configFile: string;
-  stateDb: string;
   backlogJson: string;
   eventsLog: string;
   sessionsDir: string;
@@ -50,7 +49,6 @@ export function projectPathsFor(root: string, provider: Provider = 'claude'): Pr
     claudeCommands: join(claudeDir, 'commands'),
     maestroDir,
     configFile: join(maestroDir, 'config.yaml'),
-    stateDb: join(maestroDir, 'state.db'),
     backlogJson: join(maestroDir, 'backlog.json'),
     eventsLog: join(maestroDir, 'events.log'),
     sessionsDir: join(maestroDir, 'sessions'),

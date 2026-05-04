@@ -10,7 +10,6 @@ import { runStop } from './commands/stop.js';
 import { runAgents } from './commands/agents.js';
 import { runAgent } from './commands/agent.js';
 import { runDocs } from './commands/docs.js';
-import { runCost } from './commands/cost.js';
 import { runLogs } from './commands/logs.js';
 import { runReset } from './commands/reset.js';
 import { runStart } from './commands/start.js';
@@ -123,14 +122,6 @@ program
   .description('list docs files')
   .action(async () => {
     await runDocs();
-  });
-
-program
-  .command('cost')
-  .description('detailed cost breakdown')
-  .option('--since <date>', 'filter from ISO date')
-  .action(async (opts) => {
-    await runCost({ since: opts.since });
   });
 
 program
