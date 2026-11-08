@@ -122,6 +122,35 @@ export class SQLiteStore {
       return { operation: this.getOperation(intent.requestId)!, accepted: true };
     });
   }
+  listTickets(requestId: string): readonly LaunchTicket[] {
+    requireUuid(requestId);
+    return ((this.database?.prepare('SELECT * FROM launch_tickets WHERE request_id=? ORDER BY rowid').all(requestId) ?? []) as Row[]).map(row => this.ticket(row));
+  }
+  reopenOperation(requestId: string): OperationRecord {
+    requireUuid(requestId);
+    return this.mutate(database => {
+      const op = this.getOperation(requestId);
+      if (!op || !['IN_PROGRESS', 'BLOCKED'].includes(op.outcome)) throw new Error('STALE_TARGET');
+      database.prepare("UPDATE operations SET outcome='IN_PROGRESS',phase='PRECHECK',completed_at=NULL,error=NULL WHERE request_id=?").run(requestId);
+      return this.getOperation(requestId)!;
+    });
+  }
+  retireTicket(ticketId: string, generation: string, claimedPid: number): void {
+    requireUuid(ticketId);
+    this.mutate(database => {
+      if (database.prepare("UPDATE launch_tickets SET status='CANCELLED',claimed_pid=NULL WHERE ticket_id=? AND generation=? AND claimed_pid=? AND status='CLAIMED'")
+        .run(ticketId, generation, claimedPid).changes !== 1) throw new Error('STALE_TARGET');
+    });
+  }
+  reconcileInstanceAbsent(instanceId: string, generation: string): void {
+    requireUuid(instanceId);
+    this.mutate(database => {
+      const current = this.readSnapshot()?.instance;
+      if (!current || current.instanceId !== instanceId || current.generation !== generation) throw new Error('STALE_TARGET');
+      if (this.listResources(instanceId).some(r => r.releaseState !== 'RELEASED')) throw new Error('BLOCKED');
+      database.prepare("UPDATE instances SET lifecycle='STOPPED' WHERE instance_id=? AND generation=?").run(instanceId, generation);
+    });
+  }
   resumeBlocked(requestId: string, targetInstanceId: string | null): OperationRecord {
     requireUuid(requestId);
     return this.mutate(database => {
