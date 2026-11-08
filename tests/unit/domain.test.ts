@@ -72,6 +72,7 @@ test('public errors contain safe actionable text without raw causes or secrets',
   assert.equal(typeof module.foundationError, 'function', 'Error contract must be implemented');
   const error = module.foundationError('PERSISTENCE_UNAVAILABLE', { persisted: false });
   assert.equal(error.code, 'PERSISTENCE_UNAVAILABLE');
+  assert.equal(error.category, 'PERSISTENCE');
   assert.equal(error.persisted, false);
   assert.equal(typeof error.nextAction, 'string');
   assert.ok(error.nextAction.length > 0);

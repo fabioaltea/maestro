@@ -7,8 +7,8 @@
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T078 completati; US4/E3 verificato e harness accesso locale predisposto.
-T079–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
+T001–T079 completati; US4/E3 verificato, harness accesso locale e diagnostica verificati.
+T080–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
 Commit locali per task autorizzati; nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -225,7 +225,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### US4 — accettazione
 
 - [X] T078 [US4] Predisporre `tests/acceptance/local-access.test.ts` e istruzioni del runner in `tests/fixtures/multi-user-runner.md` per UID distinti e accesso da altra macchina senza TCP; non creare account/privilegi automaticamente e non equiparare mock al test reale. **Dip.: T077.**
-- [ ] T079 [US4] Verificare tutte le categorie di errore, segreti sentinella e letture non mutanti in `tests/acceptance/diagnostics.test.ts`, compresi major non supportata, metodo interno non autorizzato, spazio esaurito e report bootstrap non persistito. **Dip.: T078.**
+- [X] T079 [US4] Verificare tutte le categorie di errore, segreti sentinella e letture non mutanti in `tests/acceptance/diagnostics.test.ts`, compresi major non supportata, metodo interno non autorizzato, spazio esaurito e report bootstrap non persistito. **Dip.: T078.**
 ### US4 — checkpoint
 
 - [ ] T080 [US4] Eseguire la prova dieci osservatori/100 eventi al secondo per 60 s e 1.000 letture concorrenti in `tests/acceptance/event-load.test.ts`, registrando p95 eventi <=1 s, stato p95 <=500 ms e massimo 2 s oppure errore esplicito in `specs/001-core-background-daemon/reports/us4-observability.md`. **Dip.: T079, T077.**

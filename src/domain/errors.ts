@@ -25,10 +25,22 @@ const catalog = {
 } as const;
 
 export type ErrorCode = keyof typeof catalog;
+export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
+const categories: Record<ErrorCode, ErrorCategory> = {
+  INVALID_REQUEST: 'VALIDATION', UNSUPPORTED_VERSION: 'VALIDATION', UNSUPPORTED_PLATFORM: 'VALIDATION',
+  UNAUTHORIZED: 'AUTHORIZATION', STALE_TARGET: 'AUTHORIZATION', IDEMPOTENCY_CONFLICT: 'VALIDATION',
+  BUSY: 'CONCURRENCY', BLOCKED: 'SAFETY', EVENT_BACKPRESSURE: 'OBSERVABILITY',
+  PERSISTENCE_UNAVAILABLE: 'PERSISTENCE', STATE_INCOMPATIBLE: 'PERSISTENCE', STATE_CORRUPT: 'PERSISTENCE',
+  DEADLINE_EXCEEDED: 'TIMEOUT', RESOURCE_IDENTITY_UNKNOWN: 'SAFETY', ENDPOINT_COLLISION: 'SAFETY',
+  CURSOR_EXPIRED: 'OBSERVABILITY', WRONG_STORE: 'VALIDATION', SLOW_CONSUMER: 'OBSERVABILITY',
+  DAEMON_ABSENT: 'RUNTIME', SERVICE_UNREACHABLE: 'RUNTIME', CONTROL_INTERRUPTED: 'RUNTIME',
+  CORE_EXITED_BEFORE_ACCEPTANCE: 'RUNTIME', INTERNAL_ERROR: 'RUNTIME',
+};
 export type FailureCause = 'DISK_FULL' | 'READ_ONLY' | 'IO_ERROR' | 'WORKER_EXIT' | 'CORRUPT' | 'INCOMPATIBLE' | 'PROCESS_EXIT' | 'IDENTITY_UNVERIFIED' | null;
 export interface ErrorContext { readonly operationId?: string; readonly persisted?: boolean; readonly cause?: FailureCause }
 export interface SafeError {
   readonly code: ErrorCode;
+  readonly category: ErrorCategory;
   readonly cause: FailureCause;
   readonly message: string;
   readonly nextAction: string;
@@ -43,5 +55,5 @@ export function foundationError(code: ErrorCode, context: ErrorContext = {}): Sa
   const operationId = context.operationId ?? null;
   if (context.cause != null && !['DISK_FULL', 'READ_ONLY', 'IO_ERROR', 'WORKER_EXIT', 'CORRUPT', 'INCOMPATIBLE', 'PROCESS_EXIT', 'IDENTITY_UNVERIFIED'].includes(context.cause)) throw new Error('INVALID_ERROR_CODE');
   if (operationId !== null && !/^[0-9a-f-]{36}$/i.test(operationId)) throw new Error('INVALID_IDENTIFIER');
-  return Object.freeze({ code, message, nextAction, retryable, cause: context.cause ?? null, persisted: context.persisted ?? false, operationId });
+  return Object.freeze({ code, category: categories[code], message, nextAction, retryable, cause: context.cause ?? null, persisted: context.persisted ?? false, operationId });
 }

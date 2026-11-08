@@ -49,6 +49,8 @@ correlationId, requestId?, result=OK|BUSY|BLOCKED|ERROR|UNKNOWN_OUTCOME,
 outcome?, freshness, liveness, data?, error?.
 
 Error: code, category, message, retryable, operationId?, nextAction, persisted.
+Le categorie del catalogo sono VALIDATION, AUTHORIZATION, CONCURRENCY, SAFETY,
+PERSISTENCE, TIMEOUT, OBSERVABILITY e RUNTIME; cause enum e code restano distinti.
 Codici definiti: INVALID_REQUEST, UNSUPPORTED_VERSION, UNSUPPORTED_PLATFORM,
 UNAUTHORIZED, STALE_TARGET, IDEMPOTENCY_CONFLICT, BUSY, BLOCKED,
 PERSISTENCE_UNAVAILABLE, STATE_INCOMPATIBLE, STATE_CORRUPT, DEADLINE_EXCEEDED,
