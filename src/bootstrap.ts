@@ -1,6 +1,6 @@
 import { createDaemonLauncher } from './platform/macos/launcher.js';
 import { defaultArchiveDirectory } from './platform/macos/paths.js';
-import { inspectArchive, readOperationFromArchive, absentResult } from './core/inspect-main.js';
+import { inspectArchive, inspectDetails, readOperationFromArchive, absentResult } from './core/inspect-main.js';
 import { classifyError } from './core/control-main.js';
 import { foundationError, type ErrorCode } from './domain/errors.js';
 import type { ClientBackend } from './ports/platform.js';
@@ -16,6 +16,8 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
   return {
     defaultDirectory: defaultArchiveDirectory(),
     inspect: inspectArchive,
+    diagnostics: directory => inspectDetails(directory, 'diagnostics'),
+    events: (directory, limit) => inspectDetails(directory, 'events', limit),
     async operation(directory, requestId) {
       const operation = await readOperationFromArchive(directory, requestId);
       if (!operation) return failureResult('INVALID_REQUEST', requestId);

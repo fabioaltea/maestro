@@ -133,7 +133,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
   return {
     recordEvents: drafts => call('recordEvents', [drafts]),
     drainEvents: () => call('drainEvents', []),
-    getEventState: () => call('getEventState', []),
+    getEventState: verify => call('getEventState', [verify ?? false]),
     listEvents: options => call('listEvents', [options ?? {}]),
     onFailure: listener => { listeners.add(listener); if (failure) queueMicrotask(() => listener(failure!)); return () => listeners.delete(listener); },
     listTickets: id => call('listTickets', [id]),

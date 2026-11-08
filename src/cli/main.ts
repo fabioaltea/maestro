@@ -25,23 +25,25 @@ export async function runCli(args: readonly string[]): Promise<number> {
   try {
     const { values, positionals } = parseArgs({ args: [...args], allowPositionals: true, strict: true, options: {
       help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' }, json: { type: 'boolean' },
-      'state-dir': { type: 'string' }, 'request-id': { type: 'string' }, 'timeout-ms': { type: 'string' },
+      'state-dir': { type: 'string' }, 'request-id': { type: 'string' }, 'timeout-ms': { type: 'string' }, limit: { type: 'string' },
     } });
     json = values.json ?? false;
     if (values.help) {
-      await write('maestro daemon start|status|stop|restart|operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\n');
+      await write('maestro daemon start|status|stop|restart|diagnostics|events|operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\n');
       return 0;
     }
     if (values.version) { await write(VERSION + '\n'); return 0; }
     const command = positionals[1];
-    if (positionals[0] !== 'daemon' || !command || !['start', 'status', 'stop', 'restart', 'operation'].includes(command)
+    if (positionals[0] !== 'daemon' || !command || !['start', 'status', 'stop', 'restart', 'operation', 'diagnostics', 'events'].includes(command)
       || positionals.length !== (command === 'operation' ? 3 : 2)) throw new Error('INVALID_REQUEST');
-    if (['status', 'operation'].includes(command) && values['request-id']) throw new Error('INVALID_REQUEST');
+    if (['status', 'operation', 'diagnostics', 'events'].includes(command) && values['request-id']) throw new Error('INVALID_REQUEST');
+    if (values.limit && command !== 'events') throw new Error('INVALID_REQUEST');
     const { createClientBackend, failureResult } = await import('../bootstrap.js');
     try {
-      result = await new LocalClient(createClientBackend()).run(command as 'start' | 'status' | 'stop' | 'restart' | 'operation', {
+      result = await new LocalClient(createClientBackend()).run(command as 'start' | 'status' | 'stop' | 'restart' | 'operation' | 'diagnostics' | 'events', {
         ...(values['state-dir'] ? { stateDirectory: values['state-dir'] } : {}),
         ...(command === 'operation' ? { requestId: positionals[2]! } : values['request-id'] ? { requestId: values['request-id'] } : {}),
+        ...(values.limit ? {limit: Number(values.limit)} : {}),
         ...(values['timeout-ms'] ? { timeoutMs: Number(values['timeout-ms']) } : {}),
       });
     } catch (error) {
@@ -53,8 +55,10 @@ export async function runCli(args: readonly string[]): Promise<number> {
     result = { protocolVersion: 1, requestId: null, storeId: null, instanceId: null, result: 'ERROR',
       outcome: null, freshness: 'LAST_KNOWN', liveness: 'UNKNOWN', data: {}, error: foundationError('INVALID_REQUEST') };
   }
+  const humanEvents = result.data.events as {records?: readonly unknown[]; truncated?: boolean; highWater?: string} | undefined;
   await write(json ? JSON.stringify(result) + '\n' : result.error
     ? `${result.error.code}: ${result.error.message}\n${result.error.nextAction}\n`
+    : humanEvents ? `${JSON.stringify(humanEvents.records ?? [])}\nEventi fino a ${humanEvents.highWater}; troncato=${humanEvents.truncated}\n`
     : `${result.outcome ?? result.data.lifecycle ?? result.data.status ?? result.result}${result.data.lifecycle ? ` [${result.freshness}, ${result.liveness}, ready=${result.data.ready === true}]` : ''}${result.instanceId ? ` (${result.instanceId})` : ''}\n`);
   return exitCode(result);
 }

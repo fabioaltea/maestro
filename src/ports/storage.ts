@@ -86,11 +86,7 @@ export interface ControllerAttemptRecord {
   readonly endedAt: string | null;
   readonly result: string | null;
 }
-export interface StoragePort {
-  recordEvents(drafts: readonly import('../protocol/messages.js').EventDraft[]): Promise<void>;
-  drainEvents(): Promise<void>;
-  getEventState(): Promise<{highWater: string; firstAvailable: string; pendingBytes: number; degraded: boolean; errorCode: string | null}>;
-  listEvents(options?: {after?: string; limit?: number; maxBytes?: number}): Promise<import('../protocol/messages.js').EventPage>;
+export interface StoragePort extends EventStoragePort {
   onFailure(callback: (error: SafeError) => void): () => void;
   listTickets(requestId: string): Promise<readonly LaunchTicket[]>;
   reopenOperation(requestId: string): Promise<OperationRecord>;
@@ -121,7 +117,8 @@ export interface StoragePort {
 }
 
 export interface EventStoragePort {
-  appendOutbox(events: readonly EventRecord[]): Promise<void>;
+  recordEvents(drafts: readonly import('../protocol/messages.js').EventDraft[]): Promise<void>;
   drainEvents(): Promise<void>;
-  readEvents(after: string, limit: number): Promise<readonly EventRecord[]>;
+  getEventState(verify?: boolean): Promise<import('../protocol/messages.js').EventState>;
+  listEvents(options?: {after?: string; limit?: number; maxBytes?: number}): Promise<import('../protocol/messages.js').EventPage>;
 }

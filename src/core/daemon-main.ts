@@ -1,3 +1,4 @@
+import { diagnosticsData, eventQuery } from './diagnostics.js';
 import { observePendingControl } from './control-observation.js';
 import type { CoreDependencies } from './runtime.js';
 import { createHash, randomUUID } from 'node:crypto';
@@ -93,11 +94,18 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
         storeId: snapshot.store.storeId, instanceId: instance.instanceId, pid: instance.pid,
         generation: instance.generation, lifecycle: instance.lifecycle, ready: instance.lifecycle === 'RUNNING',
         revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation,
-        lastError: instance.lastError, ...await observePendingControl(snapshot, storage, createProcessIdentity()),
+        observability: await storage.getEventState(), lastError: instance.lastError, ...await observePendingControl(snapshot, storage, createProcessIdentity()),
         resourceIssues: instance.lifecycle === 'BLOCKED' ? (await storage.listResources(instance.instanceId))
           .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
             kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState })) : [],
       } };
+      if (request.method === 'diagnostics.get' || request.method === 'events.list') {
+        try {
+          const data = request.method === 'diagnostics.get' ? await diagnosticsData(storage, snapshot)
+            : {events: await storage.listEvents(eventQuery(request.params))};
+          return {...base, result: 'OK', data: {storeId: snapshot.store.storeId, ...data}};
+        } catch (error) { return {...base, result: 'ERROR', data: {code: classifyError(error)}}; }
+      }
       if (request.method === 'internal.readiness') {
         if (peer.role !== 'controller') {
           await auditDenied(request.correlationId, 'UNAUTHORIZED');

@@ -89,6 +89,8 @@ import type { PublicResult } from '../protocol/messages.js';
 
 export interface ClientBackend {
   readonly defaultDirectory: string;
+  diagnostics(directory: string): Promise<PublicResult>;
+  events(directory: string, limit?: number): Promise<PublicResult>;
   operation(directory: string, requestId: string): Promise<PublicResult>;
   inspect(directory: string): Promise<PublicResult>;
   control(intent: BootstrapIntent, timeoutMs: number): Promise<PublicResult>;

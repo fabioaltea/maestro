@@ -54,3 +54,10 @@ export interface EventPage {
   readonly truncated: boolean;
   readonly nextAfter: string;
 }
+
+export interface EventState {
+  readonly highWater: string; readonly firstAvailable: string; readonly pendingBytes: number;
+  readonly degraded: boolean; readonly errorCode: string | null;
+  readonly usage?: {journalBytes: number; logBytes: number; walBytes: number; shmBytes: number; outboxMetadataBytes: number; totalBytes: number;
+    limits: {journalBytes: number; logBytes: number; totalBytes: number; temporaryBytes: number; walBytes: number}};
+}

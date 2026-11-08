@@ -2,7 +2,7 @@ import { beforeDiagnosticMutation, diagnosticUsage, appendDiagnosticLog, allocat
 import { randomUUID } from 'node:crypto';
 import { openJournal } from './event-journal.js';
 import { redactEventDraft } from '../protocol/events.js';
-import { MAX_OUTBOX_BYTES, type EventDraft, type EventPage } from '../protocol/messages.js';
+import { MAX_OUTBOX_BYTES, type EventDraft, type EventPage, type EventState } from '../protocol/messages.js';
 import type { EventRecord } from '../ports/storage.js';
 import Database from 'better-sqlite3';
 import { constants, closeSync, existsSync, lstatSync, openSync } from 'node:fs';
@@ -100,13 +100,14 @@ export class SQLiteStore {
   }
   private enqueue(drafts: readonly EventDraft[]): void {
     const database = this.writable();
-    const identity = this.readSnapshot()!.store;
+    const snapshot = this.readSnapshot()!;
+    const identity = snapshot.store;
     let seq = (database.prepare('SELECT next_event_seq FROM store WHERE singleton=1').get() as {next_event_seq: bigint}).next_event_seq;
     const records: EventRecord[] = drafts.map(raw => {
       const draft = redactEventDraft(raw);
       if (seq >= 9_223_372_036_854_775_807n) throw new Error('EVENT_BACKPRESSURE');
       return {protocolVersion: 1, storeId: identity.storeId, eventId: randomUUID(), seq: String(seq++), occurredAt: new Date().toISOString(),
-        type: draft.type, instanceId: draft.instanceId ?? null, operationId: draft.operationId ?? null, payload: draft.payload};
+        type: draft.type, instanceId: draft.instanceId ?? null, operationId: draft.operationId ?? snapshot.pendingOperation?.requestId ?? null, payload: draft.payload};
     });
     if (Buffer.byteLength(JSON.stringify(records)) > MAX_OUTBOX_BYTES) throw new Error('EVENT_BACKPRESSURE');
     database.prepare('UPDATE event_outbox SET records=? WHERE singleton=1').run(JSON.stringify(records));
@@ -131,14 +132,14 @@ export class SQLiteStore {
     return value;
   }
   recordEvents(drafts: readonly EventDraft[]): void { this.mutate(() => {}, drafts, true); }
-  getEventState() {
+  getEventState(verify = false): EventState {
     if (!this.database) return {highWater: '0', firstAvailable: '1', pendingBytes: 0, degraded: false, errorCode: null};
     const meta = this.database.prepare('SELECT * FROM journal_metadata WHERE singleton=1').get() as Row;
     const raw = (this.database.prepare('SELECT records FROM event_outbox WHERE singleton=1').get() as {records: string}).records;
     let errorCode = this.eventError;
     let firstAvailable = String(meta.retention_floor);
-    try { firstAvailable = this.eventsJournal().list({highWater: String(meta.high_water), limit: 1}).firstAvailable; }
-    catch (error) { errorCode = error instanceof Error ? error.message : 'STATE_CORRUPT'; }
+    try { if (verify) firstAvailable = this.eventsJournal().list({highWater: String(meta.high_water), limit: 1}).firstAvailable; }
+    catch (error) { errorCode = error instanceof Error && ['STATE_CORRUPT', 'EVENT_BACKPRESSURE', 'UNAUTHORIZED', 'ENDPOINT_COLLISION'].includes(error.message) ? error.message : 'PERSISTENCE_UNAVAILABLE'; }
     const usage = diagnosticUsage(this.directory, this.database);
     return {usage, highWater: String(meta.high_water), firstAvailable, pendingBytes: raw === '[]' ? 0 : Buffer.byteLength(raw), degraded: raw !== '[]' || errorCode !== null, errorCode};
   }

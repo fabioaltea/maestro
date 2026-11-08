@@ -56,7 +56,7 @@ test('shutdownPrepared is a drain completion marker, not an intention to stop', 
 });
 
 test('status client enforces its observation deadline even when backend does not return', async () => {
-  const client = new LocalClient({ defaultDirectory: '/unused', operation: () => new Promise(() => {}), inspect: () => new Promise(() => {}), control: () => new Promise(() => {}) });
+  const client = new LocalClient({ defaultDirectory: '/unused', diagnostics: () => new Promise(() => {}), events: () => new Promise(() => {}), operation: () => new Promise(() => {}), inspect: () => new Promise(() => {}), control: () => new Promise(() => {}) });
   const result = await Promise.race([client.run('status', { timeoutMs: 15 }), new Promise<null>(resolve => setTimeout(() => resolve(null), 100))]);
   assert.equal(result?.error?.code, 'DEADLINE_EXCEEDED');
 });
@@ -65,7 +65,7 @@ test('client expiry preserves the request identity and does not cancel accepted 
   let finish!: () => void;
   let calls = 0, completed = false;
   const id = randomUUID();
-  const client = new LocalClient({ defaultDirectory: '/unused', inspect: () => new Promise(() => {}), operation: () => new Promise(() => {}),
+  const client = new LocalClient({ defaultDirectory: '/unused', diagnostics: () => new Promise(() => {}), events: () => new Promise(() => {}), inspect: () => new Promise(() => {}), operation: () => new Promise(() => {}),
     control: async intent => {
       calls++;
       assert.equal(intent.requestId, id);

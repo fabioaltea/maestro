@@ -32,7 +32,7 @@ test('diagnostics and event pages are read-only offline and absent archives are 
     assert.equal(event.protocolVersion, 1);
     assert.equal(typeof event.seq, 'string');
     assert.ok(event.eventId && event.storeId && event.operationId);
-    assert.ok(event.type.startsWith('operation.'));
+    assert.ok(event.type.startsWith('operation.') || event.type === 'lifecycle.changed');
   }
   assert.ok(Buffer.byteLength(events.stdout) <= 65_536);
   assert.equal(JSON.parse((await h.call('status')).stdout).data.revision, before);
