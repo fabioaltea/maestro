@@ -159,7 +159,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 
 ### Test richiesti
 
-- [ ] T046 [P] [US3] Scrivere test RED di riconciliazione in `tests/unit/recovery.test.ts`, includendo controller perso, ticket non reclamato/reclamato, retry della stessa azione, nuovo comando incompatibile e stop che interrompe un vecchio avvio non reclamato. **Dip.: T045.**
+- [X] T046 [P] [US3] Scrivere test RED di riconciliazione in `tests/unit/recovery.test.ts`, includendo controller perso, ticket non reclamato/reclamato, retry della stessa azione, nuovo comando incompatibile e stop che interrompe un vecchio avvio non reclamato. **Dip.: T045.**
 - [ ] T047 [P] [US3] Scrivere matrice RED in `tests/integration/recovery-crash-matrix.test.ts` usando `tests/fixtures/fault-schedule.ts`: prima/dopo commit intento, claim, spawn, effetto/esito, stop e secondo recovery; conservare le prove degli esiti già confermati. **Dip.: T045.**
 - [ ] T048 [P] [US3] Scrivere prove RED di archivio corrotto/incompatibile, readonly, spazio esaurito e worker crash in `tests/integration/recovery-storage-failures.test.ts`; usare sandbox/fault adapter invece di riempire il disco dell'utente, preservando file e distinguendo persisted=false. **Dip.: T045.**
 - [ ] T049 [P] [US3] Scrivere prove RED di orfani Foundation e identità incerta in `tests/integration/recovery-processes.test.ts`, simulando deterministicamente PID reuse e mantenendo processi estranei reali; controllare che la policy non si estenda al controller o a scope diversi. **Dip.: T045.**
