@@ -7,7 +7,7 @@
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T020 completati; task successivi ancora da eseguire. Nessuna pubblicazione autorizzata.
+T001–T032 completati; prima slice F1 al checkpoint di review. T033–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -121,7 +121,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T029 [US1] Implementare `src/core/inspect-main.ts` read-only: snapshot storico e osservazione liveness separati, archivio assente senza creazione, pendingFinalization e nessuna pulizia/recovery mutante per una lettura. **Dip.: T028, T021.**
 - [X] T030 [US1] Implementare LocalClient e i comandi iniziali in `src/client/local-client.ts` e `src/cli/main.ts`, incluso bootstrap core, polling bounded del requestId, output/codici concordanti, --state-dir/--json/--request-id e help offline; la CLI non contiene policy né scrive SQL. **Dip.: T029, T021.**
 - [X] T031 [US1] Realizzare il solo arresto senza lavori/ausiliari attivi in `src/core/lifecycle.ts` e `src/core/control-main.ts`: intento, richiesta interna autorizzata, shutdownPrepared, prova della cessazione e finalizzazione STOPPED dal controller; mai dichiarare stop dal solo socket chiuso. **Dip.: T030, T019, T015.**
-- [ ] T032 [US1] Eseguire le prove US1 e l'esercizio F1 di `specs/001-core-background-daemon/quickstart.md`, salvando evidenze in `specs/001-core-background-daemon/reports/f1.md`; zero istanze proprietarie duplicate, archivio indipendente e nessun falso successo; registrare le soglie non ancora misurate come NOT_RUN. **Dip.: T031, T022, T023.**
+- [X] T032 [US1] Eseguire le prove US1 e l'esercizio F1 di `specs/001-core-background-daemon/quickstart.md`, salvando evidenze in `specs/001-core-background-daemon/reports/f1.md`; zero istanze proprietarie duplicate, archivio indipendente e nessun falso successo; registrare le soglie non ancora misurate come NOT_RUN. **Dip.: T031, T022, T023.**
 
 **Checkpoint**: MVP dimostrabile start/status/stop minimo; le garanzie avanzate di stop/restart e recovery seguono in US2/US3.
 

@@ -64,7 +64,7 @@ if (!isMainThread) {
 
 export async function openStorage(options: StorageOptions): Promise<StoragePort> {
   if (!isMainThread) throw new Error('INVALID_REQUEST');
-  const worker = new Worker(new URL('./worker.js', import.meta.url), { workerData: options });
+  const worker = new Worker(new URL('./worker.js', import.meta.url), { workerData: options, execArgv: [] });
   const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
   let nextId = 0;
   let closing = false;

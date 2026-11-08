@@ -16,7 +16,8 @@ tests/
 
 ## Commands
 
-Comandi pianificati, disponibili solo dopo il bootstrap della futura implementazione:
+Build, typecheck, lint e test ordinari disponibili. Accettazione completa e benchmark
+restano previsti dai task successivi:
 
 ```sh
 npm run build
@@ -35,7 +36,8 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 001-core-background-daemon: progettati daemon, controller transitorio, persistenza e contratti locali; nessun codice implementato.
+- 001-core-background-daemon: T001–T032 implementati e committati per task; prima slice F1
+  start/status/stop minimo, 43 test passati. Restart, recovery completo ed eventi restano nei task successivi.
 
 <!-- MANUAL ADDITIONS START -->
 

@@ -31,6 +31,14 @@ test('read-only inspection never initializes an archive; write creates private c
   assert.equal(await adapter.createCredential(archive.clientKeyFile), first);
   assert.equal((await lstat(archive.clientKeyFile)).mode & 0o777, 0o600);
   assert.equal(await adapter.readCredential(archive.clientKeyFile), first);
+  const markerPath = join(archive.runtimeDirectory, 'archive.json');
+  const validMarker = JSON.stringify({ directory: archive.directory, ownerUid: archive.ownerUid });
+  await writeFile(markerPath, '');
+  const initializer = new Promise<void>((resolve, reject) => setTimeout(() => {
+    void writeFile(markerPath, validMarker).then(resolve, reject);
+  }, 25));
+  assert.ok(await adapter.resolveArchive(directory, 'write'));
+  await initializer;
   await writeFile(join(archive.runtimeDirectory, 'archive.json'), JSON.stringify({ directory: '/another/archive' }));
   await assert.rejects(adapter.resolveArchive(directory, 'read'), /ENDPOINT_COLLISION/);
   await writeFile(join(archive.runtimeDirectory, 'archive.json'), JSON.stringify({ directory: archive.directory, ownerUid: archive.ownerUid }));

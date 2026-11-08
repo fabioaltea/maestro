@@ -10,6 +10,7 @@ function unauthorized(): never { throw new Error('UNAUTHORIZED'); }
 function isMissing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }
+let platformChecked = false;
 export function defaultArchiveDirectory(): string {
   return join(homedir(), 'Library', 'Application Support', 'Maestro', 'foundation', 'default');
 }
@@ -18,11 +19,16 @@ export function createPlatformPaths(): PlatformPaths {
   if (process.platform !== 'darwin' || process.arch !== 'arm64' || !process.getuid) {
     throw new Error('UNSUPPORTED_PLATFORM');
   }
-  const version = execFileSync('/usr/bin/sw_vers', ['-productVersion'], { encoding: 'utf8' }).trim();
-  if (!/^26\.3(?:\.|$)/.test(version)) throw new Error('UNSUPPORTED_PLATFORM');
-  const volume = execFileSync('/usr/sbin/diskutil', ['info', '-plist', '/'], { encoding: 'utf8' });
-  if (!/<key>FilesystemType<\/key>\s*<string>apfs<\/string>/.test(volume)) {
-    throw new Error('UNSUPPORTED_PLATFORM');
+  if (!platformChecked) {
+    let version: string;
+    let volume: string;
+    try {
+      version = execFileSync('/usr/bin/sw_vers', ['-productVersion'], { encoding: 'utf8', timeout: 1_000 }).trim();
+      volume = execFileSync('/sbin/mount', ['-t', 'apfs'], { encoding: 'utf8', timeout: 1_000, maxBuffer: 65_536 });
+    } catch { throw new Error('PERSISTENCE_UNAVAILABLE'); }
+    if (!/^26\.3(?:\.|$)/.test(version)
+      || !volume.split('\n').some(line => / on \/ \(apfs(?:,|\))/.test(line))) throw new Error('UNSUPPORTED_PLATFORM');
+    platformChecked = true;
   }
   const uid = process.getuid();
   const knownRuntimeDirectories = new Set<string>();
@@ -123,9 +129,16 @@ export function createPlatformPaths(): PlatformPaths {
         await validateOwnerAndLinks(marker, 'file');
         const handle = await open(marker, constants.O_RDONLY | constants.O_NOFOLLOW);
         try {
-          const info = await handle.stat();
-          if (info.size > 8192 || await handle.readFile({ encoding: 'utf8' }) !== expectedMarker) {
-            throw new Error('ENDPOINT_COLLISION');
+          for (let attempt = 0; ; attempt++) {
+            const info = await handle.stat();
+            if (info.size === 0 && attempt < 19) {
+              await new Promise<void>(resolve => setTimeout(resolve, 5));
+              continue;
+            }
+            if (info.size > 8192 || await handle.readFile({ encoding: 'utf8' }) !== expectedMarker) {
+              throw new Error('ENDPOINT_COLLISION');
+            }
+            break;
           }
         } finally { await handle.close(); }
         knownRuntimeDirectories.add(runtimeDirectory);
