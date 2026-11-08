@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { createProcessSandbox } from '../fixtures/process-sandbox.js';
-import { createCliHarness } from '../fixtures/cli-harness.js';
+import { createCliHarness, invokeCli } from '../fixtures/cli-harness.js';
 import { loadContract } from '../fixtures/load-contract.js';
 import { createPlatformPaths } from '../../src/platform/macos/paths.js';
 import { createProcessIdentity } from '../../src/platform/macos/process-identity.js';
@@ -38,6 +38,11 @@ for (const mode of ['cooperative', 'foreign'] as const) {
     await sandbox.requestExit(parent, 'crash');
     const revision = (await store.readSnapshot())!.store.revision;
     const offline = JSON.parse((await h.call('status')).stdout);
+    if (mode === 'foreign') {
+      const human = await invokeCli(['daemon', 'status', '--state-dir', h.archive]);
+      assert.equal(human.code, 0);
+      assert.match(human.stdout, /LAST_KNOWN.*ABSENT_VERIFIED.*ready=false/);
+    }
     assert.equal(offline.freshness, 'LAST_KNOWN');
     assert.equal(offline.data.ready, false);
     assert.equal(offline.data.observationError.code, 'DAEMON_ABSENT');

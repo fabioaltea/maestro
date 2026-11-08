@@ -55,7 +55,7 @@ export async function runCli(args: readonly string[]): Promise<number> {
   }
   await write(json ? JSON.stringify(result) + '\n' : result.error
     ? `${result.error.code}: ${result.error.message}\n${result.error.nextAction}\n`
-    : `${result.outcome ?? result.data.lifecycle ?? result.data.status ?? result.result}${result.instanceId ? ` (${result.instanceId})` : ''}\n`);
+    : `${result.outcome ?? result.data.lifecycle ?? result.data.status ?? result.result}${result.data.lifecycle ? ` [${result.freshness}, ${result.liveness}, ready=${result.data.ready === true}]` : ''}${result.instanceId ? ` (${result.instanceId})` : ''}\n`);
   return exitCode(result);
 }
 

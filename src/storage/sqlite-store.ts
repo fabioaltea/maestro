@@ -45,6 +45,7 @@ export class SQLiteStore {
       if (!store || Number(store.schema_version) !== SCHEMA_VERSION || Number(store.owner_uid) !== process.getuid!()) {
         throw new Error('STATE_INCOMPATIBLE');
       }
+      if (store.canonical_path !== dirname(options.path)) throw new Error('UNAUTHORIZED');
       if (options.identity && (store.store_id !== options.identity.storeId || store.canonical_path !== options.identity.canonicalPath)) {
         throw new Error('STATE_INCOMPATIBLE');
       }
@@ -314,7 +315,7 @@ export class SQLiteStore {
     requireUuid(instanceId);
     const rows = this.database?.prepare('SELECT * FROM managed_resources WHERE owning_instance_id=?').all(instanceId) as Row[] | undefined;
     return (rows ?? []).map(row => ({ resourceId: String(row.resource_id), owningInstanceId: String(row.owning_instance_id),
-      kind: row.kind as ManagedResource['kind'], policyScope: 'foundation', generation: String(row.generation),
+      kind: row.kind as ManagedResource['kind'], policyScope: row.policy_scope as ManagedResource['policyScope'], generation: String(row.generation),
       pid: row.pid === null ? null : Number(row.pid), endpoint: row.endpoint as string | null,
       credentialRef: row.credential_ref as string | null, observation: row.observation as ManagedResource['observation'],
       releaseState: row.release_state as ManagedResource['releaseState'] }));

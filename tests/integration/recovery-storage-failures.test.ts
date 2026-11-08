@@ -136,3 +136,17 @@ for (const role of ['daemon', 'controller'] as const) {
     }
   });
 }
+
+test('a copied store at another canonical path is refused before any recovery mutation', async t => {
+  const context = await createTestContext(t), path = join(context.directory, 'state.sqlite');
+  const store = await openStorage({path, identity: {storeId: randomUUID(), schemaVersion: 1, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0'}});
+  await store.close();
+  const {mkdir} = await import('node:fs/promises');
+  const other = join(context.directory, 'other');
+  await mkdir(other, {mode: 0o700});
+  const bytes = await readFile(path), copied = join(other, 'state.sqlite');
+  await writeFile(copied, bytes, {mode: 0o600});
+  await assert.rejects(openStorage({path: copied}), /UNAUTHORIZED/);
+  assert.deepEqual(await readFile(copied), bytes);
+  assert.deepEqual(await readFile(path), bytes);
+});
