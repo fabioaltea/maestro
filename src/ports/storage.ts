@@ -89,6 +89,10 @@ export interface StoragePort {
   readSnapshot(): Promise<StoreSnapshot | null>;
   getOperation(requestId: string): Promise<OperationRecord | null>;
   acceptOperation(intent: AcceptOperation): Promise<{ operation: OperationRecord; accepted: boolean }>;
+  resumeBlocked(requestId: string, targetInstanceId: string | null): Promise<OperationRecord>;
+  cancelIssuedTickets(requestId: string): Promise<void>;
+  prepareShutdown(instanceId: string, generation: string): Promise<void>;
+  blockInstance(instanceId: string, error: SafeError): Promise<void>;
   setOperationPhase(requestId: string, phase: ControlPhase): Promise<void>;
   completeOperation(requestId: string, outcome: Outcome, completedAt: string, error: SafeError | null): Promise<void>;
   issueTicket(ticket: Omit<LaunchTicket, 'status' | 'claimedPid'>): Promise<LaunchTicket>;

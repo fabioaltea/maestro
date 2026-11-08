@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { requireUuid } from '../domain/identifiers.js';
 import { systemClock, type Clock } from '../ports/clock.js';
-import type { AcceptOperation, StoragePort, LaunchTicket } from '../ports/storage.js';
+import type { AcceptOperation, StoragePort, LaunchTicket, OperationRecord, InstanceRecord } from '../ports/storage.js';
 
 type Intent = Omit<AcceptOperation, 'payloadHash' | 'ownerUid' | 'acceptedAt'> & { readonly canonicalStateDir: string };
 
@@ -42,4 +42,28 @@ export function createOperations(store: StoragePort, ownerUid: number, clock: Cl
       return store.claimTicket(requireUuid(ticketId), generation, pid);
     },
   };
+}
+
+/** Admission never retargets an already accepted request to a successor. */
+export function controlDisposition(operation: OperationRecord, current: InstanceRecord | null): 'EXECUTE' | 'RETRY' | 'HISTORICAL' {
+  if (['SUCCEEDED', 'FAILED', 'INTERRUPTED'].includes(operation.outcome)) return 'HISTORICAL';
+  if ((current?.instanceId ?? null) !== operation.targetInstanceId) throw new Error('STALE_TARGET');
+  if (operation.outcome === 'BLOCKED') {
+    if (operation.successorInstanceId !== null) throw new Error('BLOCKED');
+    return 'RETRY';
+  }
+  return 'EXECUTE';
+}
+
+export function authorizePrepareStop(input: {
+  role: string; currentCredential: boolean; controlLeaseHeld: boolean;
+  instance: InstanceRecord; operation: OperationRecord | null; params: Readonly<Record<string, unknown>>;
+}): void {
+  const { operation, instance, params } = input;
+  if (input.role !== 'controller' || !input.currentCredential || !input.controlLeaseHeld || !operation
+    || operation.outcome !== 'IN_PROGRESS' || !['stop', 'restart'].includes(operation.action)
+    || !['STOP_REQUESTED', 'DRAINING', 'WAIT_EXIT'].includes(operation.phase)
+    || operation.requestId !== params.requestId) throw new Error('UNAUTHORIZED');
+  if (operation.targetInstanceId !== instance.instanceId || params.targetInstanceId !== instance.instanceId
+    || params.generation !== instance.generation) throw new Error('STALE_TARGET');
 }

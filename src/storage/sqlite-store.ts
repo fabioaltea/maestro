@@ -122,11 +122,58 @@ export class SQLiteStore {
       return { operation: this.getOperation(intent.requestId)!, accepted: true };
     });
   }
+  resumeBlocked(requestId: string, targetInstanceId: string | null): OperationRecord {
+    requireUuid(requestId);
+    return this.mutate(database => {
+      const op = this.getOperation(requestId);
+      const current = this.readSnapshot()?.instance;
+      if (!op || op.outcome !== 'BLOCKED' || op.targetInstanceId !== targetInstanceId
+        || (current?.instanceId ?? null) !== targetInstanceId) throw new Error('STALE_TARGET');
+      if (op.successorInstanceId !== null) throw new Error('BLOCKED');
+      database.prepare("UPDATE operations SET outcome='IN_PROGRESS',phase='PRECHECK',completed_at=NULL,error=NULL WHERE request_id=?").run(requestId);
+      return this.getOperation(requestId)!;
+    });
+  }
+  cancelIssuedTickets(requestId: string): void {
+    requireUuid(requestId);
+    this.mutate(database => {
+      const op = this.getOperation(requestId);
+      if (!op || op.outcome !== 'IN_PROGRESS') throw new Error('STALE_TARGET');
+      database.prepare("UPDATE launch_tickets SET status='CANCELLED' WHERE request_id=? AND status='ISSUED'").run(requestId);
+    });
+  }
+  prepareShutdown(instanceId: string, generation: string): void {
+    requireUuid(instanceId);
+    this.mutate(database => {
+      const current = this.readSnapshot()?.instance;
+      if (!current || current.instanceId !== instanceId || current.generation !== generation) throw new Error('STALE_TARGET');
+      if (current.lifecycle !== 'STOPPING' || this.listResources(instanceId).some(r => r.releaseState !== 'RELEASED')) throw new Error('BLOCKED');
+      database.prepare('UPDATE instances SET shutdown_prepared=1 WHERE instance_id=?').run(instanceId);
+    });
+  }
+  blockInstance(instanceId: string, error: SafeError): void {
+    requireUuid(instanceId);
+    this.mutate(database => {
+      const current = this.readSnapshot()?.instance;
+      if (!current || current.instanceId !== instanceId) throw new Error('STALE_TARGET');
+      if (current.lifecycle !== 'BLOCKED') transition(current.lifecycle, 'BLOCKED');
+      database.prepare("UPDATE instances SET lifecycle='BLOCKED',shutdown_prepared=0,last_error=? WHERE instance_id=?")
+        .run(JSON.stringify(error), instanceId);
+    });
+  }
   setOperationPhase(requestId: string, phase: ControlPhase): void {
     requireUuid(requestId);
     this.mutate(database => {
       const record = this.getOperation(requestId);
       if (!record || !['IN_PROGRESS', 'BLOCKED'].includes(record.outcome)) throw new Error('STALE_TARGET');
+      const edges: Partial<Record<ControlPhase, readonly ControlPhase[]>> = {
+        ACCEPTED: ['PRECHECK', 'SPAWN_INTENT', 'STOP_REQUESTED'],
+        PRECHECK: ['SPAWN_INTENT', 'STOP_REQUESTED'], SPAWN_INTENT: ['WAIT_READY'],
+        STOP_REQUESTED: ['DRAINING', 'WAIT_EXIT'], DRAINING: ['WAIT_EXIT'],
+        WAIT_EXIT: record.action === 'restart' ? ['SPAWN_INTENT'] : [],
+      };
+      if (record.phase === phase) return;
+      if (!edges[record.phase]?.includes(phase)) throw new Error('INVALID_TRANSITION');
       database.prepare('UPDATE operations SET phase=? WHERE request_id=?').run(phase, requestId);
     });
   }
@@ -195,17 +242,29 @@ export class SQLiteStore {
       const current = this.readSnapshot()?.instance;
       if (!current || current.instanceId !== instanceId) throw new Error('STALE_TARGET');
       transition(current.lifecycle, next);
+      if (next === 'STOPPED' && (!current.shutdownPrepared || this.listResources(instanceId).some(r => r.releaseState !== 'RELEASED'))) throw new Error('BLOCKED');
       database.prepare('UPDATE instances SET lifecycle=?,shutdown_prepared=? WHERE instance_id=?')
-        .run(next, next === 'STOPPING' ? 1 : 0, instanceId);
+        .run(next, next === 'STOPPED' && current.shutdownPrepared ? 1 : 0, instanceId);
     });
   }
   saveResource(resource: ManagedResource): void {
     requireUuid(resource.resourceId); requireUuid(resource.owningInstanceId);
     if (resource.policyScope !== 'foundation') throw new Error('INVALID_REQUEST');
-    this.mutate(database => database.prepare(`INSERT INTO managed_resources VALUES (?,?,?,?,?,?,?,?,?,?)
+    this.mutate(database => {
+      const current = this.readSnapshot()?.instance;
+      if (!current || current.instanceId !== resource.owningInstanceId) throw new Error('STALE_TARGET');
+      const owner = database.prepare('SELECT owning_instance_id FROM managed_resources WHERE resource_id=?').get(resource.resourceId) as Row | undefined;
+      if (owner && owner.owning_instance_id !== resource.owningInstanceId) throw new Error('STALE_TARGET');
+      const existing = this.listResources(resource.owningInstanceId).find(r => r.resourceId === resource.resourceId);
+      if (!existing && current.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
+      if (existing && ['owningInstanceId', 'kind', 'policyScope', 'generation', 'pid', 'endpoint', 'credentialRef']
+        .some(key => existing[key as keyof ManagedResource] !== resource[key as keyof ManagedResource])) throw new Error('STALE_TARGET');
+      if (resource.pid !== null && database.prepare('SELECT 1 FROM controller_attempts WHERE pid=?').get(resource.pid)) throw new Error('UNAUTHORIZED');
+      return database.prepare(`INSERT INTO managed_resources VALUES (?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(resource_id) DO UPDATE SET observation=excluded.observation,release_state=excluded.release_state`)
       .run(resource.resourceId, resource.owningInstanceId, resource.kind, resource.policyScope, resource.generation,
-        resource.pid, resource.endpoint, resource.credentialRef, resource.observation, resource.releaseState));
+        resource.pid, resource.endpoint, resource.credentialRef, resource.observation, resource.releaseState);
+    });
   }
   listResources(instanceId: string): readonly ManagedResource[] {
     requireUuid(instanceId);

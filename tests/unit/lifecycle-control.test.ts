@@ -22,6 +22,13 @@ test('BLOCKED retries revalidate the original target; terminal results stay hist
     assert.equal(controlDisposition(operation, null), 'EXECUTE'); // restart from an empty/stopped archive
     const blocked = { ...operation, outcome: 'BLOCKED' as const };
     assert.equal(controlDisposition(blocked, null), 'RETRY');
+    await store.completeOperation(operation.requestId, 'BLOCKED', new Date().toISOString(), null);
+    const revision = (await store.readSnapshot())!.store.revision;
+    await assert.rejects(store.resumeBlocked(operation.requestId, randomUUID()), /STALE_TARGET/);
+    assert.equal((await store.readSnapshot())!.store.revision, revision);
+    assert.equal((await store.resumeBlocked(operation.requestId, null)).outcome, 'IN_PROGRESS');
+    await store.completeOperation(operation.requestId, 'SUCCEEDED', new Date().toISOString(), null);
+    await assert.rejects(store.resumeBlocked(operation.requestId, null), /STALE_TARGET/);
     const successor: InstanceRecord = { instanceId: randomUUID(), pid: 123, generation: '1', lifecycle: 'RUNNING', startedAt: '', shutdownPrepared: false, lastError: null };
     assert.throws(() => controlDisposition(blocked, successor), /STALE_TARGET/);
     assert.equal(controlDisposition({ ...blocked, outcome: 'SUCCEEDED' }, successor), 'HISTORICAL');
