@@ -113,7 +113,7 @@ export interface StreamChannel extends StreamSink { afterReply(callback: () => v
 export interface EventSubscription {
   readonly response: RpcResponse; readonly subscriptionId: string; readonly storeId: string;
   readonly instanceId: string; readonly highWater: string;
-  readonly lastReceived?: import('../protocol/event-cursor.js').EventCursor | null;
+  readonly lastReceived: import('../protocol/event-cursor.js').EventCursor | null;
   readonly done: Promise<{reason: string | null; lastReceived: string | null; gap?: import('../protocol/event-cursor.js').EventGap}>;
   close(): Promise<void>;
 }

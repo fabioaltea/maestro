@@ -36,11 +36,12 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 001-core-background-daemon: T001–T072 implementati e committati per task; checkpoint US4/E2.
-  Eventi durevoli, diagnostics/events read-only e streaming live autenticato con --follow.
+- 001-core-background-daemon: T001–T077 implementati e committati per task; checkpoint US4/E3.
+  Replay paginato e live autenticato, cursori storeId/seq e CLI --after; gap espliciti.
   Backpressure aggregata <=1 MiB per osservatore; stop del client separato dal lifecycle.
-  Schema 2 invariato; 115 test ordinari passati. E2: due osservatori, 8.192 eventi e 30 status.
-  Campioni e limiti in reports/e2-stream.md. Replay e cursori pubblici restano in E3.
+  Schema 2 invariato; 126 test ordinari e accettazione E3 passati. Sequenza ricostruita
+  dopo disconnessione/restart, duplicati riconoscibili e retention con budget fixture 128 KiB.
+  Campioni e limiti in reports/e3-replay.md. Accettazione US4 e V1 restano da eseguire.
 
 <!-- MANUAL ADDITIONS START -->
 

@@ -7,7 +7,7 @@
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T072 completati; US4/E2 al checkpoint di review. T073–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
+T001–T077 completati; US4/E3 al checkpoint di review. T078–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -219,7 +219,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T076 [US4] Implementare --after e rappresentazione dei gap in `src/client/local-client.ts` e `src/cli/main.ts`; esporre il cursore dell'ultimo frame ricevuto, permettere riallineamento allo stato e non promettere exactly-once o continuare silenziosamente dopo una lacuna. **Dip.: T075.**
 ### E3 — checkpoint
 
-- [ ] T077 [US4] Eseguire prove E3 e ricostruire una sequenza nota attraverso disconnessione/restart/rotazione in `tests/acceptance/event-replay.test.ts`, riportando duplicati riconoscibili e lacune in `specs/001-core-background-daemon/reports/e3-replay.md`. **Dip.: T076, T074.**
+- [X] T077 [US4] Eseguire prove E3 e ricostruire una sequenza nota attraverso disconnessione/restart/rotazione in `tests/acceptance/event-replay.test.ts`, riportando duplicati riconoscibili e lacune in `specs/001-core-background-daemon/reports/e3-replay.md`. **Dip.: T076, T074.**
 ### US4 — accettazione
 
 - [ ] T078 [US4] Predisporre `tests/acceptance/local-access.test.ts` e istruzioni del runner in `tests/fixtures/multi-user-runner.md` per UID distinti e accesso da altra macchina senza TCP; non creare account/privilegi automaticamente e non equiparare mock al test reale. **Dip.: T077.**

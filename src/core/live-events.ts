@@ -52,30 +52,30 @@ export function createLiveEvents(store: StoragePort, instanceId: string) {
       // all delivery after registration reads the durable journal, including appends racing this reply.
       pending.add(channel);
       try {
-      const state = await store.captureEventState(), subscriptionId = randomUUID();
-      if (stopped || channel.closed) return failure('SERVICE_UNREACHABLE');
-      if (state.errorCode) return failure(state.errorCode);
-      if (after !== undefined && BigInt(after) > BigInt(state.highWater)) return failure('INVALID_REQUEST');
-      if (after !== undefined && BigInt(after) < BigInt(state.firstAvailable) - 1n) return {...base, result: 'ERROR', data: {code: 'CURSOR_EXPIRED', ...eventGap(storeId, state)}};
-      const pump = createEventPump({subscriptionId, correlationId: request.correlationId, instanceId, storeId,
-        after: after ?? state.highWater, replayHighWater: state.highWater, sink: channel,
-        eventState: () => store.getEventState(true),
-        readPage: (after, maxBytes, highWater) => store.listEvents({after, maxBytes, limit: 1000, ...(highWater !== undefined ? {highWater} : {})}),
-      });
-      active.set(subscriptionId, {owner: channel, pump});
-      void pump.done.then(stats => {
-        active.delete(subscriptionId); recent.push(stats); if (recent.length > 10) recent.shift(); closedCount++;
-        if (stats.reason === 'SLOW_CONSUMER') {
-          slowConsumers++;
-          if (performance.now() - lastSlowAudit >= 1_000) {
-            lastSlowAudit = performance.now();
-            void store.recordEvents([{type: 'diagnostics.degraded', instanceId, payload: {code: 'SLOW_CONSUMER', count: 1}}]).catch(() => {});
+        const state = await store.captureEventState(), subscriptionId = randomUUID();
+        if (stopped || channel.closed) return failure('SERVICE_UNREACHABLE');
+        if (state.errorCode) return failure(state.errorCode);
+        if (after !== undefined && BigInt(after) > BigInt(state.highWater)) return failure('INVALID_REQUEST');
+        if (after !== undefined && BigInt(after) < BigInt(state.firstAvailable) - 1n) return {...base, result: 'ERROR', data: {code: 'CURSOR_EXPIRED', ...eventGap(storeId, state)}};
+        const pump = createEventPump({subscriptionId, correlationId: request.correlationId, instanceId, storeId,
+          after: after ?? state.highWater, replayHighWater: state.highWater, sink: channel,
+          eventState: async () => {const state = await store.getEventState(true); if (state.errorCode) throw new Error(state.errorCode); return state;},
+          readPage: (after, maxBytes, highWater) => store.listEvents({after, maxBytes, limit: 1000, ...(highWater !== undefined ? {highWater} : {})}),
+        });
+        active.set(subscriptionId, {owner: channel, pump});
+        void pump.done.then(stats => {
+          active.delete(subscriptionId); recent.push(stats); if (recent.length > 10) recent.shift(); closedCount++;
+          if (stats.reason === 'SLOW_CONSUMER') {
+            slowConsumers++;
+            if (performance.now() - lastSlowAudit >= 1_000) {
+              lastSlowAudit = performance.now();
+              void store.recordEvents([{type: 'diagnostics.degraded', instanceId, payload: {code: 'SLOW_CONSUMER', count: 1}}]).catch(() => {});
+            }
           }
-        }
-        if (!active.size && timer) { clearInterval(timer); timer = undefined; }
-      });
-      channel.afterReply(() => { startPolling(); pump.start(); });
-      return {...base, result: 'OK', data: {subscriptionId, storeId, instanceId, highWater: state.highWater, after: after ?? state.highWater}};
+          if (!active.size && timer) { clearInterval(timer); timer = undefined; }
+        });
+        channel.afterReply(() => { startPolling(); pump.start(); });
+        return {...base, result: 'OK', data: {subscriptionId, storeId, instanceId, highWater: state.highWater, after: after ?? state.highWater}};
       } catch (error) {return failure(classifyError(error));}
       finally {pending.delete(channel);}
     },

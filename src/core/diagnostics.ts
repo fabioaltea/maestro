@@ -27,7 +27,11 @@ export async function readEventPage(store: StoragePort, storeId: string, params:
     const page = await store.listEvents(query);
     return {...page, nextCursor: {storeId, seq: page.nextAfter}};
   } catch (error) {
-    if (error instanceof Error && error.message === 'CURSOR_EXPIRED') throw new EventStreamError('CURSOR_EXPIRED', eventGap(storeId, await store.getEventState(true)));
+    if (error instanceof Error && error.message === 'CURSOR_EXPIRED') {
+      const state = await store.getEventState(true);
+      if (state.errorCode) throw new Error(state.errorCode);
+      throw new EventStreamError('CURSOR_EXPIRED', eventGap(storeId, state));
+    }
     throw error;
   }
 }

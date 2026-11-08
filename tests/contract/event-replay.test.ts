@@ -116,3 +116,9 @@ test('transport and CLI preserve gap bounds both before subscription and during 
     }
   } finally {await server.close();}
 });
+
+test('gap reporting never substitutes unverified bounds for a persistence failure', async () => {
+  const {readEventPage} = await import('../../src/core/diagnostics.js');
+  const store = {listEvents: async () => {throw new Error('CURSOR_EXPIRED');}, getEventState: async () => ({firstAvailable: '1', highWater: '10', errorCode: 'STATE_CORRUPT'})} as unknown as import('../../src/ports/storage.js').StoragePort;
+  await assert.rejects(readEventPage(store, randomUUID(), {}), /STATE_CORRUPT/);
+});

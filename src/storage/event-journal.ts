@@ -145,8 +145,9 @@ export function openJournal(options: JournalOptions) {
     }
     return {records, firstAvailable: String(floor), highWater: String(cap), truncated, nextAfter: records.at(-1)?.seq ?? String(after)};
   }
-  function append(events: readonly EventRecord[], pendingFloor = events[0]?.seq ?? String(high + 1n)) {
+  function append(events: readonly EventRecord[], pendingFloor?: string) {
     if (!writable) throw new Error('UNAUTHORIZED'); refresh();
+    pendingFloor ??= events[0]?.seq ?? String(high + 1n);
     if (partial) throw new Error('STATE_CORRUPT');
     privateDirectory(dirname(directory), false); privateDirectory(directory, true);
     for (const event of events) {

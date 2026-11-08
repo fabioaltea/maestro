@@ -136,3 +136,15 @@ test('a reader validates only the committed high-water prefix while another writ
   assert.equal(reader.list({highWater: '1'}).records.length, 1);
   assert.throws(() => reader.list({highWater: '2'}), /STATE_CORRUPT/);
 });
+
+test('reopened journal computes the pending floor after refreshing existing history for an empty drain', async t => {
+  const {openJournal} = await journalModule(), context = await createTestContext(t), directory = join(context.directory, 'events');
+  const writer = openJournal({directory, storeId, segmentBytes: 4096, budgetBytes: 65536});
+  for (let seq = 1; seq <= 30; seq++) writer.append([event(seq)]);
+  const reopened = openJournal({directory, storeId, segmentBytes: 4096, budgetBytes: 8192});
+  reopened.append([]);
+  const page = reopened.list();
+  assert.ok(BigInt(page.firstAvailable) > 1n); assert.equal(page.highWater, '30');
+  let allocated = 0; for (const name of await readdir(directory)) allocated += (await lstat(join(directory, name))).blocks * 512;
+  assert.ok(allocated <= 8192);
+});
