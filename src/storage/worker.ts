@@ -10,7 +10,7 @@ interface Request { id: number; method: Method; args: unknown[] }
 
 function safeCode(error: unknown): string {
   if (error instanceof Error) {
-    if (/^(INVALID_REQUEST|INVALID_IDENTIFIER|INVALID_TRANSITION|UNAUTHORIZED|STATE_INCOMPATIBLE|STATE_CORRUPT|STALE_TARGET|IDEMPOTENCY_CONFLICT|BUSY|PERSISTENCE_UNAVAILABLE)$/.test(error.message)) return error.message;
+    if (/^(INVALID_REQUEST|INVALID_IDENTIFIER|INVALID_TRANSITION|UNAUTHORIZED|STATE_INCOMPATIBLE|STATE_CORRUPT|STALE_TARGET|IDEMPOTENCY_CONFLICT|BUSY|BLOCKED|PERSISTENCE_UNAVAILABLE)$/.test(error.message)) return error.message;
     if ('code' in error && typeof error.code === 'string') {
       if (/^SQLITE_(BUSY|LOCKED)/.test(error.code)) return 'BUSY';
       if (/^SQLITE_(CORRUPT|NOTADB)/.test(error.code)) return 'STATE_CORRUPT';

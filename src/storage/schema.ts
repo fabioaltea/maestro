@@ -59,6 +59,8 @@ CREATE TABLE launch_tickets (
   UNIQUE(instance_id, generation)
 ) STRICT;
 CREATE INDEX ticket_by_request ON launch_tickets(request_id);
+CREATE UNIQUE INDEX single_active_ticket ON launch_tickets(request_id)
+  WHERE status IN ('ISSUED','CLAIMED');
 CREATE TABLE managed_resources (
   resource_id TEXT PRIMARY KEY,
   owning_instance_id TEXT NOT NULL REFERENCES instances(instance_id),

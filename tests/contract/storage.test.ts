@@ -59,16 +59,18 @@ test('ticket claim is atomic and a cancelled generation cannot become an instanc
   const second = await open({ path });
   try {
     await first.acceptOperation(intent);
+    const cancelled = await first.issueTicket({ ticketId: 'a26be691-4445-41d8-bef6-d522d1e0be48', requestId,
+      instanceId: '345caeb6-a3ce-4fd2-8558-fce8486a6bc5', generation: '0' });
+    assert.equal(await first.cancelTicket(cancelled.ticketId), true);
+    assert.equal(await second.claimTicket(cancelled.ticketId, '0', 102), false);
     const ticket = await first.issueTicket({ ticketId: '2f30be90-bc81-4562-bcda-714f1c50b65a', requestId,
       instanceId: '234ce67a-4316-4b24-bff6-d13a97f47888', generation: '1' });
     const claims = await Promise.all([first.claimTicket(ticket.ticketId, '1', 100), second.claimTicket(ticket.ticketId, '1', 101)]);
     assert.equal(claims.filter(Boolean).length, 1);
     assert.equal((await second.getTicket(ticket.ticketId))?.status, 'CLAIMED');
     assert.equal(await first.cancelTicket(ticket.ticketId), false);
-    const cancelled = await first.issueTicket({ ticketId: 'a26be691-4445-41d8-bef6-d522d1e0be48', requestId,
-      instanceId: '345caeb6-a3ce-4fd2-8558-fce8486a6bc5', generation: '2' });
-    assert.equal(await first.cancelTicket(cancelled.ticketId), true);
-    assert.equal(await second.claimTicket(cancelled.ticketId, '2', 102), false);
+    await assert.rejects(first.issueTicket({ ticketId: '76003b5f-447e-49bb-a749-f19928afc1ee', requestId,
+      instanceId: '345caeb6-a3ce-4fd2-8558-fce8486a6bc5', generation: '2' }), /BLOCKED/);
   } finally { await second.close(); await first.close(); }
 });
 

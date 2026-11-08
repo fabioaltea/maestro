@@ -114,7 +114,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T024 [P] [US1] Scrivere test RED in `tests/unit/launch-ticket.test.ts` per ticket ISSUED/CLAIMED/CANCELLED, claim concorrenti e candidato ritardato dopo annullamento; il candidato non valido deve uscire prima di effetti applicativi. **Dip.: T020.**
 ### Implementazione e verifica
 
-- [ ] T025 [US1] Implementare accettazione durevole, hash canonico, claim/revoca ticket e risultato storico in `src/core/operations.ts`, compresa contesa senza accettazione fittizia e nessuna ripetizione dello stesso effetto. **Dip.: T024, T017.**
+- [X] T025 [US1] Implementare accettazione durevole, hash canonico, claim/revoca ticket e risultato storico in `src/core/operations.ts`, compresa contesa senza accettazione fittizia e nessuna ripetizione dello stesso effetto. **Dip.: T024, T017.**
 - [ ] T026 [US1] Implementare bootstrap del controller e spawn daemon detached in `src/platform/macos/launcher.ts`: nessuna shell o fd del terminale, pipe iniziale bounded chiusa dopo lettura, unref e report di errore prima dell'accettazione. **Dip.: T022, T009, T014.**
 - [ ] T027 [US1] Implementare il percorso start in `src/core/control-main.ts`: control lease, UID/versione, intento/ticket prima dello spawn, attesa autenticata della readiness e registrazione dell'esito; il controller continua senza CLI. **Dip.: T025, T026, T023.**
 - [ ] T028 [US1] Implementare bootstrap daemon in `src/core/daemon-main.ts`: daemon lease nel main, claim atomico, storage worker, socket non-ready finché le verifiche non terminano, stato vivo/query e nessuna inizializzazione di un altro archivio. **Dip.: T027, T018.**

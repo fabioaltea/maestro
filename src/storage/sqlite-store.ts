@@ -150,6 +150,9 @@ export class SQLiteStore {
     return this.mutate(database => {
       const operation = this.getOperation(ticket.requestId);
       if (!operation || !['IN_PROGRESS', 'BLOCKED'].includes(operation.outcome)) throw new Error('STALE_TARGET');
+      if (database.prepare("SELECT 1 FROM launch_tickets WHERE request_id=? AND status IN ('ISSUED','CLAIMED')").get(ticket.requestId)) {
+        throw new Error('BLOCKED');
+      }
       database.prepare("INSERT INTO launch_tickets(ticket_id,request_id,instance_id,generation,status) VALUES (?,?,?,?,'ISSUED')")
         .run(ticket.ticketId, ticket.requestId, ticket.instanceId, ticket.generation);
       database.prepare('UPDATE operations SET successor_instance_id=? WHERE request_id=?').run(ticket.instanceId, ticket.requestId);
