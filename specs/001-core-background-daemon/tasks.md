@@ -8,7 +8,7 @@
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
 T001–T080 completati; carico US4 verificato con dieci osservatori e mille letture.
-T081 verificato; T082–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
+T081 e T083 verificati; T084–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
 Commit locali per task autorizzati; nessuna pubblicazione autorizzata.
 L'utente autorizza il consolidamento T085–T087 anche con T082 NOT_RUN, senza
 dichiarare la feature completa o superato FR-016. T082 resta aperto fino alla prova reale.
@@ -245,7 +245,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T081 [P] Eseguire 100 prove da dieci start simultanei e 100 retry identici in `tests/acceptance/control-concurrency.test.ts`; includere candidati ritardati e controller perso, registrando zero proprietari/effetti duplicati in `specs/001-core-background-daemon/reports/concurrency.md`. **Dip.: T080.**
 - [ ] T082 [P] Eseguire `tests/acceptance/local-access.test.ts` sul runner con secondo UID predisposto e registrare prove in `specs/001-core-background-daemon/reports/local-access.md`; assenza del runner resta NOT_RUN e impedisce di dichiarare FR-016 verificato, senza creare utenti o simulare un PASS. **Dip.: T080.**
   **Esito corrente:** NOT_RUN per secondo UID e macchina remota; controlli locali 1 PASS/1 SKIP. Vedere `reports/local-access.md`.
-- [ ] T083 [P] Implementare/eseguire `tests/acceptance/idle-resources.test.ts` e `tests/acceptance/benchmark-foundation.ts`: idle e assenza client per dieci minuti, stessa istanza, RSS incluso worker <=150 MiB, CPU <=1% di un core; produrre `specs/001-core-background-daemon/reports/performance.md` con target distinti da misure. **Dip.: T080.**
+- [X] T083 [P] Implementare/eseguire `tests/acceptance/idle-resources.test.ts` e `tests/acceptance/benchmark-foundation.ts`: idle e assenza client per dieci minuti, stessa istanza, RSS incluso worker <=150 MiB, CPU <=1% di un core; produrre `specs/001-core-background-daemon/reports/performance.md` con target distinti da misure. **Dip.: T080.**
 - [ ] T084 [P] Rieseguire confini d'import e contratti OS con sostituti e macOS reale in `tests/contract/architecture.test.ts` e `tests/contract/platform-paths-lease.test.ts`; verificare nessuna implementazione di altri OS o policy Agent Runtime, registrando `specs/001-core-background-daemon/reports/architecture.md`. **Dip.: T080.**
 - [ ] T085 Eseguire build/typecheck/lint e tutte le suite definite in `package.json`, con rete assente e risorse temporanee; consolidare SC-001–SC-010 e AR-001–AR-003 in `specs/001-core-background-daemon/reports/acceptance.md`, includendo campioni falliti/timeout e NOT_RUN invece di escluderli. **Dip.: T081, T082, T083, T084.**
 - [ ] T086 Aggiornare `README.md`, `specs/001-core-background-daemon/quickstart.md` e `AGENTS.md` con comandi realmente disponibili, piattaforma verificata, diagnosi di blocco/PID incerto e limiti; preservare aggiunte manuali e spiegare quali prestazioni sono state misurate. **Dip.: T085.**
