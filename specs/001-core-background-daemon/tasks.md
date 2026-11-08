@@ -186,7 +186,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### E1 — test
 
 - [X] T059 [P] [US4] Scrivere test RED di diagnostics.get/events.list e CLI diagnostics/events in `tests/contract/diagnostics-events.test.ts`; correlazioni, redazione, codici, permessi e output umano/JSON concordanti, lettura offline senza mutazione. **Dip.: T058.**
-- [ ] T060 [P] [US4] Scrivere test RED di transazione/outbox in `tests/integration/event-outbox-crash.test.ts`: crash prima/dopo commit, append, sync e clear; nessuna perdita dell'evento associato allo stato confermato e dedup seq/eventId. **Dip.: T058.**
+- [X] T060 [P] [US4] Scrivere test RED di transazione/outbox in `tests/integration/event-outbox-crash.test.ts`: crash prima/dopo commit, append, sync e clear; nessuna perdita dell'evento associato allo stato confermato e dedup seq/eventId. **Dip.: T058.**
 - [ ] T061 [P] [US4] Scrivere test RED in `tests/integration/event-journal-budget.test.ts` per tail parziale, checksum discordante, rotazione, segmenti pinning, outbox piena e checkpoint impedito; misurare file/sidecar e preservare lo storico autorevole. **Dip.: T058.**
 ### E1 — implementazione
 
