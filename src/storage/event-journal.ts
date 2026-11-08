@@ -142,7 +142,7 @@ export function openJournal(options: JournalOptions) {
       let active = segments.at(-1);
       const rotate = !active || active.size + frame.length > segmentBytes;
       const desired = Math.ceil(((rotate ? 0 : active!.size) + frame.length) / 4096) * 4096;
-      const projected = segments.reduce((sum, s) => sum + s.allocated, 0) + desired - (rotate ? 0 : active!.allocated) + 4096;
+      const projected = segments.reduce((sum, s) => sum + s.allocated, 0) + desired - (rotate ? 0 : active!.allocated) + Math.min(64 * 1024, Math.floor(budgetBytes / 2));
       if (projected > budgetBytes) {
         const remove: Segment[] = []; let freed = 0;
         for (const segment of segments) {

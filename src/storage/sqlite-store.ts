@@ -1,3 +1,4 @@
+import { beforeDiagnosticMutation, diagnosticUsage, appendDiagnosticLog, allocated, MiB } from './diagnostic-budget.js';
 import { randomUUID } from 'node:crypto';
 import { openJournal } from './event-journal.js';
 import { redactEventDraft } from '../protocol/events.js';
@@ -63,6 +64,7 @@ export class SQLiteStore {
       if (!this.readOnly) {
         database.pragma('journal_mode = WAL');
         database.pragma('synchronous = FULL');
+      database.pragma('wal_autocheckpoint = 0');
       }
       database.defaultSafeIntegers(true);
     } catch (error) { database.close(); this.database = null; throw error; }
@@ -83,13 +85,18 @@ export class SQLiteStore {
     if (!pending.length) return;
     this.eventsJournal().recover(pending);
     const page = this.eventsJournal().list({limit: 1});
+    appendDiagnosticLog(this.directory, pending);
     database.prepare('UPDATE journal_metadata SET high_water=?,retention_floor=?,degraded_code=NULL WHERE singleton=1').run(BigInt(pending.at(-1)!.seq), BigInt(page.firstAvailable));
     database.prepare("UPDATE event_outbox SET records='[]' WHERE singleton=1").run();
     this.hooks.checkpoint?.('event.cleared');
   }
   drainEvents(): void {
     const database = this.writable();
-    database.transaction(() => this.drainInTransaction()).immediate(); this.eventError = null;
+    beforeDiagnosticMutation(this.directory, database);
+    database.transaction(() => {
+      if (allocated(join(this.directory, 'state.sqlite-wal')) >= MiB) throw new Error('EVENT_BACKPRESSURE');
+      this.drainInTransaction();
+    }).immediate(); this.eventError = null;
   }
   private enqueue(drafts: readonly EventDraft[]): void {
     const database = this.writable();
@@ -107,7 +114,9 @@ export class SQLiteStore {
   }
   private mutate<T>(action: (database: Database.Database) => T, drafts: readonly EventDraft[] = [], forceEvents = false): T {
     const database = this.writable();
+    beforeDiagnosticMutation(this.directory, database);
     const value = database.transaction(() => {
+      if (allocated(join(this.directory, 'state.sqlite-wal')) >= MiB) throw new Error('EVENT_BACKPRESSURE');
       try { this.drainInTransaction(); } catch { throw new Error('EVENT_BACKPRESSURE'); }
       const before = (database.prepare('SELECT total_changes() AS count').get() as {count: bigint}).count;
       const value = action(database);
@@ -130,7 +139,8 @@ export class SQLiteStore {
     let firstAvailable = String(meta.retention_floor);
     try { firstAvailable = this.eventsJournal().list({highWater: String(meta.high_water), limit: 1}).firstAvailable; }
     catch (error) { errorCode = error instanceof Error ? error.message : 'STATE_CORRUPT'; }
-    return {highWater: String(meta.high_water), firstAvailable, pendingBytes: raw === '[]' ? 0 : Buffer.byteLength(raw), degraded: raw !== '[]' || errorCode !== null, errorCode};
+    const usage = diagnosticUsage(this.directory, this.database);
+    return {usage, highWater: String(meta.high_water), firstAvailable, pendingBytes: raw === '[]' ? 0 : Buffer.byteLength(raw), degraded: raw !== '[]' || errorCode !== null, errorCode};
   }
   listEvents(options: {after?: string; limit?: number; maxBytes?: number} = {}): EventPage {
     if (!this.database) return {records: [], firstAvailable: '1', highWater: '0', truncated: false, nextAfter: '0'};
