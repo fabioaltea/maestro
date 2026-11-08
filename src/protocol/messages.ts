@@ -19,3 +19,18 @@ export interface Welcome {
   readonly serverNonce: string;
   readonly proof: string;
 }
+import type { Freshness, Liveness, Outcome } from '../domain/states.js';
+import type { SafeError } from '../domain/errors.js';
+
+export interface PublicResult {
+  readonly protocolVersion: 1;
+  readonly requestId: string | null;
+  readonly storeId: string | null;
+  readonly instanceId: string | null;
+  readonly result: 'OK' | 'BUSY' | 'BLOCKED' | 'ERROR' | 'UNKNOWN_OUTCOME';
+  readonly outcome: Outcome | null;
+  readonly freshness: Freshness;
+  readonly liveness: Liveness;
+  readonly data: Readonly<Record<string, unknown>>;
+  readonly error: SafeError | null;
+}
