@@ -1,4 +1,5 @@
-import { diagnosticsData, eventQuery } from './diagnostics.js';
+import { EventStreamError, requireGap, type EventCursor } from '../protocol/event-cursor.js';
+import { diagnosticsData, readEventPage } from './diagnostics.js';
 import { observePendingControl } from './control-observation.js';
 import { foundationError } from '../domain/errors.js';
 import { randomUUID } from 'node:crypto';
@@ -71,23 +72,25 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
       observedAt: new Date().toISOString() } };
 }
 
-export async function inspectDetails(directory: string, method: 'diagnostics' | 'events', limit?: number): Promise<PublicResult> {
+export async function inspectDetails(directory: string, method: 'diagnostics' | 'events', limit?: number, after?: EventCursor): Promise<PublicResult> {
   const state = await inspectArchive(directory);
   const adapter = createPlatformPaths(), paths = await adapter.resolveArchive(directory, 'read');
-  if (!paths) return state;
+  if (!paths) {if (after) throw new Error('INVALID_REQUEST'); return state;}
+  const params = {...(limit !== undefined ? {limit} : {}), ...(after ? {after} : {})};
   if (state.freshness === 'LIVE') {
     try {
       const key = await adapter.readCredential(paths.clientKeyFile);
       const response = await createLocalTransport().call(paths.daemonEndpoint, key, {protocolVersion: 1,
-        correlationId: randomUUID(), method: method === 'diagnostics' ? 'diagnostics.get' : 'events.list', params: limit === undefined ? {} : {limit}}, 1_000);
+        correlationId: randomUUID(), method: method === 'diagnostics' ? 'diagnostics.get' : 'events.list', params}, 1_000);
       const data = response.data as Record<string, unknown> | null;
+      if (response.result === 'ERROR' && typeof data?.code === 'string') throw new EventStreamError(data.code, data.code === 'CURSOR_EXPIRED' ? requireGap(data, state.storeId ?? undefined) : undefined);
       if (response.result === 'OK' && data?.storeId === state.storeId) return {...state, data: {...state.data, ...data}};
-    } catch { /* Offline inspection never repairs a journal or drains an outbox. */ }
+    } catch (error) {if (error instanceof EventStreamError) throw error; /* Offline inspection never repairs a journal or drains an outbox. */ }
   }
   const store = await openStorage({path: paths.stateFile, readonly: true});
   try {
     const details = method === 'diagnostics' ? await diagnosticsData(store, await store.readSnapshot())
-      : {events: await store.listEvents(eventQuery(limit === undefined ? {} : {limit}))};
+      : {events: await readEventPage(store, state.storeId!, params)};
     return {...state, freshness: state.freshness === 'VOLATILE' ? 'VOLATILE' : 'LAST_KNOWN', data: {...state.data, ...details}};
   } finally { await store.close(); }
 }

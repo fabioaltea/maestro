@@ -70,7 +70,9 @@ operation.blocked, recovery.started, recovery.completed, resource.blocked,
 authorization.denied e diagnostics.degraded. Nessun output grezzo di processi o variabili
 d'ambiente entra nel payload.
 
-Cursore: storeId + seq dell'ultimo evento ricevuto. Cursor di un altro archivio ⇒ WRONG_STORE.
+Cursore IPC: oggetto `{storeId, seq}` dell'ultimo evento ricevuto, sia per
+`events.list` sia per `events.subscribe`. Una pagina espone `nextCursor` strutturato.
+La CLI rende il cursore opaco con base64url; il protocollo conserva seq come stringa. Cursor di un altro archivio ⇒ WRONG_STORE.
 Cursor oltre highWater ⇒ INVALID_REQUEST; sotto retentionFloor-1 ⇒ CURSOR_EXPIRED.
 La risposta gap include firstAvailable, highWater e nextAction=reread-status; il client
 sceglie esplicitamente se continuare dai dati disponibili. Nessuna lacuna silenziosa.

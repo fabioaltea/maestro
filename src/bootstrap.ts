@@ -19,12 +19,12 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
   return {
     defaultDirectory: defaultArchiveDirectory(),
     inspect: inspectArchive,
-    async follow(directory, consume, signal, timeoutMs) {
+    async follow(directory, consume, signal, timeoutMs, after) {
       const adapter = createPlatformPaths(), paths = await adapter.resolveArchive(directory, 'read');
       if (!paths) throw new Error('SERVICE_UNREACHABLE');
       try {
         const key = await adapter.readCredential(paths.clientKeyFile);
-        return await createLocalTransport().subscribe(paths.daemonEndpoint, key, {protocolVersion: 1, correlationId: randomUUID(), method: 'events.subscribe', params: {}}, consume,
+        return await createLocalTransport().subscribe(paths.daemonEndpoint, key, {protocolVersion: 1, correlationId: randomUUID(), method: 'events.subscribe', params: after ? {after} : {}}, consume,
           {timeoutMs: timeoutMs ?? 1_000, ...(signal ? {signal} : {})});
       } catch (error) {
         if (error instanceof Error && 'code' in error && ['ENOENT', 'ECONNREFUSED'].includes(String(error.code))) throw new Error('SERVICE_UNREACHABLE');
@@ -32,7 +32,7 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
       }
     },
     diagnostics: directory => inspectDetails(directory, 'diagnostics'),
-    events: (directory, limit) => inspectDetails(directory, 'events', limit),
+    events: (directory, limit, after) => inspectDetails(directory, 'events', limit, after),
     async operation(directory, requestId) {
       const operation = await readOperationFromArchive(directory, requestId);
       if (!operation) return failureResult('INVALID_REQUEST', requestId);

@@ -22,7 +22,14 @@ Mutazioni: `--request-id UUID` opzionale; generato se assente, sempre incluso ne
 `--timeout-ms` può ridurre la deadline, mai aumentare i massimi della specifica:
 status 2.000 ms, stop 10.000 ms, altri comandi di controllo 30.000 ms.
 Eventi: `--after CURSOR` e `--limit 1..1000`, default 100, massimo pagina 64 KiB.
-Il cursore è la codifica opaca dell'oggetto storeId/seq: non è un timestamp.
+Il cursore è la codifica opaca base64url senza padding del JSON canonico
+`{"storeId":"UUID","seq":"DECIMALE"}`: non è un timestamp. Usare il campo `cursor`
+della pagina o del frame ricevuto come valore di `--after`. La pagina espone anche
+`nextCursor` strutturato; il client streaming espone `lastReceived` solo dopo
+l'accettazione della callback. Un gap conserva firstAvailable/highWater e
+nextAction=reread-status, con exit 2; non attiva retry, reset del cursore o
+riconnessione automatica. Dopo aver riletto status, il client può scegliere
+esplicitamente un cursore con seq=firstAvailable-1 per il solo storico conservato.
 Nessun --force, reset, shell, avvio ausiliari o comando provider.
 
 ## Output ed esiti

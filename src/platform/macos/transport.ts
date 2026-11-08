@@ -1,3 +1,4 @@
+import { EventStreamError, requireGap, requireCursor, type EventGap } from '../../protocol/event-cursor.js';
 import { requireUuid, requireDecimal } from '../../domain/identifiers.js';
 import { createServer, connect, type Socket } from 'node:net';
 import { chmod, lstat } from 'node:fs/promises';
@@ -223,6 +224,7 @@ export function createLocalTransport(): LocalTransport {
 async function subscribeLocal(endpoint: string, key: string, request: import('../../ports/platform.js').RpcRequest,
   consume: (frame: StreamEventFrame) => Promise<void>, options: {timeoutMs?: number; signal?: AbortSignal} = {}): Promise<EventSubscription> {
   if (!hex(key) || request.method !== 'events.subscribe') throw new Error('INVALID_REQUEST');
+  const requestedCursor = request.params.after === undefined ? undefined : requireCursor(request.params.after);
   decodeRequest(encodeFrame(request)); await privateEndpoint(endpoint, true);
   const timeout = options.timeoutMs ?? 1_000;
   if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 2_000) throw new Error('INVALID_REQUEST');
@@ -232,16 +234,16 @@ async function subscribeLocal(endpoint: string, key: string, request: import('..
   let buffer = Buffer.alloc(0), response: RpcResponse | null = null;
   const closeId = randomUUID();
   let resolveReady!: (subscription: EventSubscription) => void, rejectReady!: (error: Error) => void;
-  let complete!: (result: {reason: string | null; lastReceived: string | null}) => void;
+  let complete!: (result: {reason: string | null; lastReceived: string | null; gap?: EventGap}) => void;
   const ready = new Promise<EventSubscription>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
-  const done = new Promise<{reason: string | null; lastReceived: string | null}>(resolve => { complete = resolve; });
+  const done = new Promise<{reason: string | null; lastReceived: string | null; gap?: EventGap}>(resolve => { complete = resolve; });
   const timer = setTimeout(() => finish('DEADLINE_EXCEEDED'), timeout);
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
-  function finish(reason: string | null) {
+  function finish(reason: string | null, gap?: EventGap) {
     if (ended) return; ended = true; clearTimeout(timer); clearTimeout(closeTimer);
     options.signal?.removeEventListener('abort', interrupted); socket.destroy(); buffer = Buffer.alloc(0);
-    if (!response) rejectReady(new Error(reason ?? 'CONTROL_INTERRUPTED'));
-    complete({reason, lastReceived});
+    if (!response) rejectReady(new EventStreamError(reason ?? 'CONTROL_INTERRUPTED', gap));
+    complete({reason, lastReceived, ...(gap ? {gap} : {})});
   }
   async function close() {
     if (ended) return;
@@ -273,22 +275,25 @@ async function subscribeLocal(endpoint: string, key: string, request: import('..
     if (!response) {
       if (object.correlationId !== request.correlationId || object.result !== 'OK' || !object.data || typeof object.data !== 'object') {
         const code = object.data && typeof object.data === 'object' && 'code' in object.data ? object.data.code : 'INVALID_REQUEST';
-        finish(typeof code === 'string' && ['INVALID_REQUEST', 'BUSY', 'BLOCKED', 'UNAUTHORIZED', 'WRONG_STORE', 'CURSOR_EXPIRED', 'PERSISTENCE_UNAVAILABLE', 'STATE_CORRUPT', 'SERVICE_UNREACHABLE'].includes(code) ? code : 'INVALID_REQUEST'); return;
+        const gap = code === 'CURSOR_EXPIRED' ? requireGap(object.data, requestedCursor?.storeId) : undefined;
+        finish(typeof code === 'string' && ['INVALID_REQUEST', 'BUSY', 'BLOCKED', 'UNAUTHORIZED', 'WRONG_STORE', 'CURSOR_EXPIRED', 'PERSISTENCE_UNAVAILABLE', 'STATE_CORRUPT', 'SERVICE_UNREACHABLE'].includes(code) ? code : 'INVALID_REQUEST', gap); return;
       }
       const data = object.data as Record<string, unknown>;
       subscriptionId = requireUuid(data.subscriptionId); storeId = requireUuid(data.storeId);
+      if (requestedCursor && requestedCursor.storeId !== storeId) throw new Error('WRONG_STORE');
       if (data.instanceId !== identity) throw new Error('STALE_TARGET');
       highWater = requireDecimal(data.highWater);
-      startAfter = request.params.after === undefined ? highWater : requireDecimal((request.params.after as {seq: unknown}).seq);
+      startAfter = requestedCursor?.seq ?? highWater;
       if (BigInt(startAfter) > BigInt(highWater)) throw new Error('INVALID_REQUEST');
       response = object as unknown as RpcResponse; clearTimeout(timer);
-      resolveReady({response, subscriptionId, storeId, instanceId: identity, highWater, done, close}); return;
+      resolveReady({response, subscriptionId, storeId, instanceId: identity, highWater, get lastReceived() {return lastReceived === null ? null : {storeId, seq: lastReceived};}, done, close}); return;
     }
     if (closing && object.correlationId === closeId) { finish(null); return; }
     if (object.subscriptionId !== subscriptionId || object.correlationId !== request.correlationId) throw new Error('INVALID_REQUEST');
     if (object.kind === 'subscription.closed') {
       const code = object.error && typeof object.error === 'object' && 'code' in object.error ? object.error.code : null;
-      finish(typeof code === 'string' && ['SLOW_CONSUMER', 'CURSOR_EXPIRED', 'PERSISTENCE_UNAVAILABLE', 'STATE_CORRUPT'].includes(code) ? code : 'CONTROL_INTERRUPTED'); return;
+      const gap = code === 'CURSOR_EXPIRED' ? requireGap(object, storeId) : undefined;
+      finish(typeof code === 'string' && ['SLOW_CONSUMER', 'CURSOR_EXPIRED', 'PERSISTENCE_UNAVAILABLE', 'STATE_CORRUPT'].includes(code) ? code : 'CONTROL_INTERRUPTED', gap); return;
     }
     if (object.kind !== 'event' || object.instanceId !== identity || !object.event || typeof object.event !== 'object') throw new Error('INVALID_REQUEST');
     const event = object.event as StreamEventFrame['event'];

@@ -91,9 +91,9 @@ import type { PublicResult } from '../protocol/messages.js';
 
 export interface ClientBackend {
   readonly defaultDirectory: string;
-  follow(directory: string, consume: (frame: import('../protocol/messages.js').StreamEventFrame) => Promise<void>, signal?: AbortSignal, timeoutMs?: number): Promise<EventSubscription>;
+  follow(directory: string, consume: (frame: import('../protocol/messages.js').StreamEventFrame) => Promise<void>, signal?: AbortSignal, timeoutMs?: number, after?: import('../protocol/event-cursor.js').EventCursor): Promise<EventSubscription>;
   diagnostics(directory: string): Promise<PublicResult>;
-  events(directory: string, limit?: number): Promise<PublicResult>;
+  events(directory: string, limit?: number, after?: import('../protocol/event-cursor.js').EventCursor): Promise<PublicResult>;
   operation(directory: string, requestId: string): Promise<PublicResult>;
   inspect(directory: string): Promise<PublicResult>;
   control(intent: BootstrapIntent, timeoutMs: number): Promise<PublicResult>;
@@ -113,6 +113,7 @@ export interface StreamChannel extends StreamSink { afterReply(callback: () => v
 export interface EventSubscription {
   readonly response: RpcResponse; readonly subscriptionId: string; readonly storeId: string;
   readonly instanceId: string; readonly highWater: string;
-  readonly done: Promise<{reason: string | null; lastReceived: string | null}>;
+  readonly lastReceived?: import('../protocol/event-cursor.js').EventCursor | null;
+  readonly done: Promise<{reason: string | null; lastReceived: string | null; gap?: import('../protocol/event-cursor.js').EventGap}>;
   close(): Promise<void>;
 }

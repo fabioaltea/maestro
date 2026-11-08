@@ -1,5 +1,6 @@
+import { EventStreamError } from '../protocol/event-cursor.js';
 import { createLiveEvents } from './live-events.js';
-import { diagnosticsData, eventQuery } from './diagnostics.js';
+import { diagnosticsData, readEventPage } from './diagnostics.js';
 import { observePendingControl } from './control-observation.js';
 import type { CoreDependencies } from './runtime.js';
 import { createHash, randomUUID } from 'node:crypto';
@@ -105,9 +106,9 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       if (request.method === 'diagnostics.get' || request.method === 'events.list') {
         try {
           const data = request.method === 'diagnostics.get' ? await diagnosticsData(storage, snapshot)
-            : {events: await storage.listEvents(eventQuery(request.params))};
+            : {events: await readEventPage(storage, snapshot.store.storeId, request.params)};
           return {...base, result: 'OK', data: {storeId: snapshot.store.storeId, ...data, ...(request.method === 'diagnostics.get' ? {subscriptions: streams!.diagnostics()} : {})}};
-        } catch (error) { return {...base, result: 'ERROR', data: {code: classifyError(error)}}; }
+        } catch (error) { return {...base, result: 'ERROR', data: {code: classifyError(error), ...(error instanceof EventStreamError && error.gap ? error.gap : {})}}; }
       }
       if (request.method === 'events.subscribe' || request.method === 'subscription.close') return streams!.dispatch(request, peer, snapshot.store.storeId);
       if (request.method === 'internal.readiness') {

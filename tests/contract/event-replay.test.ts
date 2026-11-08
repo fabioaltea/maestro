@@ -63,3 +63,56 @@ test('expired cursor returns an explicit gap with retained bounds and reread-sta
     assert.deepEqual(result.data, {code: 'CURSOR_EXPIRED', storeId, firstAvailable: '5', highWater: '10', nextAction: 'reread-status'});
   } finally { registry.closeAll(); }
 });
+
+test('CLI paginated --after yields a reusable cursor and follow emits the received cursor', async t => {
+  const {encodeCursor, decodeCursor} = await import('../../src/protocol/event-cursor.js');
+  const {createTestContext} = await import('../fixtures/test-context.js');
+  const {fileURLToPath} = await import('node:url');
+  const h = await createCliHarness(t), context = await createTestContext(t);
+  assert.equal((await h.call('start')).code, 0);
+  const store = new SQLiteStore({path: join(h.archive, 'state.sqlite')});
+  let after: string, expected: string;
+  try {store.drainEvents(); const storeId = store.readSnapshot()!.store.storeId; after = encodeCursor({storeId, seq: store.getEventState().highWater}); store.recordEvents([{type: 'diagnostics.degraded', payload: {code: 'BUSY'}}, {type: 'diagnostics.degraded', payload: {code: 'BUSY'}}]); expected = store.getEventState().highWater;} finally {store.close();}
+  const first = JSON.parse((await h.call('events', '--after', after, '--limit', '1')).stdout);
+  assert.equal(first.result, 'OK'); assert.equal(first.data.events.records.length, 1); assert.equal(first.data.events.truncated, true);
+  assert.equal(decodeCursor(first.data.events.cursor).seq, first.data.events.records[0].seq);
+  const next = JSON.parse((await h.call('events', '--after', first.data.events.cursor)).stdout);
+  assert.equal(next.data.events.records.length, 1); assert.equal(next.data.events.records[0].seq, expected);
+  const child = context.spawnNode([fileURLToPath(new URL('../fixtures/cli-stream.js', import.meta.url)), h.archive, first.data.events.cursor], {stdio: ['ignore', 'pipe', 'pipe', 'ipc']});
+  let output = ''; child.stdout!.on('data', chunk => {output += String(chunk);});
+  const exit = new Promise<number | null>(resolve => child.once('exit', resolve));
+  try {await until(() => output.includes('"kind":"event"')); const frame = output.trim().split('\n').map(line => JSON.parse(line)).find(f => f.kind === 'event'); assert.equal(decodeCursor(frame.cursor).seq, expected);}
+  finally {child.send({type: 'maestro-test-shutdown'}); assert.equal(await exit, 0);}
+  const wrong = await h.call('events', '--after', encodeCursor({storeId: randomUUID(), seq: '0'}));
+  assert.equal(wrong.code, 2); assert.equal(JSON.parse(wrong.stdout).error.code, 'WRONG_STORE');
+  for (const args of [['events', '--after', 'broken'], ['status', '--after', after]]) {
+    const result = await h.call(args[0]!, ...args.slice(1)); assert.equal(result.code, 2);
+  }
+});
+
+test('transport and CLI preserve gap bounds both before subscription and during replay', async t => {
+  const {encodeCursor} = await import('../../src/protocol/event-cursor.js');
+  const h = await createCliHarness(t), adapter = createPlatformPaths();
+  const paths = (await adapter.resolveArchive(h.archive, 'write'))!, key = await adapter.createCredential(paths.clientKeyFile);
+  const transport = createLocalTransport(), storeId = randomUUID(), instanceId = randomUUID();
+  const gap = {storeId, firstAvailable: '5', highWater: '10', nextAction: 'reread-status'};
+  let phase = 'before';
+  const server = await transport.listen(paths.daemonEndpoint, instanceId, new Map([[key, 'client']]), async (request, peer) => {
+    if (phase === 'before') return {protocolVersion: 1, correlationId: request.correlationId, result: 'ERROR', data: {code: 'CURSOR_EXPIRED', ...gap}};
+    const subscriptionId = randomUUID();
+    peer.channel!.afterReply(() => peer.channel!.end(Buffer.from(JSON.stringify({protocolVersion: 1, kind: 'subscription.closed', correlationId: request.correlationId, subscriptionId, ...gap, error: {code: 'CURSOR_EXPIRED'}}) + '\n')));
+    return {protocolVersion: 1, correlationId: request.correlationId, result: 'OK', data: {subscriptionId, storeId, instanceId, highWater: '10'}};
+  });
+  try {
+    for (phase of ['before', 'during']) {
+      const request = {protocolVersion: 1 as const, correlationId: randomUUID(), method: 'events.subscribe', params: {after: {storeId, seq: '2'}}};
+      if (phase === 'before') await assert.rejects(transport.subscribe(paths.daemonEndpoint, key, request, async () => assert.fail('gap must not deliver events')), error => {assert.deepEqual((error as {gap?: unknown}).gap, gap); return (error as Error).message === 'CURSOR_EXPIRED';});
+      else {const subscription = await transport.subscribe(paths.daemonEndpoint, key, request, async () => assert.fail()); const result = await subscription.done; assert.equal(result.reason, 'CURSOR_EXPIRED'); assert.deepEqual(result.gap, gap); assert.equal(result.lastReceived, null);}
+      const cli = await h.call('events', '--follow', '--after', encodeCursor({storeId, seq: '2'}));
+      assert.equal(cli.code, 2, cli.stdout);
+      const result = cli.stdout.trim().split('\n').map(line => JSON.parse(line)).at(-1);
+      assert.equal(result.error.code, 'CURSOR_EXPIRED');
+      assert.deepEqual(phase === 'before' ? result.data : {storeId: result.storeId, firstAvailable: result.firstAvailable, highWater: result.highWater, nextAction: result.nextAction}, gap);
+    }
+  } finally {await server.close();}
+});
