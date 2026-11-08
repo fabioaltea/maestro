@@ -4,13 +4,17 @@ import { dirname, isAbsolute } from 'node:path';
 import { initializeSchema, SCHEMA_VERSION } from './schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { transition, type Lifecycle, type Outcome } from '../domain/states.js';
-import type { SafeError } from '../domain/errors.js';
+import { foundationError, type SafeError } from '../domain/errors.js';
 import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
   StoreIdentity, StoreSnapshot } from '../ports/storage.js';
 
 export interface StorageOptions { readonly path: string; readonly readonly?: boolean; readonly identity?: StoreIdentity }
 type Row = Record<string, string | number | bigint | null>;
-const parseError = (raw: Row[string] | undefined): SafeError | null => typeof raw === 'string' ? JSON.parse(raw) as SafeError : null;
+const parseError = (raw: Row[string] | undefined): SafeError | null => {
+  if (typeof raw !== 'string') return null;
+  const saved = JSON.parse(raw) as SafeError;
+  return foundationError(saved.code, { persisted: saved.persisted, cause: saved.cause ?? null, ...(saved.operationId ? {operationId: saved.operationId} : {}) });
+};
 
 export class SQLiteStore {
   private database: Database.Database | null = null;

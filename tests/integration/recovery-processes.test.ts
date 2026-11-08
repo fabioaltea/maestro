@@ -36,6 +36,14 @@ for (const mode of ['cooperative', 'foreign'] as const) {
     await sandbox.waitForMessage(child, 'ready');
     await store.saveResource({resourceId, owningInstanceId: instanceId, kind: 'auxiliary', policyScope: 'foundation', generation: '1', pid: child.pid!, endpoint, credentialRef, observation: 'UNKNOWN', releaseState: 'OWNED'});
     await sandbox.requestExit(parent, 'crash');
+    const revision = (await store.readSnapshot())!.store.revision;
+    const offline = JSON.parse((await h.call('status')).stdout);
+    assert.equal(offline.freshness, 'LAST_KNOWN');
+    assert.equal(offline.data.ready, false);
+    assert.equal(offline.data.observationError.code, 'DAEMON_ABSENT');
+    assert.equal(offline.data.observationError.persisted, false);
+    assert.ok(offline.data.resourceIssues.some((r: {resourceId: string}) => r.resourceId === resourceId));
+    assert.equal((await store.readSnapshot())!.store.revision, revision);
     const identity = createProcessIdentity();
     let destructiveCalls = 0;
     const context = {store, paths, identity: mode === 'foreign' ? { ...identity, challenge: async () => 'UNKNOWN' } : identity,

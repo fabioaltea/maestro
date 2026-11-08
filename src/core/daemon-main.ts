@@ -1,3 +1,4 @@
+import { observePendingControl } from './control-observation.js';
 import type { CoreDependencies } from './runtime.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { makeDeadline, systemClock } from '../ports/clock.js';
@@ -83,7 +84,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
         storeId: snapshot.store.storeId, instanceId: instance.instanceId, pid: instance.pid,
         generation: instance.generation, lifecycle: instance.lifecycle, ready: instance.lifecycle === 'RUNNING',
         revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation,
-        lastError: instance.lastError, pendingFinalization: false,
+        lastError: instance.lastError, ...await observePendingControl(snapshot, storage, createProcessIdentity()),
         resourceIssues: instance.lifecycle === 'BLOCKED' ? (await storage.listResources(instance.instanceId))
           .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
             kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState })) : [],

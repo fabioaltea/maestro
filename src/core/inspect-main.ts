@@ -1,3 +1,5 @@
+import { observePendingControl } from './control-observation.js';
+import { foundationError } from '../domain/errors.js';
 import { randomUUID } from 'node:crypto';
 import { createPlatformPaths } from '../platform/macos/paths.js';
 import { createLocalTransport } from '../platform/macos/transport.js';
@@ -27,10 +29,12 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
   if (!paths) return absentResult();
   const store = await openStorage({ path: paths.stateFile, readonly: true });
   let snapshot;
+  let control: Awaited<ReturnType<typeof observePendingControl>> = {pendingFinalization: false, controllerLiveness: null};
   let resourceIssues: readonly { resourceId: string; kind: string; observation: string; releaseState: string }[] = [];
   try {
     snapshot = await store.readSnapshot();
-    if (snapshot?.instance?.lifecycle === 'BLOCKED') resourceIssues = (await store.listResources(snapshot.instance.instanceId))
+    if (snapshot) control = await observePendingControl(snapshot, store, createProcessIdentity());
+    if (snapshot?.instance) resourceIssues = (await store.listResources(snapshot.instance.instanceId))
       .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
         kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState }));
   }
@@ -58,7 +62,9 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
     liveness: liveness === 'ABSENT' ? 'ABSENT_VERIFIED' : 'UNKNOWN', error: null,
     data: { status: 'PRESENT', lifecycle: instance?.lifecycle ?? null, ready: false, pid: instance?.pid ?? null,
       resourceIssues, revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation, lastError: instance?.lastError ?? null,
-      pendingFinalization: liveness === 'ABSENT' && snapshot.pendingOperation !== null,
+      ...control, pendingFinalization: control.pendingFinalization || (liveness === 'ABSENT' && snapshot.pendingOperation !== null),
+      observationError: instance && instance.lifecycle !== 'STOPPED'
+        ? foundationError(liveness === 'ABSENT' ? 'DAEMON_ABSENT' : 'RESOURCE_IDENTITY_UNKNOWN', { cause: liveness === 'ABSENT' ? 'PROCESS_EXIT' : 'IDENTITY_UNVERIFIED' }) : null,
       observedAt: new Date().toISOString() } };
 }
 

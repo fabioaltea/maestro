@@ -52,3 +52,18 @@ test('a different stop interrupts a lost restart after stop, without resuming it
     assert.equal((await store.readSnapshot())?.instance?.lifecycle, 'STOPPED');
   } finally { await store.close(); }
 });
+
+test('read-only live inspection exposes a lost controller without finalizing or mutating state', async t => {
+  const h = await recoveryScenario(t, 'control.ready');
+  const store = await openStorage({path: h.paths.stateFile, readonly: true});
+  try {
+    const revision = (await store.readSnapshot())!.store.revision;
+    const status = JSON.parse((await h.call('status')).stdout);
+    assert.equal(status.data.ready, true);
+    assert.equal(status.data.pendingFinalization, true);
+    assert.equal(status.data.controllerLiveness, 'ABSENT_VERIFIED');
+    assert.equal((await store.getOperation(h.requestId))?.outcome, 'IN_PROGRESS');
+    assert.equal((await store.readSnapshot())!.store.revision, revision);
+    assert.equal((await h.call('start', '--request-id', h.requestId)).code, 0);
+  } finally { await store.close(); }
+});

@@ -16,13 +16,14 @@ const catalog = {
   CURSOR_EXPIRED: ['Parte degli eventi non è più conservata.', 'Rileggere lo stato e scegliere da dove riprendere.', false],
   WRONG_STORE: ['Cursore riferito a un altro archivio.', 'Usare il cursore dell’archivio corrente.', false],
   SLOW_CONSUMER: ['Osservatore scollegato per limite del buffer.', 'Riprendere con il cursore dell’ultimo evento ricevuto.', true],
+  DAEMON_ABSENT: ['Il processo del daemon risulta cessato.', 'Eseguire un controllo esplicito per riconciliare lo stato salvato.', true],
   CONTROL_INTERRUPTED: ['Controller terminato senza esito verificato.', 'Interrogare e riprovare lo stesso requestId per riconciliare l’esito.', true],
   CORE_EXITED_BEFORE_ACCEPTANCE: ['Core terminato prima della conferma di accettazione.', 'Verificare runtime e interrogare il requestId.', true],
   INTERNAL_ERROR: ['Errore interno non classificato.', 'Consultare la diagnostica redatta e preservare lo stato.', false],
 } as const;
 
 export type ErrorCode = keyof typeof catalog;
-export type FailureCause = 'DISK_FULL' | 'READ_ONLY' | 'IO_ERROR' | 'WORKER_EXIT' | 'CORRUPT' | 'INCOMPATIBLE' | null;
+export type FailureCause = 'DISK_FULL' | 'READ_ONLY' | 'IO_ERROR' | 'WORKER_EXIT' | 'CORRUPT' | 'INCOMPATIBLE' | 'PROCESS_EXIT' | 'IDENTITY_UNVERIFIED' | null;
 export interface ErrorContext { readonly operationId?: string; readonly persisted?: boolean; readonly cause?: FailureCause }
 export interface SafeError {
   readonly code: ErrorCode;
@@ -38,6 +39,7 @@ export function foundationError(code: ErrorCode, context: ErrorContext = {}): Sa
   if (!Object.hasOwn(catalog, code)) throw new Error('INVALID_ERROR_CODE');
   const [message, nextAction, retryable] = catalog[code];
   const operationId = context.operationId ?? null;
+  if (context.cause != null && !['DISK_FULL', 'READ_ONLY', 'IO_ERROR', 'WORKER_EXIT', 'CORRUPT', 'INCOMPATIBLE', 'PROCESS_EXIT', 'IDENTITY_UNVERIFIED'].includes(context.cause)) throw new Error('INVALID_ERROR_CODE');
   if (operationId !== null && !/^[0-9a-f-]{36}$/i.test(operationId)) throw new Error('INVALID_IDENTIFIER');
   return Object.freeze({ code, message, nextAction, retryable, cause: context.cause ?? null, persisted: context.persisted ?? false, operationId });
 }
