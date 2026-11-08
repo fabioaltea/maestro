@@ -16,6 +16,7 @@ const catalog = {
   CURSOR_EXPIRED: ['Parte degli eventi non è più conservata.', 'Rileggere lo stato e scegliere da dove riprendere.', false],
   WRONG_STORE: ['Cursore riferito a un altro archivio.', 'Usare il cursore dell’archivio corrente.', false],
   SLOW_CONSUMER: ['Osservatore scollegato per limite del buffer.', 'Riprendere con il cursore dell’ultimo evento ricevuto.', true],
+  CONTROL_INTERRUPTED: ['Controller terminato senza esito verificato.', 'Interrogare e riprovare lo stesso requestId per riconciliare l’esito.', true],
   CORE_EXITED_BEFORE_ACCEPTANCE: ['Core terminato prima della conferma di accettazione.', 'Verificare runtime e interrogare il requestId.', true],
   INTERNAL_ERROR: ['Errore interno non classificato.', 'Consultare la diagnostica redatta e preservare lo stato.', false],
 } as const;

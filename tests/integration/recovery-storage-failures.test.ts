@@ -75,3 +75,64 @@ test('storage worker loss rejects pending/future calls and does not release main
     assert.equal(createOwnershipLease().tryAcquire(join(context.directory, 'daemon-lease.sqlite'), 'daemon').status, 'BUSY');
   } finally { await store.close(); if (lease.status === 'HELD') lease.handle.release(); }
 });
+
+for (const role of ['daemon', 'controller'] as const) {
+  test(`${role} worker dies: lease survives or unconfirmed controller result remains queryable`, async t => {
+    const { createProcessSandbox } = await import('../fixtures/process-sandbox.js');
+    const { createCliHarness } = await import('../fixtures/cli-harness.js');
+    const { createPlatformPaths } = await import('../../src/platform/macos/paths.js');
+    const { createOperations } = await import('../../src/core/operations.js');
+    const sandbox = await createProcessSandbox(t), h = await createCliHarness(t);
+    const adapter = createPlatformPaths(), paths = (await adapter.resolveArchive(h.archive, 'write'))!;
+    const requestId = randomUUID();
+    let intent: unknown = {protocolVersion: 1, requestId, action: 'start', canonicalStateDir: paths.directory};
+    if (role === 'daemon') {
+      await adapter.createCredential(paths.clientKeyFile);
+      const seed = await openStorage({path: paths.stateFile, identity: {storeId: randomUUID(), schemaVersion: 1, ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0'}});
+      try {
+        const operations = createOperations(seed, paths.ownerUid);
+        await operations.accept({requestId, action: 'start', targetInstanceId: null, canonicalStateDir: paths.directory});
+        const ticket = await operations.issueLaunch(requestId, randomUUID());
+        intent = {ticketId: ticket.ticketId, instanceId: ticket.instanceId, generation: ticket.generation, canonicalStateDir: paths.directory};
+      } finally { await seed.close(); }
+    }
+    const file = join(h.directory, 'worker-failure-intent.json');
+    await writeFile(file, JSON.stringify(intent), {mode: 0o600});
+    const actor = sandbox.spawnFixture('recovery-actor.js', [file, role === 'daemon' ? 'daemon.running' : 'control.ready']);
+    await sandbox.waitForMessage(actor, 'paused', 5_000);
+    const store = await openStorage({path: paths.stateFile, readonly: true});
+    try {
+      const instance = (await store.readSnapshot())!.instance!;
+      const failed = sandbox.waitForMessage(actor, 'worker-exited');
+      actor.send({type: 'worker-exit'}); await failed;
+      if (role === 'daemon') {
+        const status = JSON.parse((await h.call('status')).stdout);
+        assert.equal(status.freshness, 'VOLATILE');
+        assert.equal(status.data.ready, false);
+        assert.equal(status.data.lastError.persisted, false);
+        assert.equal(status.data.lastError.cause, 'WORKER_EXIT');
+        assert.equal(createOwnershipLease().tryAcquire(paths.daemonLeaseFile, 'daemon').status, 'BUSY');
+        assert.equal((await h.call('start')).code, 4);
+        assert.equal(actor.exitCode, null);
+      } else {
+        const exit = new Promise<{code: number | null; signal: string | null}>(resolve => actor.once('exit', (code, signal) => resolve({code, signal})));
+        const { createClientBackend } = await import('../../src/bootstrap.js');
+        const backend = createClientBackend({spawnController: async () => ({pid: actor.pid!, exit, bootstrap: Promise.resolve({accepted: true})}), spawnDaemon: async () => { throw new Error('UNEXPECTED_SPAWN'); }});
+        const observation = backend.control({protocolVersion: 1, requestId, action: 'start', canonicalStateDir: paths.directory}, 3_000);
+        actor.send({type: 'continue'});
+        assert.equal((await exit).code, 7);
+        const result = await observation;
+        assert.equal(result.result, 'UNKNOWN_OUTCOME');
+        assert.equal(result.error?.code, 'CONTROL_INTERRUPTED');
+        assert.equal(result.error?.persisted, false);
+        assert.equal((await store.getOperation(requestId))?.outcome, 'IN_PROGRESS');
+        const retried = await h.call('start', '--request-id', requestId);
+        assert.equal(retried.code, 0, retried.stdout);
+        assert.equal(JSON.parse(retried.stdout).instanceId, instance.instanceId);
+      }
+    } finally {
+      if (actor.exitCode === null && actor.signalCode === null) await sandbox.requestExit(actor, 'crash');
+      await store.close();
+    }
+  });
+}

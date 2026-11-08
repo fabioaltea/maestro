@@ -46,7 +46,7 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
       const data = response.data as Record<string, unknown> | null;
       if (response.result === 'OK' && data?.storeId === snapshot.store.storeId && data.instanceId === instance.instanceId) {
         return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: instance.instanceId,
-          result: 'OK', outcome: null, freshness: 'LIVE', liveness: 'LIVE_VERIFIED', error: null,
+          result: 'OK', outcome: null, freshness: data.freshness === 'VOLATILE' ? 'VOLATILE' : 'LIVE', liveness: 'LIVE_VERIFIED', error: null,
           data: { ...data, status: 'PRESENT', observedAt: new Date().toISOString() } };
       }
     } catch { /* A failed live observation must not rewrite the saved state. */ }

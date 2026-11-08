@@ -11,7 +11,7 @@ import { createOwnershipLease } from '../platform/macos/lease.js';
 import { createDaemonLauncher } from '../platform/macos/launcher.js';
 import { createProcessIdentity } from '../platform/macos/process-identity.js';
 import { createLocalTransport } from '../platform/macos/transport.js';
-import { openStorage } from '../storage/worker.js';
+import { openStorage, classifyStorageFailure } from '../storage/worker.js';
 import { createOperations } from './operations.js';
 import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { requireUuid } from '../domain/identifiers.js';
@@ -145,7 +145,7 @@ export async function runControl(intent: BootstrapIntent, dependencies: CoreDepe
     report(false, code);
     if (store && operation?.outcome === 'IN_PROGRESS') {
       const outcome = ['BLOCKED', 'RESOURCE_IDENTITY_UNKNOWN', 'DEADLINE_EXCEEDED'].includes(code) ? 'BLOCKED' : 'FAILED';
-      await store.completeOperation(operation.requestId, outcome, new Date().toISOString(), foundationError(code, { persisted: true, operationId: operation.requestId })).catch(() => {});
+      await store.completeOperation(operation.requestId, outcome, new Date().toISOString(), foundationError(code, { persisted: true, operationId: operation.requestId, cause: classifyStorageFailure(error).cause })).catch(() => {});
       if (attempt) await store.finishControllerAttempt(attempt.attemptId, new Date().toISOString(), outcome).catch(() => {});
     }
     return code === 'BUSY' ? 3 : code === 'BLOCKED' ? 4 : code === 'UNAUTHORIZED' ? 6 : 7;

@@ -1,13 +1,13 @@
 import type { CoreDependencies } from './runtime.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { makeDeadline, systemClock } from '../ports/clock.js';
-import { foundationError } from '../domain/errors.js';
+import { foundationError, type SafeError } from '../domain/errors.js';
 import { drainFoundationAuxiliaries } from './foundation-auxiliary-policy.js';
 import { createDaemonLauncher } from '../platform/macos/launcher.js';
 import { createProcessIdentity } from '../platform/macos/process-identity.js';
 import { join } from 'node:path';
 import type { DaemonIntent, LeaseHandle, LocalRole, LocalServer } from '../ports/platform.js';
-import type { StoragePort } from '../ports/storage.js';
+import type { StoragePort, StoreSnapshot } from '../ports/storage.js';
 import { createPlatformPaths } from '../platform/macos/paths.js';
 import { createOwnershipLease } from '../platform/macos/lease.js';
 import { createLocalTransport } from '../platform/macos/transport.js';
@@ -37,6 +37,9 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     lease = lock.handle;
     const storage = await (dependencies.storage ?? openStorage)({ path: paths.stateFile });
     store = storage;
+    let volatileError: SafeError | null = null;
+    let lastSnapshot: StoreSnapshot | null = null;
+    storage.onFailure(error => { volatileError = error; });
     const ticket = await storage.getTicket(intent.ticketId);
     if (!ticket || ticket.instanceId !== intent.instanceId || ticket.generation !== intent.generation
       || !await createOperations(storage, paths.ownerUid).claimLaunch(intent.ticketId, intent.generation, process.pid)) {
@@ -45,11 +48,13 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     await checkpoint('daemon.claimed');
     await storage.recordInstance({ instanceId: intent.instanceId, pid: process.pid, generation: intent.generation,
       lifecycle: 'STARTING', startedAt: new Date().toISOString(), shutdownPrepared: false, lastError: null });
+    lastSnapshot = await storage.readSnapshot();
     await checkpoint('daemon.recorded');
     const clientKey = await adapter.readCredential(paths.clientKeyFile);
     let draining = false;
     server = await createLocalTransport().listen(paths.daemonEndpoint, intent.instanceId, async () => {
       const keys = new Map<string, LocalRole>([[clientKey, 'client']]);
+      if (volatileError) return keys;
       const snapshot = await storage.readSnapshot();
       const pending = snapshot?.pendingOperation;
       if (pending && (pending.successorInstanceId === intent.instanceId || pending.targetInstanceId === intent.instanceId)) {
@@ -61,7 +66,16 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       }
       return keys;
     }, async (request, peer) => {
+      if (volatileError) {
+        const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
+        if (request.method !== 'status.get') return { ...base, result: 'BLOCKED', data: { code: 'PERSISTENCE_UNAVAILABLE' } };
+        return { ...base, result: 'OK', data: { storeId: lastSnapshot?.store.storeId, instanceId: intent.instanceId,
+          pid: process.pid, generation: intent.generation, lifecycle: 'BLOCKED', ready: false, freshness: 'VOLATILE',
+          revision: lastSnapshot?.store.revision, lastError: volatileError, currentOperation: lastSnapshot?.pendingOperation,
+          resourceIssues: [], pendingFinalization: true } };
+      }
       const snapshot = await storage.readSnapshot();
+      lastSnapshot = snapshot;
       const instance = snapshot?.instance;
       if (!snapshot || !instance || instance.instanceId !== intent.instanceId) throw new Error('STATE_CORRUPT');
       const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
@@ -134,6 +148,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
     });
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
+    lastSnapshot = await storage.readSnapshot();
     await checkpoint('daemon.running');
     let signalPending = false;
     onShutdownSignal = () => {

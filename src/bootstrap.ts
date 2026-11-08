@@ -7,12 +7,12 @@ import type { ClientBackend } from './ports/platform.js';
 import type { PublicResult } from './protocol/messages.js';
 
 export function failureResult(code: ErrorCode, requestId: string | null): PublicResult {
-  return { ...absentResult(), requestId, result: code === 'BUSY' ? 'BUSY' : code === 'BLOCKED' ? 'BLOCKED'
-    : code === 'DEADLINE_EXCEEDED' ? 'UNKNOWN_OUTCOME' : 'ERROR', freshness: 'LAST_KNOWN', liveness: 'UNKNOWN',
+  return { ...absentResult(), requestId, result: code === 'BUSY' ? 'BUSY' : ['BLOCKED', 'RESOURCE_IDENTITY_UNKNOWN', 'ENDPOINT_COLLISION'].includes(code) ? 'BLOCKED'
+    : ['DEADLINE_EXCEEDED', 'CONTROL_INTERRUPTED'].includes(code) ? 'UNKNOWN_OUTCOME' : 'ERROR', freshness: 'LAST_KNOWN', liveness: 'UNKNOWN',
     data: {}, error: foundationError(code, requestId ? { operationId: requestId } : {}) };
 }
 
-export function createClientBackend(): ClientBackend {
+export function createClientBackend(launcher = createDaemonLauncher()): ClientBackend {
   return {
     defaultDirectory: defaultArchiveDirectory(),
     inspect: inspectArchive,
@@ -27,7 +27,7 @@ export function createClientBackend(): ClientBackend {
     },
     async control(intent, timeoutMs) {
       const deadline = performance.now() + timeoutMs;
-      const process = await createDaemonLauncher().spawnController(intent);
+      const process = await launcher.spawnController(intent);
       let bootstrap: { accepted: boolean; errorCode?: string } | null = null;
       let exited = false;
       void process.bootstrap?.then(value => { bootstrap = value; });
@@ -48,6 +48,7 @@ export function createClientBackend(): ClientBackend {
             result: operation.outcome === 'SUCCEEDED' ? 'OK' : operation.outcome === 'BLOCKED' ? 'BLOCKED' : 'ERROR',
             error: operation.error, data: { ...state.data, operation } };
         }
+        if (exited && operation?.outcome === 'IN_PROGRESS') return failureResult('CONTROL_INTERRUPTED', intent.requestId);
         if (exited && !operation && bootstrap === null) return failureResult('CORE_EXITED_BEFORE_ACCEPTANCE', intent.requestId);
         await new Promise<void>(resolve => setTimeout(resolve, Math.min(25, Math.max(0, deadline - performance.now()))));
       }
