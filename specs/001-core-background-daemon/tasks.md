@@ -84,7 +84,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T009 Definire i contratti delle cinque porte OS e dello storage in `src/ports/platform.ts` e `src/ports/storage.ts`: prove VERIFIED/ABSENT/UNKNOWN, lease con ownership unica, launcher detached e accesso core read-only; nessuna policy universale di terminazione. **Dip.: T008.**
 ### Test richiesti
 
-- [ ] T010 [P] Scrivere test RED di permessi, canonicalizzazione, link, collisione endpoint e lease conteso/crash in `tests/contract/platform-paths-lease.test.ts`; includere il divieto di rimuovere o riaprire nello stesso titolare l'inode del lease. **Dip.: T009.**
+- [X] T010 [P] Scrivere test RED di permessi, canonicalizzazione, link, collisione endpoint e lease conteso/crash in `tests/contract/platform-paths-lease.test.ts`; includere il divieto di rimuovere o riaprire nello stesso titolare l'inode del lease. **Dip.: T009.**
 - [ ] T011 [P] Scrivere test RED dello StoragePort in `tests/contract/storage.test.ts`: commit prima della conferma, requestId/payloadHash, claim atomico del ticket, schema incompatibile e letture offline senza inizializzazione. **Dip.: T009.**
 - [ ] T012 [P] Scrivere test RED del protocollo base in `tests/contract/protocol-base.test.ts`: frame 64 KiB, JSON/major/metodo non validi, handshake entro 1 s, HMAC/nonce e capability; rifiuto prima degli effetti e nessun segreto in output. **Dip.: T009.**
 - [ ] T013 [P] Scrivere test RED di ProcessIdentity in `tests/contract/process-identity.test.ts`: challenge corretto/errato, exit osservato, ESRCH, EPERM e PID riutilizzato; una sonda positiva non deve autorizzare segnali o attribuire proprietà. **Dip.: T009.**
