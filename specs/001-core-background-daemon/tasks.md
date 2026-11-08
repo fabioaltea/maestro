@@ -111,7 +111,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T021 [P] [US1] Scrivere test RED di help/version e start/status/stop minimo, JSON/umano e codici d'uscita in `tests/contract/cli-foundation.test.ts`; status su archivio assente non deve creare stato o avviare processi. **Dip.: T020.**
 - [X] T022 [P] [US1] Scrivere integrazioni RED di distacco in `tests/integration/daemon-detach.test.ts`, con uscita normale e anomala della CLI, chiusura di un terminale controllato dall'harness e disconnessione di tutti i client; verificare instanceId invariato senza dipendere dal terminale del runner. **Dip.: T020.**
 - [X] T023 [P] [US1] Scrivere integrazioni RED di dieci avvii simultanei, già operativo, archivio separato e socket irraggiungibile in `tests/integration/daemon-start.test.ts`; massimo un proprietario, no falsa readiness, nessun effetto su un secondo archivio. **Dip.: T020.**
-- [ ] T024 [P] [US1] Scrivere test RED in `tests/unit/launch-ticket.test.ts` per ticket ISSUED/CLAIMED/CANCELLED, claim concorrenti e candidato ritardato dopo annullamento; il candidato non valido deve uscire prima di effetti applicativi. **Dip.: T020.**
+- [X] T024 [P] [US1] Scrivere test RED in `tests/unit/launch-ticket.test.ts` per ticket ISSUED/CLAIMED/CANCELLED, claim concorrenti e candidato ritardato dopo annullamento; il candidato non valido deve uscire prima di effetti applicativi. **Dip.: T020.**
 ### Implementazione e verifica
 
 - [ ] T025 [US1] Implementare accettazione durevole, hash canonico, claim/revoca ticket e risultato storico in `src/core/operations.ts`, compresa contesa senza accettazione fittizia e nessuna ripetizione dello stesso effetto. **Dip.: T024, T017.**
