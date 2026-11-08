@@ -57,7 +57,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### Implementazione e verifica
 
 - [X] T001 Registrare file da preservare, cancellazioni e modifiche preesistenti in `specs/001-core-background-daemon/implementation-inventory.md`; verificare lo stato Git senza ripristinare, eliminare o committare file; un'eventuale pulizia richiede un'autorizzazione separata. **Dip.: nessuna.**
-- [ ] T002 Definire il package greenfield in `package.json`, `.nvmrc` e `package-lock.json`: Node 26.13.0, TypeScript 6.0.3, better-sqlite3 13.0.3 e tipi compatibili, ESM, alias maestro; ignorare runtime state e output compilati in `.gitignore` dopo il controllo dell'inventario. **Dip.: T001.**
+- [X] T002 Definire il package greenfield in `package.json`, `.nvmrc` e `package-lock.json`: Node 26.13.0, TypeScript 6.0.3, better-sqlite3 13.0.3 e tipi compatibili, ESM, alias maestro; ignorare runtime state e output compilati in `.gitignore` dopo il controllo dell'inventario. **Dip.: T001.**
 - [ ] T003 Configurare strict/NodeNext e build `dist/cli/main.js` in `tsconfig.json`, compilazione test separata in `tsconfig.test.json` e script build/typecheck in `package.json`, mantenendo la CLI compilata indipendente dal runner di sviluppo. **Dip.: T002.**
 - [ ] T004 Creare il runner node:test e gli script test, test:contract, test:integration, test:acceptance e bench:foundation in `package.json` e `tests/fixtures/test-context.ts`; predisporre sandbox temporanei, registrazione dei soli processi posseduti e cleanup verificato, senza credential/provider reali. **Dip.: T003.**
 ### Test richiesti
