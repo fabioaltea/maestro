@@ -134,7 +134,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### Test richiesti
 
 - [X] T033 [P] [US2] Scrivere test RED di drain, stop già concluso, restart da STOPPED, retry/esiti storici e deadline in `tests/unit/lifecycle-control.test.ts`; distinguere BLOCKED riprovabile con precondizioni rinnovate dagli esiti terminali. **Dip.: T032.**
-- [ ] T034 [P] [US2] Scrivere test RED in `tests/contract/control-authorization.test.ts` per internal.prepareStop riservato al controller, target/generation stale, capability client in sola lettura, payloadHash discordante e nuovi comandi incompatibili; zero mutazioni. **Dip.: T032.**
+- [X] T034 [P] [US2] Scrivere test RED in `tests/contract/control-authorization.test.ts` per internal.prepareStop riservato al controller, target/generation stale, capability client in sola lettura, payloadHash discordante e nuovi comandi incompatibili; zero mutazioni. **Dip.: T032.**
 - [ ] T035 [P] [US2] Scrivere integrazioni RED in `tests/integration/daemon-restart.test.ts` per restart indipendente dal client, control lease mantenuto lungo entrambe le fasi e finalizzazione solo dopo exit; includere dieci richieste concorrenti e risposta perduta. **Dip.: T032.**
 ### Implementazione e verifica
 
