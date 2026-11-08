@@ -1,3 +1,4 @@
+import type { CoreDependencies } from './runtime.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { makeDeadline, systemClock } from '../ports/clock.js';
 import { foundationError } from '../domain/errors.js';
@@ -16,7 +17,9 @@ import { requireUuid } from '../domain/identifiers.js';
 import { isEntrypoint, readBootstrap, reportBootstrap } from './entrypoint.js';
 import { classifyError } from './control-main.js';
 
-export async function runDaemon(intent: DaemonIntent): Promise<void> {
+export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependencies = {}): Promise<void> {
+  const checkpoint = dependencies.checkpoint ?? (async () => {});
+  const report = dependencies.report ?? reportBootstrap;
   let lease: LeaseHandle | undefined;
   let store: StoragePort | undefined;
   let server: LocalServer | undefined;
@@ -32,15 +35,17 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
     const lock = createOwnershipLease().tryAcquire(paths.daemonLeaseFile, 'daemon');
     if (lock.status !== 'HELD') throw new Error('BLOCKED');
     lease = lock.handle;
-    const storage = await openStorage({ path: paths.stateFile });
+    const storage = await (dependencies.storage ?? openStorage)({ path: paths.stateFile });
     store = storage;
     const ticket = await storage.getTicket(intent.ticketId);
     if (!ticket || ticket.instanceId !== intent.instanceId || ticket.generation !== intent.generation
       || !await createOperations(storage, paths.ownerUid).claimLaunch(intent.ticketId, intent.generation, process.pid)) {
       throw new Error('STALE_TARGET');
     }
+    await checkpoint('daemon.claimed');
     await storage.recordInstance({ instanceId: intent.instanceId, pid: process.pid, generation: intent.generation,
       lifecycle: 'STARTING', startedAt: new Date().toISOString(), shutdownPrepared: false, lastError: null });
+    await checkpoint('daemon.recorded');
     const clientKey = await adapter.readCredential(paths.clientKeyFile);
     let draining = false;
     server = await createLocalTransport().listen(paths.daemonEndpoint, intent.instanceId, async () => {
@@ -104,6 +109,7 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
               sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
             });
             await storage.prepareShutdown(intent.instanceId, intent.generation);
+            await checkpoint('daemon.shutdownPrepared');
             await server!.close();
             await storage.close();
             // Keep the main ownership lease until the actual process terminates.
@@ -111,14 +117,24 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
           })().catch(async error => {
             draining = false;
             await storage.blockInstance(intent.instanceId, foundationError(classifyError(error), { persisted: true,
-              operationId: pending!.requestId })).catch(() => { reportBootstrap(false, 'PERSISTENCE_UNAVAILABLE'); });
+              operationId: pending!.requestId })).catch(() => { report(false, 'PERSISTENCE_UNAVAILABLE'); });
           });
         });
         return { ...base, result: 'OK', data: { preparingStop: true } };
       }
       return { ...base, result: 'ERROR', data: { code: 'INVALID_REQUEST' } };
     });
+    await storage.transitionInstance(intent.instanceId, 'RECOVERING');
+    await checkpoint('daemon.recovering');
+    const pending = (await storage.readSnapshot())?.pendingOperation;
+    const controller = pending ? await storage.getControllerAttempt(pending.requestId) : null;
+    await drainFoundationAuxiliaries({ store: storage, instanceId: intent.instanceId, paths,
+      identity: createProcessIdentity(), transport: createLocalTransport(), platformPaths: adapter,
+      deadline: makeDeadline(systemClock, 8_000), excludedPids: [process.pid, ...(controller ? [controller.pid] : [])],
+      sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+    });
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
+    await checkpoint('daemon.running');
     let signalPending = false;
     onShutdownSignal = () => {
       if (signalPending || draining) return;
@@ -140,7 +156,7 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
     };
     process.on('SIGTERM', onShutdownSignal);
     process.on('SIGINT', onShutdownSignal);
-    reportBootstrap(true);
+    report(true);
     // The listening server keeps the process alive; the ownership connection remains held.
   } catch (error) {
     process.off('SIGHUP', ignoreHangup);
