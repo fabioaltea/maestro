@@ -7,6 +7,7 @@ const catalog = {
   IDEMPOTENCY_CONFLICT: ['Identificativo già usato per un intento diverso.', 'Usare lo stesso payload o un nuovo requestId.', false],
   BUSY: ['Operazione già in corso.', 'Interrogare la richiesta attiva o riprovare.', true],
   BLOCKED: ['Operazione bloccata per sicurezza.', 'Verificare risorse e diagnostica prima del retry.', true],
+  EVENT_BACKPRESSURE: ['Osservabilità bloccata: il batch precedente non è drenato.', 'Consultare diagnostics e preservare il journal prima di riprovare.', true],
   PERSISTENCE_UNAVAILABLE: ['Stato persistente non disponibile.', 'Verificare spazio, permessi e disponibilità del disco.', true],
   STATE_INCOMPATIBLE: ['Versione dello stato non compatibile.', 'Usare una versione compatibile senza ricreare lo stato.', false],
   STATE_CORRUPT: ['Integrità dello stato non verificabile.', 'Preservare i file e richiedere un intervento manuale.', false],

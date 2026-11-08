@@ -25,7 +25,7 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     const h = await createCliHarness(t);
     const paths = (await createPlatformPaths().resolveArchive(h.archive, 'write'))!;
     await createPlatformPaths().createCredential(paths.clientKeyFile);
-    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 1,
+    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 2,
       ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0' } });
     const operations = createOperations(store, paths.ownerUid);
     const requestId = randomUUID(), instanceId = randomUUID();

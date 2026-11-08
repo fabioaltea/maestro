@@ -27,7 +27,7 @@ test('disk-full/read-only/driver failures are classified without exposing raw ca
 for (const damage of ['corrupt', 'incompatible'] as const) {
   test(`${damage} archive remains byte-identical after refused recovery`, async t => {
     const context = await createTestContext(t), path = join(context.directory, 'state.sqlite');
-    const store = await openStorage({ path, identity: { storeId: randomUUID(), schemaVersion: 1, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0' } });
+    const store = await openStorage({ path, identity: { storeId: randomUUID(), schemaVersion: 2, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0' } });
     await store.close();
     if (damage === 'corrupt') await writeFile(path, Buffer.alloc(4096, 0x61));
     else { const db = new Database(path); db.pragma('user_version=999'); db.close(); }
@@ -39,7 +39,7 @@ for (const damage of ['corrupt', 'incompatible'] as const) {
 
 test('native write rejection rolls back the intent and preserves confirmed outcomes; read-only cannot mutate', async t => {
   const context = await createTestContext(t), path = join(context.directory, 'state.sqlite');
-  const store = await openStorage({ path, identity: { storeId: randomUUID(), schemaVersion: 1, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0' } });
+  const store = await openStorage({ path, identity: { storeId: randomUUID(), schemaVersion: 2, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0' } });
   const intent = { requestId: randomUUID(), action: 'start' as const, targetInstanceId: null, payloadHash: 'a'.repeat(64), ownerUid: process.getuid!(), acceptedAt: new Date().toISOString() };
   try {
     await store.acceptOperation(intent);
@@ -63,7 +63,7 @@ test('storage worker loss rejects pending/future calls and does not release main
   const context = await createTestContext(t), path = join(context.directory, 'state.sqlite');
   let worker: Worker | undefined;
   const open = openStorage as unknown as (options: Parameters<typeof openStorage>[0], host: {observeWorker(worker: Worker): void}) => Promise<StoragePort & {onFailure(callback: (error: SafeError) => void): () => void}>;
-  const store = await open({ path, identity: { storeId: randomUUID(), schemaVersion: 1, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0' } }, { observeWorker: value => { worker = value; } });
+  const store = await open({ path, identity: { storeId: randomUUID(), schemaVersion: 2, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0' } }, { observeWorker: value => { worker = value; } });
   const lease = createOwnershipLease().tryAcquire(join(context.directory, 'daemon-lease.sqlite'), 'daemon');
   assert.equal(lease.status, 'HELD');
   try {
@@ -88,7 +88,7 @@ for (const role of ['daemon', 'controller'] as const) {
     let intent: unknown = {protocolVersion: 1, requestId, action: 'start', canonicalStateDir: paths.directory};
     if (role === 'daemon') {
       await adapter.createCredential(paths.clientKeyFile);
-      const seed = await openStorage({path: paths.stateFile, identity: {storeId: randomUUID(), schemaVersion: 1, ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0'}});
+      const seed = await openStorage({path: paths.stateFile, identity: {storeId: randomUUID(), schemaVersion: 2, ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0'}});
       try {
         const operations = createOperations(seed, paths.ownerUid);
         await operations.accept({requestId, action: 'start', targetInstanceId: null, canonicalStateDir: paths.directory});
@@ -139,7 +139,7 @@ for (const role of ['daemon', 'controller'] as const) {
 
 test('a copied store at another canonical path is refused before any recovery mutation', async t => {
   const context = await createTestContext(t), path = join(context.directory, 'state.sqlite');
-  const store = await openStorage({path, identity: {storeId: randomUUID(), schemaVersion: 1, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0'}});
+  const store = await openStorage({path, identity: {storeId: randomUUID(), schemaVersion: 2, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0'}});
   await store.close();
   const {mkdir} = await import('node:fs/promises');
   const other = join(context.directory, 'other');

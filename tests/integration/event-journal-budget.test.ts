@@ -18,7 +18,7 @@ interface Journal {
 interface JournalModule { openJournal(options: {directory: string; storeId: string; readonly?: boolean; segmentBytes?: number; budgetBytes?: number}): Journal; encodeEvent(event: EventRecord): Buffer }
 const journalModule = () => loadContract<JournalModule>('storage/event-journal.js', ['openJournal', 'encodeEvent']);
 const storeId = randomUUID();
-const event = (seq: number): EventRecord => ({storeId, eventId: randomUUID(), seq: String(seq), occurredAt: new Date().toISOString(), instanceId: null, operationId: null, type: 'diagnostics.degraded', payload: {padding: 'x'.repeat(900)}});
+const event = (seq: number): EventRecord => ({protocolVersion: 1, storeId, eventId: randomUUID(), seq: String(seq), occurredAt: new Date().toISOString(), instanceId: null, operationId: null, type: 'diagnostics.degraded', payload: {padding: 'x'.repeat(900)}});
 
 test('only a proven partial pending tail is repaired; complete checksum damage preserves bytes', async t => {
   const {openJournal, encodeEvent} = await journalModule();

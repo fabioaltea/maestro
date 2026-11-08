@@ -18,7 +18,7 @@ test('a cancelled delayed candidate cannot register an instance or expose readin
     await adapter.validateOwnerAndLinks(archive.runtimeDirectory, 'directory');
     await rm(archive.runtimeDirectory, { recursive: true });
   });
-  const store = await openStorage({ path: archive.stateFile, identity: { storeId: randomUUID(), schemaVersion: 1,
+  const store = await openStorage({ path: archive.stateFile, identity: { storeId: randomUUID(), schemaVersion: 2,
     ownerUid: archive.ownerUid, canonicalPath: archive.directory, revision: '0' } });
   const operations = createOperations(store, archive.ownerUid);
   const requestId = randomUUID();

@@ -57,7 +57,7 @@ for (const mode of ['loaded', 'foreign'] as const) {
     const sandbox = await createProcessSandbox(t), h = await createCliHarness(t);
     const adapter = createPlatformPaths(), paths = (await adapter.resolveArchive(h.archive, 'write'))!;
     await adapter.createCredential(paths.clientKeyFile);
-    const store = await openStorage({path: paths.stateFile, identity: {storeId: randomUUID(), schemaVersion: 1, ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0'}});
+    const store = await openStorage({path: paths.stateFile, identity: {storeId: randomUUID(), schemaVersion: 2, ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0'}});
     const confirmed: OperationRecord[] = [], children: ReturnType<typeof sandbox.spawnFixture>[] = [];
     let daemon: ReturnType<typeof sandbox.spawnFixture> | undefined;
     try {

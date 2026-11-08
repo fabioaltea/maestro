@@ -2,12 +2,12 @@ import type Database from 'better-sqlite3';
 import type { StoreIdentity } from '../ports/storage.js';
 import { requireUuid } from '../domain/identifiers.js';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 export const SCHEMA_SQL = `
 CREATE TABLE store (
   singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
   store_id TEXT NOT NULL UNIQUE,
-  schema_version INTEGER NOT NULL CHECK(schema_version = 1),
+  schema_version INTEGER NOT NULL CHECK(schema_version = 2),
   owner_uid INTEGER NOT NULL CHECK(owner_uid >= 0),
   canonical_path TEXT NOT NULL,
   revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
@@ -73,6 +73,18 @@ CREATE TABLE managed_resources (
   observation TEXT NOT NULL CHECK(observation IN ('VERIFIED','ABSENT','UNKNOWN')),
   release_state TEXT NOT NULL CHECK(release_state IN ('OWNED','RELEASED','BLOCKED'))
 ) STRICT;
+CREATE TABLE event_outbox (
+  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+  records TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(records) AND length(CAST(records AS BLOB))<=65536)
+) STRICT;
+INSERT INTO event_outbox(singleton) VALUES(1);
+CREATE TABLE journal_metadata (
+  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+  retention_floor INTEGER NOT NULL DEFAULT 1 CHECK(retention_floor>=1),
+  high_water INTEGER NOT NULL DEFAULT 0 CHECK(high_water>=0),
+  degraded_code TEXT
+) STRICT;
+INSERT INTO journal_metadata(singleton) VALUES(1);
 CREATE INDEX resources_by_instance ON managed_resources(owning_instance_id, release_state);
 `;
 

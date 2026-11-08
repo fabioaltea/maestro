@@ -21,7 +21,7 @@ export async function recoveryScenario(t: TestContext, point: string, requestedA
   if (action === 'stop' || action === 'restart') assert.equal((await h.call('start')).code, 0);
   if (point.startsWith('recovery.') || point.startsWith('daemon.')) {
     await createPlatformPaths().createCredential(paths.clientKeyFile);
-    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 1,
+    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 2,
       ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0' } });
     const operations = createOperations(store, paths.ownerUid);
     await operations.accept({ requestId, action: 'start', targetInstanceId: null, canonicalStateDir: paths.directory });

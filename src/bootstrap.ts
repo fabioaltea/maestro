@@ -7,7 +7,7 @@ import type { ClientBackend } from './ports/platform.js';
 import type { PublicResult } from './protocol/messages.js';
 
 export function failureResult(code: ErrorCode, requestId: string | null): PublicResult {
-  return { ...absentResult(), requestId, result: code === 'BUSY' ? 'BUSY' : ['BLOCKED', 'RESOURCE_IDENTITY_UNKNOWN', 'ENDPOINT_COLLISION'].includes(code) ? 'BLOCKED'
+  return { ...absentResult(), requestId, result: code === 'BUSY' ? 'BUSY' : ['BLOCKED', 'EVENT_BACKPRESSURE', 'RESOURCE_IDENTITY_UNKNOWN', 'ENDPOINT_COLLISION'].includes(code) ? 'BLOCKED'
     : ['DEADLINE_EXCEEDED', 'CONTROL_INTERRUPTED'].includes(code) ? 'UNKNOWN_OUTCOME' : 'ERROR', freshness: 'LAST_KNOWN', liveness: 'UNKNOWN',
     data: {}, error: foundationError(code, requestId ? { operationId: requestId } : {}) };
 }

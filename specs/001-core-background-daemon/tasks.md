@@ -190,7 +190,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T061 [P] [US4] Scrivere test RED in `tests/integration/event-journal-budget.test.ts` per tail parziale, checksum discordante, rotazione, segmenti pinning, outbox piena e checkpoint impedito; misurare file/sidecar e preservare lo storico autorevole. **Dip.: T058.**
 ### E1 — implementazione
 
-- [ ] T062 [US4] Aggiungere EventOutbox/JournalMetadata, seq persistente e serializzazione bigint/stringa in `src/storage/schema.ts` e `src/protocol/messages.ts`; una sola riga outbox <=64 KiB, record <=16 KiB, nessuna entità provider. **Dip.: T059, T060, T061.**
+- [X] T062 [US4] Aggiungere EventOutbox/JournalMetadata, seq persistente e serializzazione bigint/stringa in `src/storage/schema.ts` e `src/protocol/messages.ts`; una sola riga outbox <=64 KiB, record <=16 KiB, nessuna entità provider. **Dip.: T059, T060, T061.**
 - [ ] T063 [US4] Implementare journal segmentato con lunghezza/checksum, sync-before-publish, dedup e recupero della sola coda incompleta in `src/storage/event-journal.ts`; altra corruzione blocca senza cancellare file. **Dip.: T062.**
 - [ ] T064 [US4] Integrare stato+seq+outbox nello stesso commit e drenaggio serializzato in `src/storage/sqlite-store.ts` e `src/storage/worker.ts`, collegando emissioni di lifecycle, controllo, recovery e autorizzazione nei rispettivi moduli core; distinguere esito durevole da osservabilità degradata. **Dip.: T063.**
 - [ ] T065 [US4] Applicare budget e oldest-first retention in `src/storage/event-journal.ts` e `src/storage/worker.ts`: 40 MiB journal, 5 MiB log, riserva/overhead conteggiati nel totale 50 MiB, +5 MiB temporanei, checkpoint/batch bounded e zero reader persistenti per osservatori. **Dip.: T064.**

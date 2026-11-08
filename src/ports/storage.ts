@@ -67,6 +67,7 @@ export interface AcceptOperation {
   readonly acceptedAt: string;
 }
 export interface EventRecord {
+  readonly protocolVersion: 1;
   readonly storeId: string;
   readonly eventId: string;
   readonly seq: string;
