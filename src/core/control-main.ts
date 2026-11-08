@@ -9,7 +9,7 @@ import { createDaemonLauncher } from '../platform/macos/launcher.js';
 import { createProcessIdentity } from '../platform/macos/process-identity.js';
 import { createLocalTransport } from '../platform/macos/transport.js';
 import { openStorage } from '../storage/worker.js';
-import { createOperations } from './operations.js';
+import { createOperations, controlDisposition } from './operations.js';
 import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { isEntrypoint, readBootstrap, reportBootstrap } from './entrypoint.js';
@@ -100,9 +100,13 @@ export async function runControl(intent: BootstrapIntent): Promise<number> {
       targetInstanceId: existing ? existing.targetInstanceId : snapshot.instance?.instanceId ?? null });
     operation = accepted.operation;
     if (!accepted.accepted) {
-      reportBootstrap(true);
-      return operation.outcome === 'SUCCEEDED' ? 0 : operation.outcome === 'BLOCKED' ? 4
-        : operation.outcome === 'IN_PROGRESS' ? 3 : 7;
+      const disposition = controlDisposition(operation, snapshot.instance);
+      if (disposition === 'RETRY') {
+        operation = await store.resumeBlocked(operation.requestId, operation.targetInstanceId);
+      } else {
+        reportBootstrap(true);
+        return operation.outcome === 'SUCCEEDED' ? 0 : operation.outcome === 'IN_PROGRESS' ? 3 : 7;
+      }
     }
     attempt = { attemptId: randomUUID(), requestId: intent.requestId, pid: process.pid,
       generation: randomUUID(), startedAt: new Date().toISOString(), endedAt: null, result: null };
@@ -111,9 +115,10 @@ export async function runControl(intent: BootstrapIntent): Promise<number> {
     const controlKey = await adapter.createCredential(join(paths.credentialsDirectory, `controller-${attempt.attemptId}.key`));
     reportBootstrap(true);
     const context = { paths, store, operation, attempt, controlKey };
-    if (intent.action === 'start') await executeStart(context);
-    else if (intent.action === 'stop') await executeStop(context, { leases: createOwnershipLease(), identity: createProcessIdentity(), transport: createLocalTransport() });
-    else throw new Error('INVALID_REQUEST');
+    if (intent.action === 'stop' || intent.action === 'restart') {
+      await executeStop(context, { leases: createOwnershipLease(), identity: createProcessIdentity(), transport: createLocalTransport() });
+    }
+    if (intent.action === 'start' || intent.action === 'restart') await executeStart(context);
     await store.completeOperation(intent.requestId, 'SUCCEEDED', new Date().toISOString(), null);
     await store.finishControllerAttempt(attempt.attemptId, new Date().toISOString(), 'SUCCEEDED');
     return 0;
@@ -122,7 +127,7 @@ export async function runControl(intent: BootstrapIntent): Promise<number> {
     reportBootstrap(false, code);
     if (store && operation?.outcome === 'IN_PROGRESS') {
       const outcome = ['BLOCKED', 'RESOURCE_IDENTITY_UNKNOWN', 'DEADLINE_EXCEEDED'].includes(code) ? 'BLOCKED' : 'FAILED';
-      await store.completeOperation(operation.requestId, outcome, new Date().toISOString(), foundationError(code)).catch(() => {});
+      await store.completeOperation(operation.requestId, outcome, new Date().toISOString(), foundationError(code, { persisted: true, operationId: operation.requestId })).catch(() => {});
       if (attempt) await store.finishControllerAttempt(attempt.attemptId, new Date().toISOString(), outcome).catch(() => {});
     }
     return code === 'BUSY' ? 3 : code === 'BLOCKED' ? 4 : code === 'UNAUTHORIZED' ? 6 : 7;

@@ -5,6 +5,7 @@ import type { ControlContext } from './control-main.js';
 
 export async function executeStop(context: ControlContext, ports: StopPorts): Promise<void> {
   const { paths, store, operation, controlKey } = context;
+  await store.cancelIssuedTickets(operation.requestId);
   const current = (await store.readSnapshot())?.instance;
   const { leases, identity, transport } = ports;
   if (!current || current.lifecycle === 'STOPPED') {
