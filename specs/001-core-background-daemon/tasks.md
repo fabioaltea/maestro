@@ -187,7 +187,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 
 - [X] T059 [P] [US4] Scrivere test RED di diagnostics.get/events.list e CLI diagnostics/events in `tests/contract/diagnostics-events.test.ts`; correlazioni, redazione, codici, permessi e output umano/JSON concordanti, lettura offline senza mutazione. **Dip.: T058.**
 - [X] T060 [P] [US4] Scrivere test RED di transazione/outbox in `tests/integration/event-outbox-crash.test.ts`: crash prima/dopo commit, append, sync e clear; nessuna perdita dell'evento associato allo stato confermato e dedup seq/eventId. **Dip.: T058.**
-- [ ] T061 [P] [US4] Scrivere test RED in `tests/integration/event-journal-budget.test.ts` per tail parziale, checksum discordante, rotazione, segmenti pinning, outbox piena e checkpoint impedito; misurare file/sidecar e preservare lo storico autorevole. **Dip.: T058.**
+- [X] T061 [P] [US4] Scrivere test RED in `tests/integration/event-journal-budget.test.ts` per tail parziale, checksum discordante, rotazione, segmenti pinning, outbox piena e checkpoint impedito; misurare file/sidecar e preservare lo storico autorevole. **Dip.: T058.**
 ### E1 — implementazione
 
 - [ ] T062 [US4] Aggiungere EventOutbox/JournalMetadata, seq persistente e serializzazione bigint/stringa in `src/storage/schema.ts` e `src/protocol/messages.ts`; una sola riga outbox <=64 KiB, record <=16 KiB, nessuna entità provider. **Dip.: T059, T060, T061.**
