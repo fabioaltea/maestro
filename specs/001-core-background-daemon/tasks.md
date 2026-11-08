@@ -7,7 +7,7 @@
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T032 completati; prima slice F1 al checkpoint di review. T033–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
+T001–T045 completati; controllo US2 al checkpoint di review F2. T046–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -147,7 +147,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T042 [US2] Aggiungere restart e operation REQUEST_ID in `src/cli/main.ts` e `src/client/local-client.ts`, inclusi esito storico offline, IDEMPOTENCY_CONFLICT e target diverso; completare i codici definiti dal contratto CLI. **Dip.: T040, T034.**
 - [X] T043 [US2] Applicare deadline status 2 s, stop 10 s e altri controlli massimo 30 s in `src/core/lifecycle.ts` e `src/client/local-client.ts`; un timeout del client non annulla quanto accettato né autorizza un altro spawn. **Dip.: T042, T041, T033.**
 - [X] T044 [US2] Aggiungere prove reali di segnali, deadline e perdita del client in `tests/integration/daemon-control-deadlines.test.ts`, senza modificare il processo del runner; stop bloccato deve preservare processo/risorsa e fornire nextAction. **Dip.: T043.**
-- [ ] T045 [US2] Eseguire i test US2 e 30 cicli ordinari con target start/stop/restart 5/10/15 s in `tests/acceptance/control-cycles.test.ts`, producendo `specs/001-core-background-daemon/reports/f2-control.md` con campioni e anomalie; zero residui per ogni stop riuscito. **Dip.: T044, T035, T036.**
+- [X] T045 [US2] Eseguire i test US2 e 30 cicli ordinari con target start/stop/restart 5/10/15 s in `tests/acceptance/control-cycles.test.ts`, producendo `specs/001-core-background-daemon/reports/f2-control.md` con campioni e anomalie; zero residui per ogni stop riuscito. **Dip.: T044, T035, T036.**
 
 **Checkpoint**: Controllo start/stop/restart completo; nessun force, zero risorse proprie residue dopo stop riuscito.
 

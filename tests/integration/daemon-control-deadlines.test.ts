@@ -55,7 +55,10 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
       const exited = sandbox.waitForMessage(owner, 'daemon-exited', 5_000);
       owner.send({ type: 'signal', signal });
       await exited;
-      await until(async () => (await store.readSnapshot())?.instance?.lifecycle === 'STOPPED');
+      await until(async () => {
+        const snapshot = await store.readSnapshot();
+        return snapshot?.instance?.lifecycle === 'STOPPED' && snapshot.pendingOperation === null;
+      });
       const instance = (await store.readSnapshot())?.instance;
       assert.equal(instance?.shutdownPrepared, true);
       assert.equal((await store.readSnapshot())?.pendingOperation, null);
@@ -100,11 +103,14 @@ for (const mode of ['gated', 'ack-only'] as const) {
         const response = await h.call('stop', '--request-id', requestId);
         const elapsed = performance.now() - started;
         assert.equal(response.code, 4, response.stdout);
-        assert.ok(elapsed < 10_500, `stop observation took ${elapsed}ms`);
+        t.diagnostic(`blocked stop observation: ${elapsed.toFixed(2)} ms; target <=10000 ms`);
+        assert.ok(elapsed <= 10_000, `stop observation took ${elapsed}ms`);
         assert.equal(child.exitCode, null);
         assert.equal((await store.readSnapshot())?.instance?.lifecycle, 'BLOCKED');
         assert.equal((await store.readSnapshot())?.instance?.shutdownPrepared, false);
-        assert.ok(JSON.parse(response.stdout).error.nextAction);
+        const result = JSON.parse(response.stdout);
+        assert.ok(result.error.nextAction);
+        assert.ok(result.data.resourceIssues.some((resource: {resourceId: string}) => resource.resourceId === resourceId));
       }
     } finally {
       await sandbox.requestExit(child, 'shutdown');

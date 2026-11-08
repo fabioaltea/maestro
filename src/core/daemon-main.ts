@@ -65,6 +65,9 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
         generation: instance.generation, lifecycle: instance.lifecycle, ready: instance.lifecycle === 'RUNNING',
         revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation,
         lastError: instance.lastError, pendingFinalization: false,
+        resourceIssues: instance.lifecycle === 'BLOCKED' ? (await storage.listResources(instance.instanceId))
+          .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
+            kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState })) : [],
       } };
       if (request.method === 'internal.readiness') {
         if (peer.role !== 'controller') return { ...base, result: 'ERROR', data: { code: 'UNAUTHORIZED' } };

@@ -27,7 +27,13 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
   if (!paths) return absentResult();
   const store = await openStorage({ path: paths.stateFile, readonly: true });
   let snapshot;
-  try { snapshot = await store.readSnapshot(); }
+  let resourceIssues: readonly { resourceId: string; kind: string; observation: string; releaseState: string }[] = [];
+  try {
+    snapshot = await store.readSnapshot();
+    if (snapshot?.instance?.lifecycle === 'BLOCKED') resourceIssues = (await store.listResources(snapshot.instance.instanceId))
+      .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
+        kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState }));
+  }
   finally { await store.close(); }
   if (!snapshot) return absentResult();
   const instance = snapshot.instance;
@@ -51,7 +57,7 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
     result: 'OK', outcome: null, freshness: 'LAST_KNOWN',
     liveness: liveness === 'ABSENT' ? 'ABSENT_VERIFIED' : 'UNKNOWN', error: null,
     data: { status: 'PRESENT', lifecycle: instance?.lifecycle ?? null, ready: false, pid: instance?.pid ?? null,
-      revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation, lastError: instance?.lastError ?? null,
+      resourceIssues, revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation, lastError: instance?.lastError ?? null,
       pendingFinalization: liveness === 'ABSENT' && snapshot.pendingOperation !== null,
       observedAt: new Date().toISOString() } };
 }

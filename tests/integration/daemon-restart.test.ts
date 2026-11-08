@@ -51,7 +51,9 @@ test('ten duplicate restarts retain one operation and successor; old process exi
 
 test('restart from STOPPED starts once and lost client response can be queried offline', async t => {
   const h = await createCliHarness(t);
+  assert.equal((await h.call('start')).code, 0);
   assert.equal((await h.call('stop')).code, 0);
+  const stoppedInstanceId = JSON.parse((await h.call('status')).stdout).instanceId;
   const id = randomUUID();
   const impatient = await h.call('restart', '--request-id', id, '--timeout-ms', '50');
   assert.equal(impatient.code, 5, impatient.stdout);
@@ -64,7 +66,7 @@ test('restart from STOPPED starts once and lost client response can be queried o
     await new Promise(resolve => setTimeout(resolve, 25));
   } while (performance.now() < deadline);
   assert.equal(operation?.outcome, 'SUCCEEDED');
-  assert.equal(operation.targetInstanceId, null);
+  assert.equal(operation.targetInstanceId, stoppedInstanceId);
   assert.equal((await h.call('stop')).code, 0);
   const historical = await h.call('operation', id);
   assert.equal(historical.code, 0, historical.stdout);

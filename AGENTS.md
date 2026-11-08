@@ -16,8 +16,8 @@ tests/
 
 ## Commands
 
-Build, typecheck, lint e test ordinari disponibili. Accettazione completa e benchmark
-restano previsti dai task successivi:
+Build, typecheck, lint, test ordinari e accettazione dei cicli di controllo disponibili.
+Accettazione completa e bench:foundation restano previsti dai task successivi:
 
 ```sh
 npm run build
@@ -36,8 +36,10 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 001-core-background-daemon: T001–T032 implementati e committati per task; prima slice F1
-  start/status/stop minimo, 43 test passati. Restart, recovery completo ed eventi restano nei task successivi.
+- 001-core-background-daemon: T001–T045 implementati e committati per task; checkpoint US2
+  start/status/stop/restart, operation offline, drain Foundation, segnali e deadline.
+  61 test ordinari e 30 cicli ordinari passati; misure in reports/f2-control.md.
+  Recovery completo ed eventi restano nei task successivi.
 
 <!-- MANUAL ADDITIONS START -->
 

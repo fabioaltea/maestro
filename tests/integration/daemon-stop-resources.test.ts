@@ -39,6 +39,7 @@ for (const mode of ['cooperative', 'noncooperative', 'foreign'] as const) {
         assert.equal((await h.call('start')).code, 3); // incompatible controls cannot bypass a blocked stop
         const result = JSON.parse(stopped.stdout);
         assert.ok(result.error.nextAction);
+        assert.ok(result.data.resourceIssues.some((resource: {resourceId: string}) => resource.resourceId === resourceId));
         assert.equal((await store.getOperation(stopId))?.successorInstanceId, null);
         if (mode === 'noncooperative') {
           const ready = sandbox.waitForMessage(child, 'cooperating'); child.send({ type: 'cooperate' }); await ready;
