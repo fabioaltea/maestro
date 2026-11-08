@@ -8,7 +8,7 @@
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
 T001–T080 completati; carico US4 verificato con dieci osservatori e mille letture.
-T081–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
+T081 verificato; T082–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
 Commit locali per task autorizzati; nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -240,7 +240,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 
 ### Implementazione e verifica
 
-- [ ] T081 [P] Eseguire 100 prove da dieci start simultanei e 100 retry identici in `tests/acceptance/control-concurrency.test.ts`; includere candidati ritardati e controller perso, registrando zero proprietari/effetti duplicati in `specs/001-core-background-daemon/reports/concurrency.md`. **Dip.: T080.**
+- [X] T081 [P] Eseguire 100 prove da dieci start simultanei e 100 retry identici in `tests/acceptance/control-concurrency.test.ts`; includere candidati ritardati e controller perso, registrando zero proprietari/effetti duplicati in `specs/001-core-background-daemon/reports/concurrency.md`. **Dip.: T080.**
 - [ ] T082 [P] Eseguire `tests/acceptance/local-access.test.ts` sul runner con secondo UID predisposto e registrare prove in `specs/001-core-background-daemon/reports/local-access.md`; assenza del runner resta NOT_RUN e impedisce di dichiarare FR-016 verificato, senza creare utenti o simulare un PASS. **Dip.: T080.**
 - [ ] T083 [P] Implementare/eseguire `tests/acceptance/idle-resources.test.ts` e `tests/acceptance/benchmark-foundation.ts`: idle e assenza client per dieci minuti, stessa istanza, RSS incluso worker <=150 MiB, CPU <=1% di un core; produrre `specs/001-core-background-daemon/reports/performance.md` con target distinti da misure. **Dip.: T080.**
 - [ ] T084 [P] Rieseguire confini d'import e contratti OS con sostituti e macOS reale in `tests/contract/architecture.test.ts` e `tests/contract/platform-paths-lease.test.ts`; verificare nessuna implementazione di altri OS o policy Agent Runtime, registrando `specs/001-core-background-daemon/reports/architecture.md`. **Dip.: T080.**

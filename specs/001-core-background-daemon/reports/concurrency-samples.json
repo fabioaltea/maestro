@@ -1,0 +1,1918 @@
+{
+  "measuredAt": "2026-11-08T20:06:00.664Z",
+  "platform": {
+    "node": "26.13.0",
+    "os": "darwin",
+    "arch": "arm64"
+  },
+  "requestedRounds": 100,
+  "concurrentStarts": 10,
+  "completedRounds": 100,
+  "requestedRetries": 100,
+  "completedRetries": 100,
+  "retryCodes": [
+    0,
+    3,
+    0,
+    3,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    3,
+    0,
+    3,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    3,
+    0,
+    0,
+    3,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    0,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    3,
+    0,
+    0,
+    3,
+    3,
+    0,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    0,
+    0,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    3,
+    0,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    3,
+    0,
+    3,
+    0,
+    3,
+    0,
+    0,
+    3,
+    3,
+    3,
+    0,
+    3,
+    3,
+    3,
+    0,
+    3,
+    3,
+    3,
+    3,
+    3,
+    0,
+    3,
+    0
+  ],
+  "samples": [
+    {
+      "round": 1,
+      "elapsedMs": 4498.375458,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3
+      ],
+      "instanceId": "41d141b0-a759-47df-90c1-df007b0667a1",
+      "claims": 1
+    },
+    {
+      "round": 2,
+      "elapsedMs": 1779.9182499999997,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "f0d189c8-187a-4730-a007-bd409db6ec7b",
+      "claims": 1
+    },
+    {
+      "round": 3,
+      "elapsedMs": 1627.7719159999997,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "e34c7521-dba6-400f-8f47-4bc16774d62c",
+      "claims": 1
+    },
+    {
+      "round": 4,
+      "elapsedMs": 1301.4240410000002,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "423b59c6-dbe2-493c-9d45-44ed7026d6dc",
+      "claims": 1
+    },
+    {
+      "round": 5,
+      "elapsedMs": 1569.9081669999996,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "395214ce-4dde-4d76-8e7f-cf862d2ac4bd",
+      "claims": 1
+    },
+    {
+      "round": 6,
+      "elapsedMs": 1408.8846670000003,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "24127df3-78a6-4e95-be48-247fc32b819f",
+      "claims": 1
+    },
+    {
+      "round": 7,
+      "elapsedMs": 1513.3063330000004,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "db02f1dd-0c7a-4629-8779-5d1185e19a1a",
+      "claims": 1
+    },
+    {
+      "round": 8,
+      "elapsedMs": 1346.3019999999997,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "ab399930-30d4-4082-9fc9-2e00ee831711",
+      "claims": 1
+    },
+    {
+      "round": 9,
+      "elapsedMs": 1229.5959169999987,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "69d31814-37f0-497c-a4de-c9547119dd71",
+      "claims": 1
+    },
+    {
+      "round": 10,
+      "elapsedMs": 1245.2207500000004,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "307dae92-93df-4cd7-9174-ff4dc086ab85",
+      "claims": 1
+    },
+    {
+      "round": 11,
+      "elapsedMs": 1269.8693749999984,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "916d6301-f7c1-4c56-b7b6-389f5c9f42ad",
+      "claims": 1
+    },
+    {
+      "round": 12,
+      "elapsedMs": 1567.0962919999984,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "b26fe60d-255b-4ee7-b418-cc425e485568",
+      "claims": 1
+    },
+    {
+      "round": 13,
+      "elapsedMs": 1370.3291659999995,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "2776b95b-d45c-4e7d-9a71-643de59d26da",
+      "claims": 1
+    },
+    {
+      "round": 14,
+      "elapsedMs": 1240.070917000001,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "6d917091-decf-4c22-8abf-71154335ba35",
+      "claims": 1
+    },
+    {
+      "round": 15,
+      "elapsedMs": 1210.5529160000006,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "539cd729-7e08-4b2d-add9-9b76d1805f34",
+      "claims": 1
+    },
+    {
+      "round": 16,
+      "elapsedMs": 1290.3460840000007,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "585c1b95-1aa6-4c26-bd80-9551ae783b45",
+      "claims": 1
+    },
+    {
+      "round": 17,
+      "elapsedMs": 1237.6225000000013,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "003dcb3f-bf31-4f73-87f5-8242f2718f68",
+      "claims": 1
+    },
+    {
+      "round": 18,
+      "elapsedMs": 1338.5992909999986,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "fd387f5b-76f7-4f10-8254-ee0979079b7d",
+      "claims": 1
+    },
+    {
+      "round": 19,
+      "elapsedMs": 1484.9992500000008,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "d181db8e-96b8-4e02-a6dc-f9df5b3214a2",
+      "claims": 1
+    },
+    {
+      "round": 20,
+      "elapsedMs": 1154.0966249999983,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "a34fdff7-caf5-4c58-a894-9c9ef89df014",
+      "claims": 1
+    },
+    {
+      "round": 21,
+      "elapsedMs": 1369.9597920000015,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "b9258178-3eab-4674-8741-a4632543de81",
+      "claims": 1
+    },
+    {
+      "round": 22,
+      "elapsedMs": 1387.9672080000018,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "7cb873f1-de2a-43ec-b4e2-b78c45547133",
+      "claims": 1
+    },
+    {
+      "round": 23,
+      "elapsedMs": 1188.554959000001,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "ec4fcea6-a7db-4d14-b02d-c773d8ac825f",
+      "claims": 1
+    },
+    {
+      "round": 24,
+      "elapsedMs": 1196.3791669999991,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3
+      ],
+      "instanceId": "2808e2f7-c2af-4505-b640-d4b24dd7d9ae",
+      "claims": 1
+    },
+    {
+      "round": 25,
+      "elapsedMs": 1241.6089999999967,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "aebd9294-beff-4a2f-8322-889ce845dcb5",
+      "claims": 1
+    },
+    {
+      "round": 26,
+      "elapsedMs": 1464.210708000006,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "5eb38547-d656-431d-a338-2ea974018e5c",
+      "claims": 1
+    },
+    {
+      "round": 27,
+      "elapsedMs": 1581.3305000000037,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "b1c213db-8cea-4a19-b94a-72fe6dd1ec73",
+      "claims": 1
+    },
+    {
+      "round": 28,
+      "elapsedMs": 1339.7089999999953,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "022234cb-9b0d-422f-8b9e-d0e3dd866f8c",
+      "claims": 1
+    },
+    {
+      "round": 29,
+      "elapsedMs": 1254.193333000003,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "524f9755-fb7e-42c4-b0c3-23b615f1cb4a",
+      "claims": 1
+    },
+    {
+      "round": 30,
+      "elapsedMs": 1204.4723750000048,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "d6314180-656a-46d7-86be-4a5bbf550330",
+      "claims": 1
+    },
+    {
+      "round": 31,
+      "elapsedMs": 1199.276874999996,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "0c1be7a1-4d8f-4cc7-bfb9-168b911080b2",
+      "claims": 1
+    },
+    {
+      "round": 32,
+      "elapsedMs": 1155.4263750000027,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "1b4e1666-aabc-48a5-a252-5271695d229e",
+      "claims": 1
+    },
+    {
+      "round": 33,
+      "elapsedMs": 1162.856209000005,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "04f43ef2-bf7e-47ee-9475-b38e39667905",
+      "claims": 1
+    },
+    {
+      "round": 34,
+      "elapsedMs": 1219.3872090000004,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "fd85d110-ea36-426a-8817-602065918a86",
+      "claims": 1
+    },
+    {
+      "round": 35,
+      "elapsedMs": 1222.5574579999957,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3
+      ],
+      "instanceId": "40f5c600-ebeb-40b0-a8ce-353af82f0c2e",
+      "claims": 1
+    },
+    {
+      "round": 36,
+      "elapsedMs": 1231.4813749999958,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "141069f4-de45-4d47-8302-a1b8e64eebe0",
+      "claims": 1
+    },
+    {
+      "round": 37,
+      "elapsedMs": 1337.8857500000013,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "bfc30b3e-fd2f-4c0f-ada8-11a336c88aa5",
+      "claims": 1
+    },
+    {
+      "round": 38,
+      "elapsedMs": 1266.0786670000089,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "cd1e3e62-4dfc-4db7-a42c-ff3a4c6fe694",
+      "claims": 1
+    },
+    {
+      "round": 39,
+      "elapsedMs": 1166.1313329999975,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "eb45b924-ebc4-4be0-9133-05fde6487b3e",
+      "claims": 1
+    },
+    {
+      "round": 40,
+      "elapsedMs": 1254.7278339999903,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "43ad59ae-fb8d-4940-ad3c-87e530edf210",
+      "claims": 1
+    },
+    {
+      "round": 41,
+      "elapsedMs": 1213.7373750000115,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "4d3deff1-75a4-41ff-8635-d8289efe6aa4",
+      "claims": 1
+    },
+    {
+      "round": 42,
+      "elapsedMs": 1182.294584000003,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "db6eabef-c18d-497a-b8fb-6de558a60b03",
+      "claims": 1
+    },
+    {
+      "round": 43,
+      "elapsedMs": 1248.9522909999941,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "cb46eb0e-2ee1-4d4a-88c5-f0104c00b1b2",
+      "claims": 1
+    },
+    {
+      "round": 44,
+      "elapsedMs": 1277.4753330000094,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "14ef0466-a6f9-416d-a567-e405ea2239c1",
+      "claims": 1
+    },
+    {
+      "round": 45,
+      "elapsedMs": 1210.6307919999963,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "f20cd4b8-04ac-4087-bad9-177d8daee258",
+      "claims": 1
+    },
+    {
+      "round": 46,
+      "elapsedMs": 1225.7479590000003,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "ad7c0ec5-97ba-41ea-b028-d8b4a06c4f50",
+      "claims": 1
+    },
+    {
+      "round": 47,
+      "elapsedMs": 1289.3043749999924,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "55fa0239-00be-4ba2-88cc-2b87632f634e",
+      "claims": 1
+    },
+    {
+      "round": 48,
+      "elapsedMs": 1296.7370419999934,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "803b02c0-b586-4463-9fb7-4d378be7f5b4",
+      "claims": 1
+    },
+    {
+      "round": 49,
+      "elapsedMs": 1321.4837499999994,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "d806d1f5-878f-4494-8286-dd887bc806d2",
+      "claims": 1
+    },
+    {
+      "round": 50,
+      "elapsedMs": 1265.477291999996,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "f0f99a12-6d8e-4d27-aa0a-050476109e8c",
+      "claims": 1
+    },
+    {
+      "round": 51,
+      "elapsedMs": 1158.2769999999873,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "6ac10546-f0d4-4107-b5a2-5b1d601f5b40",
+      "claims": 1
+    },
+    {
+      "round": 52,
+      "elapsedMs": 1349.744875000004,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "5f27dd3b-e0db-4756-8e5f-ac39ad225f7c",
+      "claims": 1
+    },
+    {
+      "round": 53,
+      "elapsedMs": 1231.451457999996,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "a0fac5cc-ed15-451d-b750-0c119e3d0970",
+      "claims": 1
+    },
+    {
+      "round": 54,
+      "elapsedMs": 1220.1704590000008,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "c0b6195b-d263-4b55-aa30-a60df3c4bbe4",
+      "claims": 1
+    },
+    {
+      "round": 55,
+      "elapsedMs": 1233.9337499999965,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "643f4165-cf43-4a93-8bc1-65f7f9b8a2f8",
+      "claims": 1
+    },
+    {
+      "round": 56,
+      "elapsedMs": 1340.349749999994,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "e1e310ae-00f8-400b-8c92-6d835f7ff882",
+      "claims": 1
+    },
+    {
+      "round": 57,
+      "elapsedMs": 1206.950416000007,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "d25ad558-216b-403a-b726-ebb470866435",
+      "claims": 1
+    },
+    {
+      "round": 58,
+      "elapsedMs": 1233.250749999992,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "b0217015-aa5e-4b8e-bfd9-655aaeabcf99",
+      "claims": 1
+    },
+    {
+      "round": 59,
+      "elapsedMs": 1230.1127080000006,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "b9f2f557-b8aa-48ef-8d8f-9c7d282743bb",
+      "claims": 1
+    },
+    {
+      "round": 60,
+      "elapsedMs": 1204.767749999999,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "87ff3eae-09df-4eb5-abc6-ddbf9d472c8f",
+      "claims": 1
+    },
+    {
+      "round": 61,
+      "elapsedMs": 1230.513208999997,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "5539e6a9-be3e-4b4b-b8a6-6823dd95faa0",
+      "claims": 1
+    },
+    {
+      "round": 62,
+      "elapsedMs": 1218.3827080000046,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "81f8aeda-2eb0-41cf-a8fa-1265f0e7e0ac",
+      "claims": 1
+    },
+    {
+      "round": 63,
+      "elapsedMs": 1279.5345420000085,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "39fc9378-140d-4442-9515-1041fb520614",
+      "claims": 1
+    },
+    {
+      "round": 64,
+      "elapsedMs": 1901.8263330000045,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "43bc966f-47c6-49ab-a65a-6356b18d7016",
+      "claims": 1
+    },
+    {
+      "round": 65,
+      "elapsedMs": 1551.0139170000039,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "f5d94b1a-d82e-4364-a91c-8ae20285197d",
+      "claims": 1
+    },
+    {
+      "round": 66,
+      "elapsedMs": 1477.4802909999999,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "59e6d4f4-91c1-4e0c-97e4-f3748dc29da4",
+      "claims": 1
+    },
+    {
+      "round": 67,
+      "elapsedMs": 1073.429833000002,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "87003def-0b7b-4308-a91d-25a106feed07",
+      "claims": 1
+    },
+    {
+      "round": 68,
+      "elapsedMs": 1200.9418329999899,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "017a209e-8dc3-4219-a667-9ee3ff028fdf",
+      "claims": 1
+    },
+    {
+      "round": 69,
+      "elapsedMs": 1222.769042,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "d85d728c-12de-4b62-bd37-df7437fe663e",
+      "claims": 1
+    },
+    {
+      "round": 70,
+      "elapsedMs": 1242.4929590000102,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "7baa037c-b2f2-4b5c-84cf-62665a1891f3",
+      "claims": 1
+    },
+    {
+      "round": 71,
+      "elapsedMs": 1310.7900829999999,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3
+      ],
+      "instanceId": "18fb50b0-3e7a-4fa5-bebb-deb6e1896b99",
+      "claims": 1
+    },
+    {
+      "round": 72,
+      "elapsedMs": 1153.1390410000022,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "a1fc6563-f441-496d-975e-ac0930c85833",
+      "claims": 1
+    },
+    {
+      "round": 73,
+      "elapsedMs": 1311.8246669999935,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "b90e5804-e984-4a0d-ac3a-4a35607b17d8",
+      "claims": 1
+    },
+    {
+      "round": 74,
+      "elapsedMs": 1528.9754169999942,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "03975649-3766-4b7c-876c-ab4b72cc673b",
+      "claims": 1
+    },
+    {
+      "round": 75,
+      "elapsedMs": 1219.5727920000063,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "93f9b3e9-cb5d-4d9a-80c2-8d4f2222d5ad",
+      "claims": 1
+    },
+    {
+      "round": 76,
+      "elapsedMs": 1228.6834589999926,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "46aad35d-84f4-4ffd-adcd-0a86aa701e65",
+      "claims": 1
+    },
+    {
+      "round": 77,
+      "elapsedMs": 1232.9660840000142,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "79945931-1767-443e-943a-85c935d967b0",
+      "claims": 1
+    },
+    {
+      "round": 78,
+      "elapsedMs": 1124.7215419999848,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "5e464f40-7382-4132-96f5-18f118feeacd",
+      "claims": 1
+    },
+    {
+      "round": 79,
+      "elapsedMs": 1184.6929579999996,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "f670459c-a58b-4ab3-bc1b-1fcf5ec3137f",
+      "claims": 1
+    },
+    {
+      "round": 80,
+      "elapsedMs": 1209.2462499999965,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "5aa49a2b-8313-4a88-84ce-f5bee57c5f52",
+      "claims": 1
+    },
+    {
+      "round": 81,
+      "elapsedMs": 1296.6765829999931,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "12eb2aab-7ced-4d4d-b2cb-d590734eb369",
+      "claims": 1
+    },
+    {
+      "round": 82,
+      "elapsedMs": 1323.738416999986,
+      "codes": [
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "bb8f8f47-7fa0-4fa1-9ec3-02a9c956feb6",
+      "claims": 1
+    },
+    {
+      "round": 83,
+      "elapsedMs": 1401.179541999998,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "67f88421-43d6-41f7-9c5c-53891cc6e748",
+      "claims": 1
+    },
+    {
+      "round": 84,
+      "elapsedMs": 1481.3272080000024,
+      "codes": [
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "9d778e95-489c-430a-ba1a-1e9405d7f802",
+      "claims": 1
+    },
+    {
+      "round": 85,
+      "elapsedMs": 1260.3368750000081,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "170aa336-7ff2-4258-a315-b358788c82b5",
+      "claims": 1
+    },
+    {
+      "round": 86,
+      "elapsedMs": 1314.8291250000184,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "9d3bc865-4511-4ba1-b5c7-37ca9bd4bb16",
+      "claims": 1
+    },
+    {
+      "round": 87,
+      "elapsedMs": 1508.646041,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "513e7c59-d106-4d6e-9e3d-8a95d61d903c",
+      "claims": 1
+    },
+    {
+      "round": 88,
+      "elapsedMs": 1218.1569999999774,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "5ee1e67b-d35d-4d1e-ba20-a8c6d5df2c4e",
+      "claims": 1
+    },
+    {
+      "round": 89,
+      "elapsedMs": 1214.664832999988,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "40d61d0d-8c8e-4fac-b9fc-ca6dc2913a5e",
+      "claims": 1
+    },
+    {
+      "round": 90,
+      "elapsedMs": 1277.68641699999,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "6de92e9e-d512-428a-9027-5d19ca36f18d",
+      "claims": 1
+    },
+    {
+      "round": 91,
+      "elapsedMs": 1229.625166999991,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "b3ef464e-4c8d-4640-b4e6-e2d6580a96cf",
+      "claims": 1
+    },
+    {
+      "round": 92,
+      "elapsedMs": 1382.9597919999796,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "9976c66b-a7c8-4fc7-8621-6e7841fb9cb9",
+      "claims": 1
+    },
+    {
+      "round": 93,
+      "elapsedMs": 1445.3865410000144,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "f5542cf2-bf76-44ff-bb68-0fe3a0366edc",
+      "claims": 1
+    },
+    {
+      "round": 94,
+      "elapsedMs": 1235.9970420000027,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3
+      ],
+      "instanceId": "e0496e03-4555-454d-a8d8-7d3cc25e3164",
+      "claims": 1
+    },
+    {
+      "round": 95,
+      "elapsedMs": 1284.4686250000086,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "aa11ad6f-4905-4ebc-acc0-38cf09797644",
+      "claims": 1
+    },
+    {
+      "round": 96,
+      "elapsedMs": 1218.655333999981,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "469b94b5-f116-4683-8de2-e3b376993713",
+      "claims": 1
+    },
+    {
+      "round": 97,
+      "elapsedMs": 1189.5894160000025,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "3a5562b8-a5d4-4fe5-9592-1543289b4a32",
+      "claims": 1
+    },
+    {
+      "round": 98,
+      "elapsedMs": 1284.2699999999895,
+      "codes": [
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "1cb1b0ab-dbcc-49bd-9da4-f622328e663d",
+      "claims": 1
+    },
+    {
+      "round": 99,
+      "elapsedMs": 1459.2541250000068,
+      "codes": [
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "2fe182cf-b806-46f1-bc55-db8dafe9e3e1",
+      "claims": 1
+    },
+    {
+      "round": 100,
+      "elapsedMs": 1719.6499159999948,
+      "codes": [
+        3,
+        3,
+        3,
+        3,
+        0,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "instanceId": "3fe09a7a-629a-4803-a216-4de239cd4641",
+      "claims": 1
+    }
+  ],
+  "anomalies": []
+}
