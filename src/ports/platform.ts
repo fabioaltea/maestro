@@ -79,7 +79,7 @@ export interface AuthenticatedPeer {
 }
 export interface LocalServer { close(): Promise<void> }
 export interface LocalTransport {
-  listen(endpoint: string, identity: string, keys: ReadonlyMap<string, LocalRole>,
+  listen(endpoint: string, identity: string, keys: ReadonlyMap<string, LocalRole> | (() => Promise<ReadonlyMap<string, LocalRole>>),
     dispatch: (request: RpcRequest, peer: AuthenticatedPeer) => Promise<RpcResponse>): Promise<LocalServer>;
   call(endpoint: string, key: string, request: RpcRequest, timeoutMs: number): Promise<RpcResponse>;
 }

@@ -53,6 +53,7 @@ export function createLocalTransport(): LocalTransport {
       const server = createServer(socket => {
         sockets.add(socket);
         let authenticated = false;
+        let authenticating = false;
         let failed = false;
         let role: LocalRole = 'client';
         let queued = 0;
@@ -72,13 +73,17 @@ export function createLocalTransport(): LocalTransport {
         frameReader(socket, frame => {
           if (failed) return;
           if (!authenticated) {
-            try {
+            if (authenticating) { fail('UNAUTHORIZED'); return; }
+            authenticating = true;
+            void (async () => {
               const hello = decodeObject(frame);
               if (hello.protocolVersion !== 1 || hello.kind !== 'hello' || !hex(hello.token) || !hex(hello.clientNonce)) {
                 fail('UNAUTHORIZED'); return;
               }
               const token = hello.token;
-              const entry = [...keys].find(([candidate]) => equal(candidate, token));
+              const available = typeof keys === 'function' ? await keys() : keys;
+              if (failed || socket.destroyed) return;
+              const entry = [...available].find(([candidate]) => equal(candidate, token));
               if (!entry) { fail('UNAUTHORIZED'); return; }
               role = entry[1];
               const serverNonce = randomBytes(32).toString('hex');
@@ -86,7 +91,7 @@ export function createLocalTransport(): LocalTransport {
                 clientNonce: hello.clientNonce, serverNonce, proof: proof(token, identity, role, hello.clientNonce, serverNonce) }));
               authenticated = true;
               clearTimeout(timer);
-            } catch { fail('UNAUTHORIZED'); }
+            })().catch(() => fail('UNAUTHORIZED')).finally(() => { authenticating = false; });
             return;
           }
           if (++queued > 8) { fail('INVALID_REQUEST'); return; }
