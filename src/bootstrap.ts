@@ -39,6 +39,11 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
         if (bootstrap !== null && !(bootstrap as {accepted: boolean}).accepted) {
           return failureResult(classifyError(new Error((bootstrap as {errorCode?: string}).errorCode ?? 'INTERNAL_ERROR')), intent.requestId);
         }
+        // Exit can arrive while the previous read still held an older SQLite snapshot.
+        if (exited && operation?.outcome === 'IN_PROGRESS') {
+          try { operation = await readOperationFromArchive(intent.canonicalStateDir, intent.requestId); }
+          catch { return failureResult('CONTROL_INTERRUPTED', intent.requestId); }
+        }
         if (operation && operation.action !== intent.action) return failureResult('IDEMPOTENCY_CONFLICT', intent.requestId);
         if (operation && operation.outcome !== 'IN_PROGRESS' && (bootstrap as {accepted: boolean} | null)?.accepted) {
           let state;

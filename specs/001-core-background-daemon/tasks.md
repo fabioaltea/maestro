@@ -172,7 +172,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T054 [US3] Collegare RECOVERING al bootstrap di `src/core/daemon-main.ts`; esporre letture con ready=false fino alla riconciliazione, senza finalizzare le operazioni attualmente possedute dal controller. **Dip.: T053.**
 - [X] T055 [US3] Gestire perdita dello storage worker in `src/core/daemon-main.ts` e `src/core/control-main.ts`: main mantiene il lease, osservazione VOLATILE/BLOCKED e nessun falso commit; controller conclude con errore/diagnosi entro la deadline. **Dip.: T054, T048.**
 - [X] T056 [US3] Estendere snapshot/errori di `src/core/inspect-main.ts` e `src/domain/errors.ts` con pendingFinalization, risorse incerte, causa, retryable, persisted e nextAction; letture offline non fanno recovery mutante. **Dip.: T055.**
-- [ ] T057 [US3] Implementare ed eseguire `tests/acceptance/recovery.test.ts`: almeno 30 crash distribuiti, 1.000 operazioni e fino a dieci ausiliari per il recupero entro 30 s; dimostrare zero perdite confermate/duplicazioni e conservare i casi bloccati. **Dip.: T056, T047, T049.**
+- [X] T057 [US3] Implementare ed eseguire `tests/acceptance/recovery.test.ts`: almeno 30 crash distribuiti, 1.000 operazioni e fino a dieci ausiliari per il recupero entro 30 s; dimostrare zero perdite confermate/duplicazioni e conservare i casi bloccati. **Dip.: T056, T047, T049.**
 - [ ] T058 [US3] Registrare risultati US3 e prove di proprietà/esiti in `specs/001-core-background-daemon/reports/f2-recovery.md`; gate fallito se un'incertezza diventa successo, un processo estraneo viene toccato o il database è ricreato. **Dip.: T057.**
 
 **Checkpoint**: Stato operativo o blocco motivato entro 30 s sul carico previsto; mai reset o effetti alla cieca.

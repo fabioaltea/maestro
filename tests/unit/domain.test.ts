@@ -75,5 +75,7 @@ test('public errors contain safe actionable text without raw causes or secrets',
   assert.equal(error.persisted, false);
   assert.equal(typeof error.nextAction, 'string');
   assert.ok(error.nextAction.length > 0);
-  assert.equal('cause' in error, false);
+  assert.equal(error.cause, null);
+  assert.equal(module.foundationError('PERSISTENCE_UNAVAILABLE', {cause: 'DISK_FULL'}).cause, 'DISK_FULL');
+  assert.throws(() => module.foundationError('PERSISTENCE_UNAVAILABLE', {cause: 'sentinel-secret/raw driver cause'}), /INVALID_ERROR_CODE/);
 });
