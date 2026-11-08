@@ -212,7 +212,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### E3 — test
 
 - [X] T073 [P] [US4] Scrivere test RED in `tests/contract/event-replay.test.ts` per cursore storeId/seq, WRONG_STORE, cursore futuro e CURSOR_EXPIRED con firstAvailable/highWater/nextAction; duplicati devono conservare seq/eventId. **Dip.: T072.**
-- [ ] T074 [P] [US4] Scrivere integrazioni RED in `tests/integration/event-replay-races.test.ts` per append durante replay, retention concorrente, perdita della connessione e restart; nessuna omissione nel passaggio replay→live o segmenti pinning da client lento. **Dip.: T072.**
+- [X] T074 [P] [US4] Scrivere integrazioni RED in `tests/integration/event-replay-races.test.ts` per append durante replay, retention concorrente, perdita della connessione e restart; nessuna omissione nel passaggio replay→live o segmenti pinning da client lento. **Dip.: T072.**
 ### E3 — implementazione
 
 - [ ] T075 [US4] Implementare cattura highWater/registrazione serializzata, replay paginato, retentionFloor e gap esplicito in `src/protocol/event-pump.ts`, `src/storage/event-journal.ts` e `src/core/daemon-main.ts`, mantenendo l'ordine per seq indipendente dall'ora civile. **Dip.: T073, T074.**
