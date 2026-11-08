@@ -36,7 +36,7 @@ export class SQLiteStore {
     try {
       if (!existed) initializeSchema(database, options.identity!);
       if (database.pragma('user_version', { simple: true }) !== SCHEMA_VERSION) throw new Error('STATE_INCOMPATIBLE');
-      if (database.pragma('quick_check', { simple: true }) !== 'ok') throw new Error('STATE_CORRUPT');
+      if (database.pragma('quick_check', { simple: true }) !== 'ok' || (database.pragma('foreign_key_check') as unknown[]).length !== 0) throw new Error('STATE_CORRUPT');
       const store = database.prepare('SELECT * FROM store WHERE singleton=1').get() as Row | undefined;
       if (!store || Number(store.schema_version) !== SCHEMA_VERSION || Number(store.owner_uid) !== process.getuid!()) {
         throw new Error('STATE_INCOMPATIBLE');

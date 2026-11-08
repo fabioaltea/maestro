@@ -1,5 +1,6 @@
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
+import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
 const methods = ['readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
@@ -8,17 +9,20 @@ const methods = ['readSnapshot', 'getOperation', 'acceptOperation', 'setOperatio
 type Method = typeof methods[number];
 interface Request { id: number; method: Method; args: unknown[] }
 
-function safeCode(error: unknown): string {
+export function classifyStorageFailure(error: unknown): SafeError {
   if (error instanceof Error) {
-    if (/^(INVALID_REQUEST|INVALID_IDENTIFIER|INVALID_TRANSITION|UNAUTHORIZED|STATE_INCOMPATIBLE|STATE_CORRUPT|STALE_TARGET|IDEMPOTENCY_CONFLICT|BUSY|BLOCKED|PERSISTENCE_UNAVAILABLE)$/.test(error.message)) return error.message;
-    if ('code' in error && typeof error.code === 'string') {
-      if (/^SQLITE_(BUSY|LOCKED)/.test(error.code)) return 'BUSY';
-      if (/^SQLITE_(CORRUPT|NOTADB)/.test(error.code)) return 'STATE_CORRUPT';
-      if (/^SQLITE_(FULL|IOERR|READONLY|CANTOPEN)/.test(error.code)) return 'PERSISTENCE_UNAVAILABLE';
-    }
+    if ('safeFailure' in error) return error.safeFailure as SafeError;
+    const native = 'code' in error && typeof error.code === 'string' ? error.code : '';
+    if (/^(SQLITE_FULL|ENOSPC|EDQUOT)$/.test(native)) return foundationError('PERSISTENCE_UNAVAILABLE', { cause: 'DISK_FULL' });
+    if (/^(SQLITE_READONLY|EACCES|EROFS)/.test(native)) return foundationError('PERSISTENCE_UNAVAILABLE', { cause: 'READ_ONLY' });
+    if (/^SQLITE_(CORRUPT|NOTADB)/.test(native)) return foundationError('STATE_CORRUPT', { cause: 'CORRUPT' });
+    if (/^(SQLITE_IOERR|SQLITE_CANTOPEN|EIO)/.test(native)) return foundationError('PERSISTENCE_UNAVAILABLE', { cause: 'IO_ERROR' });
+    if (/^SQLITE_(BUSY|LOCKED)/.test(native)) return foundationError('BUSY');
+    try { return foundationError(error.message as SafeError['code']); } catch { /* Never expose the driver's raw message. */ }
   }
-  return 'PERSISTENCE_UNAVAILABLE';
+  return foundationError('PERSISTENCE_UNAVAILABLE');
 }
+const safeCode = (error: unknown) => classifyStorageFailure(error).code;
 
 if (!isMainThread) {
   const port = parentPort!;
@@ -48,7 +52,7 @@ if (!isMainThread) {
               await new Promise<void>(resolve => setTimeout(resolve, 10));
               continue;
             }
-            port.postMessage({ id: request.id, error: code });
+            port.postMessage({ id: request.id, error: code, failure: classifyStorageFailure(error) });
             return;
           }
         }
@@ -57,14 +61,22 @@ if (!isMainThread) {
       });
     });
   } catch (error) {
-    port.postMessage({ ready: false, error: safeCode(error) });
+    port.postMessage({ ready: false, error: safeCode(error), failure: classifyStorageFailure(error) });
     port.close();
   }
 }
 
-export async function openStorage(options: StorageOptions): Promise<StoragePort> {
+export async function openStorage(options: StorageOptions, host: { observeWorker?(worker: Worker): void } = {}): Promise<StoragePort> {
   if (!isMainThread) throw new Error('INVALID_REQUEST');
   const worker = new Worker(new URL('./worker.js', import.meta.url), { workerData: options, execArgv: [] });
+  host.observeWorker?.(worker);
+  let failure: SafeError | null = null;
+  const listeners = new Set<(error: SafeError) => void>();
+  function notify(error: SafeError) {
+    if (closing || failure) return;
+    failure = error;
+    for (const listener of listeners) listener(error);
+  }
   const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
   let nextId = 0;
   let closing = false;
@@ -80,7 +92,7 @@ export async function openStorage(options: StorageOptions): Promise<StoragePort>
     }
     pending.clear();
   }
-  worker.on('message', (message: { ready?: boolean; id?: number; error?: string; value?: unknown }) => {
+  worker.on('message', (message: { ready?: boolean; id?: number; error?: string; failure?: SafeError; value?: unknown }) => {
     if (message.ready !== undefined) {
       clearTimeout(readyTimer);
       if (message.ready) resolveReady();
@@ -92,20 +104,26 @@ export async function openStorage(options: StorageOptions): Promise<StoragePort>
     if (!entry) return;
     pending.delete(message.id);
     clearTimeout(entry.timer);
-    if (message.error) entry.reject(new Error(message.error));
+    if (message.error) {
+      const safe = message.failure ?? classifyStorageFailure(new Error(message.error));
+      if (['PERSISTENCE_UNAVAILABLE', 'STATE_CORRUPT', 'STATE_INCOMPATIBLE'].includes(safe.code)) notify(safe);
+      entry.reject(Object.assign(new Error(message.error), { safeFailure: safe }));
+    }
     else entry.resolve(message.value);
   });
-  worker.on('error', () => { clearTimeout(readyTimer); rejectReady(new Error('PERSISTENCE_UNAVAILABLE')); rejectPending(); });
-  worker.on('exit', () => { exited = true; clearTimeout(readyTimer); rejectReady(new Error('PERSISTENCE_UNAVAILABLE')); rejectPending(); });
+  worker.on('error', () => { notify(foundationError('PERSISTENCE_UNAVAILABLE', { cause: 'WORKER_EXIT' })); clearTimeout(readyTimer); rejectReady(new Error('PERSISTENCE_UNAVAILABLE')); rejectPending(); });
+  worker.on('exit', () => { exited = true; notify(foundationError('PERSISTENCE_UNAVAILABLE', { cause: 'WORKER_EXIT' })); clearTimeout(readyTimer); rejectReady(new Error('PERSISTENCE_UNAVAILABLE')); rejectPending(); });
   try { await ready; }
   catch (error) { clearTimeout(readyTimer); await worker.terminate(); throw error; }
 
   function call<T>(method: Method, args: unknown[]): Promise<T> {
     if (closing || exited) return Promise.reject(new Error('PERSISTENCE_UNAVAILABLE'));
+    if (failure && !['readSnapshot', 'getOperation', 'getTicket', 'listResources', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
     const id = ++nextId;
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         pending.delete(id);
+        notify(foundationError('PERSISTENCE_UNAVAILABLE', { cause: 'IO_ERROR' }));
         reject(new Error('DEADLINE_EXCEEDED'));
       }, 2_100);
       pending.set(id, { resolve: value => resolve(value as T), reject, timer });
@@ -113,6 +131,7 @@ export async function openStorage(options: StorageOptions): Promise<StoragePort>
     });
   }
   return {
+    onFailure: listener => { listeners.add(listener); if (failure) queueMicrotask(() => listener(failure!)); return () => listeners.delete(listener); },
     readSnapshot: () => call('readSnapshot', []),
     getOperation: id => call('getOperation', [id]),
     acceptOperation: intent => call('acceptOperation', [intent]),

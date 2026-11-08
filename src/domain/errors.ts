@@ -21,9 +21,11 @@ const catalog = {
 } as const;
 
 export type ErrorCode = keyof typeof catalog;
-export interface ErrorContext { readonly operationId?: string; readonly persisted?: boolean }
+export type FailureCause = 'DISK_FULL' | 'READ_ONLY' | 'IO_ERROR' | 'WORKER_EXIT' | 'CORRUPT' | 'INCOMPATIBLE' | null;
+export interface ErrorContext { readonly operationId?: string; readonly persisted?: boolean; readonly cause?: FailureCause }
 export interface SafeError {
   readonly code: ErrorCode;
+  readonly cause: FailureCause;
   readonly message: string;
   readonly nextAction: string;
   readonly retryable: boolean;
@@ -36,5 +38,5 @@ export function foundationError(code: ErrorCode, context: ErrorContext = {}): Sa
   const [message, nextAction, retryable] = catalog[code];
   const operationId = context.operationId ?? null;
   if (operationId !== null && !/^[0-9a-f-]{36}$/i.test(operationId)) throw new Error('INVALID_IDENTIFIER');
-  return Object.freeze({ code, message, nextAction, retryable, persisted: context.persisted ?? false, operationId });
+  return Object.freeze({ code, message, nextAction, retryable, cause: context.cause ?? null, persisted: context.persisted ?? false, operationId });
 }

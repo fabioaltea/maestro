@@ -86,6 +86,7 @@ export interface ControllerAttemptRecord {
   readonly result: string | null;
 }
 export interface StoragePort {
+  onFailure(callback: (error: SafeError) => void): () => void;
   readSnapshot(): Promise<StoreSnapshot | null>;
   getOperation(requestId: string): Promise<OperationRecord | null>;
   acceptOperation(intent: AcceptOperation): Promise<{ operation: OperationRecord; accepted: boolean }>;
