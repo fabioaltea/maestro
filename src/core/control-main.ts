@@ -1,3 +1,4 @@
+import { makeDeadline, systemClock, type Deadline } from '../ports/clock.js';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -29,6 +30,7 @@ export interface ControlContext {
   readonly operation: OperationRecord;
   readonly attempt: ControllerAttemptRecord;
   readonly controlKey: string;
+  readonly deadline: Deadline;
 }
 
 async function executeStart(context: ControlContext): Promise<void> {
@@ -50,6 +52,7 @@ async function executeStart(context: ControlContext): Promise<void> {
   const probe = createOwnershipLease().tryAcquire(paths.daemonLeaseFile, 'daemon');
   if (probe.status !== 'HELD') throw new Error('BLOCKED');
   probe.handle.release();
+  if (context.deadline.expired()) throw new Error('DEADLINE_EXCEEDED');
   await store.setOperationPhase(operation.requestId, 'SPAWN_INTENT');
   const operations = createOperations(store, paths.ownerUid);
   const ticket = await operations.issueLaunch(operation.requestId, randomUUID());
@@ -58,13 +61,12 @@ async function executeStart(context: ControlContext): Promise<void> {
   let exited: {code: number | null} | null = null;
   void observed.exit.then(value => { exited = value; });
   await store.setOperationPhase(operation.requestId, 'WAIT_READY');
-  const deadline = performance.now() + 29_000;
-  while (performance.now() < deadline) {
+  while (!context.deadline.expired()) {
     try {
       const response = await transport.call(paths.daemonEndpoint, controlKey, {
         protocolVersion: 1, correlationId: randomUUID(), method: 'internal.readiness',
         params: { expectedInstanceId: ticket.instanceId, launchGeneration: ticket.generation },
-      }, 500);
+      }, Math.min(500, context.deadline.remainingMs()));
       const data = response.data as Record<string, unknown> | null;
       if (response.result === 'OK' && data?.ready === true && data.identity === ticket.instanceId
         && data.generation === ticket.generation) return;
@@ -76,6 +78,7 @@ async function executeStart(context: ControlContext): Promise<void> {
 }
 
 export async function runControl(intent: BootstrapIntent): Promise<number> {
+  const deadline = makeDeadline(systemClock, intent.action === 'stop' ? 9_500 : 29_500);
   let lease: LeaseHandle | undefined;
   let store: StoragePort | undefined;
   let operation: OperationRecord | undefined;
@@ -114,7 +117,7 @@ export async function runControl(intent: BootstrapIntent): Promise<number> {
     await adapter.createCredential(paths.clientKeyFile);
     const controlKey = await adapter.createCredential(join(paths.credentialsDirectory, `controller-${attempt.attemptId}.key`));
     reportBootstrap(true);
-    const context = { paths, store, operation, attempt, controlKey };
+    const context = { paths, store, operation, attempt, controlKey, deadline };
     if (intent.action === 'stop' || intent.action === 'restart') {
       await executeStop(context, { leases: createOwnershipLease(), identity: createProcessIdentity(), transport: createLocalTransport() });
     }

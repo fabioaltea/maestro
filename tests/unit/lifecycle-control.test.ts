@@ -60,3 +60,29 @@ test('status client enforces its observation deadline even when backend does not
   const result = await Promise.race([client.run('status', { timeoutMs: 15 }), new Promise<null>(resolve => setTimeout(() => resolve(null), 100))]);
   assert.equal(result?.error?.code, 'DEADLINE_EXCEEDED');
 });
+
+test('client expiry preserves the request identity and does not cancel accepted work', async () => {
+  let finish!: () => void;
+  let calls = 0, completed = false;
+  const id = randomUUID();
+  const client = new LocalClient({ defaultDirectory: '/unused', inspect: () => new Promise(() => {}), operation: () => new Promise(() => {}),
+    control: async intent => {
+      calls++;
+      assert.equal(intent.requestId, id);
+      await new Promise<void>(resolve => { finish = resolve; });
+      completed = true;
+      return { protocolVersion: 1, requestId: id, storeId: null, instanceId: null, result: 'OK', outcome: 'SUCCEEDED', freshness: 'LAST_KNOWN', liveness: 'UNKNOWN', data: {}, error: null };
+    },
+  });
+  const result = await client.run('restart', { requestId: id, timeoutMs: 10 });
+  assert.equal(result.result, 'UNKNOWN_OUTCOME');
+  assert.equal(result.requestId, id);
+  assert.equal(completed, false);
+  finish();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(completed, true);
+  assert.equal(calls, 1);
+  await assert.rejects(client.run('status', { timeoutMs: 2_001 }), /INVALID_REQUEST/);
+  await assert.rejects(client.run('stop', { timeoutMs: 10_001 }), /INVALID_REQUEST/);
+  await assert.rejects(client.run('restart', { timeoutMs: 30_001 }), /INVALID_REQUEST/);
+});

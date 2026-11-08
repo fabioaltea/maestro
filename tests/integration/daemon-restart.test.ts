@@ -53,7 +53,7 @@ test('restart from STOPPED starts once and lost client response can be queried o
   const h = await createCliHarness(t);
   assert.equal((await h.call('stop')).code, 0);
   const id = randomUUID();
-  const impatient = await h.call('restart', '--request-id', id, '--timeout-ms', '1');
+  const impatient = await h.call('restart', '--request-id', id, '--timeout-ms', '50');
   assert.equal(impatient.code, 5, impatient.stdout);
   const deadline = performance.now() + 5_000;
   let operation;

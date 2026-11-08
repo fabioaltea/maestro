@@ -6,6 +6,7 @@ import type { ControlContext } from './control-main.js';
 export async function executeStop(context: ControlContext, ports: StopPorts): Promise<void> {
   const { paths, store, operation, controlKey } = context;
   await store.cancelIssuedTickets(operation.requestId);
+  if (context.deadline.expired()) throw new Error('BLOCKED');
   const current = (await store.readSnapshot())?.instance;
   const { leases, identity, transport } = ports;
   if (!current || current.lifecycle === 'STOPPED') {
@@ -22,14 +23,14 @@ export async function executeStop(context: ControlContext, ports: StopPorts): Pr
 
   const verified = await identity.challenge(paths.daemonEndpoint, {
     identity: current.instanceId, generation: current.generation, key: controlKey,
-  }, 1_000);
+  }, Math.min(1_000, context.deadline.remainingMs()));
   if (verified !== 'VERIFIED') throw new Error('RESOURCE_IDENTITY_UNKNOWN');
   await store.setOperationPhase(operation.requestId, 'STOP_REQUESTED');
   try {
     const response = await transport.call(paths.daemonEndpoint, controlKey, {
       protocolVersion: 1, correlationId: randomUUID(), method: 'internal.prepareStop',
       params: { requestId: operation.requestId, targetInstanceId: current.instanceId, generation: current.generation },
-    }, 1_000);
+    }, Math.min(1_000, context.deadline.remainingMs()));
     if (response.result !== 'OK') throw new Error('BLOCKED');
   } catch (error) {
     if (error instanceof Error && ['UNAUTHORIZED', 'INVALID_REQUEST', 'BLOCKED'].includes(error.message)) throw error;
@@ -37,7 +38,7 @@ export async function executeStop(context: ControlContext, ports: StopPorts): Pr
   }
   await store.setOperationPhase(operation.requestId, 'DRAINING');
   await store.setOperationPhase(operation.requestId, 'WAIT_EXIT');
-  const deadline = performance.now() + 8_000;
+  const deadline = Math.min(performance.now() + 8_500, context.deadline.expiresAt);
   while (performance.now() < deadline) {
     const observation = (await store.readSnapshot())?.instance;
     if (observation?.instanceId !== current.instanceId) throw new Error('STALE_TARGET');
