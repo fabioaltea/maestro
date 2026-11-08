@@ -21,6 +21,12 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "build:test": "tsc -p tsconfig.test.json",
+    "test": "npm run build && npm run build:test && node scripts/run-tests.mjs",
+    "test:contract": "npm run build && npm run build:test && node scripts/run-tests.mjs contract",
+    "test:integration": "npm run build && npm run build:test && node scripts/run-tests.mjs integration",
+    "test:acceptance": "npm run build && npm run build:test && node scripts/run-tests.mjs acceptance",
+    "bench:foundation": "npm run build && npm run build:test && node dist-tests/tests/acceptance/benchmark-foundation.js"
   }
 }
