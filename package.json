@@ -4,13 +4,23 @@
   "private": true,
   "type": "module",
   "description": "Local headless development orchestration foundation",
-  "engines": { "node": "26.13.0" },
+  "engines": {
+    "node": "26.13.0"
+  },
   "packageManager": "npm@11.20.0",
-  "bin": { "maestro": "dist/cli/main.js" },
-  "dependencies": { "better-sqlite3": "13.0.3" },
+  "bin": {
+    "maestro": "dist/cli/main.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.0.3"
+  },
   "devDependencies": {
     "@types/better-sqlite3": "9.6.0",
     "@types/node": "26.6.6",
     "typescript": "6.0.3"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
   }
 }
