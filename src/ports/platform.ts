@@ -36,6 +36,7 @@ export interface ProcessExit { readonly code: number | null; readonly signal: st
 export interface ObservedProcess {
   readonly pid: number;
   readonly exit: Promise<ProcessExit>;
+  readonly bootstrap?: Promise<{ readonly accepted: boolean; readonly errorCode?: string } | null>;
 }
 export interface BootstrapIntent {
   readonly protocolVersion: 1;
