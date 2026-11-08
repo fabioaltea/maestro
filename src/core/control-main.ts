@@ -1,3 +1,5 @@
+import type { CoreDependencies } from './runtime.js';
+import { reconcileControl } from './recovery.js';
 import { makeDeadline, systemClock, type Deadline } from '../ports/clock.js';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,7 +12,7 @@ import { createDaemonLauncher } from '../platform/macos/launcher.js';
 import { createProcessIdentity } from '../platform/macos/process-identity.js';
 import { createLocalTransport } from '../platform/macos/transport.js';
 import { openStorage } from '../storage/worker.js';
-import { createOperations, controlDisposition } from './operations.js';
+import { createOperations } from './operations.js';
 import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { isEntrypoint, readBootstrap, reportBootstrap } from './entrypoint.js';
@@ -31,6 +33,8 @@ export interface ControlContext {
   readonly attempt: ControllerAttemptRecord;
   readonly controlKey: string;
   readonly deadline: Deadline;
+  readonly checkpoint: (point: string) => Promise<void>;
+  readonly launcher: import('../ports/platform.js').DaemonLauncher;
 }
 
 async function executeStart(context: ControlContext): Promise<void> {
@@ -49,15 +53,22 @@ async function executeStart(context: ControlContext): Promise<void> {
     } catch { /* An unreachable endpoint is not proof that its process stopped. */ }
     throw new Error('BLOCKED');
   }
-  const probe = createOwnershipLease().tryAcquire(paths.daemonLeaseFile, 'daemon');
-  if (probe.status !== 'HELD') throw new Error('BLOCKED');
-  probe.handle.release();
+  const leaseDeadline = Math.min(performance.now() + 2_000, context.deadline.expiresAt);
+  for (;;) {
+    const probe = createOwnershipLease().tryAcquire(paths.daemonLeaseFile, 'daemon');
+    if (probe.status === 'HELD') { probe.handle.release(); break; }
+    if (performance.now() >= leaseDeadline) throw new Error('BLOCKED');
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
   if (context.deadline.expired()) throw new Error('DEADLINE_EXCEEDED');
   await store.setOperationPhase(operation.requestId, 'SPAWN_INTENT');
   const operations = createOperations(store, paths.ownerUid);
-  const ticket = await operations.issueLaunch(operation.requestId, randomUUID());
-  const observed = await createDaemonLauncher().spawnDaemon({ ticketId: ticket.ticketId,
+  const ticket = (await store.listTickets(operation.requestId)).find(ticket => ticket.status === 'ISSUED')
+    ?? await operations.issueLaunch(operation.requestId, randomUUID());
+  await context.checkpoint('control.ticketIssued');
+  const observed = await context.launcher.spawnDaemon({ ticketId: ticket.ticketId,
     generation: ticket.generation, instanceId: ticket.instanceId, canonicalStateDir: paths.directory });
+  await context.checkpoint('control.spawned');
   let exited: {code: number | null} | null = null;
   void observed.exit.then(value => { exited = value; });
   await store.setOperationPhase(operation.requestId, 'WAIT_READY');
@@ -69,7 +80,7 @@ async function executeStart(context: ControlContext): Promise<void> {
       }, Math.min(500, context.deadline.remainingMs()));
       const data = response.data as Record<string, unknown> | null;
       if (response.result === 'OK' && data?.ready === true && data.identity === ticket.instanceId
-        && data.generation === ticket.generation) return;
+        && data.generation === ticket.generation) { await context.checkpoint('control.ready'); return; }
     } catch { /* Readiness is explicitly verified on a subsequent attempt. */ }
     if (exited !== null) throw new Error('CORE_EXITED_BEFORE_ACCEPTANCE');
     await new Promise<void>(resolve => setTimeout(resolve, 25));
@@ -77,7 +88,9 @@ async function executeStart(context: ControlContext): Promise<void> {
   throw new Error('DEADLINE_EXCEEDED');
 }
 
-export async function runControl(intent: BootstrapIntent): Promise<number> {
+export async function runControl(intent: BootstrapIntent, dependencies: CoreDependencies = {}): Promise<number> {
+  const checkpoint = dependencies.checkpoint ?? (async () => {});
+  const report = dependencies.report ?? reportBootstrap;
   const deadline = makeDeadline(systemClock, intent.action === 'stop' ? 9_500 : 29_500);
   let lease: LeaseHandle | undefined;
   let store: StoragePort | undefined;
@@ -90,44 +103,46 @@ export async function runControl(intent: BootstrapIntent): Promise<number> {
     const adapter = createPlatformPaths();
     const paths = (await adapter.resolveArchive(intent.canonicalStateDir, 'write'))!;
     const lock = createOwnershipLease().tryAcquire(paths.controlLeaseFile, 'control');
-    if (lock.status !== 'HELD') { reportBootstrap(false, lock.status === 'BUSY' ? 'BUSY' : 'BLOCKED'); return lock.status === 'BUSY' ? 3 : 4; }
+    if (lock.status !== 'HELD') { report(false, lock.status === 'BUSY' ? 'BUSY' : 'BLOCKED'); return lock.status === 'BUSY' ? 3 : 4; }
     lease = lock.handle;
     const fresh = !existsSync(paths.stateFile);
-    store = await openStorage({ path: paths.stateFile, ...(fresh ? { identity: {
+    store = await (dependencies.storage ?? openStorage)({ path: paths.stateFile, ...(fresh ? { identity: {
       storeId: randomUUID(), schemaVersion: 1, ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0',
     } } : {}) });
+    await reconcileControl({ store, paths, deadline, checkpoint, identity: createProcessIdentity(),
+      transport: createLocalTransport(), leases: createOwnershipLease(), platformPaths: adapter,
+      excludedPids: [process.pid], sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+    }, intent);
     const snapshot = (await store.readSnapshot())!;
     const existing = await store.getOperation(intent.requestId);
+    await checkpoint('control.beforeAccept');
     const accepted = await createOperations(store, paths.ownerUid).accept({ requestId: intent.requestId,
       action: intent.action, canonicalStateDir: paths.directory,
       targetInstanceId: existing ? existing.targetInstanceId : snapshot.instance?.instanceId ?? null });
     operation = accepted.operation;
-    if (!accepted.accepted) {
-      const disposition = controlDisposition(operation, snapshot.instance);
-      if (disposition === 'RETRY') {
-        operation = await store.resumeBlocked(operation.requestId, operation.targetInstanceId);
-      } else {
-        reportBootstrap(true);
-        return operation.outcome === 'SUCCEEDED' ? 0 : operation.outcome === 'IN_PROGRESS' ? 3 : 7;
-      }
+    if (!accepted.accepted && ['SUCCEEDED', 'FAILED', 'INTERRUPTED'].includes(operation.outcome)) {
+      report(true);
+      return operation.outcome === 'SUCCEEDED' ? 0 : 7;
     }
+    await checkpoint('control.accepted');
     attempt = { attemptId: randomUUID(), requestId: intent.requestId, pid: process.pid,
       generation: randomUUID(), startedAt: new Date().toISOString(), endedAt: null, result: null };
     await store.recordControllerAttempt(attempt);
     await adapter.createCredential(paths.clientKeyFile);
     const controlKey = await adapter.createCredential(join(paths.credentialsDirectory, `controller-${attempt.attemptId}.key`));
-    reportBootstrap(true);
-    const context = { paths, store, operation, attempt, controlKey, deadline };
+    report(true);
+    const context = { paths, store, operation, attempt, controlKey, deadline, checkpoint, launcher: dependencies.launcher ?? createDaemonLauncher() };
     if (intent.action === 'stop' || intent.action === 'restart') {
       await executeStop(context, { leases: createOwnershipLease(), identity: createProcessIdentity(), transport: createLocalTransport() });
     }
     if (intent.action === 'start' || intent.action === 'restart') await executeStart(context);
     await store.completeOperation(intent.requestId, 'SUCCEEDED', new Date().toISOString(), null);
+    await checkpoint('control.completed');
     await store.finishControllerAttempt(attempt.attemptId, new Date().toISOString(), 'SUCCEEDED');
     return 0;
   } catch (error) {
     const code = classifyError(error);
-    reportBootstrap(false, code);
+    report(false, code);
     if (store && operation?.outcome === 'IN_PROGRESS') {
       const outcome = ['BLOCKED', 'RESOURCE_IDENTITY_UNKNOWN', 'DEADLINE_EXCEEDED'].includes(code) ? 'BLOCKED' : 'FAILED';
       await store.completeOperation(operation.requestId, outcome, new Date().toISOString(), foundationError(code, { persisted: true, operationId: operation.requestId })).catch(() => {});

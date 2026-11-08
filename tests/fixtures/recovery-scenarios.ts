@@ -12,13 +12,13 @@ import { openStorage } from '../../src/storage/worker.js';
 export const recoveryPoints = ['control.beforeAccept', 'control.accepted', 'control.ticketIssued', 'control.spawned',
   'control.ready', 'control.completed', 'control.stopRequested', 'control.stopObserved', 'recovery.beforeCleanup', 'recovery.afterCleanup'] as const;
 
-export async function recoveryScenario(t: TestContext, point: string) {
+export async function recoveryScenario(t: TestContext, point: string, requestedAction?: 'start' | 'stop' | 'restart') {
   const sandbox = await createProcessSandbox(t);
   const h = await createCliHarness(t);
   const paths = (await createPlatformPaths().resolveArchive(h.archive, 'write'))!;
   let requestId = randomUUID();
-  const action = point.includes('stop') ? 'stop' : 'start';
-  if (action === 'stop') assert.equal((await h.call('start')).code, 0);
+  const action = requestedAction ?? (point.includes('stop') ? 'stop' : 'start');
+  if (action === 'stop' || action === 'restart') assert.equal((await h.call('start')).code, 0);
   if (point.startsWith('recovery.')) {
     await createPlatformPaths().createCredential(paths.clientKeyFile);
     const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 1,

@@ -22,3 +22,33 @@ for (const point of recoveryPoints) {
     if (previous?.outcome === 'SUCCEEDED') assert.deepEqual(historical, previous);
   });
 }
+
+test('new stop cancels an unclaimed old launch and a delayed candidate is fenced', async t => {
+  const h = await recoveryScenario(t, 'control.ticketIssued');
+  assert.equal((await h.call('start')).code, 3);
+  const store = await openStorage({path: h.paths.stateFile, readonly: true});
+  try {
+    const ticket = (await store.listTickets(h.requestId))[0]!;
+    const stopped = await h.call('stop');
+    assert.equal(stopped.code, 0, stopped.stdout);
+    assert.equal((await store.getOperation(h.requestId))?.outcome, 'INTERRUPTED');
+    assert.equal((await store.getTicket(ticket.ticketId))?.status, 'CANCELLED');
+    const { createDaemonLauncher } = await import('../../src/platform/macos/launcher.js');
+    const late = await createDaemonLauncher().spawnDaemon({ticketId: ticket.ticketId, instanceId: ticket.instanceId, generation: ticket.generation, canonicalStateDir: h.archive});
+    assert.notEqual((await late.exit).code, 0);
+    assert.equal((await store.readSnapshot())?.instance, null);
+  } finally { await store.close(); }
+});
+
+test('a different stop interrupts a lost restart after stop, without resuming its start phase', async t => {
+  const h = await recoveryScenario(t, 'control.stopObserved', 'restart');
+  assert.equal((await h.call('start')).code, 3);
+  assert.equal((await h.call('stop')).code, 0);
+  const store = await openStorage({path: h.paths.stateFile, readonly: true});
+  try {
+    const old = await store.getOperation(h.requestId);
+    assert.equal(old?.outcome, 'INTERRUPTED');
+    assert.equal(old?.successorInstanceId, null);
+    assert.equal((await store.readSnapshot())?.instance?.lifecycle, 'STOPPED');
+  } finally { await store.close(); }
+});

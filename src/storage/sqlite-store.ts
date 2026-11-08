@@ -264,10 +264,14 @@ export class SQLiteStore {
       const claim = database.prepare("SELECT 1 FROM launch_tickets WHERE instance_id=? AND generation=? AND claimed_pid=? AND status='CLAIMED'")
         .get(instance.instanceId, instance.generation, instance.pid);
       if (!claim) throw new Error('STALE_TARGET');
+      const previous = database.prepare('SELECT lifecycle,generation FROM instances WHERE instance_id=?').get(instance.instanceId) as Row | undefined;
+      if (previous && (previous.lifecycle !== 'STOPPED' || BigInt(String(previous.generation)) >= BigInt(instance.generation))) throw new Error('STALE_TARGET');
       const current = this.readSnapshot()?.instance;
       if (current && current.instanceId !== instance.instanceId && current.lifecycle !== 'STOPPED') throw new Error('BUSY');
       database.prepare(`INSERT INTO instances(instance_id,pid,generation,lifecycle,started_at,shutdown_prepared,last_error)
-        VALUES (?,?,?,?,?,?,?)`).run(instance.instanceId, instance.pid, instance.generation, instance.lifecycle,
+        VALUES (?,?,?,?,?,?,?) ON CONFLICT(instance_id) DO UPDATE SET pid=excluded.pid,generation=excluded.generation,
+          lifecycle=excluded.lifecycle,started_at=excluded.started_at,shutdown_prepared=excluded.shutdown_prepared,last_error=excluded.last_error
+          WHERE instances.lifecycle='STOPPED' AND CAST(instances.generation AS INTEGER)<CAST(excluded.generation AS INTEGER)`).run(instance.instanceId, instance.pid, instance.generation, instance.lifecycle,
         instance.startedAt, instance.shutdownPrepared ? 1 : 0, instance.lastError ? JSON.stringify(instance.lastError) : null);
       database.prepare('UPDATE store SET current_instance_id=? WHERE singleton=1').run(instance.instanceId);
     });

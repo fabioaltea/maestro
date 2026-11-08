@@ -77,9 +77,17 @@ export async function reconcileControl(context: RecoveryContext, requested: Boot
     while (observed.observation === 'UNKNOWN' && ['STARTING', 'RECOVERING'].includes((await store.readSnapshot())?.instance?.lifecycle ?? '')
       && performance.now() < grace) { await context.sleep(25); observed = await observe(context); }
     let tickets = pending ? await store.listTickets(pending.requestId) : [];
-    const active = tickets.find(t => t.status !== 'CANCELLED');
-    if (active?.status === 'CLAIMED' && active.instanceId !== snapshot.instance?.instanceId
+    let active = tickets.find(t => t.status !== 'CANCELLED');
+    const claimGrace = Math.min(performance.now() + 2_000, context.deadline.expiresAt);
+    while (active?.status === 'CLAIMED' && active.instanceId !== (await store.readSnapshot())?.instance?.instanceId
+      && await context.identity.probeAbsent(active.claimedPid!) !== 'ABSENT' && performance.now() < claimGrace) {
+      await context.sleep(25); observed = await observe(context);
+      tickets = pending ? await store.listTickets(pending.requestId) : [];
+      active = tickets.find(t => t.status !== 'CANCELLED');
+    }
+    if (active?.status === 'CLAIMED' && active.instanceId !== (await store.readSnapshot())?.instance?.instanceId
       && await context.identity.probeAbsent(active.claimedPid!) !== 'ABSENT') throw new Error('RESOURCE_IDENTITY_UNKNOWN');
+    observed = await observe(context);
     if (observed.observation === 'ABSENT') await recoverAbsentInstance(context);
     const current = (await store.readSnapshot())?.instance;
     if (!pending) {
@@ -90,7 +98,8 @@ export async function reconcileControl(context: RecoveryContext, requested: Boot
       ticketStatus: active?.status === 'ISSUED' || active?.status === 'CLAIMED' ? active.status : null, currentInstanceId: current?.instanceId ?? null });
     if (decision === 'BLOCKED' && observed.verified && pending.requestId === requested.requestId
       && pending.targetInstanceId === current?.instanceId && ['stop', 'restart'].includes(pending.action)) decision = 'RESUME';
-    if (decision === 'BLOCKED') throw new Error('BLOCKED');
+    if (decision === 'BLOCKED') throw new Error(pending.requestId !== requested.requestId
+      && (observed.verified || observed.observation === 'ABSENT') ? 'BUSY' : 'BLOCKED');
     if (decision === 'COMPLETE') {
       if (pending.action === 'stop') await store.cancelIssuedTickets(pending.requestId);
       await store.completeOperation(pending.requestId, 'SUCCEEDED', new Date().toISOString(), null);

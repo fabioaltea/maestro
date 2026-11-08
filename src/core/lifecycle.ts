@@ -26,6 +26,7 @@ export async function executeStop(context: ControlContext, ports: StopPorts): Pr
   }, Math.min(1_000, context.deadline.remainingMs()));
   if (verified !== 'VERIFIED') throw new Error('RESOURCE_IDENTITY_UNKNOWN');
   await store.setOperationPhase(operation.requestId, 'STOP_REQUESTED');
+  await context.checkpoint('control.stopRequested');
   try {
     const response = await transport.call(paths.daemonEndpoint, controlKey, {
       protocolVersion: 1, correlationId: randomUUID(), method: 'internal.prepareStop',
@@ -51,6 +52,7 @@ export async function executeStop(context: ControlContext, ports: StopPorts): Pr
           if (!latest || latest.instanceId !== current.instanceId || latest.lifecycle !== 'STOPPING') throw new Error('BLOCKED');
           if ((await store.listResources(current.instanceId)).some(resource => resource.releaseState !== 'RELEASED')) throw new Error('BLOCKED');
           await store.transitionInstance(current.instanceId, 'STOPPED');
+          await context.checkpoint('control.stopObserved');
           return;
         } finally { acquired.handle.release(); }
       }
