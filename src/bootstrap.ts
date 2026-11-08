@@ -1,3 +1,6 @@
+import { createPlatformPaths } from './platform/macos/paths.js';
+import { createLocalTransport } from './platform/macos/transport.js';
+import { randomUUID } from 'node:crypto';
 import { createDaemonLauncher } from './platform/macos/launcher.js';
 import { defaultArchiveDirectory } from './platform/macos/paths.js';
 import { inspectArchive, inspectDetails, readOperationFromArchive, absentResult } from './core/inspect-main.js';
@@ -8,7 +11,7 @@ import type { PublicResult } from './protocol/messages.js';
 
 export function failureResult(code: ErrorCode, requestId: string | null): PublicResult {
   return { ...absentResult(), requestId, result: code === 'BUSY' ? 'BUSY' : ['BLOCKED', 'EVENT_BACKPRESSURE', 'RESOURCE_IDENTITY_UNKNOWN', 'ENDPOINT_COLLISION'].includes(code) ? 'BLOCKED'
-    : ['DEADLINE_EXCEEDED', 'CONTROL_INTERRUPTED'].includes(code) ? 'UNKNOWN_OUTCOME' : 'ERROR', freshness: 'LAST_KNOWN', liveness: 'UNKNOWN',
+    : ['DEADLINE_EXCEEDED', 'CONTROL_INTERRUPTED', 'SERVICE_UNREACHABLE', 'SLOW_CONSUMER'].includes(code) ? 'UNKNOWN_OUTCOME' : 'ERROR', freshness: 'LAST_KNOWN', liveness: 'UNKNOWN',
     data: {}, error: foundationError(code, requestId ? { operationId: requestId } : {}) };
 }
 
@@ -16,6 +19,18 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
   return {
     defaultDirectory: defaultArchiveDirectory(),
     inspect: inspectArchive,
+    async follow(directory, consume, signal, timeoutMs) {
+      const adapter = createPlatformPaths(), paths = await adapter.resolveArchive(directory, 'read');
+      if (!paths) throw new Error('SERVICE_UNREACHABLE');
+      try {
+        const key = await adapter.readCredential(paths.clientKeyFile);
+        return await createLocalTransport().subscribe(paths.daemonEndpoint, key, {protocolVersion: 1, correlationId: randomUUID(), method: 'events.subscribe', params: {}}, consume,
+          {timeoutMs: timeoutMs ?? 1_000, ...(signal ? {signal} : {})});
+      } catch (error) {
+        if (error instanceof Error && 'code' in error && ['ENOENT', 'ECONNREFUSED'].includes(String(error.code))) throw new Error('SERVICE_UNREACHABLE');
+        throw error;
+      }
+    },
     diagnostics: directory => inspectDetails(directory, 'diagnostics'),
     events: (directory, limit) => inspectDetails(directory, 'events', limit),
     async operation(directory, requestId) {

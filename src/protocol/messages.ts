@@ -61,3 +61,9 @@ export interface EventState {
   readonly usage?: {journalBytes: number; logBytes: number; walBytes: number; shmBytes: number; outboxMetadataBytes: number; totalBytes: number;
     limits: {journalBytes: number; logBytes: number; totalBytes: number; temporaryBytes: number; walBytes: number}};
 }
+
+export interface StreamEventFrame {
+  readonly protocolVersion: 1; readonly kind: 'event'; readonly correlationId: string;
+  readonly subscriptionId: string; readonly instanceId: string;
+  readonly event: import('../ports/storage.js').EventRecord;
+}

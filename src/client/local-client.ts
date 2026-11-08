@@ -13,6 +13,10 @@ export interface CommandOptions {
 
 export class LocalClient {
   constructor(private readonly backend: ClientBackend) {}
+  async followEvents(consume: (frame: import('../protocol/messages.js').StreamEventFrame) => Promise<void>, options: CommandOptions & {signal?: AbortSignal} = {}) {
+    if (options.requestId || options.limit !== undefined || (options.timeoutMs !== undefined && (!Number.isFinite(options.timeoutMs) || options.timeoutMs <= 0 || options.timeoutMs > 2_000))) throw new Error('INVALID_REQUEST');
+    return this.backend.follow(options.stateDirectory ?? this.backend.defaultDirectory, consume, options.signal, options.timeoutMs);
+  }
   async run(command: 'start' | 'status' | 'stop' | 'restart' | 'operation' | 'diagnostics' | 'events', options: CommandOptions = {}): Promise<PublicResult> {
     const directory = options.stateDirectory ?? this.backend.defaultDirectory;
     const reading = ['status', 'operation', 'diagnostics', 'events'].includes(command);

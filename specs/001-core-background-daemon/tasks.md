@@ -205,7 +205,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### E2 — implementazione
 
 - [X] T070 [US4] Implementare pump live in `src/protocol/event-pump.ts`: notifiche come wake-up, cursore sul journal, pagine chiuse prima dell'attesa, byte accounting senza doppio conteggio, SLOW_CONSUMER e nessuna history alternativa illimitata. **Dip.: T068, T069.**
-- [ ] T071 [US4] Collegare subscribe/close e CLI events --follow in `src/core/daemon-main.ts`, `src/platform/macos/transport.ts`, `src/client/local-client.ts` e `src/cli/main.ts`; la disconnessione non modifica lifecycle e nessuna sottoscrizione trattiene una transazione SQL. **Dip.: T070.**
+- [X] T071 [US4] Collegare subscribe/close e CLI events --follow in `src/core/daemon-main.ts`, `src/platform/macos/transport.ts`, `src/client/local-client.ts` e `src/cli/main.ts`; la disconnessione non modifica lifecycle e nessuna sottoscrizione trattiene una transazione SQL. **Dip.: T070.**
 ### E2 — checkpoint
 
 - [ ] T072 [US4] Eseguire le prove E2 con due osservatori di cui uno lento e letture di stato concorrenti in `tests/acceptance/event-stream.test.ts`, salvando code, disconnessioni e latenze in `specs/001-core-background-daemon/reports/e2-stream.md`; backpressure obbligatoria già qui. **Dip.: T071, T068.**

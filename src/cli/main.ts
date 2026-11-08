@@ -19,17 +19,49 @@ async function write(text: string): Promise<void> {
   await new Promise<void>((resolve, reject) => process.stdout.write(text, error => error ? reject(error) : resolve()));
 }
 
+async function follow(client: LocalClient, json: boolean, options: import('../client/local-client.js').CommandOptions): Promise<number> {
+  const abort = new AbortController();
+  const interrupted = () => abort.abort();
+  let brokenOutput = false;
+  const outputError = () => { brokenOutput = true; abort.abort(); };
+  process.on('SIGINT', interrupted); process.on('SIGTERM', interrupted); process.stdout.on('error', outputError);
+  let subscription: import('../ports/platform.js').EventSubscription | undefined;
+  let started!: () => void;
+  const start = new Promise<void>(resolve => { started = resolve; });
+  try {
+    subscription = await client.followEvents(async frame => {
+      await start;
+      if (!abort.signal.aborted) await write(json ? JSON.stringify(frame) + '\n' : `${frame.event.seq} ${frame.event.type} ${JSON.stringify(frame.event.payload)}\n`);
+    }, {...options, signal: abort.signal});
+    await write(json ? JSON.stringify({protocolVersion: 1, kind: 'subscription.started', correlationId: subscription.response.correlationId,
+      subscriptionId: subscription.subscriptionId, storeId: subscription.storeId, instanceId: subscription.instanceId, highWater: subscription.highWater}) + '\n'
+      : `Eventi live da ${subscription.highWater} (${subscription.instanceId})\n`);
+    started();
+    const result = await subscription.done;
+    if (abort.signal.aborted || brokenOutput || result.reason === null) return 0;
+    const {classifyError} = await import('../core/control-main.js');
+    const error = foundationError(classifyError(new Error(result.reason)));
+    await write(json ? JSON.stringify({protocolVersion: 1, kind: 'subscription.closed', subscriptionId: subscription.subscriptionId, lastReceived: result.lastReceived, error}) + '\n'
+      : `${error.code}: ${error.message}\n${error.nextAction}\n`);
+    const {failureResult} = await import('../bootstrap.js');
+    return exitCode(failureResult(error.code, null));
+  } catch (error) { if (abort.signal.aborted || brokenOutput) return 0; throw error; }
+  finally {
+    started(); await subscription?.close(); process.off('SIGINT', interrupted); process.off('SIGTERM', interrupted); process.stdout.off('error', outputError);
+  }
+}
+
 export async function runCli(args: readonly string[]): Promise<number> {
   let json = args.includes('--json');
   let result: PublicResult;
   try {
     const { values, positionals } = parseArgs({ args: [...args], allowPositionals: true, strict: true, options: {
       help: { type: 'boolean', short: 'h' }, version: { type: 'boolean', short: 'v' }, json: { type: 'boolean' },
-      'state-dir': { type: 'string' }, 'request-id': { type: 'string' }, 'timeout-ms': { type: 'string' }, limit: { type: 'string' },
+      'state-dir': { type: 'string' }, 'request-id': { type: 'string' }, 'timeout-ms': { type: 'string' }, limit: { type: 'string' }, follow: {type: 'boolean'},
     } });
     json = values.json ?? false;
     if (values.help) {
-      await write('maestro daemon start|status|stop|restart|diagnostics [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon events [--limit 1..1000] [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\n');
+      await write('maestro daemon start|status|stop|restart|diagnostics [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon events [--limit 1..1000 | --follow] [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\n');
       return 0;
     }
     if (values.version) { await write(VERSION + '\n'); return 0; }
@@ -37,10 +69,16 @@ export async function runCli(args: readonly string[]): Promise<number> {
     if (positionals[0] !== 'daemon' || !command || !['start', 'status', 'stop', 'restart', 'operation', 'diagnostics', 'events'].includes(command)
       || positionals.length !== (command === 'operation' ? 3 : 2)) throw new Error('INVALID_REQUEST');
     if (['status', 'operation', 'diagnostics', 'events'].includes(command) && values['request-id']) throw new Error('INVALID_REQUEST');
+    if (values.follow && (command !== 'events' || values.limit)) throw new Error('INVALID_REQUEST');
     if (values.limit && command !== 'events') throw new Error('INVALID_REQUEST');
     const { createClientBackend, failureResult } = await import('../bootstrap.js');
     try {
-      result = await new LocalClient(createClientBackend()).run(command as 'start' | 'status' | 'stop' | 'restart' | 'operation' | 'diagnostics' | 'events', {
+      const client = new LocalClient(createClientBackend());
+      if (values.follow) return await follow(client, json, {
+        ...(values['state-dir'] ? {stateDirectory: values['state-dir']} : {}),
+        ...(values['timeout-ms'] ? {timeoutMs: Number(values['timeout-ms'])} : {}),
+      });
+      result = await client.run(command as 'start' | 'status' | 'stop' | 'restart' | 'operation' | 'diagnostics' | 'events', {
         ...(values['state-dir'] ? { stateDirectory: values['state-dir'] } : {}),
         ...(command === 'operation' ? { requestId: positionals[2]! } : values['request-id'] ? { requestId: values['request-id'] } : {}),
         ...(values.limit ? {limit: Number(values.limit)} : {}),

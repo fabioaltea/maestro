@@ -18,6 +18,7 @@ const catalog = {
   WRONG_STORE: ['Cursore riferito a un altro archivio.', 'Usare il cursore dell’archivio corrente.', false],
   SLOW_CONSUMER: ['Osservatore scollegato per limite del buffer.', 'Riprendere con il cursore dell’ultimo evento ricevuto.', true],
   DAEMON_ABSENT: ['Il processo del daemon risulta cessato.', 'Eseguire un controllo esplicito per riconciliare lo stato salvato.', true],
+  SERVICE_UNREACHABLE: ['Servizio locale non raggiungibile.', 'Interrogare status e conservare l’ultima sequenza ricevuta.', true],
   CONTROL_INTERRUPTED: ['Controller terminato senza esito verificato.', 'Interrogare e riprovare lo stesso requestId per riconciliare l’esito.', true],
   CORE_EXITED_BEFORE_ACCEPTANCE: ['Core terminato prima della conferma di accettazione.', 'Verificare runtime e interrogare il requestId.', true],
   INTERNAL_ERROR: ['Errore interno non classificato.', 'Consultare la diagnostica redatta e preservare lo stato.', false],

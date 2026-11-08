@@ -1,3 +1,4 @@
+import { createLiveEvents } from './live-events.js';
 import { diagnosticsData, eventQuery } from './diagnostics.js';
 import { observePendingControl } from './control-observation.js';
 import type { CoreDependencies } from './runtime.js';
@@ -41,7 +42,8 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     store = storage;
     let volatileError: SafeError | null = null;
     let lastSnapshot: StoreSnapshot | null = null;
-    storage.onFailure(error => { volatileError = error; });
+    let streams: ReturnType<typeof createLiveEvents> | undefined;
+    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); });
     const ticket = await storage.getTicket(intent.ticketId);
     if (!ticket || ticket.instanceId !== intent.instanceId || ticket.generation !== intent.generation
       || !await createOperations(storage, paths.ownerUid).claimLaunch(intent.ticketId, intent.generation, process.pid)) {
@@ -53,6 +55,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     lastSnapshot = await storage.readSnapshot();
     await checkpoint('daemon.recorded');
     const clientKey = await adapter.readCredential(paths.clientKeyFile);
+    streams = createLiveEvents(storage, intent.instanceId);
     let draining = false;
     let deniedCount = 0, lastDeniedAudit = -Infinity;
     async function auditDenied(correlationId: string, code: 'UNAUTHORIZED' | 'STALE_TARGET') {
@@ -103,9 +106,10 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
         try {
           const data = request.method === 'diagnostics.get' ? await diagnosticsData(storage, snapshot)
             : {events: await storage.listEvents(eventQuery(request.params))};
-          return {...base, result: 'OK', data: {storeId: snapshot.store.storeId, ...data}};
+          return {...base, result: 'OK', data: {storeId: snapshot.store.storeId, ...data, ...(request.method === 'diagnostics.get' ? {subscriptions: streams!.diagnostics()} : {})}};
         } catch (error) { return {...base, result: 'ERROR', data: {code: classifyError(error)}}; }
       }
+      if (request.method === 'events.subscribe' || request.method === 'subscription.close') return streams!.dispatch(request, peer, snapshot.store.storeId);
       if (request.method === 'internal.readiness') {
         if (peer.role !== 'controller') {
           await auditDenied(request.correlationId, 'UNAUTHORIZED');
@@ -146,6 +150,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
             });
             await storage.prepareShutdown(intent.instanceId, intent.generation);
             await checkpoint('daemon.shutdownPrepared');
+            streams!.closeAll();
             await server!.close();
             await storage.close();
             // Keep the main ownership lease until the actual process terminates.

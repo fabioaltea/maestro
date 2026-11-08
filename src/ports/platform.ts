@@ -75,6 +75,7 @@ export interface RpcResponse {
   readonly data: unknown;
 }
 export interface AuthenticatedPeer {
+  readonly channel?: StreamChannel;
   readonly credentialId: string;
   readonly role: LocalRole;
   readonly identity: string;
@@ -83,12 +84,14 @@ export interface LocalServer { close(): Promise<void> }
 export interface LocalTransport {
   listen(endpoint: string, identity: string, keys: ReadonlyMap<string, LocalRole> | (() => Promise<ReadonlyMap<string, LocalRole>>),
     dispatch: (request: RpcRequest, peer: AuthenticatedPeer) => Promise<RpcResponse>): Promise<LocalServer>;
+  subscribe(endpoint: string, key: string, request: RpcRequest, consume: (frame: import('../protocol/messages.js').StreamEventFrame) => Promise<void>, options?: {timeoutMs?: number; signal?: AbortSignal}): Promise<EventSubscription>;
   call(endpoint: string, key: string, request: RpcRequest, timeoutMs: number): Promise<RpcResponse>;
 }
 import type { PublicResult } from '../protocol/messages.js';
 
 export interface ClientBackend {
   readonly defaultDirectory: string;
+  follow(directory: string, consume: (frame: import('../protocol/messages.js').StreamEventFrame) => Promise<void>, signal?: AbortSignal, timeoutMs?: number): Promise<EventSubscription>;
   diagnostics(directory: string): Promise<PublicResult>;
   events(directory: string, limit?: number): Promise<PublicResult>;
   operation(directory: string, requestId: string): Promise<PublicResult>;
@@ -104,4 +107,12 @@ export interface StreamSink {
   waitDrain(signal: AbortSignal): Promise<void>;
   end(bytes?: Uint8Array): void;
   onClose(callback: () => void): () => void;
+}
+
+export interface StreamChannel extends StreamSink { afterReply(callback: () => void): void }
+export interface EventSubscription {
+  readonly response: RpcResponse; readonly subscriptionId: string; readonly storeId: string;
+  readonly instanceId: string; readonly highWater: string;
+  readonly done: Promise<{reason: string | null; lastReceived: string | null}>;
+  close(): Promise<void>;
 }

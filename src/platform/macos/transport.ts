@@ -1,9 +1,10 @@
+import { requireUuid, requireDecimal } from '../../domain/identifiers.js';
 import { createServer, connect, type Socket } from 'node:net';
 import { chmod, lstat } from 'node:fs/promises';
 import { dirname, isAbsolute } from 'node:path';
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import type { LocalTransport, LocalRole, RpcResponse } from '../../ports/platform.js';
-import { HANDSHAKE_TIMEOUT_MS, MAX_CLIENT_BUFFER_BYTES, MAX_FRAME_BYTES } from '../../protocol/messages.js';
+import { createHash, createHmac, randomUUID, randomBytes, timingSafeEqual } from 'node:crypto';
+import type { LocalTransport, LocalRole, RpcResponse, StreamChannel, EventSubscription } from '../../ports/platform.js';
+import { HANDSHAKE_TIMEOUT_MS, MAX_CLIENT_BUFFER_BYTES, MAX_FRAME_BYTES, MAX_EVENT_BYTES, EVENT_TYPES, type StreamEventFrame } from '../../protocol/messages.js';
 import { decodeObject, decodeRequest, encodeFrame } from '../../protocol/validation.js';
 
 const hex = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
@@ -43,6 +44,7 @@ function frameReader(socket: Socket, consume: (frame: Buffer) => void, fail: () 
 
 export function createLocalTransport(): LocalTransport {
   return {
+    subscribe: subscribeLocal,
     async listen(endpoint, identity, keys, dispatch) {
       await privateEndpoint(endpoint, false);
       try { await lstat(endpoint); throw new Error('ENDPOINT_COLLISION'); }
@@ -59,18 +61,42 @@ export function createLocalTransport(): LocalTransport {
         let credentialId = '';
         let queued = 0;
         let queue = Promise.resolve();
+        const afterReply: (() => void)[] = [];
+        const closeListeners = new Set<() => void>();
         const timer = setTimeout(() => fail('UNAUTHORIZED'), HANDSHAKE_TIMEOUT_MS);
         function fail(code: string) {
           if (failed || socket.destroyed) return;
           failed = true;
           clearTimeout(timer);
-          socket.end(encodeFrame({ protocolVersion: 1, kind: 'error', code }));
-          const destroy = setTimeout(() => socket.destroy(), 100);
-          destroy.unref();
-          socket.once('close', () => clearTimeout(destroy));
+          channel.end(encodeFrame({ protocolVersion: 1, kind: 'error', code }));
         }
+        const channel: StreamChannel = {
+          get bufferedBytes() { return socket.writableLength; },
+          get needsDrain() { return socket.writableNeedDrain; },
+          get closed() { return socket.destroyed || !socket.writable; },
+          write(bytes) { if (failed || socket.destroyed) throw new Error('PERSISTENCE_UNAVAILABLE'); return socket.write(bytes); },
+          waitDrain(signal) {
+            if (!socket.writableNeedDrain) return Promise.resolve();
+            return new Promise<void>((resolve, reject) => {
+              const dispose = () => { socket.off('drain', drained); socket.off('close', gone); socket.off('error', gone); signal.removeEventListener('abort', gone); };
+              const drained = () => { dispose(); resolve(); };
+              const gone = () => { dispose(); reject(new Error('DEADLINE_EXCEEDED')); };
+              socket.once('drain', drained); socket.once('close', gone); socket.once('error', gone); signal.addEventListener('abort', gone, {once: true});
+              if (signal.aborted || socket.destroyed) gone();
+            });
+          },
+          end(bytes) {
+            if (socket.destroyed) return;
+            if (bytes && (socket.writableNeedDrain || socket.writableLength + bytes.byteLength > MAX_CLIENT_BUFFER_BYTES)) bytes = undefined;
+            if (bytes) socket.end(bytes); else socket.end();
+            const destroy = setTimeout(() => socket.destroy(), 100); destroy.unref();
+            socket.once('close', () => clearTimeout(destroy));
+          },
+          onClose(callback) { closeListeners.add(callback); if (socket.destroyed) queueMicrotask(callback); return () => closeListeners.delete(callback); },
+          afterReply(callback) { if (afterReply.length) throw new Error('INVALID_REQUEST'); afterReply.push(callback); },
+        };
         socket.on('error', () => socket.destroy());
-        socket.once('close', () => { clearTimeout(timer); sockets.delete(socket); });
+        socket.once('close', () => { failed = true; clearTimeout(timer); sockets.delete(socket); for (const callback of closeListeners) callback(); closeListeners.clear(); });
         frameReader(socket, frame => {
           if (failed) return;
           if (!authenticated) {
@@ -104,10 +130,13 @@ export function createLocalTransport(): LocalTransport {
           queue = queue.then(async () => {
             if (failed || socket.destroyed) return;
             try {
-              const result = await dispatch(parsed, { role, identity, credentialId });
+              const result = await dispatch(parsed, { role, identity, credentialId, channel });
               const encoded = encodeFrame(result);
               if (socket.writableLength + encoded.byteLength > MAX_CLIENT_BUFFER_BYTES) { fail('SLOW_CONSUMER'); return; }
-              socket.write(encoded);
+              if (channel.needsDrain) await channel.waitDrain(AbortSignal.timeout(1_000));
+              if (socket.destroyed || failed) return;
+              channel.write(encoded);
+              for (const callback of afterReply.splice(0)) callback();
             } catch { fail('INTERNAL_ERROR'); }
             finally { queued--; }
           });
@@ -185,4 +214,101 @@ export function createLocalTransport(): LocalTransport {
       });
     },
   };
+}
+
+async function subscribeLocal(endpoint: string, key: string, request: import('../../ports/platform.js').RpcRequest,
+  consume: (frame: StreamEventFrame) => Promise<void>, options: {timeoutMs?: number; signal?: AbortSignal} = {}): Promise<EventSubscription> {
+  if (!hex(key) || request.method !== 'events.subscribe') throw new Error('INVALID_REQUEST');
+  decodeRequest(encodeFrame(request)); await privateEndpoint(endpoint, true);
+  const timeout = options.timeoutMs ?? 1_000;
+  if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 2_000) throw new Error('INVALID_REQUEST');
+  const socket = connect(endpoint), nonce = randomBytes(32).toString('hex');
+  let welcomed = false, ended = false, closing = false, reading = false;
+  let identity = '', subscriptionId = '', storeId = '', highWater = '0', lastReceived: string | null = null;
+  let buffer = Buffer.alloc(0), response: RpcResponse | null = null;
+  const closeId = randomUUID();
+  let resolveReady!: (subscription: EventSubscription) => void, rejectReady!: (error: Error) => void;
+  let complete!: (result: {reason: string | null; lastReceived: string | null}) => void;
+  const ready = new Promise<EventSubscription>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+  const done = new Promise<{reason: string | null; lastReceived: string | null}>(resolve => { complete = resolve; });
+  const timer = setTimeout(() => finish('DEADLINE_EXCEEDED'), timeout);
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
+  function finish(reason: string | null) {
+    if (ended) return; ended = true; clearTimeout(timer); clearTimeout(closeTimer);
+    options.signal?.removeEventListener('abort', interrupted); socket.destroy(); buffer = Buffer.alloc(0);
+    if (!response) rejectReady(new Error(reason ?? 'CONTROL_INTERRUPTED'));
+    complete({reason, lastReceived});
+  }
+  async function close() {
+    if (ended) return;
+    if (!closing) {
+      closing = true;
+      if (response) socket.write(encodeFrame({protocolVersion: 1, correlationId: closeId, method: 'subscription.close', params: {subscriptionId}}));
+      else { finish(null); return; }
+      closeTimer = setTimeout(() => finish(null), 250);
+    }
+    await done;
+  }
+  const interrupted = () => { void close(); };
+  options.signal?.addEventListener('abort', interrupted, {once: true});
+  socket.once('connect', () => socket.write(encodeFrame({protocolVersion: 1, kind: 'hello', token: key, clientNonce: nonce})));
+  socket.once('error', () => finish(closing ? null : 'SERVICE_UNREACHABLE'));
+  socket.once('close', () => finish(closing ? null : 'CONTROL_INTERRUPTED'));
+  async function frame(bytes: Buffer) {
+    const object = decodeObject(bytes);
+    if (object.protocolVersion !== 1) throw new Error('UNSUPPORTED_VERSION');
+    if (object.kind === 'error') {
+      const allowed = ['UNAUTHORIZED', 'UNSUPPORTED_VERSION', 'INVALID_REQUEST', 'SLOW_CONSUMER', 'INTERNAL_ERROR'];
+      finish(typeof object.code === 'string' && allowed.includes(object.code) ? object.code : 'INVALID_REQUEST'); return;
+    }
+    if (!welcomed) {
+      if (object.kind !== 'welcome' || object.clientNonce !== nonce || typeof object.identity !== 'string' || object.role !== 'client' && object.role !== 'controller'
+        || !hex(object.serverNonce) || !hex(object.proof) || !equal(object.proof, proof(key, object.identity, object.role, nonce, object.serverNonce))) throw new Error('UNAUTHORIZED');
+      identity = requireUuid(object.identity); welcomed = true; socket.write(encodeFrame(request)); return;
+    }
+    if (!response) {
+      if (object.correlationId !== request.correlationId || object.result !== 'OK' || !object.data || typeof object.data !== 'object') {
+        const code = object.data && typeof object.data === 'object' && 'code' in object.data ? object.data.code : 'INVALID_REQUEST';
+        finish(typeof code === 'string' && ['INVALID_REQUEST', 'BUSY', 'BLOCKED', 'UNAUTHORIZED'].includes(code) ? code : 'INVALID_REQUEST'); return;
+      }
+      const data = object.data as Record<string, unknown>;
+      subscriptionId = requireUuid(data.subscriptionId); storeId = requireUuid(data.storeId);
+      if (data.instanceId !== identity) throw new Error('STALE_TARGET');
+      highWater = requireDecimal(data.highWater); response = object as unknown as RpcResponse; clearTimeout(timer);
+      resolveReady({response, subscriptionId, storeId, instanceId: identity, highWater, done, close}); return;
+    }
+    if (closing && object.correlationId === closeId) { finish(null); return; }
+    if (object.subscriptionId !== subscriptionId || object.correlationId !== request.correlationId) throw new Error('INVALID_REQUEST');
+    if (object.kind === 'subscription.closed') {
+      const code = object.error && typeof object.error === 'object' && 'code' in object.error ? object.error.code : null;
+      finish(typeof code === 'string' && ['SLOW_CONSUMER', 'CURSOR_EXPIRED', 'PERSISTENCE_UNAVAILABLE', 'STATE_CORRUPT'].includes(code) ? code : 'CONTROL_INTERRUPTED'); return;
+    }
+    if (object.kind !== 'event' || object.instanceId !== identity || !object.event || typeof object.event !== 'object') throw new Error('INVALID_REQUEST');
+    const event = object.event as StreamEventFrame['event'];
+    if (event.protocolVersion !== 1 || event.storeId !== storeId || !EVENT_TYPES.includes(event.type as typeof EVENT_TYPES[number])
+      || BigInt(requireDecimal(event.seq)) <= BigInt(lastReceived ?? highWater) || Buffer.byteLength(JSON.stringify(event)) + 36 > MAX_EVENT_BYTES) throw new Error('INVALID_REQUEST');
+    requireUuid(event.eventId);
+    if (event.instanceId !== null) requireUuid(event.instanceId);
+    if (event.operationId !== null) requireUuid(event.operationId);
+    if (closing) return;
+    await Promise.race([consume(object as unknown as StreamEventFrame), done]);
+    if (!ended && !closing) lastReceived = event.seq;
+  }
+  socket.on('data', (chunk: Buffer) => {
+    socket.pause();
+    buffer = Buffer.concat([buffer, chunk]);
+    if (buffer.byteLength > MAX_CLIENT_BUFFER_BYTES) { finish('SLOW_CONSUMER'); return; }
+    if (reading) return; reading = true;
+    void (async () => {
+      while (!ended) {
+        const newline = buffer.indexOf(10);
+        if (newline < 0) { if (buffer.byteLength > MAX_FRAME_BYTES) throw new Error('INVALID_REQUEST'); break; }
+        if (newline > MAX_FRAME_BYTES) throw new Error('INVALID_REQUEST');
+        const bytes = buffer.subarray(0, newline); buffer = buffer.subarray(newline + 1);
+        await frame(bytes);
+      }
+    })().catch(() => finish('INVALID_REQUEST')).finally(() => { reading = false; if (!ended) socket.resume(); });
+  });
+  if (options.signal?.aborted) interrupted();
+  return ready;
 }

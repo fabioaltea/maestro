@@ -40,7 +40,7 @@ test('diagnostics and event pages are read-only offline and absent archives are 
   assert.equal(human.code, 0);
   assert.match(human.stdout, /STOPPED/);
   assert.equal((await h.call('events', '--limit', '1001')).code, 2);
-  assert.equal((await h.call('events', '--follow')).code, 2);
+  assert.equal((await h.call('events', '--follow', '--limit', '2')).code, 2);
 });
 
 test('authenticated diagnostics/events RPC preserve correlation and redact capabilities', async t => {
