@@ -7,8 +7,8 @@
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T079 completati; US4/E3 verificato, harness accesso locale e diagnostica verificati.
-T080–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
+T001–T080 completati; carico US4 verificato con dieci osservatori e mille letture.
+T081–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
 Commit locali per task autorizzati; nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -228,7 +228,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T079 [US4] Verificare tutte le categorie di errore, segreti sentinella e letture non mutanti in `tests/acceptance/diagnostics.test.ts`, compresi major non supportata, metodo interno non autorizzato, spazio esaurito e report bootstrap non persistito. **Dip.: T078.**
 ### US4 — checkpoint
 
-- [ ] T080 [US4] Eseguire la prova dieci osservatori/100 eventi al secondo per 60 s e 1.000 letture concorrenti in `tests/acceptance/event-load.test.ts`, registrando p95 eventi <=1 s, stato p95 <=500 ms e massimo 2 s oppure errore esplicito in `specs/001-core-background-daemon/reports/us4-observability.md`. **Dip.: T079, T077.**
+- [X] T080 [US4] Eseguire la prova dieci osservatori/100 eventi al secondo per 60 s e 1.000 letture concorrenti in `tests/acceptance/event-load.test.ts`, registrando p95 eventi <=1 s, stato p95 <=500 ms e massimo 2 s oppure errore esplicito in `specs/001-core-background-daemon/reports/us4-observability.md`. **Dip.: T079, T077.**
 
 **Checkpoint**: E1 consultabile e durevole → E2 streaming già limitato → E3 replay; soltanto dopo tutti e tre la storia è completa.
 
