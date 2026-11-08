@@ -1,7 +1,8 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { makeDeadline, systemClock } from '../ports/clock.js';
 import { foundationError } from '../domain/errors.js';
 import { drainFoundationAuxiliaries } from './foundation-auxiliary-policy.js';
+import { createDaemonLauncher } from '../platform/macos/launcher.js';
 import { createProcessIdentity } from '../platform/macos/process-identity.js';
 import { join } from 'node:path';
 import type { DaemonIntent, LeaseHandle, LocalRole, LocalServer } from '../ports/platform.js';
@@ -19,6 +20,9 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
   let lease: LeaseHandle | undefined;
   let store: StoragePort | undefined;
   let server: LocalServer | undefined;
+  const ignoreHangup = () => {};
+  process.on('SIGHUP', ignoreHangup);
+  let onShutdownSignal: (() => void) | undefined;
   try {
     requireUuid(intent.instanceId); requireUuid(intent.ticketId);
     if (typeof intent.canonicalStateDir !== 'string' || !/^[0-9]{1,19}$/.test(intent.generation)) throw new Error('INVALID_REQUEST');
@@ -112,9 +116,32 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
       return { ...base, result: 'ERROR', data: { code: 'INVALID_REQUEST' } };
     });
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
+    let signalPending = false;
+    onShutdownSignal = () => {
+      if (signalPending || draining) return;
+      signalPending = true;
+      void (async () => {
+        const pending = (await storage.readSnapshot())?.pendingOperation;
+        // An accepted stop/restart already owns the shutdown; signals add no new effects.
+        if (pending && ['stop', 'restart'].includes(pending.action) && pending.targetInstanceId === intent.instanceId) return;
+        const controller = await createDaemonLauncher().spawnController({ protocolVersion: 1,
+          requestId: randomUUID(), action: 'stop', canonicalStateDir: paths.directory });
+        const bootstrap = await controller.bootstrap;
+        if (bootstrap && !bootstrap.accepted) {
+          await storage.recordInstanceError(intent.instanceId, foundationError(classifyError(new Error(bootstrap.errorCode)), { persisted: true }));
+        }
+        await controller.exit;
+      })().catch(async error => {
+        await storage.recordInstanceError(intent.instanceId, foundationError(classifyError(error), { persisted: true })).catch(() => {});
+      }).finally(() => { signalPending = false; });
+    };
+    process.on('SIGTERM', onShutdownSignal);
+    process.on('SIGINT', onShutdownSignal);
     reportBootstrap(true);
     // The listening server keeps the process alive; the ownership connection remains held.
   } catch (error) {
+    process.off('SIGHUP', ignoreHangup);
+    if (onShutdownSignal) { process.off('SIGTERM', onShutdownSignal); process.off('SIGINT', onShutdownSignal); }
     await server?.close();
     try { await store?.close(); } finally { lease?.release(); }
     throw error;

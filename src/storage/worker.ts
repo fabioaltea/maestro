@@ -3,7 +3,7 @@ import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
 import type { StoragePort } from '../ports/storage.js';
 
 const methods = ['readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
-  'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
+  'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
 type Method = typeof methods[number];
 interface Request { id: number; method: Method; args: unknown[] }
@@ -119,6 +119,7 @@ export async function openStorage(options: StorageOptions): Promise<StoragePort>
     resumeBlocked: (id, target) => call('resumeBlocked', [id, target]),
     cancelIssuedTickets: id => call('cancelIssuedTickets', [id]),
     prepareShutdown: (id, generation) => call('prepareShutdown', [id, generation]),
+    recordInstanceError: (id, error) => call('recordInstanceError', [id, error]),
     blockInstance: (id, error) => call('blockInstance', [id, error]),
     setOperationPhase: (id, phase) => call('setOperationPhase', [id, phase]),
     completeOperation: (id, outcome, completedAt, error) => call('completeOperation', [id, outcome, completedAt, error]),

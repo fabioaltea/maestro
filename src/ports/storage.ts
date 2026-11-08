@@ -92,6 +92,7 @@ export interface StoragePort {
   resumeBlocked(requestId: string, targetInstanceId: string | null): Promise<OperationRecord>;
   cancelIssuedTickets(requestId: string): Promise<void>;
   prepareShutdown(instanceId: string, generation: string): Promise<void>;
+  recordInstanceError(instanceId: string, error: SafeError): Promise<void>;
   blockInstance(instanceId: string, error: SafeError): Promise<void>;
   setOperationPhase(requestId: string, phase: ControlPhase): Promise<void>;
   completeOperation(requestId: string, outcome: Outcome, completedAt: string, error: SafeError | null): Promise<void>;

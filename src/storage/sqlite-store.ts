@@ -151,6 +151,13 @@ export class SQLiteStore {
       database.prepare('UPDATE instances SET shutdown_prepared=1 WHERE instance_id=?').run(instanceId);
     });
   }
+  recordInstanceError(instanceId: string, error: SafeError): void {
+    requireUuid(instanceId);
+    this.mutate(database => {
+      if (this.readSnapshot()?.instance?.instanceId !== instanceId) throw new Error('STALE_TARGET');
+      database.prepare('UPDATE instances SET last_error=? WHERE instance_id=?').run(JSON.stringify(error), instanceId);
+    });
+  }
   blockInstance(instanceId: string, error: SafeError): void {
     requireUuid(instanceId);
     this.mutate(database => {
