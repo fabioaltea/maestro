@@ -29,19 +29,19 @@ export async function runCli(args: readonly string[]): Promise<number> {
     } });
     json = values.json ?? false;
     if (values.help) {
-      await write('maestro daemon start|status|stop [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\n');
+      await write('maestro daemon start|status|stop|restart|operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\n');
       return 0;
     }
     if (values.version) { await write(VERSION + '\n'); return 0; }
-    if (positionals[0] !== 'daemon' || positionals.length !== 2 || !['start', 'status', 'stop'].includes(positionals[1]!)) {
-      throw new Error('INVALID_REQUEST');
-    }
-    if (positionals[1] === 'status' && values['request-id']) throw new Error('INVALID_REQUEST');
+    const command = positionals[1];
+    if (positionals[0] !== 'daemon' || !command || !['start', 'status', 'stop', 'restart', 'operation'].includes(command)
+      || positionals.length !== (command === 'operation' ? 3 : 2)) throw new Error('INVALID_REQUEST');
+    if (['status', 'operation'].includes(command) && values['request-id']) throw new Error('INVALID_REQUEST');
     const { createClientBackend, failureResult } = await import('../bootstrap.js');
     try {
-      result = await new LocalClient(createClientBackend()).run(positionals[1] as 'start' | 'status' | 'stop', {
+      result = await new LocalClient(createClientBackend()).run(command as 'start' | 'status' | 'stop' | 'restart' | 'operation', {
         ...(values['state-dir'] ? { stateDirectory: values['state-dir'] } : {}),
-        ...(values['request-id'] ? { requestId: values['request-id'] } : {}),
+        ...(command === 'operation' ? { requestId: positionals[2]! } : values['request-id'] ? { requestId: values['request-id'] } : {}),
         ...(values['timeout-ms'] ? { timeoutMs: Number(values['timeout-ms']) } : {}),
       });
     } catch (error) {
@@ -55,7 +55,7 @@ export async function runCli(args: readonly string[]): Promise<number> {
   }
   await write(json ? JSON.stringify(result) + '\n' : result.error
     ? `${result.error.code}: ${result.error.message}\n${result.error.nextAction}\n`
-    : `${result.data.lifecycle ?? result.data.status ?? result.result}${result.instanceId ? ` (${result.instanceId})` : ''}\n`);
+    : `${result.outcome ?? result.data.lifecycle ?? result.data.status ?? result.result}${result.instanceId ? ` (${result.instanceId})` : ''}\n`);
   return exitCode(result);
 }
 

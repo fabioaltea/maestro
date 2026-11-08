@@ -56,7 +56,7 @@ test('shutdownPrepared is a drain completion marker, not an intention to stop', 
 });
 
 test('status client enforces its observation deadline even when backend does not return', async () => {
-  const client = new LocalClient({ defaultDirectory: '/unused', inspect: () => new Promise(() => {}), control: () => new Promise(() => {}) });
+  const client = new LocalClient({ defaultDirectory: '/unused', operation: () => new Promise(() => {}), inspect: () => new Promise(() => {}), control: () => new Promise(() => {}) });
   const result = await Promise.race([client.run('status', { timeoutMs: 15 }), new Promise<null>(resolve => setTimeout(() => resolve(null), 100))]);
   assert.equal(result?.error?.code, 'DEADLINE_EXCEEDED');
 });

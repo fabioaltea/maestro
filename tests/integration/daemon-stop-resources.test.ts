@@ -36,6 +36,7 @@ for (const mode of ['cooperative', 'noncooperative', 'foreign'] as const) {
       } else {
         assert.equal(stopped.code, 4, stopped.stdout);
         assert.equal(child.exitCode, null);
+        assert.equal((await h.call('start')).code, 3); // incompatible controls cannot bypass a blocked stop
         const result = JSON.parse(stopped.stdout);
         assert.ok(result.error.nextAction);
         assert.equal((await store.getOperation(stopId))?.successorInstanceId, null);

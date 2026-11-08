@@ -16,6 +16,15 @@ export function createClientBackend(): ClientBackend {
   return {
     defaultDirectory: defaultArchiveDirectory(),
     inspect: inspectArchive,
+    async operation(directory, requestId) {
+      const operation = await readOperationFromArchive(directory, requestId);
+      if (!operation) return failureResult('INVALID_REQUEST', requestId);
+      const state = await inspectArchive(directory);
+      return { ...state, requestId, freshness: 'LAST_KNOWN', outcome: operation.outcome,
+        result: operation.outcome === 'SUCCEEDED' ? 'OK' : operation.outcome === 'IN_PROGRESS' ? 'BUSY'
+          : operation.outcome === 'BLOCKED' ? 'BLOCKED' : 'ERROR',
+        error: operation.error, data: { ...state.data, operation } };
+    },
     async control(intent, timeoutMs) {
       const deadline = performance.now() + timeoutMs;
       const process = await createDaemonLauncher().spawnController(intent);
@@ -27,7 +36,11 @@ export function createClientBackend(): ClientBackend {
         let operation;
         try { operation = await readOperationFromArchive(intent.canonicalStateDir, intent.requestId); }
         catch { /* Initialization may not yet have committed its schema. */ }
-        if (operation && operation.outcome !== 'IN_PROGRESS') {
+        if (bootstrap !== null && !(bootstrap as {accepted: boolean}).accepted) {
+          return failureResult(classifyError(new Error((bootstrap as {errorCode?: string}).errorCode ?? 'INTERNAL_ERROR')), intent.requestId);
+        }
+        if (operation && operation.action !== intent.action) return failureResult('IDEMPOTENCY_CONFLICT', intent.requestId);
+        if (operation && operation.outcome !== 'IN_PROGRESS' && (bootstrap as {accepted: boolean} | null)?.accepted) {
           let state;
           try { state = await inspectArchive(intent.canonicalStateDir); }
           catch { state = absentResult(); }
@@ -35,10 +48,7 @@ export function createClientBackend(): ClientBackend {
             result: operation.outcome === 'SUCCEEDED' ? 'OK' : operation.outcome === 'BLOCKED' ? 'BLOCKED' : 'ERROR',
             error: operation.error, data: { ...state.data, operation } };
         }
-        if (bootstrap !== null && !(bootstrap as {accepted: boolean}).accepted) {
-          return failureResult(classifyError(new Error((bootstrap as {errorCode?: string}).errorCode ?? 'INTERNAL_ERROR')), intent.requestId);
-        }
-        if (exited && !operation) return failureResult('CORE_EXITED_BEFORE_ACCEPTANCE', intent.requestId);
+        if (exited && !operation && bootstrap === null) return failureResult('CORE_EXITED_BEFORE_ACCEPTANCE', intent.requestId);
         await new Promise<void>(resolve => setTimeout(resolve, Math.min(25, Math.max(0, deadline - performance.now()))));
       }
       return failureResult('DEADLINE_EXCEEDED', intent.requestId);

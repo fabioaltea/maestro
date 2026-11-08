@@ -42,3 +42,25 @@ test('public client capability cannot stop a daemon and conflicting idempotency 
   assert.equal(after.data.revision, before.data.revision);
   assert.equal(after.data.ready, true);
 });
+
+test('a historical stop cannot target a successor and operation lookup remains read-only offline', async t => {
+  const h = await createCliHarness(t);
+  const absent = await h.call('operation', randomUUID());
+  assert.equal(absent.code, 2);
+  const { lstat } = await import('node:fs/promises');
+  await assert.rejects(lstat(h.archive), { code: 'ENOENT' });
+  assert.equal((await h.call('start')).code, 0);
+  const id = randomUUID();
+  assert.equal((await h.call('stop', '--request-id', id)).code, 0);
+  const original = JSON.parse((await h.call('operation', id)).stdout).data.operation;
+  assert.equal((await h.call('start')).code, 0);
+  const successor = JSON.parse((await h.call('status')).stdout).instanceId;
+  assert.notEqual(original.targetInstanceId, successor);
+  assert.equal((await h.call('stop', '--request-id', id)).code, 0);
+  assert.equal(JSON.parse((await h.call('status')).stdout).instanceId, successor);
+  assert.equal((await h.call('stop')).code, 0);
+  const result = await h.call('operation', id);
+  assert.equal(result.code, 0);
+  assert.equal(JSON.parse(result.stdout).freshness, 'LAST_KNOWN');
+  assert.deepEqual(JSON.parse(result.stdout).data.operation, original);
+});

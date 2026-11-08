@@ -11,8 +11,12 @@ export interface CommandOptions {
 
 export class LocalClient {
   constructor(private readonly backend: ClientBackend) {}
-  async run(command: 'start' | 'status' | 'stop', options: CommandOptions = {}): Promise<PublicResult> {
+  async run(command: 'start' | 'status' | 'stop' | 'restart' | 'operation', options: CommandOptions = {}): Promise<PublicResult> {
     const directory = options.stateDirectory ?? this.backend.defaultDirectory;
+    if (command === 'operation') {
+      if (!options.requestId) throw new Error('INVALID_REQUEST');
+      return this.backend.operation(directory, requireUuid(options.requestId));
+    }
     if (command === 'status') return this.backend.inspect(directory);
     const requestId = options.requestId ? requireUuid(options.requestId) : randomUUID();
     const maximum = command === 'stop' ? 10_000 : 30_000;
