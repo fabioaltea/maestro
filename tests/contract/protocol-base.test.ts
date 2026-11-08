@@ -11,9 +11,10 @@ import { loadContract } from '../fixtures/load-contract.js';
 const request: RpcRequest = { protocolVersion: 1, correlationId: '5fc02636-f95e-4ee8-9969-2a7e0c2478f0', method: 'status.get', params: {} };
 
 test('request validation rejects incompatible, malformed, oversized and unknown frames before dispatch', async () => {
-  const { decodeRequest } = await loadContract<{ decodeRequest(frame: string): RpcRequest }>('protocol/validation.js', ['decodeRequest']);
+  const { decodeRequest } = await loadContract<{ decodeRequest(frame: string | Uint8Array): RpcRequest }>('protocol/validation.js', ['decodeRequest']);
   assert.deepEqual(decodeRequest(JSON.stringify(request)), request);
   assert.throws(() => decodeRequest('{bad json'), /INVALID_REQUEST/);
+  assert.throws(() => decodeRequest(new Uint8Array([0xff, 0xfe])), /INVALID_REQUEST/);
   assert.throws(() => decodeRequest(JSON.stringify({ ...request, protocolVersion: 2 })), /UNSUPPORTED_VERSION/);
   assert.throws(() => decodeRequest(JSON.stringify({ ...request, params: [] })), /INVALID_REQUEST/);
   assert.throws(() => decodeRequest(JSON.stringify({ ...request, method: 'shell.run' })), /INVALID_REQUEST/);
