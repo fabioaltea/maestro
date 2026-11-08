@@ -201,7 +201,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### E2 — test
 
 - [X] T068 [P] [US4] Scrivere test RED in `tests/integration/event-stream-backpressure.test.ts` per client fermo, write=false/drain, errore di write e impossibilità di inviare l'ultimo frame; massimo 1 MiB complessivo per osservatore e status degli altri client reattivo. **Dip.: T067.**
-- [ ] T069 [P] [US4] Scrivere test RED in `tests/contract/event-stream.test.ts` per subscribe/close, identity/correlation, schema, autorizzazioni e chiusura del client senza arresto del daemon; pubblicare soltanto eventi durevoli. **Dip.: T067.**
+- [X] T069 [P] [US4] Scrivere test RED in `tests/contract/event-stream.test.ts` per subscribe/close, identity/correlation, schema, autorizzazioni e chiusura del client senza arresto del daemon; pubblicare soltanto eventi durevoli. **Dip.: T067.**
 ### E2 — implementazione
 
 - [ ] T070 [US4] Implementare pump live in `src/protocol/event-pump.ts`: notifiche come wake-up, cursore sul journal, pagine chiuse prima dell'attesa, byte accounting senza doppio conteggio, SLOW_CONSUMER e nessuna history alternativa illimitata. **Dip.: T068, T069.**
