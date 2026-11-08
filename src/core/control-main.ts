@@ -12,6 +12,7 @@ import { createOperations } from './operations.js';
 import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { isEntrypoint, readBootstrap, reportBootstrap } from './entrypoint.js';
+import { executeMinimalStop } from './lifecycle.js';
 
 export function classifyError(error: unknown): ErrorCode {
   if (error instanceof Error) {
@@ -108,8 +109,10 @@ export async function runControl(intent: BootstrapIntent): Promise<number> {
     await adapter.createCredential(paths.clientKeyFile);
     const controlKey = await adapter.createCredential(join(paths.credentialsDirectory, `controller-${attempt.attemptId}.key`));
     reportBootstrap(true);
-    if (intent.action !== 'start') throw new Error('INVALID_REQUEST');
-    await executeStart({ paths, store, operation, attempt, controlKey });
+    const context = { paths, store, operation, attempt, controlKey };
+    if (intent.action === 'start') await executeStart(context);
+    else if (intent.action === 'stop') await executeMinimalStop(context);
+    else throw new Error('INVALID_REQUEST');
     await store.completeOperation(intent.requestId, 'SUCCEEDED', new Date().toISOString(), null);
     await store.finishControllerAttempt(attempt.attemptId, new Date().toISOString(), 'SUCCEEDED');
     return 0;

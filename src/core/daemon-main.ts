@@ -64,6 +64,32 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
         return { ...base, result: 'OK', data: { identity: intent.instanceId, generation: intent.generation,
           ready: instance.lifecycle === 'RUNNING' } };
       }
+      if (request.method === 'internal.prepareStop') {
+        const pending = snapshot.pendingOperation;
+        if (peer.role !== 'controller' || !pending || pending.outcome !== 'IN_PROGRESS'
+          || !['stop', 'restart'].includes(pending.action) || pending.requestId !== request.params.requestId
+          || pending.targetInstanceId !== intent.instanceId || request.params.targetInstanceId !== intent.instanceId) {
+          return { ...base, result: 'ERROR', data: { code: 'UNAUTHORIZED' } };
+        }
+        const controlLease = createOwnershipLease().tryAcquire(paths.controlLeaseFile, 'control');
+        if (controlLease.status !== 'BUSY') {
+          if (controlLease.status === 'HELD') controlLease.handle.release();
+          return { ...base, result: 'ERROR', data: { code: 'UNAUTHORIZED' } };
+        }
+        if ((await storage.listResources(intent.instanceId)).some(resource => resource.releaseState !== 'RELEASED')) {
+          return { ...base, result: 'BLOCKED', data: { code: 'RESOURCE_IDENTITY_UNKNOWN' } };
+        }
+        await storage.transitionInstance(intent.instanceId, 'STOPPING');
+        setImmediate(() => {
+          void (async () => {
+            await server!.close();
+            await storage.close();
+            // Keep the main ownership lease until the actual process terminates.
+            process.exit(0);
+          })().catch(() => { reportBootstrap(false, 'PERSISTENCE_UNAVAILABLE'); });
+        });
+        return { ...base, result: 'OK', data: { preparingStop: true } };
+      }
       return { ...base, result: 'ERROR', data: { code: 'INVALID_REQUEST' } };
     });
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
