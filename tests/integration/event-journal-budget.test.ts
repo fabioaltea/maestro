@@ -125,3 +125,14 @@ test('temporary excess is available only to reconcile an existing outbox, withou
     assert.throws(() => beforeDiagnosticMutation(context.directory, database), /EVENT_BACKPRESSURE/);
   } finally { database.close(); }
 });
+
+test('a reader validates only the committed high-water prefix while another writer appends', async t => {
+  const {openJournal, encodeEvent} = await journalModule();
+  const context = await createTestContext(t), directory = join(context.directory, 'events');
+  openJournal({directory, storeId}).append([event(1)]);
+  const pending = encodeEvent(event(2)); pending[45] = pending[45]! ^ 1;
+  const file = join(directory, (await readdir(directory))[0]!); await appendFile(file, pending);
+  const reader = openJournal({directory, storeId, readonly: true});
+  assert.equal(reader.list({highWater: '1'}).records.length, 1);
+  assert.throws(() => reader.list({highWater: '2'}), /STATE_CORRUPT/);
+});

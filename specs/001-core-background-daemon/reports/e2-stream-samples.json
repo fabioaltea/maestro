@@ -1,0 +1,81 @@
+{
+  "measuredAt": "2026-11-08T18:32:29.084Z",
+  "platform": {
+    "macOS": "26.3.1",
+    "arch": "arm64",
+    "node": "26.13.0"
+  },
+  "observers": 2,
+  "generatedEvents": 8192,
+  "fastDelivered": 8192,
+  "ordered": true,
+  "finalHighWater": "8197",
+  "lastReceived": "8197",
+  "byteLimitPerObserver": 1048576,
+  "subscriptions": {
+    "active": [
+      {
+        "subscriptionId": "f0b12cd9-4489-4add-9ef1-65f7b35c5c92",
+        "cursor": "8197",
+        "closed": false,
+        "reason": null,
+        "deliveredFrames": 8192,
+        "bufferedBytes": 0,
+        "peakBufferedBytes": 48039,
+        "waitingDrain": false
+      }
+    ],
+    "recent": [
+      {
+        "subscriptionId": "9221f9f1-327e-40ce-b8c6-00b0d027674a",
+        "cursor": "310",
+        "closed": true,
+        "reason": "SLOW_CONSUMER",
+        "deliveredFrames": 305,
+        "bufferedBytes": 65747,
+        "peakBufferedBytes": 87092,
+        "waitingDrain": false
+      }
+    ],
+    "closedCount": 1,
+    "slowConsumers": 1
+  },
+  "status": {
+    "count": 30,
+    "p95Ms": 215.92,
+    "maxMs": 227.18,
+    "samplesMs": [
+      121.08,
+      122.78,
+      126.49,
+      122.84,
+      125.75,
+      120.67,
+      121.49,
+      120.34,
+      122.34,
+      119.04,
+      121.55,
+      122.14,
+      121.28,
+      121.37,
+      119.92,
+      121.36,
+      120.05,
+      227.18,
+      140.49,
+      146.17,
+      147.57,
+      148.56,
+      154.99,
+      133.97,
+      140.02,
+      138.84,
+      145.46,
+      215.92,
+      143.19,
+      159.01
+    ]
+  },
+  "anomalies": []
+}

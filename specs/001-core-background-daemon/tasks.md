@@ -7,7 +7,7 @@
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T067 completati; US4/E1 al checkpoint di review. T068–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
+T001–T072 completati; US4/E2 al checkpoint di review. T073–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -208,7 +208,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T071 [US4] Collegare subscribe/close e CLI events --follow in `src/core/daemon-main.ts`, `src/platform/macos/transport.ts`, `src/client/local-client.ts` e `src/cli/main.ts`; la disconnessione non modifica lifecycle e nessuna sottoscrizione trattiene una transazione SQL. **Dip.: T070.**
 ### E2 — checkpoint
 
-- [ ] T072 [US4] Eseguire le prove E2 con due osservatori di cui uno lento e letture di stato concorrenti in `tests/acceptance/event-stream.test.ts`, salvando code, disconnessioni e latenze in `specs/001-core-background-daemon/reports/e2-stream.md`; backpressure obbligatoria già qui. **Dip.: T071, T068.**
+- [X] T072 [US4] Eseguire le prove E2 con due osservatori di cui uno lento e letture di stato concorrenti in `tests/acceptance/event-stream.test.ts`, salvando code, disconnessioni e latenze in `specs/001-core-background-daemon/reports/e2-stream.md`; backpressure obbligatoria già qui. **Dip.: T071, T068.**
 ### E3 — test
 
 - [ ] T073 [P] [US4] Scrivere test RED in `tests/contract/event-replay.test.ts` per cursore storeId/seq, WRONG_STORE, cursore futuro e CURSOR_EXPIRED con firstAvailable/highWater/nextAction; duplicati devono conservare seq/eventId. **Dip.: T072.**

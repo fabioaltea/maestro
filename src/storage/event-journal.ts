@@ -50,12 +50,15 @@ export function openJournal(options: JournalOptions) {
   if (segmentBytes < 1024 || segmentBytes > 1024 * 1024 || budgetBytes < segmentBytes * 2) throw new Error('INVALID_REQUEST');
   let signature = '', segments: Segment[] = [], high = 0n, floor = 1n;
   let partial: {file: string; offset: number; bytes: Buffer} | null = null;
-  function refresh() {
+  function refresh(through?: bigint) {
     if (!privateDirectory(directory, false)) { segments = []; high = 0n; return; }
     const names = readdirSync(directory).sort();
     for (const name of names) if (!namePattern.test(name) && !['retention.json', 'retention.next'].includes(name)) throw new Error('ENDPOINT_COLLISION');
-    const stats = names.map(name => ({name, info: privateFile(join(directory, name))}));
-    const nextSignature = stats.map(s => `${s.name}:${s.info.ino}:${s.info.size}:${s.info.mtimeMs}:${s.info.ctimeMs}`).join('|');
+    const stats = names.flatMap(name => {
+      try { return [{name, info: privateFile(join(directory, name))}]; }
+      catch (error) { if (missing(error)) { if (name === 'retention.next') return []; throw new Error('CURSOR_EXPIRED'); } throw error; }
+    });
+    const nextSignature = stats.map(s => `${s.name}:${s.info.ino}:${s.info.size}:${s.info.mtimeMs}:${s.info.ctimeMs}`).join('|') + `:${through === undefined ? 'all' : through}`;
     if (signature === nextSignature && signature !== '') return;
     let declaredFloor = 1n;
     for (const name of ['retention.json', 'retention.next']) {
@@ -73,8 +76,12 @@ export function openJournal(options: JournalOptions) {
     for (let index = 0; index < files.length; index++) {
       const {name, info} = files[index]!;
       if (info.size > segmentBytes) throw new Error('STATE_CORRUPT');
-      const bytes = readFileSync(join(directory, name)); let offset = 0, first = 0n, last = 0n;
-      while (offset < bytes.length) {
+      const named = BigInt(name.match(namePattern)![1]!);
+      if (through !== undefined && named > through) continue;
+      let bytes: Buffer;
+      try { bytes = readFileSync(join(directory, name)); } catch (error) { if (missing(error)) throw new Error('CURSOR_EXPIRED'); throw error; }
+      let offset = 0, first = 0n, last = 0n;
+      while (offset < bytes.length && (through === undefined || high < through)) {
         const length = bytes.length - offset >= 4 ? bytes.readUInt32BE(offset) : null;
         if (length !== null && (length < 2 || length + 36 > MAX_EVENT_BYTES)) throw new Error('STATE_CORRUPT');
         if (length === null || offset + 36 + length > bytes.length) {
@@ -108,11 +115,12 @@ export function openJournal(options: JournalOptions) {
     renameSync(temp, join(directory, 'retention.json')); syncDirectory(directory); floor = next;
   }
   function list(query: {after?: string; highWater?: string; limit?: number; maxBytes?: number} = {}): EventPage {
-    refresh(); const limit = query.limit ?? 100, maxBytes = Math.min(query.maxBytes ?? MAX_EVENT_PAGE_BYTES, MAX_EVENT_PAGE_BYTES);
+    refresh(query.highWater === undefined ? undefined : BigInt(requireDecimal(query.highWater))); const limit = query.limit ?? 100, maxBytes = Math.min(query.maxBytes ?? MAX_EVENT_PAGE_BYTES, MAX_EVENT_PAGE_BYTES);
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000 || !Number.isInteger(maxBytes) || maxBytes < MAX_EVENT_BYTES) throw new Error('INVALID_REQUEST');
     const cap = query.highWater === undefined ? high : BigInt(requireDecimal(query.highWater));
     if (cap > high) throw new Error('STATE_CORRUPT');
     const after = query.after === undefined ? floor - 1n : BigInt(requireDecimal(query.after));
+    if (cap < floor - 1n) throw new Error('CURSOR_EXPIRED');
     if (after > cap) throw new Error('INVALID_REQUEST');
     if (after < floor - 1n) throw new Error('CURSOR_EXPIRED');
     const records: EventRecord[] = []; let used = 512, truncated = false;
@@ -130,6 +138,7 @@ export function openJournal(options: JournalOptions) {
         const seq = BigInt(event.seq); if (seq <= after || seq < floor || seq > cap) continue;
         if (records.length === limit || used + length + 1 > maxBytes) { truncated = true; break outer; }
         records.push(event); used += length + 1;
+        if (seq === cap) break outer;
       }
     }
     return {records, firstAvailable: String(floor), highWater: String(cap), truncated, nextAfter: records.at(-1)?.seq ?? String(after)};
@@ -183,7 +192,7 @@ export function openJournal(options: JournalOptions) {
     }
     // Own writes were validated and synced. Re-scan payloads only when another writer changes a file.
     signature = readdirSync(directory).sort().map(name => { const info = privateFile(join(directory, name));
-      return `${name}:${info.ino}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`; }).join('|');
+      return `${name}:${info.ino}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`; }).join('|') + ':all';
   }
   function recover(pending: readonly EventRecord[]) {
     if (!writable) throw new Error('UNAUTHORIZED'); refresh();

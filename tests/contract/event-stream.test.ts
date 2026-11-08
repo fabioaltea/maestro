@@ -95,3 +95,29 @@ test('CLI --follow emits frames, handles its own SIGINT and leaves daemon identi
     assert.equal(after.instanceId, before.instanceId); assert.equal(after.data.ready, true);
   } finally { if (child.exitCode === null && child.connected) child.send({type: 'maestro-test-shutdown'}); }
 });
+
+test('stream frames with wrong correlation, identity or event schema never reach the consumer', async t => {
+  const h = await createCliHarness(t), adapter = createPlatformPaths(), paths = (await adapter.resolveArchive(h.archive, 'write'))!;
+  const key = await adapter.createCredential(paths.clientKeyFile), instanceId = randomUUID(), storeId = randomUUID();
+  let variant = 'correlation', deliveries = 0;
+  const transport = await streamTransport();
+  const server = await transport.listen(paths.daemonEndpoint, instanceId, new Map([[key, 'client']]), async (request, peer) => {
+    const subscriptionId = randomUUID();
+    peer.channel!.afterReply(() => {
+      peer.channel!.write(Buffer.from(JSON.stringify({protocolVersion: 1, kind: 'event', subscriptionId,
+        correlationId: variant === 'correlation' ? randomUUID() : request.correlationId,
+        instanceId: variant === 'identity' ? randomUUID() : instanceId,
+        event: {protocolVersion: 1, storeId, eventId: randomUUID(), seq: '1', occurredAt: new Date().toISOString(), instanceId: null, operationId: null,
+          type: 'diagnostics.degraded', payload: variant === 'schema' ? null : {code: 'BUSY'}},
+      }) + '\n'));
+    });
+    return {protocolVersion: 1, correlationId: request.correlationId, result: 'OK', data: {subscriptionId, storeId, instanceId, highWater: '0'}};
+  });
+  try {
+    for (variant of ['correlation', 'identity', 'schema']) {
+      const session = await transport.subscribe(paths.daemonEndpoint, key, {protocolVersion: 1, correlationId: randomUUID(), method: 'events.subscribe', params: {}}, async () => { deliveries++; });
+      assert.equal((await session.done).reason, 'INVALID_REQUEST');
+    }
+    assert.equal(deliveries, 0);
+  } finally { await server.close(); }
+});

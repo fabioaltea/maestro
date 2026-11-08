@@ -66,3 +66,21 @@ test('permanent write failure and absent drain release the pump; no further even
     assert.equal(writes, before); assert.equal(sink.closed, true);
   }
 });
+
+test('status stays live while a diagnostic write waits for another core writer', async t => {
+  const {createCliHarness} = await import('../fixtures/cli-harness.js');
+  const {createPlatformPaths} = await import('../../src/platform/macos/paths.js');
+  const {createLocalTransport} = await import('../../src/platform/macos/transport.js');
+  const {default: Database} = await import('better-sqlite3');
+  const h = await createCliHarness(t); assert.equal((await h.call('start')).code, 0);
+  const adapter = createPlatformPaths(), paths = (await adapter.resolveArchive(h.archive, 'read'))!, key = await adapter.readCredential(paths.clientKeyFile);
+  const lock = new Database(paths.stateFile); lock.exec('BEGIN IMMEDIATE');
+  const denied = createLocalTransport().call(paths.daemonEndpoint, key, {protocolVersion: 1, correlationId: randomUUID(), method: 'internal.prepareStop', params: {}}, 2_000).catch(() => null);
+  try {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const result = await h.call('status');
+    assert.equal(result.code, 0, result.stdout);
+    assert.equal(JSON.parse(result.stdout).freshness, 'LIVE', result.stdout);
+    assert.equal(JSON.parse(result.stdout).data.ready, true, result.stdout);
+  } finally { lock.exec('ROLLBACK'); lock.close(); await denied; }
+});

@@ -13,7 +13,10 @@ function directoryBytes(path: string) {
   const info = lstatSync(path);
   if (!info.isDirectory()) return info.blocks * 512;
   privateDirectory(path, false);
-  return readdirSync(path).reduce((bytes, name) => bytes + privateFile(join(path, name)).blocks * 512, info.blocks * 512);
+  return readdirSync(path).reduce((bytes, name) => {
+    try { return bytes + privateFile(join(path, name)).blocks * 512; }
+    catch (error) { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return bytes; throw error; }
+  }, info.blocks * 512);
 }
 export function diagnosticUsage(directory: string, database: Database.Database) {
   const eventPages = Number((database.prepare("SELECT coalesce(sum(pgsize),0) AS bytes FROM dbstat WHERE name IN ('event_outbox','journal_metadata')").get() as {bytes: bigint}).bytes);

@@ -31,8 +31,9 @@ if (!isMainThread) {
     store = new SQLiteStore(workerData as StorageOptions);
     port.postMessage({ ready: true });
     let queue = Promise.resolve();
+    const reads = new Set<Method>(['readSnapshot', 'getOperation', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'getControllerAttempt']);
     port.on('message', (request: Request) => {
-      queue = queue.then(async () => {
+      const execute = async () => {
         if (!Number.isSafeInteger(request.id) || !methods.includes(request.method) || !Array.isArray(request.args)) {
           port.postMessage({ id: request.id, error: 'INVALID_REQUEST' });
           return;
@@ -56,9 +57,11 @@ if (!isMainThread) {
             return;
           }
         }
-      }).catch(() => {
-        port.postMessage({ id: request.id, error: 'PERSISTENCE_UNAVAILABLE' });
-      });
+      };
+      const failed = () => port.postMessage({id: request.id, error: 'PERSISTENCE_UNAVAILABLE'});
+      // Synchronous SQLite calls always finish their transaction before yielding. Reads may run while a writer retries a busy lock.
+      if (reads.has(request.method)) void execute().catch(failed);
+      else queue = queue.then(execute).catch(failed);
     });
   } catch (error) {
     port.postMessage({ ready: false, error: safeCode(error), failure: classifyStorageFailure(error) });

@@ -25,16 +25,16 @@ async function privateEndpoint(endpoint: string, existing: boolean): Promise<voi
   }
 }
 
-function frameReader(socket: Socket, consume: (frame: Buffer) => void, fail: () => void): void {
+function frameReader(socket: Socket, consume: (frame: Buffer) => void, fail: () => void, account: (bytes: number) => void = () => {}): void {
   let buffered = Buffer.alloc(0);
   socket.on('data', (chunk: Buffer) => {
     if (socket.destroyed) return;
-    buffered = Buffer.concat([buffered, chunk]);
+    buffered = Buffer.concat([buffered, chunk]); account(buffered.byteLength);
     let newline: number;
     while ((newline = buffered.indexOf(10)) !== -1) {
       if (newline > MAX_FRAME_BYTES) { fail(); return; }
       const frame = buffered.subarray(0, newline);
-      buffered = buffered.subarray(newline + 1);
+      buffered = Buffer.from(buffered.subarray(newline + 1)); account(buffered.byteLength);
       consume(frame);
       if (socket.destroyed) return;
     }
@@ -59,7 +59,7 @@ export function createLocalTransport(): LocalTransport {
         let failed = false;
         let role: LocalRole = 'client';
         let credentialId = '';
-        let queued = 0;
+        let queued = 0, queuedBytes = 0, incomingBytes = 0;
         let queue = Promise.resolve();
         const afterReply: (() => void)[] = [];
         const closeListeners = new Set<() => void>();
@@ -71,10 +71,14 @@ export function createLocalTransport(): LocalTransport {
           channel.end(encodeFrame({ protocolVersion: 1, kind: 'error', code }));
         }
         const channel: StreamChannel = {
-          get bufferedBytes() { return socket.writableLength; },
+          get bufferedBytes() { return socket.writableLength + queuedBytes + incomingBytes; },
           get needsDrain() { return socket.writableNeedDrain; },
           get closed() { return socket.destroyed || !socket.writable; },
-          write(bytes) { if (failed || socket.destroyed) throw new Error('PERSISTENCE_UNAVAILABLE'); return socket.write(bytes); },
+          write(bytes) {
+            if (failed || socket.destroyed) throw new Error('PERSISTENCE_UNAVAILABLE');
+            if (socket.writableNeedDrain || channel.bufferedBytes + bytes.byteLength > MAX_CLIENT_BUFFER_BYTES) throw new Error('SLOW_CONSUMER');
+            return socket.write(bytes);
+          },
           waitDrain(signal) {
             if (!socket.writableNeedDrain) return Promise.resolve();
             return new Promise<void>((resolve, reject) => {
@@ -87,7 +91,7 @@ export function createLocalTransport(): LocalTransport {
           },
           end(bytes) {
             if (socket.destroyed) return;
-            if (bytes && (socket.writableNeedDrain || socket.writableLength + bytes.byteLength > MAX_CLIENT_BUFFER_BYTES)) bytes = undefined;
+            if (bytes && (socket.writableNeedDrain || channel.bufferedBytes + bytes.byteLength > MAX_CLIENT_BUFFER_BYTES)) bytes = undefined;
             if (bytes) socket.end(bytes); else socket.end();
             const destroy = setTimeout(() => socket.destroy(), 100); destroy.unref();
             socket.once('close', () => clearTimeout(destroy));
@@ -126,21 +130,21 @@ export function createLocalTransport(): LocalTransport {
           let request;
           try { request = decodeRequest(frame); }
           catch (error) { fail(error instanceof Error && error.message === 'UNSUPPORTED_VERSION' ? 'UNSUPPORTED_VERSION' : 'INVALID_REQUEST'); return; }
-          const parsed = request;
+          const parsed = request, requestBytes = frame.byteLength; queuedBytes += requestBytes;
           queue = queue.then(async () => {
-            if (failed || socket.destroyed) return;
+            if (failed || socket.destroyed) { queued--; queuedBytes -= requestBytes; return; }
             try {
               const result = await dispatch(parsed, { role, identity, credentialId, channel });
               const encoded = encodeFrame(result);
-              if (socket.writableLength + encoded.byteLength > MAX_CLIENT_BUFFER_BYTES) { fail('SLOW_CONSUMER'); return; }
+              if (channel.bufferedBytes + encoded.byteLength > MAX_CLIENT_BUFFER_BYTES) { fail('SLOW_CONSUMER'); return; }
               if (channel.needsDrain) await channel.waitDrain(AbortSignal.timeout(1_000));
               if (socket.destroyed || failed) return;
               channel.write(encoded);
               for (const callback of afterReply.splice(0)) callback();
             } catch { fail('INTERNAL_ERROR'); }
-            finally { queued--; }
+            finally { queued--; queuedBytes -= requestBytes; }
           });
-        }, () => fail('INVALID_REQUEST'));
+        }, () => fail('INVALID_REQUEST'), bytes => { incomingBytes = bytes; if (channel.bufferedBytes > MAX_CLIENT_BUFFER_BYTES) fail('SLOW_CONSUMER'); });
       });
       server.maxConnections = 64;
       try {
@@ -287,6 +291,8 @@ async function subscribeLocal(endpoint: string, key: string, request: import('..
     const event = object.event as StreamEventFrame['event'];
     if (event.protocolVersion !== 1 || event.storeId !== storeId || !EVENT_TYPES.includes(event.type as typeof EVENT_TYPES[number])
       || BigInt(requireDecimal(event.seq)) <= BigInt(lastReceived ?? highWater) || Buffer.byteLength(JSON.stringify(event)) + 36 > MAX_EVENT_BYTES) throw new Error('INVALID_REQUEST');
+    if (typeof event.occurredAt !== 'string' || event.occurredAt.length > 40 || !Number.isFinite(Date.parse(event.occurredAt))
+      || !event.payload || typeof event.payload !== 'object' || Array.isArray(event.payload)) throw new Error('INVALID_REQUEST');
     requireUuid(event.eventId);
     if (event.instanceId !== null) requireUuid(event.instanceId);
     if (event.operationId !== null) requireUuid(event.operationId);
