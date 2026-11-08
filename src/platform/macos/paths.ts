@@ -2,12 +2,16 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, realpath, statfs, unlink } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
+import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { PlatformPaths, ArchivePaths } from '../../ports/platform.js';
 
 function unauthorized(): never { throw new Error('UNAUTHORIZED'); }
 function isMissing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+}
+export function defaultArchiveDirectory(): string {
+  return join(homedir(), 'Library', 'Application Support', 'Maestro', 'foundation', 'default');
 }
 
 export function createPlatformPaths(): PlatformPaths {

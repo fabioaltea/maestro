@@ -83,3 +83,10 @@ export interface LocalTransport {
     dispatch: (request: RpcRequest, peer: AuthenticatedPeer) => Promise<RpcResponse>): Promise<LocalServer>;
   call(endpoint: string, key: string, request: RpcRequest, timeoutMs: number): Promise<RpcResponse>;
 }
+import type { PublicResult } from '../protocol/messages.js';
+
+export interface ClientBackend {
+  readonly defaultDirectory: string;
+  inspect(directory: string): Promise<PublicResult>;
+  control(intent: BootstrapIntent, timeoutMs: number): Promise<PublicResult>;
+}
