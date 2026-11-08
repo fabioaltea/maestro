@@ -55,6 +55,7 @@ export async function recoverAbsentInstance(context: RecoveryContext): Promise<v
   const lease = context.leases.tryAcquire(context.paths.daemonLeaseFile, 'daemon');
   if (lease.status !== 'HELD') throw new Error('BLOCKED');
   try {
+    await context.store.recordEvents([{type: 'recovery.started', instanceId: instance.instanceId, payload: {generation: instance.generation}}]);
     await context.checkpoint('recovery.beforeCleanup');
     await drainFoundationAuxiliaries({ ...context, instanceId: instance.instanceId,
       deadline: makeDeadline(systemClock, Math.min(8_000, context.deadline.remainingMs())) });

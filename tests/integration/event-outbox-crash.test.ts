@@ -7,11 +7,7 @@ import { SQLiteStore } from '../../src/storage/sqlite-store.js';
 import { createProcessSandbox } from '../fixtures/process-sandbox.js';
 import { loadContract } from '../fixtures/load-contract.js';
 
-interface EventStore extends SQLiteStore {
-  getEventState(): {highWater: string; pendingBytes: number};
-  drainEvents(): void;
-  listEvents(options?: {after?: string}): {records: {seq: string; eventId: string; operationId: string}[]};
-}
+type EventStore = SQLiteStore;
 for (const point of ['event.beforeCommit', 'event.committed', 'journal.appended', 'journal.synced', 'event.cleared']) {
   test(`outbox survives actual crash at ${point} with stable event identity and no premature publication`, async t => {
     await loadContract('storage/sqlite-store.js', ['SQLiteStore']);

@@ -87,6 +87,10 @@ export interface ControllerAttemptRecord {
   readonly result: string | null;
 }
 export interface StoragePort {
+  recordEvents(drafts: readonly import('../protocol/messages.js').EventDraft[]): Promise<void>;
+  drainEvents(): Promise<void>;
+  getEventState(): Promise<{highWater: string; firstAvailable: string; pendingBytes: number; degraded: boolean; errorCode: string | null}>;
+  listEvents(options?: {after?: string; limit?: number; maxBytes?: number}): Promise<import('../protocol/messages.js').EventPage>;
   onFailure(callback: (error: SafeError) => void): () => void;
   listTickets(requestId: string): Promise<readonly LaunchTicket[]>;
   reopenOperation(requestId: string): Promise<OperationRecord>;

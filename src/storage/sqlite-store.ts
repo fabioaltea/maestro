@@ -1,6 +1,11 @@
+import { randomUUID } from 'node:crypto';
+import { openJournal } from './event-journal.js';
+import { redactEventDraft } from '../protocol/events.js';
+import { MAX_OUTBOX_BYTES, type EventDraft, type EventPage } from '../protocol/messages.js';
+import type { EventRecord } from '../ports/storage.js';
 import Database from 'better-sqlite3';
 import { constants, closeSync, existsSync, lstatSync, openSync } from 'node:fs';
-import { dirname, isAbsolute } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { initializeSchema, SCHEMA_VERSION } from './schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { transition, type Lifecycle, type Outcome } from '../domain/states.js';
@@ -19,7 +24,11 @@ const parseError = (raw: Row[string] | undefined): SafeError | null => {
 export class SQLiteStore {
   private database: Database.Database | null = null;
   private readonly readOnly: boolean;
-  constructor(options: StorageOptions) {
+  private readonly directory: string;
+  private journal: ReturnType<typeof openJournal> | undefined;
+  private eventError: string | null = null;
+  constructor(options: StorageOptions, private readonly hooks: {checkpoint?(point: string): void} = {}) {
+    this.directory = dirname(options.path);
     this.readOnly = options.readonly ?? false;
     if (!isAbsolute(options.path)) throw new Error('INVALID_REQUEST');
     const existed = existsSync(options.path);
@@ -63,15 +72,72 @@ export class SQLiteStore {
     if (this.readOnly || !this.database) throw new Error('UNAUTHORIZED');
     return this.database;
   }
-  private mutate<T>(action: (database: Database.Database) => T): T {
+  private eventsJournal() {
+    if (!this.journal) this.journal = openJournal({directory: join(this.directory, 'events'), readonly: this.readOnly,
+      storeId: this.readSnapshot()!.store.storeId, checkpoint: point => this.hooks.checkpoint?.(point)});
+    return this.journal;
+  }
+  private drainInTransaction(): void {
     const database = this.writable();
-    return database.transaction(() => {
+    const pending = JSON.parse((database.prepare('SELECT records FROM event_outbox WHERE singleton=1').get() as {records: string}).records) as EventRecord[];
+    if (!pending.length) return;
+    this.eventsJournal().recover(pending);
+    const page = this.eventsJournal().list({limit: 1});
+    database.prepare('UPDATE journal_metadata SET high_water=?,retention_floor=?,degraded_code=NULL WHERE singleton=1').run(BigInt(pending.at(-1)!.seq), BigInt(page.firstAvailable));
+    database.prepare("UPDATE event_outbox SET records='[]' WHERE singleton=1").run();
+    this.hooks.checkpoint?.('event.cleared');
+  }
+  drainEvents(): void {
+    const database = this.writable();
+    database.transaction(() => this.drainInTransaction()).immediate(); this.eventError = null;
+  }
+  private enqueue(drafts: readonly EventDraft[]): void {
+    const database = this.writable();
+    const identity = this.readSnapshot()!.store;
+    let seq = (database.prepare('SELECT next_event_seq FROM store WHERE singleton=1').get() as {next_event_seq: bigint}).next_event_seq;
+    const records: EventRecord[] = drafts.map(raw => {
+      const draft = redactEventDraft(raw);
+      if (seq >= 9_223_372_036_854_775_807n) throw new Error('EVENT_BACKPRESSURE');
+      return {protocolVersion: 1, storeId: identity.storeId, eventId: randomUUID(), seq: String(seq++), occurredAt: new Date().toISOString(),
+        type: draft.type, instanceId: draft.instanceId ?? null, operationId: draft.operationId ?? null, payload: draft.payload};
+    });
+    if (Buffer.byteLength(JSON.stringify(records)) > MAX_OUTBOX_BYTES) throw new Error('EVENT_BACKPRESSURE');
+    database.prepare('UPDATE event_outbox SET records=? WHERE singleton=1').run(JSON.stringify(records));
+    database.prepare('UPDATE store SET next_event_seq=? WHERE singleton=1').run(seq);
+  }
+  private mutate<T>(action: (database: Database.Database) => T, drafts: readonly EventDraft[] = [], forceEvents = false): T {
+    const database = this.writable();
+    const value = database.transaction(() => {
+      try { this.drainInTransaction(); } catch { throw new Error('EVENT_BACKPRESSURE'); }
       const before = (database.prepare('SELECT total_changes() AS count').get() as {count: bigint}).count;
       const value = action(database);
       const after = (database.prepare('SELECT total_changes() AS count').get() as {count: bigint}).count;
       if (before !== after) database.prepare('UPDATE store SET revision=revision+1 WHERE singleton=1').run();
+      if ((before !== after || forceEvents) && drafts.length) this.enqueue(drafts);
+      this.hooks.checkpoint?.('event.beforeCommit');
       return value;
     }).immediate();
+    this.hooks.checkpoint?.('event.committed');
+    try { this.drainEvents(); } catch (error) { this.eventError = error instanceof Error && ['STATE_CORRUPT', 'EVENT_BACKPRESSURE', 'UNAUTHORIZED', 'ENDPOINT_COLLISION'].includes(error.message) ? error.message : 'PERSISTENCE_UNAVAILABLE'; }
+    return value;
+  }
+  recordEvents(drafts: readonly EventDraft[]): void { this.mutate(() => {}, drafts, true); }
+  getEventState() {
+    if (!this.database) return {highWater: '0', firstAvailable: '1', pendingBytes: 0, degraded: false, errorCode: null};
+    const meta = this.database.prepare('SELECT * FROM journal_metadata WHERE singleton=1').get() as Row;
+    const raw = (this.database.prepare('SELECT records FROM event_outbox WHERE singleton=1').get() as {records: string}).records;
+    let errorCode = this.eventError;
+    let firstAvailable = String(meta.retention_floor);
+    try { firstAvailable = this.eventsJournal().list({highWater: String(meta.high_water), limit: 1}).firstAvailable; }
+    catch (error) { errorCode = error instanceof Error ? error.message : 'STATE_CORRUPT'; }
+    return {highWater: String(meta.high_water), firstAvailable, pendingBytes: raw === '[]' ? 0 : Buffer.byteLength(raw), degraded: raw !== '[]' || errorCode !== null, errorCode};
+  }
+  listEvents(options: {after?: string; limit?: number; maxBytes?: number} = {}): EventPage {
+    if (!this.database) return {records: [], firstAvailable: '1', highWater: '0', truncated: false, nextAfter: '0'};
+    return this.database.transaction(() => {
+      const meta = this.database!.prepare('SELECT high_water FROM journal_metadata WHERE singleton=1').get() as Row;
+      return this.eventsJournal().list({...options, highWater: String(meta.high_water)});
+    })();
   }
   private operation(row: Row): OperationRecord {
     return { requestId: String(row.request_id), action: row.action as OperationRecord['action'],
@@ -125,7 +191,7 @@ export class SQLiteStore {
       database.prepare(`INSERT INTO operations(request_id,action,payload_hash,owner_uid,target_instance_id,phase,outcome,accepted_at)
         VALUES (?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?)`).run(intent.requestId, intent.action, intent.payloadHash, intent.ownerUid, intent.targetInstanceId, intent.acceptedAt);
       return { operation: this.getOperation(intent.requestId)!, accepted: true };
-    });
+    }, [{type: 'operation.accepted', operationId: intent.requestId, payload: {action: intent.action}}]);
   }
   listTickets(requestId: string): readonly LaunchTicket[] {
     requireUuid(requestId);
@@ -138,7 +204,7 @@ export class SQLiteStore {
       if (!op || !['IN_PROGRESS', 'BLOCKED'].includes(op.outcome)) throw new Error('STALE_TARGET');
       database.prepare("UPDATE operations SET outcome='IN_PROGRESS',phase='PRECHECK',completed_at=NULL,error=NULL WHERE request_id=?").run(requestId);
       return this.getOperation(requestId)!;
-    });
+    }, [{type: 'recovery.started', operationId: requestId, payload: {}}]);
   }
   retireTicket(ticketId: string, generation: string, claimedPid: number): void {
     requireUuid(ticketId);
@@ -154,7 +220,7 @@ export class SQLiteStore {
       if (!current || current.instanceId !== instanceId || current.generation !== generation) throw new Error('STALE_TARGET');
       if (this.listResources(instanceId).some(r => r.releaseState !== 'RELEASED')) throw new Error('BLOCKED');
       database.prepare("UPDATE instances SET lifecycle='STOPPED' WHERE instance_id=? AND generation=?").run(instanceId, generation);
-    });
+    }, [{type: 'recovery.completed', instanceId, payload: {to: 'STOPPED', generation}}]);
   }
   resumeBlocked(requestId: string, targetInstanceId: string | null): OperationRecord {
     requireUuid(requestId);
@@ -200,7 +266,7 @@ export class SQLiteStore {
       if (current.lifecycle !== 'BLOCKED') transition(current.lifecycle, 'BLOCKED');
       database.prepare("UPDATE instances SET lifecycle='BLOCKED',shutdown_prepared=0,last_error=? WHERE instance_id=?")
         .run(JSON.stringify(error), instanceId);
-    });
+    }, [{type: 'lifecycle.changed', instanceId, payload: {to: 'BLOCKED', code: error.code}}]);
   }
   setOperationPhase(requestId: string, phase: ControlPhase): void {
     requireUuid(requestId);
@@ -230,7 +296,7 @@ export class SQLiteStore {
       }
       database.prepare('UPDATE operations SET outcome=?,phase=?,completed_at=?,error=? WHERE request_id=?')
         .run(outcome, outcome === 'BLOCKED' ? previous.phase : 'FINALIZED', completedAt, error ? JSON.stringify(error) : null, requestId);
-    });
+    }, [{type: outcome === 'BLOCKED' ? 'operation.blocked' : outcome === 'FAILED' ? 'operation.failed' : 'operation.completed', operationId: requestId, payload: {outcome, ...(error ? {code: error.code} : {})}}]);
   }
   issueTicket(ticket: Omit<LaunchTicket, 'status' | 'claimedPid'>): LaunchTicket {
     requireUuid(ticket.ticketId); requireUuid(ticket.requestId); requireUuid(ticket.instanceId);
@@ -279,7 +345,7 @@ export class SQLiteStore {
           WHERE instances.lifecycle='STOPPED' AND CAST(instances.generation AS INTEGER)<CAST(excluded.generation AS INTEGER)`).run(instance.instanceId, instance.pid, instance.generation, instance.lifecycle,
         instance.startedAt, instance.shutdownPrepared ? 1 : 0, instance.lastError ? JSON.stringify(instance.lastError) : null);
       database.prepare('UPDATE store SET current_instance_id=? WHERE singleton=1').run(instance.instanceId);
-    });
+    }, [{type: 'lifecycle.changed', instanceId: instance.instanceId, payload: {to: instance.lifecycle, generation: instance.generation, pid: instance.pid}}]);
   }
   transitionInstance(instanceId: string, next: Lifecycle): void {
     requireUuid(instanceId);
@@ -290,7 +356,7 @@ export class SQLiteStore {
       if (next === 'STOPPED' && (!current.shutdownPrepared || this.listResources(instanceId).some(r => r.releaseState !== 'RELEASED'))) throw new Error('BLOCKED');
       database.prepare('UPDATE instances SET lifecycle=?,shutdown_prepared=? WHERE instance_id=?')
         .run(next, next === 'STOPPED' && current.shutdownPrepared ? 1 : 0, instanceId);
-    });
+    }, [{type: 'lifecycle.changed', instanceId, payload: {to: next}}]);
   }
   saveResource(resource: ManagedResource): void {
     requireUuid(resource.resourceId); requireUuid(resource.owningInstanceId);
@@ -309,7 +375,7 @@ export class SQLiteStore {
       ON CONFLICT(resource_id) DO UPDATE SET observation=excluded.observation,release_state=excluded.release_state`)
       .run(resource.resourceId, resource.owningInstanceId, resource.kind, resource.policyScope, resource.generation,
         resource.pid, resource.endpoint, resource.credentialRef, resource.observation, resource.releaseState);
-    });
+    }, resource.releaseState === 'BLOCKED' ? [{type: 'resource.blocked', instanceId: resource.owningInstanceId, payload: {resourceId: resource.resourceId}}] : []);
   }
   listResources(instanceId: string): readonly ManagedResource[] {
     requireUuid(instanceId);

@@ -3,7 +3,7 @@ import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
-const methods = ['listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
+const methods = ['recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
 type Method = typeof methods[number];
@@ -118,7 +118,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
 
   function call<T>(method: Method, args: unknown[]): Promise<T> {
     if (closing || exited) return Promise.reject(new Error('PERSISTENCE_UNAVAILABLE'));
-    if (failure && !['readSnapshot', 'getOperation', 'getTicket', 'listTickets', 'listResources', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
+    if (failure && !['readSnapshot', 'getOperation', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
     const id = ++nextId;
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -131,6 +131,10 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
     });
   }
   return {
+    recordEvents: drafts => call('recordEvents', [drafts]),
+    drainEvents: () => call('drainEvents', []),
+    getEventState: () => call('getEventState', []),
+    listEvents: options => call('listEvents', [options ?? {}]),
     onFailure: listener => { listeners.add(listener); if (failure) queueMicrotask(() => listener(failure!)); return () => listeners.delete(listener); },
     listTickets: id => call('listTickets', [id]),
     reopenOperation: id => call('reopenOperation', [id]),

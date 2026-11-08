@@ -53,6 +53,15 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     await checkpoint('daemon.recorded');
     const clientKey = await adapter.readCredential(paths.clientKeyFile);
     let draining = false;
+    let deniedCount = 0, lastDeniedAudit = -Infinity;
+    async function auditDenied(correlationId: string, code: 'UNAUTHORIZED' | 'STALE_TARGET') {
+      deniedCount = Math.min(65535, deniedCount + 1);
+      if (performance.now() - lastDeniedAudit < 1_000) return;
+      lastDeniedAudit = performance.now();
+      const count = deniedCount; deniedCount = 0;
+      await storage.recordEvents([{type: 'authorization.denied', instanceId: intent.instanceId,
+        payload: {correlationId, code, count}}]).catch(() => {});
+    }
     server = await createLocalTransport().listen(paths.daemonEndpoint, intent.instanceId, async () => {
       const keys = new Map<string, LocalRole>([[clientKey, 'client']]);
       if (volatileError) return keys;
@@ -90,7 +99,10 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
             kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState })) : [],
       } };
       if (request.method === 'internal.readiness') {
-        if (peer.role !== 'controller') return { ...base, result: 'ERROR', data: { code: 'UNAUTHORIZED' } };
+        if (peer.role !== 'controller') {
+          await auditDenied(request.correlationId, 'UNAUTHORIZED');
+          return { ...base, result: 'ERROR', data: { code: 'UNAUTHORIZED' } };
+        }
         if (request.params.expectedInstanceId !== intent.instanceId || request.params.launchGeneration !== intent.generation) {
           return { ...base, result: 'ERROR', data: { code: 'STALE_TARGET' } };
         }
@@ -111,6 +123,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
           authorizePrepareStop({ role: peer.role, currentCredential, controlLeaseHeld: controlLease.status === 'BUSY',
             instance, operation: pending, params: request.params });
         } catch (error) {
+          await auditDenied(request.correlationId, classifyError(error) === 'STALE_TARGET' ? 'STALE_TARGET' : 'UNAUTHORIZED');
           return { ...base, result: 'ERROR', data: { code: classifyError(error) } };
         }
         if (draining) return { ...base, result: 'OK', data: { preparingStop: true } };
