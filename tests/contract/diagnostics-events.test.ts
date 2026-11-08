@@ -58,3 +58,26 @@ test('authenticated diagnostics/events RPC preserve correlation and redact capab
   }
   await assert.rejects(createLocalTransport().call(paths.daemonEndpoint, 'a'.repeat(64), {protocolVersion: 1, correlationId: randomUUID(), method: 'diagnostics.get', params: {}}, 1_000), /UNAUTHORIZED/);
 });
+
+test('denied controller action is audited without leaking request text, environment or credentials', async t => {
+  const h = await createCliHarness(t), sentinel = 'maestro-e1-sentinel-do-not-persist';
+  process.env.MAESTRO_E1_TEST_SECRET = sentinel;
+  try {
+    assert.equal((await h.call('start')).code, 0);
+    const paths = (await createPlatformPaths().resolveArchive(h.archive, 'read'))!;
+    const key = (await readFile(paths.clientKeyFile, 'utf8')).trim();
+    const correlationId = randomUUID();
+    const denied = await createLocalTransport().call(paths.daemonEndpoint, key, {protocolVersion: 1, correlationId, method: 'internal.prepareStop', params: {password: sentinel}}, 1_000);
+    assert.equal(denied.result, 'ERROR');
+    const page = JSON.parse((await h.call('events', '--limit', '1000')).stdout).data.events;
+    assert.ok(page.records.some((e: {type: string; payload: {correlationId: string}}) => e.type === 'authorization.denied' && e.payload.correlationId === correlationId));
+    const diag = (await h.call('diagnostics')).stdout;
+    assert.ok(!diag.includes(sentinel) && !diag.includes(key));
+    const {readdir} = await import('node:fs/promises');
+    for (const folder of ['events', 'logs']) for (const name of await readdir(paths.directory + '/' + folder)) {
+      const bytes = await readFile(paths.directory + '/' + folder + '/' + name);
+      assert.equal(bytes.includes(Buffer.from(sentinel)), false);
+      assert.equal(bytes.includes(Buffer.from(key)), false);
+    }
+  } finally { delete process.env.MAESTRO_E1_TEST_SECRET; }
+});

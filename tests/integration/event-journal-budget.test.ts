@@ -88,3 +88,40 @@ test('outbox is bounded, failed drain preserves the committed intent, and pinned
     assert.equal(second.getOperation(requestId)?.outcome, 'IN_PROGRESS');
   } finally { second.close(); }
 });
+
+test('short writes are completed and zero-progress writes cannot be acknowledged', async () => {
+  const {writeAll} = await loadContract<{writeAll(fd: number, bytes: Buffer, writer: (fd: number, bytes: Buffer, offset: number, length: number) => number): void}>('storage/event-journal.js', ['writeAll']);
+  let written = '';
+  writeAll(0, Buffer.from('durable-record'), (_fd, bytes, offset, length) => {
+    const count = Math.min(3, length); written += bytes.subarray(offset, offset + count).toString(); return count;
+  });
+  assert.equal(written, 'durable-record');
+  assert.throws(() => writeAll(0, Buffer.from('never-confirm'), () => 0), /PERSISTENCE_UNAVAILABLE/);
+});
+
+test('read-only pages ignore incomplete temporary retention metadata without modifying it', async t => {
+  const {openJournal} = await journalModule();
+  const context = await createTestContext(t), directory = join(context.directory, 'events');
+  openJournal({directory, storeId}).append([event(1)]);
+  const temporary = join(directory, 'retention.next');
+  await writeFile(temporary, '', {mode: 0o600});
+  assert.equal(openJournal({directory, storeId, readonly: true}).list().records.length, 1);
+  assert.equal((await readFile(temporary)).length, 0);
+});
+
+test('temporary excess is available only to reconcile an existing outbox, without raising steady limits', async t => {
+  const {beforeDiagnosticMutation} = await import('../../src/storage/diagnostic-budget.js');
+  const {initializeSchema} = await import('../../src/storage/schema.js');
+  const context = await createTestContext(t);
+  const database = new Database(join(context.directory, 'budget.sqlite'));
+  try {
+    initializeSchema(database, {storeId, schemaVersion: SCHEMA_VERSION, ownerUid: process.getuid!(), canonicalPath: context.directory, revision: '0'});
+    const directory = join(context.directory, 'events'); await mkdir(directory, {mode: 0o700});
+    await writeFile(join(directory, 'segment-fixture.journal'), Buffer.alloc(41 * 1024 * 1024, 0x78), {mode: 0o600});
+    assert.throws(() => beforeDiagnosticMutation(context.directory, database), /EVENT_BACKPRESSURE/);
+    database.prepare('UPDATE event_outbox SET records=?').run(JSON.stringify([event(1)]));
+    assert.doesNotThrow(() => beforeDiagnosticMutation(context.directory, database));
+    database.prepare("UPDATE event_outbox SET records='[]'").run();
+    assert.throws(() => beforeDiagnosticMutation(context.directory, database), /EVENT_BACKPRESSURE/);
+  } finally { database.close(); }
+});

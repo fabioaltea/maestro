@@ -85,7 +85,8 @@ export class SQLiteStore {
     if (!pending.length) return;
     this.eventsJournal().recover(pending);
     const page = this.eventsJournal().list({limit: 1});
-    appendDiagnosticLog(this.directory, pending);
+    if (page.highWater !== pending.at(-1)!.seq) throw new Error('STATE_CORRUPT');
+    appendDiagnosticLog(this.directory, pending, point => this.hooks.checkpoint?.(point));
     database.prepare('UPDATE journal_metadata SET high_water=?,retention_floor=?,degraded_code=NULL WHERE singleton=1').run(BigInt(pending.at(-1)!.seq), BigInt(page.firstAvailable));
     database.prepare("UPDATE event_outbox SET records='[]' WHERE singleton=1").run();
     this.hooks.checkpoint?.('event.cleared');

@@ -7,7 +7,7 @@
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T058 completati; recovery US3 al checkpoint di review F2. T059–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
+T001–T067 completati; US4/E1 al checkpoint di review. T068–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -197,7 +197,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T066 [US4] Implementare snapshot diagnostics ed events.list con pagine <=64 KiB, flag di troncamento e log redatti bounded in `src/core/inspect-main.ts`, `src/core/daemon-main.ts`, `src/client/local-client.ts` e `src/cli/main.ts`; niente dump di ambiente/credenziali, nessun evento confermato prima di sync. **Dip.: T065.**
 ### E1 — checkpoint
 
-- [ ] T067 [US4] Eseguire crash/retention/saturazione e prove con segreti sentinella, registrando byte fisici, outbox, WAL e metadata in `specs/001-core-background-daemon/reports/e1-events.md`; se le ipotesi di allocazione non tengono, correggere lo storage senza modificare le soglie. **Dip.: T066, T060, T061.**
+- [X] T067 [US4] Eseguire crash/retention/saturazione e prove con segreti sentinella, registrando byte fisici, outbox, WAL e metadata in `specs/001-core-background-daemon/reports/e1-events.md`; se le ipotesi di allocazione non tengono, correggere lo storage senza modificare le soglie. **Dip.: T066, T060, T061.**
 ### E2 — test
 
 - [ ] T068 [P] [US4] Scrivere test RED in `tests/integration/event-stream-backpressure.test.ts` per client fermo, write=false/drain, errore di write e impossibilità di inviare l'ultimo frame; massimo 1 MiB complessivo per osservatore e status degli altri client reattivo. **Dip.: T067.**

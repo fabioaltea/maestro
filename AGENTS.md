@@ -5,7 +5,7 @@ Auto-generated from all feature plans. Last updated: 2026-11-08
 ## Active Technologies
 
 - TypeScript 6.0.3 strict, Node.js 26.13.0 LTS, ESM/NodeNext; better-sqlite3 13.0.3; API native Node (001-core-background-daemon).
-- SQLite locale con WAL e synchronous FULL; lease separati; journal eventi e outbox previsti da US4.
+- SQLite locale con WAL e synchronous FULL; lease separati; schema 2 con outbox e journal eventi bounded.
 
 ## Project Structure
 
@@ -36,11 +36,11 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 001-core-background-daemon: T001–T058 implementati e committati per task; checkpoint US3.
-  Controllo locale, recovery conservativo di daemon/controller, ticket con generation,
-  ausiliari autenticati e osservazione VOLATILE su perdita dello storage worker.
-  91 test ordinari passati; campagna US3: 30 scenari, 1.000 esiti e dieci ausiliari.
-  Evidenze e limiti in reports/f2-recovery.md. Eventi e diagnostica estesa restano in US4.
+- 001-core-background-daemon: T001–T067 implementati e committati per task; checkpoint US4/E1.
+  Controllo/recovery headless, eventi con outbox e sync, diagnostics/events read-only.
+  Schema 2: archivi precedenti rifiutati senza reset/migrazione; usare un nuovo archivio di prova.
+  106 test ordinari e due prove di accettazione E1 passati; byte fisici in reports/e1-events.md.
+  Streaming e replay restano in E2/E3.
 
 <!-- MANUAL ADDITIONS START -->
 

@@ -1,0 +1,52 @@
+{
+  "measuredAt": "2026-11-08T17:54:48.136Z",
+  "version": {
+    "schema": 2,
+    "node": "26.13.0",
+    "macOS": "26.3.1",
+    "arch": "arm64"
+  },
+  "segmentBytes": 65536,
+  "maximumReaderSegmentBytes": 65536,
+  "generatedEvents": 5548,
+  "generatedBytesBeforeRetention": 50048893,
+  "retainedFloor": "581",
+  "confirmedOperationsPreserved": 1000,
+  "peaks": {
+    "journalBytes": 41881600,
+    "logBytes": 5156864,
+    "walBytes": 1052672,
+    "shmBytes": 32768,
+    "outboxMetadataBytes": 45056,
+    "totalBytes": 47779840,
+    "pendingBytes": 38657
+  },
+  "unlinkedPeakBytes": 573440,
+  "pinnedReaderHandles": 10,
+  "temporaryPeakTotalBytes": 48398336,
+  "final": {
+    "usage": {
+      "journalBytes": 41869312,
+      "logBytes": 4358144,
+      "walBytes": 69632,
+      "shmBytes": 32768,
+      "outboxMetadataBytes": 45056,
+      "totalBytes": 46374912,
+      "limits": {
+        "journalBytes": 41943040,
+        "logBytes": 5242880,
+        "totalBytes": 52428800,
+        "temporaryBytes": 5242880,
+        "walBytes": 2097152
+      }
+    },
+    "highWater": "5548",
+    "firstAvailable": "629",
+    "pendingBytes": 0,
+    "degraded": false,
+    "errorCode": null
+  },
+  "cliPageBytes": 57990,
+  "sentinelAbsent": true,
+  "allocationMethod": "st_blocks * 512 plus fstat of ten deliberately pinned unlinked reader handles; full WAL and SHM; dbstat event tables plus full freelist; synchronous pages close files before returning"
+}

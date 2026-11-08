@@ -1,8 +1,8 @@
-import { constants, lstatSync, readdirSync, openSync, writeSync, fsyncSync, closeSync, renameSync, unlinkSync } from 'node:fs';
+import { constants, lstatSync, readdirSync, openSync, fsyncSync, closeSync, renameSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import type Database from 'better-sqlite3';
 import type { EventRecord } from '../ports/storage.js';
-import { privateDirectory, privateFile } from './event-journal.js';
+import { privateDirectory, privateFile, writeAll } from './event-journal.js';
 export const MiB = 1024 * 1024;
 export function allocated(path: string): number {
   try { return lstatSync(path).blocks * 512; }
@@ -13,7 +13,7 @@ function directoryBytes(path: string) {
   const info = lstatSync(path);
   if (!info.isDirectory()) return info.blocks * 512;
   privateDirectory(path, false);
-  return readdirSync(path).reduce((bytes, name) => bytes + privateFile(join(path, name)).blocks * 512, 0);
+  return readdirSync(path).reduce((bytes, name) => bytes + privateFile(join(path, name)).blocks * 512, info.blocks * 512);
 }
 export function diagnosticUsage(directory: string, database: Database.Database) {
   const eventPages = Number((database.prepare("SELECT coalesce(sum(pgsize),0) AS bytes FROM dbstat WHERE name IN ('event_outbox','journal_metadata')").get() as {bytes: bigint}).bytes);
@@ -31,9 +31,13 @@ export function beforeDiagnosticMutation(directory: string, database: Database.D
     if (Number(result[0]?.busy) !== 0 || allocated(join(directory, 'state.sqlite-wal')) >= MiB) throw new Error('EVENT_BACKPRESSURE');
   }
   const usage = diagnosticUsage(directory, database);
-  if (usage.journalBytes > 40 * MiB || usage.outboxMetadataBytes > MiB || usage.totalBytes > 50 * MiB || usage.logBytes > 5 * MiB) throw new Error('EVENT_BACKPRESSURE');
+  const pending = (database.prepare('SELECT records FROM event_outbox WHERE singleton=1').get() as {records: string}).records !== '[]';
+  // A crashed drainer may leave temporary allocation. Only the existing batch may reclaim it before new state changes.
+  const recoveryAllowance = pending ? 5 * MiB : 0;
+  if (usage.journalBytes > 40 * MiB + recoveryAllowance || usage.outboxMetadataBytes > MiB
+    || usage.totalBytes > 50 * MiB + recoveryAllowance || usage.logBytes > 5 * MiB + recoveryAllowance) throw new Error('EVENT_BACKPRESSURE');
 }
-export function appendDiagnosticLog(directory: string, events: readonly EventRecord[]) {
+export function appendDiagnosticLog(directory: string, events: readonly EventRecord[], checkpoint?: (point: string) => void) {
   const path = join(directory, 'logs'); privateDirectory(path, true);
   const bytes = Buffer.from(events.map(event => JSON.stringify(event) + '\n').join(''));
   if (bytes.length > MiB) throw new Error('EVENT_BACKPRESSURE');
@@ -52,5 +56,11 @@ export function appendDiagnosticLog(directory: string, events: readonly EventRec
     }
   }
   const fd = openSync(active, constants.O_CREAT | constants.O_APPEND | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
-  try { writeSync(fd, bytes); fsyncSync(fd); } finally { closeSync(fd); }
+  try { writeAll(fd, bytes); fsyncSync(fd); } finally { closeSync(fd); }
+  checkpoint?.('log.allocated');
+  for (let index = 4; directoryBytes(path) > 5 * MiB && index >= 1; index--) {
+    const old = join(path, `foundation-${index}.log`);
+    try { privateFile(old); unlinkSync(old); } catch (error) { if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error; }
+  }
+  if (directoryBytes(path) > 5 * MiB) throw new Error('EVENT_BACKPRESSURE');
 }

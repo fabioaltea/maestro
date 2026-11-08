@@ -24,6 +24,13 @@ export function privateFile(path: string) {
   return s;
 }
 function syncDirectory(path: string) { const fd = openSync(path, constants.O_RDONLY); try { fsyncSync(fd); } finally { closeSync(fd); } }
+export function writeAll(fd: number, bytes: Buffer, writer: (fd: number, bytes: Buffer, offset: number, length: number) => number = writeSync): void {
+  for (let offset = 0; offset < bytes.length;) {
+    const count = writer(fd, bytes, offset, bytes.length - offset);
+    if (!Number.isInteger(count) || count <= 0 || count > bytes.length - offset) throw new Error('PERSISTENCE_UNAVAILABLE');
+    offset += count;
+  }
+}
 export function encodeEvent(event: EventRecord): Buffer {
   if (event.protocolVersion !== 1 || !EVENT_TYPES.includes(event.type as typeof EVENT_TYPES[number])) throw new Error('INVALID_REQUEST');
   requireUuid(event.eventId); requireUuid(event.storeId); requireDecimal(event.seq);
@@ -39,7 +46,7 @@ export function encodeEvent(event: EventRecord): Buffer {
 export function openJournal(options: JournalOptions) {
   requireUuid(options.storeId);
   const {directory} = options, writable = !options.readonly;
-  const segmentBytes = options.segmentBytes ?? 1024 * 1024, budgetBytes = options.budgetBytes ?? 40 * 1024 * 1024;
+  const segmentBytes = options.segmentBytes ?? 64 * 1024, budgetBytes = options.budgetBytes ?? 40 * 1024 * 1024;
   if (segmentBytes < 1024 || segmentBytes > 1024 * 1024 || budgetBytes < segmentBytes * 2) throw new Error('INVALID_REQUEST');
   let signature = '', segments: Segment[] = [], high = 0n, floor = 1n;
   let partial: {file: string; offset: number; bytes: Buffer} | null = null;
@@ -54,6 +61,7 @@ export function openJournal(options: JournalOptions) {
     for (const name of ['retention.json', 'retention.next']) {
       const stat = stats.find(s => s.name === name); if (!stat) continue;
       if (stat.info.size > 512) throw new Error('STATE_CORRUPT');
+      if (name === 'retention.next') continue; // uncommitted temporary metadata never controls the retention floor
       let meta: {storeId: string; firstAvailable: string};
       try { meta = JSON.parse(readFileSync(join(directory, name), 'utf8')) as typeof meta; requireDecimal(meta.firstAvailable); }
       catch { throw new Error('STATE_CORRUPT'); }
@@ -96,7 +104,7 @@ export function openJournal(options: JournalOptions) {
     const temp = join(directory, 'retention.next');
     try { privateFile(temp); } catch (error) { if (!missing(error)) throw error; }
     const fd = openSync(temp, constants.O_CREAT | constants.O_TRUNC | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
-    try { writeSync(fd, JSON.stringify({storeId: options.storeId, firstAvailable: String(next)})); fsyncSync(fd); } finally { closeSync(fd); }
+    try { writeAll(fd, Buffer.from(JSON.stringify({storeId: options.storeId, firstAvailable: String(next)}))); fsyncSync(fd); options.checkpoint?.('journal.retentionPrepared'); } finally { closeSync(fd); }
     renameSync(temp, join(directory, 'retention.json')); syncDirectory(directory); floor = next;
   }
   function list(query: {after?: string; highWater?: string; limit?: number; maxBytes?: number} = {}): EventPage {
@@ -141,7 +149,7 @@ export function openJournal(options: JournalOptions) {
       if (seq !== high + 1n) throw new Error('STATE_CORRUPT');
       let active = segments.at(-1);
       const rotate = !active || active.size + frame.length > segmentBytes;
-      const desired = Math.ceil(((rotate ? 0 : active!.size) + frame.length) / 4096) * 4096;
+      const desired = Math.max(rotate ? 0 : active!.allocated, Math.ceil(((rotate ? 0 : active!.size) + frame.length) / 4096) * 4096);
       const projected = segments.reduce((sum, s) => sum + s.allocated, 0) + desired - (rotate ? 0 : active!.allocated) + Math.min(64 * 1024, Math.floor(budgetBytes / 2));
       if (projected > budgetBytes) {
         const remove: Segment[] = []; let freed = 0;
@@ -160,12 +168,22 @@ export function openJournal(options: JournalOptions) {
       const path = join(directory, active!.name);
       if (active!.size) privateFile(path);
       const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW, 0o600);
-      try { writeSync(fd, frame); options.checkpoint?.('journal.appended'); fsyncSync(fd); options.checkpoint?.('journal.synced'); }
+      try { writeAll(fd, frame); options.checkpoint?.('journal.appended'); fsyncSync(fd); options.checkpoint?.('journal.synced'); }
       finally { closeSync(fd); }
       if (rotate) syncDirectory(directory);
       const info = privateFile(path); active!.size = info.size; active!.allocated = info.blocks * 512; active!.last = seq; high = seq;
     }
-    signature = ''; // revalidate before readers observe bytes written by another process
+    options.checkpoint?.('journal.allocated');
+    // Allocation can exceed a length-based estimate on a real filesystem. Check actual extents before acknowledgment.
+    while (readdirSync(directory).reduce((sum, name) => sum + privateFile(join(directory, name)).blocks * 512, lstatSync(directory).blocks * 512) > budgetBytes) {
+      const oldest = segments[0];
+      if (!oldest || oldest === segments.at(-1) || oldest.last >= BigInt(pendingFloor)) throw new Error('EVENT_BACKPRESSURE');
+      persistFloor(segments[1]!.first);
+      privateFile(join(directory, oldest.name)); unlinkSync(join(directory, oldest.name)); segments.shift(); syncDirectory(directory);
+    }
+    // Own writes were validated and synced. Re-scan payloads only when another writer changes a file.
+    signature = readdirSync(directory).sort().map(name => { const info = privateFile(join(directory, name));
+      return `${name}:${info.ino}:${info.size}:${info.mtimeMs}:${info.ctimeMs}`; }).join('|');
   }
   function recover(pending: readonly EventRecord[]) {
     if (!writable) throw new Error('UNAUTHORIZED'); refresh();
