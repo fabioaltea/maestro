@@ -91,7 +91,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### Implementazione e verifica
 
 - [X] T014 Implementare canonicalizzazione dell'archivio, UID reale, directory 0700/file 0600, credential casuali, runtime path breve e cleanup solo di artefatti propri in `src/platform/macos/paths.ts`; rifiutare piattaforme, link e collisioni non supportati. **Dip.: T010.**
-- [ ] T015 Implementare i lease control/daemon su connessioni main dedicate in `src/platform/macos/lease.ts`; mantenere BEGIN IMMEDIATE per l'intera proprietà, distinguere BUSY/UNKNOWN e non cancellare mai i file per recuperare un lock. **Dip.: T014, T010.**
+- [X] T015 Implementare i lease control/daemon su connessioni main dedicate in `src/platform/macos/lease.ts`; mantenere BEGIN IMMEDIATE per l'intera proprietà, distinguere BUSY/UNKNOWN e non cancellare mai i file per recuperare un lock. **Dip.: T014, T010.**
 - [ ] T016 Definire schema/versione e vincoli iniziali Store, DaemonInstance, ControlOperation, ControllerAttempt, LaunchTicket e ManagedResource in `src/storage/schema.ts`, con requestId unico, indici per incompleti e identità del successore preassegnata; non introdurre entità di feature/sessioni AI. **Dip.: T011, T014.**
 - [ ] T017 Implementare SQLiteStore e worker serializzato in `src/storage/sqlite-store.ts` e `src/storage/worker.ts`: WAL/FULL/foreign_keys, busy_timeout 50 ms, retry asincrono bounded, snapshot materializzati e commit-before-ack; nessun accesso SQL dalla CLI. **Dip.: T016, T011.**
 - [ ] T018 Implementare messaggi/validatori e trasporto UDS autenticato in `src/protocol/messages.ts`, `src/protocol/validation.ts` e `src/platform/macos/transport.ts`; capability client/controller distinte e nessun listener TCP. **Dip.: T012, T014, T008.**
