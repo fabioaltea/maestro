@@ -76,6 +76,15 @@ export interface EventRecord {
   readonly type: string;
   readonly payload: Readonly<Record<string, unknown>>;
 }
+export interface ControllerAttemptRecord {
+  readonly attemptId: string;
+  readonly requestId: string;
+  readonly pid: number;
+  readonly generation: string;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly result: string | null;
+}
 export interface StoragePort {
   readSnapshot(): Promise<StoreSnapshot | null>;
   getOperation(requestId: string): Promise<OperationRecord | null>;
@@ -90,6 +99,9 @@ export interface StoragePort {
   transitionInstance(instanceId: string, next: Lifecycle): Promise<void>;
   saveResource(resource: ManagedResource): Promise<void>;
   listResources(instanceId: string): Promise<readonly ManagedResource[]>;
+  recordControllerAttempt(attempt: ControllerAttemptRecord): Promise<void>;
+  getControllerAttempt(requestId: string): Promise<ControllerAttemptRecord | null>;
+  finishControllerAttempt(attemptId: string, endedAt: string, result: string): Promise<void>;
   close(): Promise<void>;
 }
 

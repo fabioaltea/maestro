@@ -5,7 +5,7 @@ import { initializeSchema, SCHEMA_VERSION } from './schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { transition, type Lifecycle, type Outcome } from '../domain/states.js';
 import type { SafeError } from '../domain/errors.js';
-import type { AcceptOperation, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
+import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
   StoreIdentity, StoreSnapshot } from '../ports/storage.js';
 
 export interface StorageOptions { readonly path: string; readonly readonly?: boolean; readonly identity?: StoreIdentity }
@@ -217,4 +217,21 @@ export class SQLiteStore {
       releaseState: row.release_state as ManagedResource['releaseState'] }));
   }
   close(): void { this.database?.close(); this.database = null; }
+  recordControllerAttempt(attempt: ControllerAttemptRecord): void {
+    requireUuid(attempt.attemptId); requireUuid(attempt.requestId);
+    this.mutate(database => database.prepare('INSERT INTO controller_attempts VALUES (?,?,?,?,?,?,?)')
+      .run(attempt.attemptId, attempt.requestId, attempt.pid, attempt.generation, attempt.startedAt, attempt.endedAt, attempt.result));
+  }
+  getControllerAttempt(requestId: string): ControllerAttemptRecord | null {
+    requireUuid(requestId);
+    const row = this.database?.prepare('SELECT * FROM controller_attempts WHERE request_id=? ORDER BY rowid DESC LIMIT 1').get(requestId) as Row | undefined;
+    return row ? { attemptId: String(row.attempt_id), requestId: String(row.request_id), pid: Number(row.pid),
+      generation: String(row.generation), startedAt: String(row.started_at), endedAt: row.ended_at as string | null,
+      result: row.result as string | null } : null;
+  }
+  finishControllerAttempt(attemptId: string, endedAt: string, result: string): void {
+    requireUuid(attemptId);
+    this.mutate(database => database.prepare('UPDATE controller_attempts SET ended_at=?,result=? WHERE attempt_id=?')
+      .run(endedAt, result.slice(0, 64), attemptId));
+  }
 }

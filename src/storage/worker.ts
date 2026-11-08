@@ -4,7 +4,7 @@ import type { StoragePort } from '../ports/storage.js';
 
 const methods = ['readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
-  'transitionInstance', 'saveResource', 'listResources', 'close'] as const;
+  'transitionInstance', 'saveResource', 'listResources', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
 type Method = typeof methods[number];
 interface Request { id: number; method: Method; args: unknown[] }
 
@@ -126,6 +126,9 @@ export async function openStorage(options: StorageOptions): Promise<StoragePort>
     transitionInstance: (id, state) => call('transitionInstance', [id, state]),
     saveResource: resource => call('saveResource', [resource]),
     listResources: id => call('listResources', [id]),
+    recordControllerAttempt: attempt => call('recordControllerAttempt', [attempt]),
+    getControllerAttempt: id => call('getControllerAttempt', [id]),
+    finishControllerAttempt: (id, endedAt, result) => call('finishControllerAttempt', [id, endedAt, result]),
     async close() {
       if (exited || closing) return;
       const exit = new Promise<void>(resolve => worker.once('exit', () => resolve()));
