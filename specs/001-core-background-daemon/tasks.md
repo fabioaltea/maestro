@@ -81,7 +81,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 ### Implementazione e verifica
 
 - [X] T008 Implementare stati, identificativi, errori redatti e clock sostituibile in `src/domain/states.ts`, `src/domain/identifiers.ts`, `src/domain/errors.ts` e `src/ports/clock.ts`, facendo passare i test di dominio senza dipendenze OS. **Dip.: T007.**
-- [ ] T009 Definire i contratti delle cinque porte OS e dello storage in `src/ports/platform.ts` e `src/ports/storage.ts`: prove VERIFIED/ABSENT/UNKNOWN, lease con ownership unica, launcher detached e accesso core read-only; nessuna policy universale di terminazione. **Dip.: T008.**
+- [X] T009 Definire i contratti delle cinque porte OS e dello storage in `src/ports/platform.ts` e `src/ports/storage.ts`: prove VERIFIED/ABSENT/UNKNOWN, lease con ownership unica, launcher detached e accesso core read-only; nessuna policy universale di terminazione. **Dip.: T008.**
 ### Test richiesti
 
 - [ ] T010 [P] Scrivere test RED di permessi, canonicalizzazione, link, collisione endpoint e lease conteso/crash in `tests/contract/platform-paths-lease.test.ts`; includere il divieto di rimuovere o riaprire nello stesso titolare l'inode del lease. **Dip.: T009.**
