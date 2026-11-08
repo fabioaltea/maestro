@@ -119,6 +119,8 @@ export function openJournal(options: JournalOptions) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000 || !Number.isInteger(maxBytes) || maxBytes < MAX_EVENT_BYTES) throw new Error('INVALID_REQUEST');
     const cap = query.highWater === undefined ? high : BigInt(requireDecimal(query.highWater));
     if (cap > high) throw new Error('STATE_CORRUPT');
+    // A replay cap is a committed prefix, never a pin on a segment. Retention may
+    // overtake that prefix between pages; fail explicitly instead of advancing it.
     const after = query.after === undefined ? floor - 1n : BigInt(requireDecimal(query.after));
     if (cap < floor - 1n) throw new Error('CURSOR_EXPIRED');
     if (after > cap) throw new Error('INVALID_REQUEST');

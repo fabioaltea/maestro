@@ -3,7 +3,7 @@ import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
-const methods = ['recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
+const methods = ['captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
 type Method = typeof methods[number];
@@ -136,6 +136,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
   return {
     recordEvents: drafts => call('recordEvents', [drafts]),
     drainEvents: () => call('drainEvents', []),
+    captureEventState: () => call('captureEventState', []),
     getEventState: verify => call('getEventState', [verify ?? false]),
     listEvents: options => call('listEvents', [options ?? {}]),
     onFailure: listener => { listeners.add(listener); if (failure) queueMicrotask(() => listener(failure!)); return () => listeners.delete(listener); },

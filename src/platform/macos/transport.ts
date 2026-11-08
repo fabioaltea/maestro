@@ -228,7 +228,7 @@ async function subscribeLocal(endpoint: string, key: string, request: import('..
   if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 2_000) throw new Error('INVALID_REQUEST');
   const socket = connect(endpoint), nonce = randomBytes(32).toString('hex');
   let welcomed = false, ended = false, closing = false, reading = false;
-  let identity = '', subscriptionId = '', storeId = '', highWater = '0', lastReceived: string | null = null;
+  let identity = '', subscriptionId = '', storeId = '', highWater = '0', startAfter = '0', lastReceived: string | null = null;
   let buffer = Buffer.alloc(0), response: RpcResponse | null = null;
   const closeId = randomUUID();
   let resolveReady!: (subscription: EventSubscription) => void, rejectReady!: (error: Error) => void;
@@ -273,12 +273,15 @@ async function subscribeLocal(endpoint: string, key: string, request: import('..
     if (!response) {
       if (object.correlationId !== request.correlationId || object.result !== 'OK' || !object.data || typeof object.data !== 'object') {
         const code = object.data && typeof object.data === 'object' && 'code' in object.data ? object.data.code : 'INVALID_REQUEST';
-        finish(typeof code === 'string' && ['INVALID_REQUEST', 'BUSY', 'BLOCKED', 'UNAUTHORIZED'].includes(code) ? code : 'INVALID_REQUEST'); return;
+        finish(typeof code === 'string' && ['INVALID_REQUEST', 'BUSY', 'BLOCKED', 'UNAUTHORIZED', 'WRONG_STORE', 'CURSOR_EXPIRED', 'PERSISTENCE_UNAVAILABLE', 'STATE_CORRUPT', 'SERVICE_UNREACHABLE'].includes(code) ? code : 'INVALID_REQUEST'); return;
       }
       const data = object.data as Record<string, unknown>;
       subscriptionId = requireUuid(data.subscriptionId); storeId = requireUuid(data.storeId);
       if (data.instanceId !== identity) throw new Error('STALE_TARGET');
-      highWater = requireDecimal(data.highWater); response = object as unknown as RpcResponse; clearTimeout(timer);
+      highWater = requireDecimal(data.highWater);
+      startAfter = request.params.after === undefined ? highWater : requireDecimal((request.params.after as {seq: unknown}).seq);
+      if (BigInt(startAfter) > BigInt(highWater)) throw new Error('INVALID_REQUEST');
+      response = object as unknown as RpcResponse; clearTimeout(timer);
       resolveReady({response, subscriptionId, storeId, instanceId: identity, highWater, done, close}); return;
     }
     if (closing && object.correlationId === closeId) { finish(null); return; }
@@ -290,7 +293,7 @@ async function subscribeLocal(endpoint: string, key: string, request: import('..
     if (object.kind !== 'event' || object.instanceId !== identity || !object.event || typeof object.event !== 'object') throw new Error('INVALID_REQUEST');
     const event = object.event as StreamEventFrame['event'];
     if (event.protocolVersion !== 1 || event.storeId !== storeId || !EVENT_TYPES.includes(event.type as typeof EVENT_TYPES[number])
-      || BigInt(requireDecimal(event.seq)) <= BigInt(lastReceived ?? highWater) || Buffer.byteLength(JSON.stringify(event)) + 36 > MAX_EVENT_BYTES) throw new Error('INVALID_REQUEST');
+      || BigInt(requireDecimal(event.seq)) <= BigInt(lastReceived ?? startAfter) || Buffer.byteLength(JSON.stringify(event)) + 36 > MAX_EVENT_BYTES) throw new Error('INVALID_REQUEST');
     if (typeof event.occurredAt !== 'string' || event.occurredAt.length > 40 || !Number.isFinite(Date.parse(event.occurredAt))
       || !event.payload || typeof event.payload !== 'object' || Array.isArray(event.payload)) throw new Error('INVALID_REQUEST');
     requireUuid(event.eventId);

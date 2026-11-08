@@ -215,7 +215,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T074 [P] [US4] Scrivere integrazioni RED in `tests/integration/event-replay-races.test.ts` per append durante replay, retention concorrente, perdita della connessione e restart; nessuna omissione nel passaggio replay→live o segmenti pinning da client lento. **Dip.: T072.**
 ### E3 — implementazione
 
-- [ ] T075 [US4] Implementare cattura highWater/registrazione serializzata, replay paginato, retentionFloor e gap esplicito in `src/protocol/event-pump.ts`, `src/storage/event-journal.ts` e `src/core/daemon-main.ts`, mantenendo l'ordine per seq indipendente dall'ora civile. **Dip.: T073, T074.**
+- [X] T075 [US4] Implementare cattura highWater/registrazione serializzata, replay paginato, retentionFloor e gap esplicito in `src/protocol/event-pump.ts`, `src/storage/event-journal.ts` e `src/core/daemon-main.ts`, mantenendo l'ordine per seq indipendente dall'ora civile. **Dip.: T073, T074.**
 - [ ] T076 [US4] Implementare --after e rappresentazione dei gap in `src/client/local-client.ts` e `src/cli/main.ts`; esporre il cursore dell'ultimo frame ricevuto, permettere riallineamento allo stato e non promettere exactly-once o continuare silenziosamente dopo una lacuna. **Dip.: T075.**
 ### E3 — checkpoint
 

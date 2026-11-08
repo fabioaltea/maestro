@@ -133,6 +133,11 @@ export class SQLiteStore {
     return value;
   }
   recordEvents(drafts: readonly EventDraft[]): void { this.mutate(() => {}, drafts, true); }
+  captureEventState(): EventState {
+    if (!this.database) throw new Error('STATE_CORRUPT');
+    // Same SQLite writer serialization as event publication; no transaction survives this call.
+    return this.database.transaction(() => this.getEventState(true)).immediate();
+  }
   getEventState(verify = false): EventState {
     if (!this.database) return {highWater: '0', firstAvailable: '1', pendingBytes: 0, degraded: false, errorCode: null};
     const meta = this.database.prepare('SELECT * FROM journal_metadata WHERE singleton=1').get() as Row;
@@ -144,11 +149,13 @@ export class SQLiteStore {
     const usage = diagnosticUsage(this.directory, this.database);
     return {usage, highWater: String(meta.high_water), firstAvailable, pendingBytes: raw === '[]' ? 0 : Buffer.byteLength(raw), degraded: raw !== '[]' || errorCode !== null, errorCode};
   }
-  listEvents(options: {after?: string; limit?: number; maxBytes?: number} = {}): EventPage {
+  listEvents(options: {highWater?: string; after?: string; limit?: number; maxBytes?: number} = {}): EventPage {
     if (!this.database) return {records: [], firstAvailable: '1', highWater: '0', truncated: false, nextAfter: '0'};
     return this.database.transaction(() => {
       const meta = this.database!.prepare('SELECT high_water FROM journal_metadata WHERE singleton=1').get() as Row;
-      return this.eventsJournal().list({...options, highWater: String(meta.high_water)});
+      const highWater = options.highWater ?? String(meta.high_water);
+      if (BigInt(highWater) > BigInt(String(meta.high_water))) throw new Error('INVALID_REQUEST');
+      return this.eventsJournal().list({...options, highWater});
     })();
   }
   private operation(row: Row): OperationRecord {

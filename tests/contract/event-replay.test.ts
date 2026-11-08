@@ -54,7 +54,7 @@ test('replay uses stable seq/eventId across reconnects and then delivers live ev
 test('expired cursor returns an explicit gap with retained bounds and reread-status action', async () => {
   const {createLiveEvents} = await import('../../src/core/live-events.js');
   const storeId = randomUUID(), instanceId = randomUUID();
-  const store = {getEventState: async () => ({highWater: '10', firstAvailable: '5'})} as unknown as import('../../src/ports/storage.js').StoragePort;
+  const store = {captureEventState: async () => ({highWater: '10', firstAvailable: '5'})} as unknown as import('../../src/ports/storage.js').StoragePort;
   const channel = {afterReply() { throw new Error('must not register an expired cursor'); }} as unknown as import('../../src/ports/platform.js').StreamChannel;
   const registry = createLiveEvents(store, instanceId);
   try {

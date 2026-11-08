@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import type { AuthenticatedPeer, RpcRequest, RpcResponse, StreamChannel } from '../ports/platform.js';
 import type { StoragePort } from '../ports/storage.js';
 import { createEventPump, type EventPumpStats } from '../protocol/event-pump.js';
+import { requireCursor, eventGap } from '../protocol/event-cursor.js';
+import { classifyError } from './control-main.js';
 import { requireUuid } from '../domain/identifiers.js';
 
 /** Shared polling only signals a high-water change; the journal remains the only event history. */
@@ -9,8 +11,10 @@ export function createLiveEvents(store: StoragePort, instanceId: string) {
   const active = new Map<string, {owner: StreamChannel; pump: ReturnType<typeof createEventPump>}>();
   const recent: EventPumpStats[] = [];
   let timer: ReturnType<typeof setInterval> | undefined, polling = false, highWater = '-1';
+  const pending = new Set<StreamChannel>();
+  let stopped = false;
   let closedCount = 0, slowConsumers = 0, lastSlowAudit = -Infinity;
-  function closeAll(reason?: string) { for (const {pump} of active.values()) pump.close(reason); if (timer) clearInterval(timer); timer = undefined; }
+  function closeAll(reason?: string) { stopped = true; for (const {pump} of active.values()) pump.close(reason); if (timer) clearInterval(timer); timer = undefined; }
   function startPolling() {
     if (timer) return;
     timer = setInterval(() => {
@@ -38,12 +42,25 @@ export function createLiveEvents(store: StoragePort, instanceId: string) {
         entry.pump.close();
         return {...base, result: 'OK', data: {subscriptionId: request.params.subscriptionId, closed: true}};
       }
-      if (Object.keys(request.params).length) return failure('INVALID_REQUEST'); // replay parameters belong to E3
-      if (active.size >= 10 || [...active.values()].some(entry => entry.owner === channel)) return failure('BUSY');
-      const state = await store.getEventState(), subscriptionId = randomUUID();
+      if (Object.keys(request.params).some(key => key !== 'after')) return failure('INVALID_REQUEST');
+      let after: string | undefined;
+      try { if (request.params.after !== undefined) after = requireCursor(request.params.after, storeId).seq; }
+      catch (error) {return failure(classifyError(error));}
+      if (stopped) return failure('SERVICE_UNREACHABLE');
+      if (active.size + pending.size >= 10 || pending.has(channel) || [...active.values()].some(entry => entry.owner === channel)) return failure('BUSY');
+      // Reserve the observer before capturing H in the storage writer queue. Wakeups are hints;
+      // all delivery after registration reads the durable journal, including appends racing this reply.
+      pending.add(channel);
+      try {
+      const state = await store.captureEventState(), subscriptionId = randomUUID();
+      if (stopped || channel.closed) return failure('SERVICE_UNREACHABLE');
+      if (state.errorCode) return failure(state.errorCode);
+      if (after !== undefined && BigInt(after) > BigInt(state.highWater)) return failure('INVALID_REQUEST');
+      if (after !== undefined && BigInt(after) < BigInt(state.firstAvailable) - 1n) return {...base, result: 'ERROR', data: {code: 'CURSOR_EXPIRED', ...eventGap(storeId, state)}};
       const pump = createEventPump({subscriptionId, correlationId: request.correlationId, instanceId, storeId,
-        after: state.highWater, sink: channel,
-        readPage: (after, maxBytes) => store.listEvents({after, maxBytes, limit: 1000}),
+        after: after ?? state.highWater, replayHighWater: state.highWater, sink: channel,
+        eventState: () => store.getEventState(true),
+        readPage: (after, maxBytes, highWater) => store.listEvents({after, maxBytes, limit: 1000, ...(highWater !== undefined ? {highWater} : {})}),
       });
       active.set(subscriptionId, {owner: channel, pump});
       void pump.done.then(stats => {
@@ -58,7 +75,9 @@ export function createLiveEvents(store: StoragePort, instanceId: string) {
         if (!active.size && timer) { clearInterval(timer); timer = undefined; }
       });
       channel.afterReply(() => { startPolling(); pump.start(); });
-      return {...base, result: 'OK', data: {subscriptionId, storeId, instanceId, highWater: state.highWater}};
+      return {...base, result: 'OK', data: {subscriptionId, storeId, instanceId, highWater: state.highWater, after: after ?? state.highWater}};
+      } catch (error) {return failure(classifyError(error));}
+      finally {pending.delete(channel);}
     },
   };
 }

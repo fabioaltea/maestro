@@ -119,6 +119,7 @@ export interface StoragePort extends EventStoragePort {
 export interface EventStoragePort {
   recordEvents(drafts: readonly import('../protocol/messages.js').EventDraft[]): Promise<void>;
   drainEvents(): Promise<void>;
+  captureEventState(): Promise<import('../protocol/messages.js').EventState>;
   getEventState(verify?: boolean): Promise<import('../protocol/messages.js').EventState>;
-  listEvents(options?: {after?: string; limit?: number; maxBytes?: number}): Promise<import('../protocol/messages.js').EventPage>;
+  listEvents(options?: {highWater?: string; after?: string; limit?: number; maxBytes?: number}): Promise<import('../protocol/messages.js').EventPage>;
 }
