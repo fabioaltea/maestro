@@ -299,7 +299,7 @@ export class SQLiteStore {
       if (!existing && current.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
       if (existing && ['owningInstanceId', 'kind', 'policyScope', 'generation', 'pid', 'endpoint', 'credentialRef']
         .some(key => existing[key as keyof ManagedResource] !== resource[key as keyof ManagedResource])) throw new Error('STALE_TARGET');
-      if (resource.pid !== null && database.prepare('SELECT 1 FROM controller_attempts WHERE pid=?').get(resource.pid)) throw new Error('UNAUTHORIZED');
+      if (resource.pid !== null && database.prepare('SELECT 1 FROM controller_attempts WHERE pid=? AND ended_at IS NULL').get(resource.pid)) throw new Error('UNAUTHORIZED');
       return database.prepare(`INSERT INTO managed_resources VALUES (?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(resource_id) DO UPDATE SET observation=excluded.observation,release_state=excluded.release_state`)
       .run(resource.resourceId, resource.owningInstanceId, resource.kind, resource.policyScope, resource.generation,

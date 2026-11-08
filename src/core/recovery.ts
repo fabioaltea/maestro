@@ -1,3 +1,5 @@
+import { drainFoundationAuxiliaries } from './foundation-auxiliary-policy.js';
+import { makeDeadline, systemClock } from '../ports/clock.js';
 import { randomUUID } from 'node:crypto';
 import type { ArchivePaths, BootstrapIntent, LocalTransport, OwnershipLease, PlatformPaths, ProcessIdentity } from '../ports/platform.js';
 import type { Deadline } from '../ports/clock.js';
@@ -53,10 +55,18 @@ export async function recoverAbsentInstance(context: RecoveryContext): Promise<v
   const lease = context.leases.tryAcquire(context.paths.daemonLeaseFile, 'daemon');
   if (lease.status !== 'HELD') throw new Error('BLOCKED');
   try {
-    if ((await context.store.listResources(instance.instanceId)).some(r => r.releaseState !== 'RELEASED')) throw new Error('BLOCKED');
     await context.checkpoint('recovery.beforeCleanup');
+    await drainFoundationAuxiliaries({ ...context, instanceId: instance.instanceId,
+      deadline: makeDeadline(systemClock, Math.min(8_000, context.deadline.remainingMs())) });
+    const socket = await context.platformPaths.inspectStaleSocket(context.paths.daemonEndpoint);
+    if (socket) await context.platformPaths.ownedCleanup(context.paths.daemonEndpoint, socket);
     await context.store.reconcileInstanceAbsent(instance.instanceId, instance.generation);
     await context.checkpoint('recovery.afterCleanup');
+  } catch (error) {
+    if (error instanceof Error && ['BLOCKED', 'RESOURCE_IDENTITY_UNKNOWN', 'ENDPOINT_COLLISION'].includes(error.message)) {
+      await context.store.blockInstance(instance.instanceId, foundationError(error.message as 'BLOCKED', { persisted: true }));
+    }
+    throw error;
   } finally { lease.handle.release(); }
 }
 

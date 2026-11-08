@@ -17,7 +17,8 @@ for (const mode of ['cooperative', 'foreign'] as const) {
   test(`orphan recovery ${mode}: authenticate Foundation resources and preserve uncertain identity`, async t => {
     const { recoverAbsentInstance } = await loadContract<{recoverAbsentInstance(context: unknown): Promise<void>}>('core/recovery.js', ['recoverAbsentInstance']);
     const sandbox = await createProcessSandbox(t), h = await createCliHarness(t);
-    const paths = (await createPlatformPaths().resolveArchive(h.archive, 'write'))!;
+    const platformPaths = createPlatformPaths();
+    const paths = (await platformPaths.resolveArchive(h.archive, 'write'))!;
     const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 1,
       ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0' } });
     const parent = sandbox.spawnFixture('controlled-child.js');
@@ -39,7 +40,7 @@ for (const mode of ['cooperative', 'foreign'] as const) {
     let destructiveCalls = 0;
     const context = {store, paths, identity: mode === 'foreign' ? { ...identity, challenge: async () => 'UNKNOWN' } : identity,
       transport: mode === 'foreign' ? { call: async () => { destructiveCalls++; throw new Error('UNEXPECTED_COMMAND'); } } : createLocalTransport(),
-      leases: createOwnershipLease(), platformPaths: createPlatformPaths(), deadline: makeDeadline(systemClock, 2_000), excludedPids: [process.pid], checkpoint: async () => {}, sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms))};
+      leases: createOwnershipLease(), platformPaths, deadline: makeDeadline(systemClock, 2_000), excludedPids: [process.pid], checkpoint: async () => {}, sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms))};
     try {
       if (mode === 'cooperative') {
         await recoverAbsentInstance(context);
@@ -56,3 +57,15 @@ for (const mode of ['cooperative', 'foreign'] as const) {
     } finally { await sandbox.requestExit(child, 'shutdown'); await store.close(); }
   });
 }
+
+test('recovery never unlinks a live foreign endpoint or a regular file at a reserved path', async t => {
+  const h = await createCliHarness(t), adapter = createPlatformPaths();
+  const paths = (await adapter.resolveArchive(h.archive, 'write'))!;
+  const server = await createLocalTransport().listen(paths.daemonEndpoint, randomUUID(), new Map(), async request => ({protocolVersion: 1, correlationId: request.correlationId, result: 'OK', data: {}}));
+  try { await assert.rejects(adapter.inspectStaleSocket(paths.daemonEndpoint), /ENDPOINT_COLLISION/); }
+  finally { await server.close(); }
+  const {writeFile, readFile} = await import('node:fs/promises');
+  await writeFile(paths.daemonEndpoint, 'foreign sentinel', { mode: 0o600 });
+  await assert.rejects(adapter.inspectStaleSocket(paths.daemonEndpoint), /ENDPOINT_COLLISION/);
+  assert.equal(await readFile(paths.daemonEndpoint, 'utf8'), 'foreign sentinel');
+});

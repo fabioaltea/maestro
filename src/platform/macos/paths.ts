@@ -1,3 +1,4 @@
+import { connect } from 'node:net';
 import { constants } from 'node:fs';
 import { lstat, mkdir, open, realpath, statfs, unlink } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -152,6 +153,21 @@ export function createPlatformPaths(): PlatformPaths {
       if (Buffer.byteLength(paths.daemonEndpoint) >= 90) throw new Error('ENDPOINT_COLLISION');
       await validateIfPresent(paths.clientKeyFile, 'file');
       return Object.freeze(paths);
+    },
+    async inspectStaleSocket(path) {
+      if (!knownRuntimeDirectories.has(dirname(path))) unauthorized();
+      let info;
+      try { info = await lstat(path); }
+      catch (error) { if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return null; throw error; }
+      if (!info.isSocket() || info.isSymbolicLink() || info.uid !== uid || (info.mode & 0o777) !== 0o600) throw new Error('ENDPOINT_COLLISION');
+      await new Promise<void>((resolve, reject) => {
+        const socket = connect(path);
+        const done = (error?: Error) => { clearTimeout(timer); socket.destroy(); if (error) reject(error); else resolve(); };
+        const timer = setTimeout(() => done(new Error('ENDPOINT_COLLISION')), 100);
+        socket.once('connect', () => done(new Error('ENDPOINT_COLLISION')));
+        socket.once('error', error => done('code' in error && error.code === 'ECONNREFUSED' ? undefined : new Error('ENDPOINT_COLLISION')));
+      });
+      return { uid: info.uid, inode: info.ino };
     },
     async ownedCleanup(path, expected) {
       if (!knownRuntimeDirectories.has(dirname(path))) unauthorized();

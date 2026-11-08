@@ -20,6 +20,7 @@ export interface PlatformPaths {
   validateOwnerAndLinks(path: string, kind: 'file' | 'directory'): Promise<void>;
   readCredential(path: string): Promise<string>;
   createCredential(path: string): Promise<string>;
+  inspectStaleSocket(path: string): Promise<{uid: number; inode: number} | null>;
   ownedCleanup(path: string, expected: { uid: number; inode: number }): Promise<void>;
 }
 

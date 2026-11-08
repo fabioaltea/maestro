@@ -44,6 +44,8 @@ export async function drainFoundationAuxiliaries(context: AuxiliaryDrainContext)
           await context.sleep(Math.min(20, deadline.remainingMs()));
         }
       }
+      const socket = await platformPaths.inspectStaleSocket(resource.endpoint);
+      if (socket) await platformPaths.ownedCleanup(resource.endpoint, socket);
       await store.saveResource({ ...resource, observation: 'ABSENT', releaseState: 'RELEASED' });
     } catch (error) {
       await store.saveResource({ ...resource, observation: 'UNKNOWN', releaseState: 'BLOCKED' });
