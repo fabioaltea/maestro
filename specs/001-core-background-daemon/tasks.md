@@ -204,7 +204,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T069 [P] [US4] Scrivere test RED in `tests/contract/event-stream.test.ts` per subscribe/close, identity/correlation, schema, autorizzazioni e chiusura del client senza arresto del daemon; pubblicare soltanto eventi durevoli. **Dip.: T067.**
 ### E2 — implementazione
 
-- [ ] T070 [US4] Implementare pump live in `src/protocol/event-pump.ts`: notifiche come wake-up, cursore sul journal, pagine chiuse prima dell'attesa, byte accounting senza doppio conteggio, SLOW_CONSUMER e nessuna history alternativa illimitata. **Dip.: T068, T069.**
+- [X] T070 [US4] Implementare pump live in `src/protocol/event-pump.ts`: notifiche come wake-up, cursore sul journal, pagine chiuse prima dell'attesa, byte accounting senza doppio conteggio, SLOW_CONSUMER e nessuna history alternativa illimitata. **Dip.: T068, T069.**
 - [ ] T071 [US4] Collegare subscribe/close e CLI events --follow in `src/core/daemon-main.ts`, `src/platform/macos/transport.ts`, `src/client/local-client.ts` e `src/cli/main.ts`; la disconnessione non modifica lifecycle e nessuna sottoscrizione trattiene una transazione SQL. **Dip.: T070.**
 ### E2 — checkpoint
 

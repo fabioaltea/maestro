@@ -95,3 +95,13 @@ export interface ClientBackend {
   inspect(directory: string): Promise<PublicResult>;
   control(intent: BootstrapIntent, timeoutMs: number): Promise<PublicResult>;
 }
+
+export interface StreamSink {
+  readonly bufferedBytes: number;
+  readonly needsDrain: boolean;
+  readonly closed: boolean;
+  write(bytes: Uint8Array): boolean;
+  waitDrain(signal: AbortSignal): Promise<void>;
+  end(bytes?: Uint8Array): void;
+  onClose(callback: () => void): () => void;
+}
