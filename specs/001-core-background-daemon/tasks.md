@@ -200,7 +200,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T067 [US4] Eseguire crash/retention/saturazione e prove con segreti sentinella, registrando byte fisici, outbox, WAL e metadata in `specs/001-core-background-daemon/reports/e1-events.md`; se le ipotesi di allocazione non tengono, correggere lo storage senza modificare le soglie. **Dip.: T066, T060, T061.**
 ### E2 — test
 
-- [ ] T068 [P] [US4] Scrivere test RED in `tests/integration/event-stream-backpressure.test.ts` per client fermo, write=false/drain, errore di write e impossibilità di inviare l'ultimo frame; massimo 1 MiB complessivo per osservatore e status degli altri client reattivo. **Dip.: T067.**
+- [X] T068 [P] [US4] Scrivere test RED in `tests/integration/event-stream-backpressure.test.ts` per client fermo, write=false/drain, errore di write e impossibilità di inviare l'ultimo frame; massimo 1 MiB complessivo per osservatore e status degli altri client reattivo. **Dip.: T067.**
 - [ ] T069 [P] [US4] Scrivere test RED in `tests/contract/event-stream.test.ts` per subscribe/close, identity/correlation, schema, autorizzazioni e chiusura del client senza arresto del daemon; pubblicare soltanto eventi durevoli. **Dip.: T067.**
 ### E2 — implementazione
 
