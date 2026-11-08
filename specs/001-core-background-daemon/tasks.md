@@ -7,7 +7,9 @@
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
 **Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T077 completati; US4/E3 al checkpoint di review. T078–T087 ancora da eseguire. Nessuna pubblicazione autorizzata.
+T001–T078 completati; US4/E3 verificato e harness accesso locale predisposto.
+T079–T087 in corso. Runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
+Commit locali per task autorizzati; nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -222,7 +224,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T077 [US4] Eseguire prove E3 e ricostruire una sequenza nota attraverso disconnessione/restart/rotazione in `tests/acceptance/event-replay.test.ts`, riportando duplicati riconoscibili e lacune in `specs/001-core-background-daemon/reports/e3-replay.md`. **Dip.: T076, T074.**
 ### US4 — accettazione
 
-- [ ] T078 [US4] Predisporre `tests/acceptance/local-access.test.ts` e istruzioni del runner in `tests/fixtures/multi-user-runner.md` per UID distinti e accesso da altra macchina senza TCP; non creare account/privilegi automaticamente e non equiparare mock al test reale. **Dip.: T077.**
+- [X] T078 [US4] Predisporre `tests/acceptance/local-access.test.ts` e istruzioni del runner in `tests/fixtures/multi-user-runner.md` per UID distinti e accesso da altra macchina senza TCP; non creare account/privilegi automaticamente e non equiparare mock al test reale. **Dip.: T077.**
 - [ ] T079 [US4] Verificare tutte le categorie di errore, segreti sentinella e letture non mutanti in `tests/acceptance/diagnostics.test.ts`, compresi major non supportata, metodo interno non autorizzato, spazio esaurito e report bootstrap non persistito. **Dip.: T078.**
 ### US4 — checkpoint
 
