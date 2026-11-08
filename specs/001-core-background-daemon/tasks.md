@@ -62,7 +62,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T004 Creare il runner node:test e gli script test, test:contract, test:integration, test:acceptance e bench:foundation in `package.json` e `tests/fixtures/test-context.ts`; predisporre sandbox temporanei, registrazione dei soli processi posseduti e cleanup verificato, senza credential/provider reali. **Dip.: T003.**
 ### Test richiesti
 
-- [ ] T005 Scrivere i controlli dei confini d'import in `tests/contract/architecture.test.ts` e `scripts/check-architecture.mjs`; configurare npm run lint per vietare adapter OS/SQLite nel dominio e storage/core policy nel client. **Dip.: T004.**
+- [X] T005 Scrivere i controlli dei confini d'import in `tests/contract/architecture.test.ts` e `scripts/check-architecture.mjs`; configurare npm run lint per vietare adapter OS/SQLite nel dominio e storage/core policy nel client. **Dip.: T004.**
 ### Implementazione e verifica
 
 - [ ] T006 Verificare il driver nativo e le primitive SQLite previste in `tests/integration/sqlite-driver.test.ts`, registrando baseline/toolchain in `specs/001-core-background-daemon/reports/bootstrap.md`; mancanza di prebuild o piattaforma diversa deve avere esito esplicito, senza downgrade silenzioso. **Dip.: T005.**
