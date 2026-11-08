@@ -80,7 +80,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T007 Scrivere test unitari RED per transizioni, outcome, freshness/liveness separati e deadline monotone in `tests/unit/domain.test.ts` e `tests/unit/clock.test.ts`, includendo crash senza transizione salvata e salti dell'orologio civile. **Dip.: T006.**
 ### Implementazione e verifica
 
-- [ ] T008 Implementare stati, identificativi, errori redatti e clock sostituibile in `src/domain/states.ts`, `src/domain/identifiers.ts`, `src/domain/errors.ts` e `src/ports/clock.ts`, facendo passare i test di dominio senza dipendenze OS. **Dip.: T007.**
+- [X] T008 Implementare stati, identificativi, errori redatti e clock sostituibile in `src/domain/states.ts`, `src/domain/identifiers.ts`, `src/domain/errors.ts` e `src/ports/clock.ts`, facendo passare i test di dominio senza dipendenze OS. **Dip.: T007.**
 - [ ] T009 Definire i contratti delle cinque porte OS e dello storage in `src/ports/platform.ts` e `src/ports/storage.ts`: prove VERIFIED/ABSENT/UNKNOWN, lease con ownership unica, launcher detached e accesso core read-only; nessuna policy universale di terminazione. **Dip.: T008.**
 ### Test richiesti
 
