@@ -6,12 +6,12 @@
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
-**Status**: task generati per review; tutti da eseguire. Questo comando non autorizza
-né avvia implementazione, installazioni, benchmark, cleanup o pubblicazione.
+**Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
+T001–T020 completati; task successivi ancora da eseguire. Nessuna pubblicazione autorizzata.
 
 ## Format: `[ID] [P?] [Story] Description`
 
-- Checkbox sempre non selezionata, ID univoci e sequenziali.
+- Checkbox [X] solo per task completati e committati; ID univoci e sequenziali.
 - `[P]` indica task eseguibili insieme nella wave esplicita sotto, dopo le dipendenze.
   Non autorizza a ignorare dipendenze o assegnare contemporaneamente uno stesso file.
 - `[US1]`–`[US4]` compaiono soltanto nelle fasi delle user story.
@@ -96,7 +96,7 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
 - [X] T017 Implementare SQLiteStore e worker serializzato in `src/storage/sqlite-store.ts` e `src/storage/worker.ts`: WAL/FULL/foreign_keys, busy_timeout 50 ms, retry asincrono bounded, snapshot materializzati e commit-before-ack; nessun accesso SQL dalla CLI. **Dip.: T016, T011.**
 - [X] T018 Implementare messaggi/validatori e trasporto UDS autenticato in `src/protocol/messages.ts`, `src/protocol/validation.ts` e `src/platform/macos/transport.ts`; capability client/controller distinte e nessun listener TCP. **Dip.: T012, T014, T008.**
 - [X] T019 Implementare ProcessIdentity conservativa in `src/platform/macos/process-identity.ts`; challenge con generation/credenziale, osservazione exit e sola sonda di esistenza; PID presente non autenticabile produce UNKNOWN, senza kill o killpg. **Dip.: T013, T018.**
-- [ ] T020 Completare l'harness processi e fault deterministici in `tests/fixtures/process-sandbox.ts` e `tests/fixtures/fault-schedule.ts`; limitare stop/cleanup ai processi provati come propri e mantenere i punti di fault fuori dai comandi pubblici. **Dip.: T004, T019, T017, T015, T018.**
+- [X] T020 Completare l'harness processi e fault deterministici in `tests/fixtures/process-sandbox.ts` e `tests/fixtures/fault-schedule.ts`; limitare stop/cleanup ai processi provati come propri e mantenere i punti di fault fuori dai comandi pubblici. **Dip.: T004, T019, T017, T015, T018.**
 
 **Checkpoint**: Tutti i task Foundation devono passare prima delle user story; nessuna funzionalità AI/Git/UI.
 
@@ -389,7 +389,7 @@ quelle di spec.md/quickstart.md, senza riduzioni implicite.
 
 ## Notes
 
-- I task riportati sono tutti non eseguiti: nessuna checkbox è stata completata.
+- Le checkbox riflettono l’avanzamento effettivo; i task non completati restano non selezionati.
 - I report futuri distinguono target, misura, PASS/FAIL e NOT_RUN; fallimenti e timeout
   restano nel campione. Nessun benchmark è stato eseguito durante speckit-tasks.
 - Il test reale con UID distinti richiede un runner predisposto. In sua assenza il gate
