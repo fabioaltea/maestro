@@ -42,7 +42,9 @@ test('accepted intent is durable before acknowledgment and retry preserves its i
   await store.close();
   store = await open({ path });
   try {
+    const revision = (await store.readSnapshot())!.store.revision;
     assert.equal((await store.acceptOperation(intent)).accepted, false);
+    assert.equal((await store.readSnapshot())!.store.revision, revision);
     await assert.rejects(store.acceptOperation({ ...intent, payloadHash: 'b'.repeat(64) }), /IDEMPOTENCY_CONFLICT/);
     await assert.rejects(store.acceptOperation({ ...intent, requestId: 'fbd93dc5-bac0-471f-9a35-2d4a2d5e8242' }), /BUSY/);
     assert.equal((await store.getOperation(requestId))?.payloadHash, intent.payloadHash);
