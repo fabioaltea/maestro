@@ -74,6 +74,7 @@ export interface RpcResponse {
   readonly data: unknown;
 }
 export interface AuthenticatedPeer {
+  readonly credentialId: string;
   readonly role: LocalRole;
   readonly identity: string;
 }

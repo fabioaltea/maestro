@@ -1,13 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { createOwnershipLease } from '../platform/macos/lease.js';
-import { createProcessIdentity } from '../platform/macos/process-identity.js';
-import { createLocalTransport } from '../platform/macos/transport.js';
+import type { OwnershipLease, ProcessIdentity, LocalTransport } from '../ports/platform.js';
+export interface StopPorts { leases: OwnershipLease; identity: ProcessIdentity; transport: LocalTransport }
 import type { ControlContext } from './control-main.js';
 
-export async function executeMinimalStop(context: ControlContext): Promise<void> {
+export async function executeStop(context: ControlContext, ports: StopPorts): Promise<void> {
   const { paths, store, operation, controlKey } = context;
   const current = (await store.readSnapshot())?.instance;
-  const leases = createOwnershipLease();
+  const { leases, identity, transport } = ports;
   if (!current || current.lifecycle === 'STOPPED') {
     const lease = leases.tryAcquire(paths.daemonLeaseFile, 'daemon');
     if (lease.status !== 'HELD') throw new Error('BLOCKED');
@@ -19,25 +18,29 @@ export async function executeMinimalStop(context: ControlContext): Promise<void>
     } finally { lease.handle.release(); }
   }
   if (operation.targetInstanceId !== current.instanceId) throw new Error('STALE_TARGET');
-  const identity = createProcessIdentity();
+
   const verified = await identity.challenge(paths.daemonEndpoint, {
     identity: current.instanceId, generation: current.generation, key: controlKey,
   }, 1_000);
   if (verified !== 'VERIFIED') throw new Error('RESOURCE_IDENTITY_UNKNOWN');
   await store.setOperationPhase(operation.requestId, 'STOP_REQUESTED');
   try {
-    const response = await createLocalTransport().call(paths.daemonEndpoint, controlKey, {
+    const response = await transport.call(paths.daemonEndpoint, controlKey, {
       protocolVersion: 1, correlationId: randomUUID(), method: 'internal.prepareStop',
-      params: { requestId: operation.requestId, targetInstanceId: current.instanceId },
+      params: { requestId: operation.requestId, targetInstanceId: current.instanceId, generation: current.generation },
     }, 1_000);
     if (response.result !== 'OK') throw new Error('BLOCKED');
   } catch (error) {
     if (error instanceof Error && ['UNAUTHORIZED', 'INVALID_REQUEST', 'BLOCKED'].includes(error.message)) throw error;
     // The acknowledgment can disappear with the connection; verify the actual process.
   }
+  await store.setOperationPhase(operation.requestId, 'DRAINING');
   await store.setOperationPhase(operation.requestId, 'WAIT_EXIT');
   const deadline = performance.now() + 8_000;
   while (performance.now() < deadline) {
+    const observation = (await store.readSnapshot())?.instance;
+    if (observation?.instanceId !== current.instanceId) throw new Error('STALE_TARGET');
+    if (observation.lifecycle === 'BLOCKED') throw new Error('BLOCKED');
     if (await identity.probeAbsent(current.pid) === 'ABSENT') {
       const acquired = leases.tryAcquire(paths.daemonLeaseFile, 'daemon');
       if (acquired.status === 'HELD') {

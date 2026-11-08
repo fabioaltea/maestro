@@ -1,3 +1,8 @@
+import { createHash } from 'node:crypto';
+import { makeDeadline, systemClock } from '../ports/clock.js';
+import { foundationError } from '../domain/errors.js';
+import { drainFoundationAuxiliaries } from './foundation-auxiliary-policy.js';
+import { createProcessIdentity } from '../platform/macos/process-identity.js';
 import { join } from 'node:path';
 import type { DaemonIntent, LeaseHandle, LocalRole, LocalServer } from '../ports/platform.js';
 import type { StoragePort } from '../ports/storage.js';
@@ -5,7 +10,7 @@ import { createPlatformPaths } from '../platform/macos/paths.js';
 import { createOwnershipLease } from '../platform/macos/lease.js';
 import { createLocalTransport } from '../platform/macos/transport.js';
 import { openStorage } from '../storage/worker.js';
-import { createOperations } from './operations.js';
+import { createOperations, authorizePrepareStop } from './operations.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { isEntrypoint, readBootstrap, reportBootstrap } from './entrypoint.js';
 import { classifyError } from './control-main.js';
@@ -33,6 +38,7 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
     await storage.recordInstance({ instanceId: intent.instanceId, pid: process.pid, generation: intent.generation,
       lifecycle: 'STARTING', startedAt: new Date().toISOString(), shutdownPrepared: false, lastError: null });
     const clientKey = await adapter.readCredential(paths.clientKeyFile);
+    let draining = false;
     server = await createLocalTransport().listen(paths.daemonEndpoint, intent.instanceId, async () => {
       const keys = new Map<string, LocalRole>([[clientKey, 'client']]);
       const snapshot = await storage.readSnapshot();
@@ -66,27 +72,40 @@ export async function runDaemon(intent: DaemonIntent): Promise<void> {
       }
       if (request.method === 'internal.prepareStop') {
         const pending = snapshot.pendingOperation;
-        if (peer.role !== 'controller' || !pending || pending.outcome !== 'IN_PROGRESS'
-          || !['stop', 'restart'].includes(pending.action) || pending.requestId !== request.params.requestId
-          || pending.targetInstanceId !== intent.instanceId || request.params.targetInstanceId !== intent.instanceId) {
-          return { ...base, result: 'ERROR', data: { code: 'UNAUTHORIZED' } };
+        const attempt = pending ? await storage.getControllerAttempt(pending.requestId) : null;
+        let currentCredential = false;
+        if (attempt && attempt.endedAt === null) {
+          const key = await adapter.readCredential(join(paths.credentialsDirectory, `controller-${attempt.attemptId}.key`));
+          currentCredential = peer.credentialId === createHash('sha256').update(key).digest('hex');
         }
         const controlLease = createOwnershipLease().tryAcquire(paths.controlLeaseFile, 'control');
-        if (controlLease.status !== 'BUSY') {
-          if (controlLease.status === 'HELD') controlLease.handle.release();
-          return { ...base, result: 'ERROR', data: { code: 'UNAUTHORIZED' } };
+        if (controlLease.status === 'HELD') controlLease.handle.release();
+        try {
+          authorizePrepareStop({ role: peer.role, currentCredential, controlLeaseHeld: controlLease.status === 'BUSY',
+            instance, operation: pending, params: request.params });
+        } catch (error) {
+          return { ...base, result: 'ERROR', data: { code: classifyError(error) } };
         }
-        if ((await storage.listResources(intent.instanceId)).some(resource => resource.releaseState !== 'RELEASED')) {
-          return { ...base, result: 'BLOCKED', data: { code: 'RESOURCE_IDENTITY_UNKNOWN' } };
-        }
+        if (draining) return { ...base, result: 'OK', data: { preparingStop: true } };
         await storage.transitionInstance(intent.instanceId, 'STOPPING');
+        draining = true;
         setImmediate(() => {
           void (async () => {
+            await drainFoundationAuxiliaries({ store: storage, instanceId: intent.instanceId, paths,
+              identity: createProcessIdentity(), transport: createLocalTransport(), platformPaths: adapter,
+              deadline: makeDeadline(systemClock, 8_000), excludedPids: [process.pid, attempt!.pid],
+              sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
+            });
+            await storage.prepareShutdown(intent.instanceId, intent.generation);
             await server!.close();
             await storage.close();
             // Keep the main ownership lease until the actual process terminates.
             process.exit(0);
-          })().catch(() => { reportBootstrap(false, 'PERSISTENCE_UNAVAILABLE'); });
+          })().catch(async error => {
+            draining = false;
+            await storage.blockInstance(intent.instanceId, foundationError(classifyError(error), { persisted: true,
+              operationId: pending!.requestId })).catch(() => { reportBootstrap(false, 'PERSISTENCE_UNAVAILABLE'); });
+          });
         });
         return { ...base, result: 'OK', data: { preparingStop: true } };
       }

@@ -6,13 +6,14 @@ import type { ControllerAttemptRecord, OperationRecord, StoragePort } from '../p
 import { createPlatformPaths } from '../platform/macos/paths.js';
 import { createOwnershipLease } from '../platform/macos/lease.js';
 import { createDaemonLauncher } from '../platform/macos/launcher.js';
+import { createProcessIdentity } from '../platform/macos/process-identity.js';
 import { createLocalTransport } from '../platform/macos/transport.js';
 import { openStorage } from '../storage/worker.js';
 import { createOperations } from './operations.js';
 import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { isEntrypoint, readBootstrap, reportBootstrap } from './entrypoint.js';
-import { executeMinimalStop } from './lifecycle.js';
+import { executeStop } from './lifecycle.js';
 
 export function classifyError(error: unknown): ErrorCode {
   if (error instanceof Error) {
@@ -111,7 +112,7 @@ export async function runControl(intent: BootstrapIntent): Promise<number> {
     reportBootstrap(true);
     const context = { paths, store, operation, attempt, controlKey };
     if (intent.action === 'start') await executeStart(context);
-    else if (intent.action === 'stop') await executeMinimalStop(context);
+    else if (intent.action === 'stop') await executeStop(context, { leases: createOwnershipLease(), identity: createProcessIdentity(), transport: createLocalTransport() });
     else throw new Error('INVALID_REQUEST');
     await store.completeOperation(intent.requestId, 'SUCCEEDED', new Date().toISOString(), null);
     await store.finishControllerAttempt(attempt.attemptId, new Date().toISOString(), 'SUCCEEDED');

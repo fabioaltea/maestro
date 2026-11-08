@@ -1,7 +1,7 @@
 import { createServer, connect, type Socket } from 'node:net';
 import { chmod, lstat } from 'node:fs/promises';
 import { dirname, isAbsolute } from 'node:path';
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { LocalTransport, LocalRole, RpcResponse } from '../../ports/platform.js';
 import { HANDSHAKE_TIMEOUT_MS, MAX_CLIENT_BUFFER_BYTES, MAX_FRAME_BYTES } from '../../protocol/messages.js';
 import { decodeObject, decodeRequest, encodeFrame } from '../../protocol/validation.js';
@@ -56,6 +56,7 @@ export function createLocalTransport(): LocalTransport {
         let authenticating = false;
         let failed = false;
         let role: LocalRole = 'client';
+        let credentialId = '';
         let queued = 0;
         let queue = Promise.resolve();
         const timer = setTimeout(() => fail('UNAUTHORIZED'), HANDSHAKE_TIMEOUT_MS);
@@ -86,6 +87,7 @@ export function createLocalTransport(): LocalTransport {
               const entry = [...available].find(([candidate]) => equal(candidate, token));
               if (!entry) { fail('UNAUTHORIZED'); return; }
               role = entry[1];
+              credentialId = createHash('sha256').update(token).digest('hex');
               const serverNonce = randomBytes(32).toString('hex');
               socket.write(encodeFrame({ protocolVersion: 1, kind: 'welcome', identity, role,
                 clientNonce: hello.clientNonce, serverNonce, proof: proof(token, identity, role, hello.clientNonce, serverNonce) }));
@@ -102,7 +104,7 @@ export function createLocalTransport(): LocalTransport {
           queue = queue.then(async () => {
             if (failed || socket.destroyed) return;
             try {
-              const result = await dispatch(parsed, { role, identity });
+              const result = await dispatch(parsed, { role, identity, credentialId });
               const encoded = encodeFrame(result);
               if (socket.writableLength + encoded.byteLength > MAX_CLIENT_BUFFER_BYTES) { fail('SLOW_CONSUMER'); return; }
               socket.write(encoded);
