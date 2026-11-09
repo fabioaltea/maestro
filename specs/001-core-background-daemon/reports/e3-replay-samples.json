@@ -1,15 +1,15 @@
 {
-  "measuredAt": "2026-11-08T19:38:30.885Z",
+  "measuredAt": "2026-11-08T21:17:41.042Z",
   "platform": {
     "node": "26.13.0",
     "os": "darwin",
     "arch": "arm64"
   },
   "generatedEvents": 960,
-  "storeId": "063657cf-f943-4189-8cc7-5f603c2926df",
+  "storeId": "19734b4f-7efa-4751-ad5a-9b2d4de15dee",
   "initial": "5",
-  "beforeInstanceId": "094d772b-099d-4195-aa42-d741054cecf7",
-  "afterRestartInstanceId": "9ddae5f5-0808-4ef0-b92b-60bf948997bf",
+  "beforeInstanceId": "4898567d-2628-4cd8-b898-35c14bdf23d8",
+  "afterRestartInstanceId": "8aa1dbaa-55a1-403e-9408-fe0a833c1f15",
   "partialReplay": {
     "delivered": 80,
     "lastAccepted": "84",

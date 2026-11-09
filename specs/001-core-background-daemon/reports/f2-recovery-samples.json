@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-11-08T16:59:07.035Z",
+  "measuredAt": "2026-11-09T08:43:39.331Z",
   "platform": {
     "macOS": "26.3.1",
     "arch": "arm64",
@@ -10,25 +10,26 @@
     "filesystem": "APFS"
   },
   "crashScenarios": 30,
+  "matrixProcessCrashes": 34,
   "recoveryTargetMs": 30000,
-  "p95Ms": 401.89,
-  "maxMs": 513.93,
+  "p95Ms": 517.03,
+  "maxMs": 770.32,
   "loaded": {
     "confirmedOperations": 1000,
     "auxiliaries": 10,
-    "elapsedMs": 869.48,
+    "elapsedMs": 1060.16,
     "code": 0,
-    "beforeDigest": "b234e95d457e0f02675d89fc9a7ee7f2e270c071b3b5ef2362e025973bcc573c",
-    "afterDigest": "b234e95d457e0f02675d89fc9a7ee7f2e270c071b3b5ef2362e025973bcc573c",
+    "beforeDigest": "d4e5f700f37950ee1d47cbc365aae9c8e70e85f22eb3440d9f7a1cea9c7ac23f",
+    "afterDigest": "d4e5f700f37950ee1d47cbc365aae9c8e70e85f22eb3440d9f7a1cea9c7ac23f",
     "resourcesReleased": true
   },
   "blocked": {
-    "elapsedMs": 218.84,
+    "elapsedMs": 289.14,
     "code": 4,
     "resourcePreserved": true,
     "resources": [
       {
-        "resourceId": "8e154574-7fe1-42d0-afdd-19567f9aeb4f",
+        "resourceId": "449c0672-2d8b-4d60-b1bf-8022e1eb9a31",
         "kind": "auxiliary",
         "observation": "UNKNOWN",
         "releaseState": "BLOCKED"
@@ -41,184 +42,183 @@
   "samples": [
     {
       "point": "control.beforeAccept",
-      "elapsedMs": 390.35,
+      "elapsedMs": 445.83,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.accepted",
-      "elapsedMs": 380.26,
+      "elapsedMs": 426.27,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.ticketIssued",
-      "elapsedMs": 397.97,
+      "elapsedMs": 424.28,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.spawned",
-      "elapsedMs": 259.91,
+      "elapsedMs": 378.46,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.ready",
-      "elapsedMs": 242.24,
+      "elapsedMs": 264.42,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.completed",
-      "elapsedMs": 231.52,
+      "elapsedMs": 270.52,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.stopRequested",
-      "elapsedMs": 279.6,
+      "elapsedMs": 359.23,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.stopObserved",
-      "elapsedMs": 236.2,
+      "elapsedMs": 260.33,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "recovery.beforeCleanup",
-      "elapsedMs": 386.11,
+      "elapsedMs": 517.03,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "recovery.afterCleanup",
-      "elapsedMs": 388.46,
+      "elapsedMs": 424.85,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "daemon.claimed",
-      "elapsedMs": 378.5,
+      "elapsedMs": 510.29,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "daemon.recorded",
-      "elapsedMs": 375.72,
+      "elapsedMs": 484.04,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "daemon.recovering",
-      "elapsedMs": 393.89,
+      "elapsedMs": 489.21,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "daemon.running",
-      "elapsedMs": 382.26,
+      "elapsedMs": 770.32,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.beforeAccept",
-      "elapsedMs": 389.29,
+      "elapsedMs": 446.73,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.accepted",
-      "elapsedMs": 381.37,
+      "elapsedMs": 419.94,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.ticketIssued",
-      "elapsedMs": 396.37,
+      "elapsedMs": 422.15,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.spawned",
-      "elapsedMs": 248.97,
+      "elapsedMs": 258.37,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.ready",
-      "elapsedMs": 241.62,
+      "elapsedMs": 255.6,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.completed",
-      "elapsedMs": 238.89,
+      "elapsedMs": 265.85,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.stopRequested",
-      "elapsedMs": 282.21,
+      "elapsedMs": 318.25,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.stopObserved",
-      "elapsedMs": 235.13,
+      "elapsedMs": 256.68,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "recovery.beforeCleanup",
-      "elapsedMs": 513.93,
+      "elapsedMs": 488.25,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "recovery.afterCleanup",
-      "elapsedMs": 388.47,
+      "elapsedMs": 420.25,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "daemon.claimed",
-      "elapsedMs": 383.64,
+      "elapsedMs": 414.33,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "daemon.recorded",
-      "elapsedMs": 381.47,
+      "elapsedMs": 465.52,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "daemon.recovering",
-      "elapsedMs": 381.34,
+      "elapsedMs": 466.2,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "daemon.running",
-      "elapsedMs": 401.89,
+      "elapsedMs": 468.19,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.beforeAccept",
-      "elapsedMs": 384.31,
+      "elapsedMs": 432.16,
       "code": 0,
       "sameSuccessor": true
     },
     {
       "point": "control.accepted",
-      "elapsedMs": 389.17,
+      "elapsedMs": 429.46,
       "code": 0,
       "sameSuccessor": true
     }
-  ],
-  "matrixProcessCrashes": 34
+  ]
 }

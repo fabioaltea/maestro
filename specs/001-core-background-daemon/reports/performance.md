@@ -36,3 +36,15 @@ All resource samples, platform metadata and anomalies are in
 [performance-samples.json](performance-samples.json). The table describes the first
 focused campaign; subsequent suite reruns are timestamped in their raw samples.
 No thresholds were relaxed or shortened to produce a PASS.
+
+## Verified rerun, 2026-11-09
+
+The user's `npm run bench:foundation` finished with exit 0. Samples measured at
+2026-11-09T08:54:00.000Z confirm 121 samples over 600,015.81ms, maximum RSS
+80,281,600 bytes (76.56 MiB), and mean CPU 0.00833% of one core. Anomalies are empty.
+This rerun is without sandbox-exec and passes the unchanged idle targets.
+
+The earlier whole-suite IP-denial sandbox run failed to spawn ps with EPERM:
+zero samples, no CPU measurement, not a resource-limit failure or an idle PASS.
+The current raw file contains the successful rerun, not that failed attempt.
+The failed campaign remains documented in [acceptance.md](acceptance.md).

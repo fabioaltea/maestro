@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-11-08T17:54:48.136Z",
+  "measuredAt": "2026-11-08T21:17:32.508Z",
   "version": {
     "schema": 2,
     "node": "26.13.0",
@@ -14,7 +14,7 @@
   "confirmedOperationsPreserved": 1000,
   "peaks": {
     "journalBytes": 41881600,
-    "logBytes": 5156864,
+    "logBytes": 5140480,
     "walBytes": 1052672,
     "shmBytes": 32768,
     "outboxMetadataBytes": 45056,
@@ -46,7 +46,7 @@
     "degraded": false,
     "errorCode": null
   },
-  "cliPageBytes": 57990,
+  "cliPageBytes": 58161,
   "sentinelAbsent": true,
   "allocationMethod": "st_blocks * 512 plus fstat of ten deliberately pinned unlinked reader handles; full WAL and SHM; dbstat event tables plus full freelist; synchronous pages close files before returning"
 }
