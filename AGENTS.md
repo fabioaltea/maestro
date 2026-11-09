@@ -1,6 +1,6 @@
 # maestro Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-11-08
+Auto-generated from all feature plans. Last updated: 2026-11-09
 
 ## Active Technologies
 
@@ -16,8 +16,9 @@ tests/
 
 ## Commands
 
-Build, typecheck, lint, test ordinari e accettazione dei cicli di controllo disponibili.
-Accettazione completa e bench:foundation restano previsti dai task successivi:
+Build, typecheck, lint, suite ordinarie e accettazione disponibili.
+`npm test` non include acceptance. Acceptance e bench:foundation includono una prova
+idle reale di dieci minuti; eseguire i carichi separatamente, senza sospendere il Mac:
 
 ```sh
 npm run build
@@ -36,12 +37,14 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 001-core-background-daemon: T001–T077 implementati e committati per task; checkpoint US4/E3.
-  Replay paginato e live autenticato, cursori storeId/seq e CLI --after; gap espliciti.
-  Backpressure aggregata <=1 MiB per osservatore; stop del client separato dal lifecycle.
-  Schema 2 invariato; 126 test ordinari e accettazione E3 passati. Sequenza ricostruita
-  dopo disconnessione/restart, duplicati riconoscibili e retention con budget fixture 128 KiB.
-  Campioni e limiti in reports/e3-replay.md. Accettazione US4 e V1 restano da eseguire.
+- 001-core-background-daemon: Foundation implementata; diagnostica con categorie
+  esplicite, dieci osservatori/6.000 eventi e 1.000 letture, 100 round di dieci start
+  e 100 retry verificati. Replay/live e backpressure restano bounded; schema 2 invariato.
+  Ultimo idle: 600s, massimo RSS campionato 76,56 MiB inclusi worker, CPU 0,00833% di
+  un core. Recovery con 1.000 record e dieci ausiliari verificato; campioni nei report.
+  Non dichiarare 001 completamente accettata: T082/FR-016 NOT_RUN, T085 offline bloccato.
+  La campagna completa IP-denied ha 35 PASS/11 FAIL/1 SKIP; riprove mirate senza sandbox
+  passate non la sostituiscono. Vedere reports/acceptance.md e reports/performance.md.
 
 <!-- MANUAL ADDITIONS START -->
 

@@ -1,13 +1,14 @@
 # Quickstart e verifica — Foundation
 
-Documento per la futura implementazione. Nessuna installazione, build o prova di daemon
-è stata eseguita durante la pianificazione. I comandi diventano disponibili con F0/F1.
+Comandi implementati e verifiche consolidate al 2026-11-09. La Foundation non ha
+ancora superato tutti i gate: T082 resta NOT_RUN e T085 resta bloccato dalla campagna
+completa offline fallita. Le riprove mirate passate non annullano quei risultati.
 Root del repository: `/Users/fabioaltea/Repository/maestro`.
 
-## Prerequisiti e comandi previsti
+## Prerequisiti e comandi disponibili
 
-macOS 26.3 arm64, filesystem APFS locale, Node 26.13.0 e dipendenze del lockfile F0.
-La prima piattaforma va verificata nel bootstrap; nessuna promessa di supporto ad altri OS.
+Piattaforma verificata: macOS 26.3.1 arm64/APFS locale, Node 26.13.0 e dipendenze
+del lockfile: TypeScript 6.0.3, better-sqlite3 13.0.3. Altri OS non supportati.
 I test creano archivi temporanei e li ripuliscono solo dopo aver verificato processi e
 file propri. Nessuna pulizia della vecchia codebase è implicita.
 
@@ -24,11 +25,13 @@ npm run test:acceptance
 npm run bench:foundation
 ```
 
-Script pianificati: build=`tsc -p tsconfig.json`; typecheck e lint usano il compiler e
+Script disponibili: build=`tsc -p tsconfig.json`; typecheck e lint usano il compiler e
 il controllo dei confini d'import; test esegue node:test sul codice compilato.
 Le suite test:contract/test:integration/test:acceptance selezionano le rispettive directory.
-bench:foundation produce report, non modifica le soglie o i test per farli passare.
-F0 deve creare questi script: ora non esistono e non vanno invocati come se fossero disponibili.
+`npm test` include unit, contract e integration, non acceptance. Il runner acceptance
+esegue i file sequenzialmente e include il benchmark idle. `bench:foundation` esegue
+solo la prova idle di almeno dieci minuti e produce campioni senza cambiare le soglie.
+Tenere il Mac sveglio, evitare altri carichi e non avviare benchmark in parallelo.
 
 ## Prima slice F1
 
@@ -69,6 +72,14 @@ un secondo restart. Un nuovo intento richiede un nuovo ID. Le prove di replay pa
 il cursore dell'ultimo frame realmente ricevuto tramite --after.
 Un cursore scaduto deve produrre lacuna esplicita e possibilità di rileggere status.
 
+BUSY indica contesa e invita a interrogare la richiesta in corso. BLOCKED richiede
+la nextAction riportata: non eliminare lease/socket o terminare un PID salvato per
+aggirarlo. PID presente senza identità autenticabile significa UNKNOWN, non proprietà.
+Un timeout del client non annulla un intento già accettato. `pendingFinalization`
+segnala che la lettura non ha finalizzato l'operazione; serve un controllo esplicito.
+Schema incompatibile o archivio corrotto richiedono preservazione, non reset/migrazione
+automatica. L'interruzione di `events --follow` chiude il client, non il daemon.
+
 ## Matrice di accettazione e misure
 
 | Criterio | Esecuzione richiesta e risultato atteso |
@@ -97,7 +108,7 @@ la suite ordinaria usa credenziali negate e permessi verificati, mentre il gate 
 accettazione multi-utente deve essere eseguito su runner dedicato. Non dichiararlo
 superato sulla sola base dei mock.
 
-## Formato del report futuro
+## Interpretazione dei report
 
 Per ciascun SC: commit/versione del software, runtime/driver, OS/architettura, CPU/RAM/disco,
 workload, numero campioni, unità, target, p50/p95/max quando applicabili, osservato,
@@ -105,5 +116,13 @@ pass/fail e motivo. Per quote disco misurare byte fisici di tutti i file/sidecar
 e massimi temporanei; includere file ancora aperti dopo unlink.
 Riportare errori/timeout fra i campioni, senza escluderli per migliorare i percentili.
 
-**Stato attuale delle misure**: NOT_RUN per tutti gli SC. La validazione del piano verifica
-soltanto completezza/coerenza documentale e non attesta performance o crash safety reali.
+**Misure disponibili**: idle 600s, RSS massimo campionato 76,56 MiB inclusi worker,
+CPU media 0,00833% di un core; recovery con 1.000 record e dieci ausiliari in 1.060,16ms.
+Le campagne di controllo, carico eventi, quote e replay hanno report autonomi.
+Sono misure di workload specifici, non garanzie per qualsiasi carico.
+
+Vedere [acceptance.md](reports/acceptance.md) per tutti gli SC/AR, errori e timeout.
+La campagna completa con IP negato ha 35 PASS, 11 FAIL e 1 SKIP; il sandbox ha
+impedito anche lo spawn di ps. Le riprove senza sandbox di recovery, streaming,
+permessi locali e idle passano, ma non certificano la suite completa senza rete.
+T082/FR-016 resta NOT_RUN: nessun secondo account o macchina viene creato automaticamente.
