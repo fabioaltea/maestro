@@ -6,10 +6,9 @@
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)
 e [plan-review.md](plan-review.md).
-**Status**: implementazione autorizzata dall’utente e in corso, con un commit per task.
-T001–T080 completati; carico US4 verificato con dieci osservatori e mille letture.
-T081, T083, T084 e T086 verificati; T087 in review. T085 offline bloccato;
-runner secondo UID e seconda macchina non disponibili: T082 resta NOT_RUN.
+**Status**: implementazione Foundation disponibile; consolidamento e review conclusi
+con esito BLOCKED, non dichiarazione di completezza. 85/87 task completati e committati:
+T001–T081, T083–T084, T086–T087. T082 NOT_RUN; T085 offline bloccato.
 Commit locali per task autorizzati; nessuna pubblicazione autorizzata.
 L'utente autorizza il consolidamento T085–T087 anche con T082 NOT_RUN, senza
 dichiarare la feature completa o superato FR-016. T082 resta aperto fino alla prova reale.
@@ -252,7 +251,8 @@ ausiliari e restart, US3 il recovery completo. Non dichiarare la feature complet
   **Esito corrente:** consolidamento disponibile in `reports/acceptance.md`; campagna completa con IP negato 35 PASS/11 FAIL/1 SKIP. Recovery, streaming, controlli locali e benchmark successivi senza sandbox passano; non sostituiscono il gate completo offline.
 - [X] T086 Aggiornare `README.md`, `specs/001-core-background-daemon/quickstart.md` e `AGENTS.md` con comandi realmente disponibili, piattaforma verificata, diagnosi di blocco/PID incerto e limiti; preservare aggiunte manuali e spiegare quali prestazioni sono state misurate. **Dip.: T085.**
   **Consolidamento autorizzato:** documentazione aggiornata con T082 NOT_RUN e T085 bloccato; nessuna dichiarazione di accettazione completa.
-- [ ] T087 Revisionare diff, copertura requisiti ed esiti in `specs/001-core-background-daemon/reports/release-readiness.md`; confermare scope, assenza di perdita di lavoro e gate passati. Un FAIL/NOT_RUN richiesto blocca la dichiarazione di completezza; nessun commit, push o cleanup distruttivo implicito. **Dip.: T086.**
+- [X] T087 Revisionare diff, copertura requisiti ed esiti in `specs/001-core-background-daemon/reports/release-readiness.md`; confermare scope, assenza di perdita di lavoro e gate passati. Un FAIL/NOT_RUN richiesto blocca la dichiarazione di completezza; nessun commit, push o cleanup distruttivo implicito. **Dip.: T086.**
+  **Review completata:** esito BLOCKED / NOT RELEASE READY; T082 NOT_RUN e T085 aperto impediscono di confermare tutti i gate. La review è conclusa, la feature non è completamente accettata.
 
 **Checkpoint**: Feature completabile soltanto con tutti i gate applicabili superati; nessuna pubblicazione o implementazione successiva automatica.
 
