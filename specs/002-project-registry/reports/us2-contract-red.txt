@@ -1,0 +1,50 @@
+✖ live registry pages are bounded and store/revision bound; observations remain LAST_KNOWN (5848.086708ms)
+✖ verify persists OBSERVED with stable configuration; CLI list and offline operation use the same archive (2210.167625ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8185.188125
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/project-read-verify.test.js:7:1
+✖ live registry pages are bounded and store/revision bound; observations remain LAST_KNOWN (5848.086708ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":null,"storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":null},"data":{}}
+  
+  'ERROR' !== 'OK'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-read-verify.test.js:12:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'ERROR',
+    expected: 'OK',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-read-verify.test.js:29:1
+✖ verify persists OBSERVED with stable configuration; CLI list and offline operation use the same archive (2210.167625ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"678d074f-1527-4853-aafd-b7f20db12a20","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"678d074f-1527-4853-aafd-b7f20db12a20"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-read-verify.test.js:33:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
