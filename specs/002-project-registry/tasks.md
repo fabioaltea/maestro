@@ -6,8 +6,8 @@
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
 **Status**: implementazione locale autorizzata il 2026-11-10; T001–T004
-conclusi (4/96), P0 locale PASS. Gate esterni mantenuti per accettazione finale.
-G1 e il codice registry sono il prossimo incremento.
+e T005 conclusi (5/96), P0 locale PASS. Gate esterni mantenuti per accettazione finale.
+Porte di ispezione definite; G1 ancora da qualificare.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
 ## Format e convenzioni
@@ -98,7 +98,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Implementazione e verifica
 
-- [ ] T005 Definire `RepositoryInspector`, `FilesystemIdentity` e `ProbeSupervisor` in `src/ports/repository.ts`: prove versionate common-dir/admin-dir/reference checkout, capability esplicite, osservazioni nullable, deadline e cancellation; dominio senza primitive OS. **Dip.: T004.**
+- [X] T005 Definire `RepositoryInspector`, `FilesystemIdentity` e `ProbeSupervisor` in `src/ports/repository.ts`: prove versionate common-dir/admin-dir/reference checkout, capability esplicite, osservazioni nullable, deadline e cancellation; dominio senza primitive OS. **Dip.: T004.**
 - [ ] T006 Creare fixture locali possedute e snapshot comparativi in `tests/fixtures/project-repositories.ts` e `tests/fixtures/project-faults.ts`: unborn/detached/dirty/conflitti, cloni/annidati/submodule/main/linked/bare-common, sentinelle e checkpoint deterministici; riusare test-context e fault-schedule Foundation senza toccare repo utente. **Dip.: T005.**
 
 ### Test richiesti
@@ -445,7 +445,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T004 conclusi, T005–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T005 conclusi, T006–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
