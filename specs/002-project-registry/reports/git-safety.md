@@ -37,3 +37,12 @@ observed but close could be omitted. Result acknowledgement now precedes worker
 exit, and exit/close finalization is idempotent. Five GREEN tests include this
 failed-start path; [output](probe-supervisor-green.txt).
 The full real Git worker will be qualified with the inspector in T013–T016.
+
+## T012 filesystem evidence
+
+Four contracts GREEN: canonical paths preserve spaces/Unicode/newlines, symlink
+aliases share evidence, common repository differs from per-checkout roots/admin
+directories, and replacement/move does not rebind. Device/inode/birthtime are decimal
+strings with full precision; missing/unreadable/wrong-kind paths return safe errors.
+The adapter rejects non-Darwin and filesystem types different from the qualified
+APFS system volume. [Output](repository-identity-green.txt).
