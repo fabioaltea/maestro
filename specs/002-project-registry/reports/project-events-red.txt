@@ -1,0 +1,148 @@
+✖ registry event redaction retains only scoped correlation, effects and exact revisions (5.221417ms)
+✖ all registry operation event types retain scope and safe errors without new event taxonomy (0.198291ms)
+✖ invalid registry values cannot enter journal fields and unscoped lifecycle payloads retain prior behavior (0.173792ms)
+✖ registry admission and terminal events share the existing journal and never inherit a concurrent lifecycle requestId (105.430042ms)
+✖ a precommit failure rolls back both terminal ledger state and its event (45.745875ms)
+✖ postcommit drain failure preserves durable outcome and bounded outbox; replay drain never duplicates it (86.436666ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 0
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 313.659416
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/project-events.test.js:6:1
+✖ registry event redaction retains only scoped correlation, effects and exact revisions (5.221417ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  -   action: 'REGISTER',
+  -   configRevision: '9007199254740993',
+  -   effect: 'CREATED',
+  -   observationRevision: '1',
+      outcome: 'SUCCEEDED',
+  +   redactedFields: 11,
+  -   projectId: '791a2a66-4917-433d-a5e8-38a0b87adaf7',
+  -   redactedFields: 5,
+  -   scope: 'project',
+      truncated: true
+    }
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-events.test.js:14:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { outcome: 'SUCCEEDED', truncated: true, redactedFields: 11 },
+    expected: { scope: 'project', projectId: '791a2a66-4917-433d-a5e8-38a0b87adaf7', action: 'REGISTER', outcome: 'SUCCEEDED', effect: 'CREATED', configRevision: '9007199254740993', observationRevision: '1', truncated: true, redactedFields: 5 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-events.test.js:19:1
+✖ all registry operation event types retain scope and safe errors without new event taxonomy (0.198291ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'project'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-events.test.js:25:20)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'project',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-events.test.js:36:1
+✖ invalid registry values cannot enter journal fields and unscoped lifecycle payloads retain prior behavior (0.173792ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   redactedFields: 7,
+  -   redactedFields: 6,
+  -   scope: 'project',
+      truncated: true
+    }
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-events.test.js:41:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { truncated: true, redactedFields: 7 },
+    expected: { scope: 'project', truncated: true, redactedFields: 6 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-outbox.test.js:7:1
+✖ registry admission and terminal events share the existing journal and never inherit a concurrent lifecycle requestId (105.430042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 2
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-outbox.test.js:17:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-outbox.test.js:34:1
+✖ a precommit failure rolls back both terminal ledger state and its event (45.745875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 2
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-outbox.test.js:48:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-outbox.test.js:50:1
+✖ postcommit drain failure preserves durable outcome and bounded outbox; replay drain never duplicates it (86.436666ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-outbox.test.js:61:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

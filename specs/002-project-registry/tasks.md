@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T026 conclusi (26/96), P0 locale
+**Status**: implementazione locale in corso; T001–T027 conclusi (27/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -140,7 +140,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Test richiesti
 
-- [ ] T027 Scrivere E1 in `tests/contract/project-events.test.ts` e `tests/integration/project-outbox.test.ts`: scope/projectId/revisioni allowlisted, operationId esplicito anche durante lifecycle concorrente, redazione sentinelle, atomico stato-esito-outbox, rollback e drain fallito/degradato; backpressure già obbligatoria per le prime mutazioni. **Dip.: T026, T025.**
+- [X] T027 Scrivere E1 in `tests/contract/project-events.test.ts` e `tests/integration/project-outbox.test.ts`: scope/projectId/revisioni allowlisted, operationId esplicito anche durante lifecycle concorrente, redazione sentinelle, atomico stato-esito-outbox, rollback e drain fallito/degradato; backpressure già obbligatoria per le prime mutazioni. **Dip.: T026, T025.**
 
 ### Implementazione e verifica
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T026 conclusi, T027–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T027 conclusi, T028–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
