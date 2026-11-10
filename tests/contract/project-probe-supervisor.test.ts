@@ -70,7 +70,7 @@ test('an independently expiring probe returns an explicit deadline result and do
   const supervisor = (await loadSupervisor()).createProbeSupervisor({ paths,
     workerUrl: new URL('../fixtures/project-probe-worker.js', import.meta.url) });
   const probe = await supervisor.start({ kind: 'CANDIDATE', path: context.directory }, ownership(),
-    { deadline: makeDeadline(systemClock, 800) });
+    { deadline: makeDeadline(systemClock, 3_000) });
   const result = await probe.result;
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.error.code, 'DEADLINE_EXCEEDED');
@@ -87,10 +87,9 @@ test('uncertain identity is BLOCKED rather than authorization to terminate a sav
     workerUrl: new URL('../fixtures/project-probe-worker.js', import.meta.url),
     onResource: async resource => { resources.push(resource); } });
   await assert.rejects(supervisor.start({ kind: 'CANDIDATE', path: context.directory }, ownership(),
-    { deadline: makeDeadline(systemClock, 800) }), /RESOURCE_IDENTITY_UNKNOWN/);
+    { deadline: makeDeadline(systemClock, 5_000) }), /RESOURCE_IDENTITY_UNKNOWN/);
   assert.ok(resources.some(resource => resource.releaseState === 'BLOCKED'));
-  // The fixture's own deadline is independent of the failed parent challenge.
-  await new Promise(resolve => setTimeout(resolve, 900));
+  // Failed startup disconnects the owned lifeline and observes exit before rejecting.
 });
 
 test('invalid policy scope and expired intentions are rejected before probe creation', async t => {

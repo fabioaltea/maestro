@@ -7,3 +7,8 @@ const relative = `${target}/${target === 'dist-tests' ? 'src/' : ''}platform/mac
 const directory = new URL(relative, root);
 await mkdir(directory, { recursive: true });
 await copyFile(new URL('src/platform/macos/git/inspection.sb', root), new URL('inspection.sb', directory));
+if (target === 'dist-tests') {
+  const fixtures = new URL('dist-tests/tests/fixtures/', root);
+  await mkdir(fixtures, { recursive: true });
+  await copyFile(new URL('tests/fixtures/inspection-policy-probe.c', root), new URL('inspection-policy-probe.c', fixtures));
+}
