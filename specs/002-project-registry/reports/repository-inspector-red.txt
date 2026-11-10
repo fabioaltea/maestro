@@ -1,0 +1,254 @@
+✖ empty repositories register completely and a later first commit never configures an omitted base on verify (385.509708ms)
+✖ unborn HEAD is distinct from existing reachable history on another local branch (116.956833ms)
+✖ detached HEAD does not guess a base; an explicit local branch is validated without checkout (124.162ms)
+✖ dirty/untracked/conflict observations preserve the complete repository and explicitly scope submodule contents (105.779ms)
+✖ main and linked checkouts share common identity while their reference roots remain distinct, including bare-common (129.425541ms)
+✖ aliases and subdirectories resolve to a checkout; nested repositories, clones and submodules stay distinct (104.446167ms)
+✖ executable filters yield UNKNOWN file status while safe metadata can still produce a complete candidate (114.023583ms)
+✖ deleting a configured branch changes observation validity without replacing the saved base (112.196958ms)
+✖ unavailable reference checkouts and replaced repository identities never rebind (101.496542ms)
+✖ branch changes during observation are retryable uncertainty, not a valid mixed snapshot (102.140667ms)
+✖ missing commit objects are corruption/unverified evidence rather than an empty repository (110.150458ms)
+✖ SHA-256 repositories retain their object format and never assume a 40-character OID (104.167167ms)
+✖ unavailable Git capability remains distinct from a missing repository and executes no query (101.428ms)
+✖ invalid paths and expired observations never initialize or repair a repository (0.796375ms)
+✖ repository configuration cannot silently redirect the reference checkout to a foreign root (153.411625ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 0
+ℹ fail 15
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1924.956625
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/repository-inspector.test.js:20:1
+✖ empty repositories register completely and a later first commit never configures an omitted base on verify (385.509708ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:23:29)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:39:1
+✖ unborn HEAD is distinct from existing reachable history on another local branch (116.956833ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:43:42)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:49:1
+✖ detached HEAD does not guess a base; an explicit local branch is validated without checkout (124.162ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:54:29)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:70:1
+✖ dirty/untracked/conflict observations preserve the complete repository and explicitly scope submodule contents (105.779ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:74:29)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:89:1
+✖ main and linked checkouts share common identity while their reference roots remain distinct, including bare-common (129.425541ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:93:29)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:108:1
+✖ aliases and subdirectories resolve to a checkout; nested repositories, clones and submodules stay distinct (104.446167ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:115:29)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:127:1
+✖ executable filters yield UNKNOWN file status while safe metadata can still produce a complete candidate (114.023583ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:134:42)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:142:1
+✖ deleting a configured branch changes observation validity without replacing the saved base (112.196958ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:146:29)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:154:1
+✖ unavailable reference checkouts and replaced repository identities never rebind (101.496542ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:157:29)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:170:1
+✖ branch changes during observation are retryable uncertainty, not a valid mixed snapshot (102.140667ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:173:29)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:184:1
+✖ missing commit objects are corruption/unverified evidence rather than an empty repository (110.150458ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:189:33)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:194:1
+✖ SHA-256 repositories retain their object format and never assume a 40-character OID (104.167167ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:197:42)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:201:1
+✖ unavailable Git capability remains distinct from a missing repository and executes no query (101.428ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:209:33)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:214:1
+✖ invalid paths and expired observations never initialize or repair a repository (0.796375ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:216:29)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-inspector.test.js:231:1
+✖ repository configuration cannot silently redirect the reference checkout to a foreign root (153.411625ms)
+  AssertionError [ERR_ASSERTION]: required repository observation adapter has not been implemented
+      at loadInspector (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:10:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-inspector.test.js:236:33)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

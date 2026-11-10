@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T013 conclusi (13/96), P0 locale
+**Status**: implementazione locale in corso; T001–T014 conclusi (14/96), P0 locale
 PASS. Porte e fixture disponibili; G1 ancora da qualificare. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -115,7 +115,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Test richiesti
 
-- [ ] T014 Scrivere i contratti di `RepositoryInspector` in `tests/contract/repository-inspector.test.ts`: HEAD BRANCH/DETACHED/UNBORN, base omessa/esplicita, bare senza checkout rifiutato, linked con common bare valido, status porcelain v2 NUL, filtri/includes unsafe→UNKNOWN e nessun falso clean. **Dip.: T013.**
+- [X] T014 Scrivere i contratti di `RepositoryInspector` in `tests/contract/repository-inspector.test.ts`: HEAD BRANCH/DETACHED/UNBORN, base omessa/esplicita, bare senza checkout rifiutato, linked con common bare valido, status porcelain v2 NUL, filtri/includes unsafe→UNKNOWN e nessun falso clean. **Dip.: T013.**
 
 ### Implementazione e verifica
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T013 conclusi, T014–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T014 conclusi, T015–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
