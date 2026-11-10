@@ -1,0 +1,9 @@
+✔ independent CLI clients register all supported fixture kinds, retain IDs across restart and read offline without writes (18693.839875ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 18785.857583

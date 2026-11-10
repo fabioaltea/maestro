@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T045 conclusi (45/96), P0 locale
+**Status**: implementazione locale in corso; T001–T046 conclusi (46/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -182,7 +182,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 - [X] T043 [US1] Collegare register/get in `src/client/local-client.ts` e implementare `project add`, `project show`, `project operation` in `src/cli/projects.ts` e `src/cli/main.ts`: path relativo→assoluto prima dell'intento, output umano/JSON, requestId visibile, nextAction ed exit deterministici, nessun autostart. **Dip.: T042.**
 - [X] T044 [US1] Aggiungere ed eseguire 100 retry identici e 20 import concorrenti via alias/main/linked in `tests/acceptance/project-register-concurrency.test.ts`; verificare un solo progetto attivo, stesso ID e zero modifiche implicite, payload diverso/collisione lifecycle rifiutati e disconnect dopo acceptance senza perdita del lavoro. **Dip.: T043.**
 - [X] T045 [US1] Eseguire `tests/integration/project-register-crash.test.ts` e i contratti/unitari/integrazione US1, registrando checkpoint/esiti in `specs/002-project-registry/reports/recovery.md`; verificare anche storage FULL/IO e ACK perso, senza falso successo/evento. **Dip.: T044.**
-- [ ] T046 [US1] Eseguire il percorso indipendente da due client in `tests/acceptance/project-register.test.ts`, senza rete/provider/UI; includere invalid path/accesso negato/non Git e confronto snapshot di contenuti/index/ref/config/oggetti per tutte le fixture registrabili. **Dip.: T045.**
+- [X] T046 [US1] Eseguire il percorso indipendente da due client in `tests/acceptance/project-register.test.ts`, senza rete/provider/UI; includere invalid path/accesso negato/non Git e confronto snapshot di contenuti/index/ref/config/oggetti per tutte le fixture registrabili. **Dip.: T045.**
 - [ ] T047 [US1] Consolidare risultati e limiti MVP in `specs/002-project-registry/reports/us1.md`: tutti i 7 scenari US1, ≥10 crash import, SC-004 e correlazione E1; distinguere PASS/FAIL/NOT_RUN e fermare la slice se un invariante è aperto. **Dip.: T046.**
 
 **Checkpoint**: US1 fruibile da due client con dettaglio minimo ed esiti durevoli. Nessuna dipendenza da US2/US3/US4 per la prova MVP.
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T045 conclusi, T046–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T046 conclusi, T047–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
