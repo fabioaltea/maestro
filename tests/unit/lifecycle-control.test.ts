@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -14,7 +15,7 @@ test('BLOCKED retries revalidate the original target; terminal results stay hist
   const { controlDisposition } = await loadContract<Admission>('core/operations.js', ['controlDisposition']);
   const ctx = await createTestContext(t);
   const store = await openStorage({ path: join(ctx.directory, 'state.sqlite'), identity: {
-    storeId: randomUUID(), schemaVersion: 2, ownerUid: process.getuid!(), canonicalPath: ctx.directory, revision: '0',
+    storeId: randomUUID(), schemaVersion: SCHEMA_VERSION, ownerUid: process.getuid!(), canonicalPath: ctx.directory, revision: '0',
   } });
   try {
     const ops = createOperations(store, process.getuid!());
@@ -39,7 +40,7 @@ test('BLOCKED retries revalidate the original target; terminal results stay hist
 test('shutdownPrepared is a drain completion marker, not an intention to stop', async t => {
   const ctx = await createTestContext(t);
   const store = await openStorage({ path: join(ctx.directory, 'state.sqlite'), identity: {
-    storeId: randomUUID(), schemaVersion: 2, ownerUid: process.getuid!(), canonicalPath: ctx.directory, revision: '0',
+    storeId: randomUUID(), schemaVersion: SCHEMA_VERSION, ownerUid: process.getuid!(), canonicalPath: ctx.directory, revision: '0',
   } });
   try {
     const ops = createOperations(store, process.getuid!());

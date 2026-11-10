@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../storage/schema.js';
 import type { CoreDependencies } from './runtime.js';
 import { reconcileControl } from './recovery.js';
 import { makeDeadline, systemClock, type Deadline } from '../ports/clock.js';
@@ -107,7 +108,7 @@ export async function runControl(intent: BootstrapIntent, dependencies: CoreDepe
     lease = lock.handle;
     const fresh = !existsSync(paths.stateFile);
     store = await (dependencies.storage ?? openStorage)({ path: paths.stateFile, ...(fresh ? { identity: {
-      storeId: randomUUID(), schemaVersion: 2, ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0',
+      storeId: randomUUID(), schemaVersion: SCHEMA_VERSION, ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0',
     } } : {}) });
     await reconcileControl({ store, paths, deadline, checkpoint, identity: createProcessIdentity(),
       transport: createLocalTransport(), leases: createOwnershipLease(), platformPaths: adapter,

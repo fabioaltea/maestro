@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -18,7 +19,7 @@ test('a cancelled delayed candidate cannot register an instance or expose readin
     await adapter.validateOwnerAndLinks(archive.runtimeDirectory, 'directory');
     await rm(archive.runtimeDirectory, { recursive: true });
   });
-  const store = await openStorage({ path: archive.stateFile, identity: { storeId: randomUUID(), schemaVersion: 2,
+  const store = await openStorage({ path: archive.stateFile, identity: { storeId: randomUUID(), schemaVersion: SCHEMA_VERSION,
     ownerUid: archive.ownerUid, canonicalPath: archive.directory, revision: '0' } });
   const operations = createOperations(store, archive.ownerUid);
   const requestId = randomUUID();

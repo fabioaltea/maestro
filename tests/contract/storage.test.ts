@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { lstat, readFile } from 'node:fs/promises';
@@ -15,7 +16,7 @@ const intent: AcceptOperation = {
   targetInstanceId: null, acceptedAt: '2026-11-08T12:00:00.000Z',
 };
 function identity(directory: string): StoreIdentity {
-  return { storeId: '25c6b95f-253b-49c4-9825-ff0abbe98f3a', schemaVersion: 2,
+  return { storeId: '25c6b95f-253b-49c4-9825-ff0abbe98f3a', schemaVersion: SCHEMA_VERSION,
     ownerUid: process.getuid!(), canonicalPath: directory, revision: '0' };
 }
 

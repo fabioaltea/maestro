@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
@@ -21,7 +22,7 @@ export async function recoveryScenario(t: TestContext, point: string, requestedA
   if (action === 'stop' || action === 'restart') assert.equal((await h.call('start')).code, 0);
   if (point.startsWith('recovery.') || point.startsWith('daemon.')) {
     await createPlatformPaths().createCredential(paths.clientKeyFile);
-    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 2,
+    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: SCHEMA_VERSION,
       ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0' } });
     const operations = createOperations(store, paths.ownerUid);
     await operations.accept({ requestId, action: 'start', targetInstanceId: null, canonicalStateDir: paths.directory });

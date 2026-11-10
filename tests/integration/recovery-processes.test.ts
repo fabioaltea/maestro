@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -19,7 +20,7 @@ for (const mode of ['cooperative', 'foreign'] as const) {
     const sandbox = await createProcessSandbox(t), h = await createCliHarness(t);
     const platformPaths = createPlatformPaths();
     const paths = (await platformPaths.resolveArchive(h.archive, 'write'))!;
-    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 2,
+    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: SCHEMA_VERSION,
       ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0' } });
     const parent = sandbox.spawnFixture('controlled-child.js');
     await sandbox.waitForMessage(parent, 'ready');

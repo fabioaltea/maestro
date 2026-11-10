@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { join } from 'node:path';
@@ -20,7 +21,7 @@ test('core acceptance is idempotent and an issued ticket cannot launch twice', a
   const { createOperations } = await operationFactory();
   const context = await createTestContext(t);
   const store = await openStorage({ path: join(context.directory, 'state.sqlite'), identity: {
-    storeId: '25c6b95f-253b-49c4-9825-ff0abbe98f3a', schemaVersion: 2, ownerUid: process.getuid!(),
+    storeId: '25c6b95f-253b-49c4-9825-ff0abbe98f3a', schemaVersion: SCHEMA_VERSION, ownerUid: process.getuid!(),
     canonicalPath: context.directory, revision: '0',
   } });
   try {
@@ -42,7 +43,7 @@ test('replacement cancels the delayed candidate before issuing a new generation'
   const { createOperations } = await operationFactory();
   const context = await createTestContext(t);
   const store = await openStorage({ path: join(context.directory, 'state.sqlite'), identity: {
-    storeId: '25c6b95f-253b-49c4-9825-ff0abbe98f3a', schemaVersion: 2, ownerUid: process.getuid!(),
+    storeId: '25c6b95f-253b-49c4-9825-ff0abbe98f3a', schemaVersion: SCHEMA_VERSION, ownerUid: process.getuid!(),
     canonicalPath: context.directory, revision: '0',
   } });
   try {

@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -25,7 +26,7 @@ for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     const h = await createCliHarness(t);
     const paths = (await createPlatformPaths().resolveArchive(h.archive, 'write'))!;
     await createPlatformPaths().createCredential(paths.clientKeyFile);
-    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: 2,
+    const store = await openStorage({ path: paths.stateFile, identity: { storeId: randomUUID(), schemaVersion: SCHEMA_VERSION,
       ownerUid: paths.ownerUid, canonicalPath: paths.directory, revision: '0' } });
     const operations = createOperations(store, paths.ownerUid);
     const requestId = randomUUID(), instanceId = randomUUID();

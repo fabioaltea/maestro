@@ -2,18 +2,99 @@ import type Database from 'better-sqlite3';
 import type { StoreIdentity } from '../ports/storage.js';
 import { requireUuid } from '../domain/identifiers.js';
 
-export const SCHEMA_VERSION = 2;
-export const SCHEMA_SQL = `
+export const SCHEMA_VERSION = 3;
+export const STORE_SCHEMA_SQL = `
 CREATE TABLE store (
   singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
   store_id TEXT NOT NULL UNIQUE,
-  schema_version INTEGER NOT NULL CHECK(schema_version = 2),
+  schema_version INTEGER NOT NULL CHECK(schema_version = 3),
   owner_uid INTEGER NOT NULL CHECK(owner_uid >= 0),
   canonical_path TEXT NOT NULL,
   revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0),
   next_event_seq INTEGER NOT NULL DEFAULT 1 CHECK(next_event_seq > 0),
   current_instance_id TEXT REFERENCES instances(instance_id)
 ) STRICT;
+`;
+export const REGISTRY_SCHEMA_SQL = `
+CREATE TABLE request_catalog (
+  request_id TEXT PRIMARY KEY CHECK(length(request_id)=36),
+  scope TEXT NOT NULL CHECK(scope IN ('LIFECYCLE','PROJECT')),
+  action TEXT NOT NULL,
+  payload_hash TEXT NOT NULL CHECK(length(payload_hash)=64),
+  CHECK((scope='LIFECYCLE' AND action IN ('start','stop','restart'))
+    OR (scope='PROJECT' AND action IN ('REGISTER','VERIFY','UPDATE','REMOVE')))
+) STRICT;
+CREATE TABLE registry_metadata (
+  singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+  registry_revision INTEGER NOT NULL DEFAULT 0 CHECK(registry_revision>=0)
+) STRICT;
+INSERT INTO registry_metadata(singleton) VALUES(1);
+CREATE TABLE projects (
+  project_id TEXT PRIMARY KEY CHECK(length(project_id)=36),
+  display_name TEXT NOT NULL CHECK(length(display_name)>0 AND length(display_name)<=120),
+  repository_key TEXT NOT NULL CHECK(length(repository_key)=64),
+  repository_identity TEXT NOT NULL CHECK(json_valid(repository_identity)),
+  reference_checkout TEXT NOT NULL CHECK(json_valid(reference_checkout)),
+  base_branch TEXT,
+  config_revision INTEGER NOT NULL CHECK(config_revision>0),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  removed_at TEXT
+) STRICT;
+CREATE UNIQUE INDEX active_repository_identity ON projects(repository_key) WHERE removed_at IS NULL;
+CREATE INDEX active_project_pages ON projects(project_id) WHERE removed_at IS NULL;
+CREATE TABLE project_operations (
+  request_id TEXT PRIMARY KEY REFERENCES request_catalog(request_id),
+  action TEXT NOT NULL CHECK(action IN ('REGISTER','VERIFY','UPDATE','REMOVE')),
+  payload_hash TEXT NOT NULL CHECK(length(payload_hash)=64),
+  canonical_intent TEXT NOT NULL CHECK(json_valid(canonical_intent)),
+  project_id TEXT REFERENCES projects(project_id),
+  expected_config_revision INTEGER CHECK(expected_config_revision IS NULL OR expected_config_revision>0),
+  owning_instance_id TEXT NOT NULL REFERENCES instances(instance_id),
+  owner_uid INTEGER NOT NULL CHECK(owner_uid>=0),
+  phase TEXT NOT NULL CHECK(phase IN ('ACCEPTED','PROBING','FINALIZED')),
+  outcome TEXT NOT NULL CHECK(outcome IN ('IN_PROGRESS','SUCCEEDED','FAILED','BLOCKED','INTERRUPTED')),
+  accepted_at TEXT NOT NULL,
+  deadline_at TEXT NOT NULL,
+  completed_at TEXT,
+  result TEXT CHECK(result IS NULL OR json_valid(result)),
+  CHECK((outcome='IN_PROGRESS' AND phase<>'FINALIZED' AND result IS NULL AND completed_at IS NULL)
+    OR (outcome<>'IN_PROGRESS' AND phase='FINALIZED' AND result IS NOT NULL AND completed_at IS NOT NULL))
+) STRICT;
+CREATE INDEX registry_pending ON project_operations(owning_instance_id,accepted_at) WHERE outcome='IN_PROGRESS';
+CREATE TABLE project_observations (
+  project_id TEXT PRIMARY KEY REFERENCES projects(project_id),
+  observation_revision INTEGER NOT NULL CHECK(observation_revision>0),
+  observed_config_revision INTEGER NOT NULL CHECK(observed_config_revision>0),
+  request_id TEXT NOT NULL REFERENCES project_operations(request_id),
+  observed_instance_id TEXT NOT NULL REFERENCES instances(instance_id),
+  started_at TEXT NOT NULL,
+  completed_at TEXT NOT NULL,
+  evidence TEXT NOT NULL CHECK(json_valid(evidence))
+) STRICT;
+CREATE TRIGGER immutable_request_catalog BEFORE UPDATE ON request_catalog
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER retained_request_catalog BEFORE DELETE ON request_catalog
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER immutable_project_intent BEFORE UPDATE ON project_operations
+WHEN NEW.request_id<>OLD.request_id OR NEW.action<>OLD.action OR NEW.payload_hash<>OLD.payload_hash
+  OR NEW.canonical_intent<>OLD.canonical_intent OR NEW.owner_uid<>OLD.owner_uid
+  OR NEW.owning_instance_id<>OLD.owning_instance_id OR NEW.accepted_at<>OLD.accepted_at
+  OR NEW.deadline_at<>OLD.deadline_at OR NEW.expected_config_revision IS NOT OLD.expected_config_revision
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER immutable_project_terminal BEFORE UPDATE ON project_operations WHEN OLD.outcome<>'IN_PROGRESS'
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER retained_project_operations BEFORE DELETE ON project_operations
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER immutable_project_identity BEFORE UPDATE ON projects
+WHEN NEW.project_id<>OLD.project_id OR NEW.repository_key<>OLD.repository_key
+  OR NEW.repository_identity<>OLD.repository_identity OR NEW.reference_checkout<>OLD.reference_checkout
+  OR NEW.created_at<>OLD.created_at OR OLD.removed_at IS NOT NULL
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER retained_projects BEFORE DELETE ON projects
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+`;
+export const SCHEMA_SQL = `${STORE_SCHEMA_SQL}
 CREATE TABLE instances (
   instance_id TEXT PRIMARY KEY,
   pid INTEGER NOT NULL CHECK(pid > 0),
@@ -86,7 +167,7 @@ CREATE TABLE journal_metadata (
 ) STRICT;
 INSERT INTO journal_metadata(singleton) VALUES(1);
 CREATE INDEX resources_by_instance ON managed_resources(owning_instance_id, release_state);
-`;
+${REGISTRY_SCHEMA_SQL}`;
 
 export function initializeSchema(database: Database.Database, identity: StoreIdentity): void {
   requireUuid(identity.storeId);
