@@ -1,6 +1,8 @@
 import { MAX_FRAME_BYTES, METHODS } from './messages.js';
 import type { RpcRequest } from '../ports/platform.js';
 import { requireUuid } from '../domain/identifiers.js';
+import { normalizeProjectCommand, projectObject, requireProjectFields } from '../domain/projects/intent.js';
+import type { ProjectAction } from '../domain/projects/model.js';
 
 export function decodeObject(frame: string | Uint8Array): Record<string, unknown> {
   const bytes = typeof frame === 'string' ? Buffer.from(frame, 'utf8') : frame;
@@ -20,11 +22,57 @@ export function encodeFrame(value: unknown): Buffer {
 
 export function decodeRequest(frame: string | Uint8Array): RpcRequest {
   const parsed = decodeObject(frame);
+  requireProjectFields(parsed, ['protocolVersion', 'correlationId', 'method', 'params']);
   if (parsed.protocolVersion !== 1) throw new Error(typeof parsed.protocolVersion === 'number' ? 'UNSUPPORTED_VERSION' : 'INVALID_REQUEST');
   if (typeof parsed.method !== 'string' || !METHODS.includes(parsed.method as typeof METHODS[number])
     || !parsed.params || typeof parsed.params !== 'object' || Array.isArray(parsed.params)) throw new Error('INVALID_REQUEST');
   try { requireUuid(parsed.correlationId); }
   catch { throw new Error('INVALID_REQUEST'); }
+  if (parsed.method.startsWith('projects.')) validateProjectParams(parsed.method, parsed.params);
   return { protocolVersion: 1, correlationId: parsed.correlationId as string,
     method: parsed.method, params: parsed.params as Readonly<Record<string, unknown>> };
+}
+
+export function requireProjectClient(role: string): void {
+  if (role !== 'client') throw new Error('UNAUTHORIZED');
+}
+export function requireProjectCapability(capabilities: unknown): void {
+  if (!capabilities || typeof capabilities !== 'object'
+    || (capabilities as Record<string, unknown>).projectRegistryVersion !== 1) throw new Error('UNSUPPORTED_VERSION');
+}
+function projectUuid(value: unknown): void {
+  try { requireUuid(value); } catch { throw new Error('INVALID_REQUEST'); }
+}
+export function validateProjectParams(method: string, input: unknown): void {
+  const params = projectObject(input);
+  if (method === 'projects.list') {
+    requireProjectFields(params, [], ['limit', 'cursor']);
+    if (Object.hasOwn(params, 'limit') && (typeof params.limit !== 'number' || !Number.isInteger(params.limit) || params.limit < 1 || params.limit > 100)) throw new Error('INVALID_REQUEST');
+    if (Object.hasOwn(params, 'cursor') && (typeof params.cursor !== 'string' || !params.cursor.isWellFormed()
+      || !params.cursor || Buffer.byteLength(params.cursor) > 4096)) throw new Error('INVALID_REQUEST');
+    return;
+  }
+  if (method === 'projects.get' || method === 'projects.operation.get') {
+    const key = method === 'projects.get' ? 'projectId' : 'requestId';
+    requireProjectFields(params, [key]); projectUuid(params[key]); return;
+  }
+  const actions: Readonly<Record<string, ProjectAction>> = {
+    'projects.register': 'REGISTER', 'projects.verify': 'VERIFY', 'projects.update': 'UPDATE', 'projects.remove': 'REMOVE',
+  };
+  const action = actions[method];
+  if (!action || !Object.hasOwn(params, 'requestId')) throw new Error('INVALID_REQUEST');
+  projectUuid(params.requestId);
+  const { requestId: _requestId, ...original } = params;
+  normalizeProjectCommand(action, original);
+}
+export function validateProjectAdmission(input: unknown): void {
+  const data = projectObject(input);
+  if (data.accepted === true) {
+    requireProjectFields(data, ['requestId', 'accepted', 'outcome', 'pollMethod']);
+    if (data.outcome !== 'IN_PROGRESS' || data.pollMethod !== 'projects.operation.get') throw new Error('INVALID_REQUEST');
+  } else if (data.accepted === false) {
+    requireProjectFields(data, ['requestId', 'accepted', 'outcome']);
+    if (data.outcome !== null) throw new Error('INVALID_REQUEST');
+  } else throw new Error('INVALID_REQUEST');
+  projectUuid(data.requestId);
 }

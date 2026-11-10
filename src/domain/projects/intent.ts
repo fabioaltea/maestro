@@ -6,12 +6,13 @@ export interface RegisterParams { readonly path: string; readonly name?: string;
 export interface VerifyParams { readonly projectId: string }
 export interface UpdateParams extends VerifyParams { readonly expectedRevision: string; readonly patch: ProjectPatch }
 export interface RemoveParams extends VerifyParams { readonly expectedRevision: string }
-export type ProjectIntent = { readonly version: 1; readonly scope: 'PROJECT'; readonly storeId: string } & (
+export type ProjectCommand =
   { readonly action: 'REGISTER'; readonly params: RegisterParams }
   | { readonly action: 'VERIFY'; readonly params: VerifyParams }
   | { readonly action: 'UPDATE'; readonly params: UpdateParams }
   | { readonly action: 'REMOVE'; readonly params: RemoveParams }
-);
+;
+export type ProjectIntent = { readonly version: 1; readonly scope: 'PROJECT'; readonly storeId: string } & ProjectCommand;
 
 export function projectObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('INVALID_REQUEST');
@@ -33,14 +34,11 @@ export function requireLocalBranch(value: unknown): string {
     || value.split('/').some(part => !part || part.startsWith('.') || part.endsWith('.lock'))) throw new Error('INVALID_BASE_BRANCH');
   return value;
 }
-export function normalizeProjectIntent(storeId: string, action: ProjectAction, input: unknown): ProjectIntent {
-  let normalizedStore: string;
-  try { normalizedStore = requireUuid(storeId); } catch { throw new Error('INVALID_REQUEST'); }
+export function normalizeProjectCommand(action: ProjectAction, input: unknown): ProjectCommand {
   const p = projectObject(input);
-  const head = { version: 1 as const, scope: 'PROJECT' as const, storeId: normalizedStore };
   if (action === 'REGISTER') {
     requireProjectFields(p, ['path'], ['name', 'baseBranch']);
-    return { ...head, action, params: { path: requireProjectPath(p.path),
+    return { action, params: { path: requireProjectPath(p.path),
       ...(Object.hasOwn(p, 'name') ? { name: normalizeProjectName(p.name) } : {}),
       ...(Object.hasOwn(p, 'baseBranch') ? { baseBranch: requireLocalBranch(p.baseBranch) } : {}) } };
   }
@@ -49,16 +47,21 @@ export function normalizeProjectIntent(storeId: string, action: ProjectAction, i
     ? ['projectId', 'expectedRevision'] : ['projectId', 'expectedRevision', 'patch']);
   let projectId: string;
   try { projectId = requireUuid(p.projectId); } catch { throw new Error('INVALID_REQUEST'); }
-  if (action === 'VERIFY') return { ...head, action, params: { projectId } };
+  if (action === 'VERIFY') return { action, params: { projectId } };
   const expectedRevision = requireProjectRevision(p.expectedRevision);
-  if (action === 'REMOVE') return { ...head, action, params: { projectId, expectedRevision } };
+  if (action === 'REMOVE') return { action, params: { projectId, expectedRevision } };
   const patch = projectObject(p.patch);
   requireProjectFields(patch, [], ['name', 'baseBranch']);
   if (Object.keys(patch).length === 0) throw new Error('INVALID_REQUEST');
-  return { ...head, action, params: { projectId, expectedRevision, patch: {
+  return { action, params: { projectId, expectedRevision, patch: {
     ...(Object.hasOwn(patch, 'name') ? { name: normalizeProjectName(patch.name) } : {}),
     ...(Object.hasOwn(patch, 'baseBranch') ? { baseBranch: patch.baseBranch === null ? null : requireLocalBranch(patch.baseBranch) } : {}),
   } } };
+}
+export function normalizeProjectIntent(storeId: string, action: ProjectAction, input: unknown): ProjectIntent {
+  let normalizedStore: string;
+  try { normalizedStore = requireUuid(storeId); } catch { throw new Error('INVALID_REQUEST'); }
+  return { version: 1, scope: 'PROJECT', storeId: normalizedStore, ...normalizeProjectCommand(action, input) };
 }
 /** Fixed field order, original omissions, no filesystem, Git, clock or generated defaults. */
 export function canonicalProjectIntent(storeId: string, action: ProjectAction, params: unknown): string {

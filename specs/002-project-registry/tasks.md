@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T025 conclusi (25/96), P0 locale
+**Status**: implementazione locale in corso; T001–T026 conclusi (26/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -136,7 +136,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 - [X] T023 Implementare l'upgrade transazionale esclusivo in `src/storage/registry-upgrade.ts`, collegandolo a `src/core/control-main.ts` prima del writer normale su start esplicito: detenere entrambi i lease, ricostruire store senza writable_schema, popolare catalogo con hash lifecycle invariati, verificare FK/integrità e mantenere la deadline start Foundation. **Dip.: T022.**
 - [X] T024 Implementare catalogo e admission/esiti registry in `src/storage/sqlite-store.ts` e aggiornare la prenotazione lifecycle in `src/core/operations.ts`: stessa transazione per ID/intento, confronto prima di path/revisione correnti, esito terminale immutabile, collisioni inter-scope rifiutate e nessun riuso del pending globale lifecycle. **Dip.: T023.**
 - [X] T025 Collegare il ledger e lettura readonly `projects.operation.get` in `src/storage/worker.ts` e `src/ports/storage.ts`, estendendo entrambe le allowlist readonly/failure; SQLite retry bounded, nessun await/probe in transazione, nessuna nuova connessione writer nel client. **Dip.: T024.**
-- [ ] T026 Estendere i codec, allowlist metodi e safe error in `src/protocol/messages.ts`, `src/protocol/validation.ts` e `src/domain/errors.ts` secondo i contratti registry, conservando versione e limiti Foundation; non esporre metodi non ancora implementati come riusciti. **Dip.: T020, T021.**
+- [X] T026 Estendere i codec, allowlist metodi e safe error in `src/protocol/messages.ts`, `src/protocol/validation.ts` e `src/domain/errors.ts` secondo i contratti registry, conservando versione e limiti Foundation; non esporre metodi non ancora implementati come riusciti. **Dip.: T020, T021.**
 
 ### Test richiesti
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T025 conclusi, T026–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T026 conclusi, T027–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

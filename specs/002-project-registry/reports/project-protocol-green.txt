@@ -1,0 +1,21 @@
+✔ registry methods extend the existing Foundation v1 envelope with closed typed params (4.539791ms)
+✔ registry codec rejects coercion, extra authority, malformed Unicode and payloads outside limits (0.904333ms)
+✔ client role and actual registry capability are required without granting internal authority (0.150625ms)
+✔ admission separates durable accepted work from BUSY rejection without claiming a terminal result (0.144292ms)
+✔ all registry errors have deterministic allowlisted categories and safe next actions (0.752291ms)
+✔ request validation rejects incompatible, malformed, oversized and unknown frames before dispatch (2.513167ms)
+✔ UDS authenticates the peer before dispatch and protects diagnostic responses from wrong keys (11.112ms)
+✔ a silent or pre-auth request never reaches dispatch and handshake has a bounded wait (1008.273917ms)
+✔ project names trim outside whitespace and count Unicode scalar values rather than UTF-16 units (2.423125ms)
+✔ canonical intent ignores object insertion order but retains store, action and explicit original fields (3.078375ms)
+✔ intent rejects unsupported, ambiguous, oversized and malformed input before hashing (0.422792ms)
+✔ configuration and observation revisions increment independently with exact integer bounds (0.183125ms)
+✔ only IN_PROGRESS is pending for registry; BLOCKED and every terminal outcome forbid replay transitions (0.176084ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1096.42125
