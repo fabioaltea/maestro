@@ -1,7 +1,9 @@
 import type { Project, ProjectObservation, ProjectOperation, ProjectOperationResult, ProjectPhase } from '../domain/projects/model.js';
 
 export type AcceptProjectOperation = Omit<ProjectOperation, 'phase' | 'outcome' | 'completedAt' | 'result'>;
+export interface RequestReservation { readonly scope: 'LIFECYCLE' | 'PROJECT'; readonly action: string; readonly payloadHash: string }
 export interface RegistryOperationsPort {
+  getRequestReservation(requestId: string): Promise<RequestReservation | null>;
   acceptProjectOperation(intent: AcceptProjectOperation): Promise<{ readonly accepted: boolean; readonly operation: ProjectOperation }>;
   getProjectOperation(requestId: string): Promise<ProjectOperation | null>;
   listPendingProjectOperations(): Promise<readonly ProjectOperation[]>;

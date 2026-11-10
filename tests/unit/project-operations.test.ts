@@ -43,6 +43,8 @@ async function fixture() {
   const records = new Map<string, ProjectOperation>();
   let writes = 0;
   const storage: Storage = {
+    getRequestReservation: async id => { const record = records.get(id); return record
+      ? { scope: 'PROJECT', action: record.action, payloadHash: record.payloadHash } : null; },
     readSnapshot: async () => ({ store: { storeId, schemaVersion: 3, revision: '0', ownerUid: 501, canonicalPath: '/owned/archive' },
       instance: { instanceId, pid: 1, generation: '1', lifecycle: 'RUNNING', startedAt: clock.wallUtc(), shutdownPrepared: false, lastError: null }, pendingOperation: null }),
     getProjectOperation: async id => records.get(id) ?? null,

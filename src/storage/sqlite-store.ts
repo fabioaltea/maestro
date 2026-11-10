@@ -13,7 +13,7 @@ import { transition, type Lifecycle, type Outcome } from '../domain/states.js';
 import { canonicalProjectIntent } from '../domain/projects/intent.js';
 import { PROJECT_ACTIONS, transitionProjectOperation, validateProjectOperationResult,
   type ProjectOperation, type ProjectOperationResult, type ProjectPhase } from '../domain/projects/model.js';
-import type { AcceptProjectOperation } from '../ports/registry.js';
+import type { AcceptProjectOperation, RequestReservation } from '../ports/registry.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
   StoreIdentity, StoreSnapshot } from '../ports/storage.js';
@@ -91,6 +91,11 @@ export class SQLiteStore {
     if (!row) return false;
     if (row.scope !== scope || row.action !== action || row.payload_hash !== payloadHash) throw new Error('IDEMPOTENCY_CONFLICT');
     return true;
+  }
+  getRequestReservation(requestId: string): RequestReservation | null {
+    requireUuid(requestId);
+    const row = this.registry().prepare('SELECT scope,action,payload_hash FROM request_catalog WHERE request_id=?').get(requestId) as Row | undefined;
+    return row ? { scope: row.scope as RequestReservation['scope'], action: String(row.action), payloadHash: String(row.payload_hash) } : null;
   }
   private eventsJournal() {
     if (!this.journal) this.journal = openJournal({directory: join(this.directory, 'events'), readonly: this.readOnly,
