@@ -21,3 +21,32 @@ The new registry executor is not exposed to public mutation methods yet.
 This common checkpoint is not SC-005: the required >=10 real crash samples for each
 REGISTER/UPDATE/REMOVE remain future story tests. Actual upgrade SIGKILL evidence
 is separate in registry-upgrade.md and is not counted as registry mutation crashes.
+
+
+## T045 — REGISTER recovery slice
+
+**28 PASS**, 0 FAIL/CANCELLED/SKIP across registration contracts, unit policy,
+real Git scenarios/core, ten actual SIGKILL cases and storage failures.
+[Full slice](project-register-slice-green.txt); [raw crash samples](register-crash-samples.json).
+The independent crash campaign also had [10 PASS](project-register-crash-green.txt).
+
+Ten owned daemon SIGKILL samples cover before acceptance, accepted clean/dirty,
+active probe (including real Git blocked on a FIFO), before commit clean/dirty,
+committed, client deadline before final producer acknowledgment, and before journal
+drain. Six accepted-but-uncommitted intents become INTERRUPTED without execution;
+three committed results remain byte-equivalent on retry; the never-accepted request
+can be explicitly admitted after restart. No confirmed project/result is lost and
+source snapshots remain identical. Probe EOF/absence is observed without signaling
+persisted PIDs. Client deadline uses the original requestId and never cancels work.
+
+Inside-transaction crash cases use the same production SQLite adapter directly
+behind the asynchronous storage port, so the owned daemon is killed with an actual
+open transaction. Ordinary flows and worker-loss tests independently exercise the
+production storage worker. This is not a synthetic mocked transaction failure.
+
+A real SQLite max_page_count limit forces SQLITE_FULL on project overflow-page
+allocation. IOERR_FSYNC is separately injected before commit. Both roll back
+project/observation/terminal/event together and preserve the accepted intent as
+pending when a terminal cannot be persisted. Driver detail is redacted. This does
+not claim physical disk exhaustion or power-cut testing. UPDATE/REMOVE crash
+campaigns remain future tasks, so total SC-005 feature acceptance is still open.

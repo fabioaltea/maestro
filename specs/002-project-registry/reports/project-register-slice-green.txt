@@ -1,0 +1,36 @@
+✔ project add/show/operation expose stable IDs, confirmed configuration and dated offline outcomes (3439.358875ms)
+✔ project CLI rejects invalid fields and extra authority; an unavailable daemon never autostarts (766.357708ms)
+✔ Foundation v1 without registry capability receives no mutation from a registry client (18.456708ms)
+✔ registration core uses real confined probes and commits through the storage worker without a public UI or Git mutation (1041.5775ms)
+✔ REGISTER actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (3752.900542ms)
+✔ REGISTER actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (2837.692083ms)
+✔ REGISTER actual SIGKILL at project.accepted/dirty preserves intent/result/project/event atomically (2824.305875ms)
+✔ REGISTER actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (3009.434708ms)
+✔ REGISTER actual SIGKILL at project.probing/blocked-git preserves intent/result/project/event atomically (3015.675208ms)
+✔ REGISTER actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (3464.218167ms)
+✔ REGISTER actual SIGKILL at project.beforeCommit/dirty preserves intent/result/project/event atomically (3723.33825ms)
+✔ REGISTER actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (3499.819916ms)
+✔ REGISTER actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (3459.855083ms)
+✔ REGISTER actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (3603.545375ms)
+✔ real SQLITE_FULL during project allocation rolls back project, observation, terminal outcome and event (64.266292ms)
+✔ injected IO failure immediately before registration commit rolls back every effect and never leaks the driver message (46.094125ms)
+✔ US1.1: registration is complete, dated and available to another client without changing any repository file (4733.284709ms)
+✔ US1.2: equivalent paths, subdirectories and Unicode/newline aliases deduplicate without implicit configuration changes (6495.807167ms)
+✔ US1.3: two concurrent first imports produce exactly one project and one initial observation (2226.576125ms)
+✔ US1.4: invalid, inaccessible and non-Git paths return safe errors with no partial project (1829.60875ms)
+✔ US1.5: dirty, untracked, conflicts and unsafe filters remain untouched and are never reported as clean (4549.3905ms)
+✔ US1.6: unborn and detached repositories register completely; explicit invalid base is rejected even on duplicates (4007.928334ms)
+✔ US1.7: linked checkout is fixed as first reference; main/other worktrees and common bare repository deduplicate correctly (5580.198ms)
+✔ clones with the same remote, nested repositories and submodules retain separate repository identities (5452.342541ms)
+✔ registration computes a valid default name from the checkout root and validates explicit names without mutating evidence (2.3275ms)
+✔ unborn, detached and absent base remain complete registrations without inventing a branch or approval (0.211417ms)
+✔ explicit invalid or changed base is rejected even when a repository would be a duplicate (0.344209ms)
+✔ only the winning registration allocates a project UUID; duplicate import preserves config, reference and observation (177.055542ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 74149.588083

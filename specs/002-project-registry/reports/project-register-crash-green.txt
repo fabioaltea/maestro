@@ -1,0 +1,18 @@
+✔ REGISTER actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (4375.588917ms)
+✔ REGISTER actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (3290.567042ms)
+✔ REGISTER actual SIGKILL at project.accepted/dirty preserves intent/result/project/event atomically (3088.559541ms)
+✔ REGISTER actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (2942.740375ms)
+✔ REGISTER actual SIGKILL at project.probing/blocked-git preserves intent/result/project/event atomically (3072.891042ms)
+✔ REGISTER actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (3592.715375ms)
+✔ REGISTER actual SIGKILL at project.beforeCommit/dirty preserves intent/result/project/event atomically (3490.192875ms)
+✔ REGISTER actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (3531.201333ms)
+✔ REGISTER actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (3513.747167ms)
+✔ REGISTER actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (3550.932833ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 34563.746959
