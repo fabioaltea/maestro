@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T009 conclusi (9/96), P0 locale
+**Status**: implementazione locale in corso; T001–T010 conclusi (10/96), P0 locale
 PASS. Porte e fixture disponibili; G1 ancora da qualificare. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -108,7 +108,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Implementazione e verifica
 
-- [ ] T010 [P] Implementare il runner e profilo OS in `src/platform/macos/git/runner.ts` e `src/platform/macos/git/inspection.sb`: Git verificato, shell=false, parametri separati, tutte le scritture/rete/fork negate, unico exec Git consentito, hardening previsto in `specs/002-project-registry/contracts/git-inspection.md`; capacità indisponibile blocca prima del probe. Distribuire il profilo anche nel build compilato tramite `scripts/build-assets.mjs` e `package.json`, risolvendolo rispetto al modulo e non al cwd. **Dip.: T007.**
+- [X] T010 [P] Implementare il runner e profilo OS in `src/platform/macos/git/runner.ts` e `src/platform/macos/git/inspection.sb`: Git verificato, shell=false, parametri separati, tutte le scritture/rete/fork negate, unico exec Git consentito, hardening previsto in `specs/002-project-registry/contracts/git-inspection.md`; capacità indisponibile blocca prima del probe. Distribuire il profilo anche nel build compilato tramite `scripts/build-assets.mjs` e `package.json`, risolvendolo rispetto al modulo e non al cwd. **Dip.: T007.**
 - [ ] T011 [P] Implementare `src/platform/macos/git/probe-supervisor.ts` e `src/platform/macos/git/probe-main.ts` usando il contratto ausiliari Foundation: handle diretto del solo Git figlio, lifeline, deadline autonoma, shutdown cooperativo e uscita verificata; nessun kill basato sul PID persistito o su gruppi di processi estranei. **Dip.: T008.**
 - [ ] T012 [P] Implementare acquisizione/confronto anchor in `src/platform/macos/git/filesystem-identity.ts` con prove versionate e limiti; canonicalizzare checkout/common-dir separatamente e non usare remote, HEAD o nome come identità. **Dip.: T009.**
 - [ ] T013 Creare ed eseguire `tests/integration/git-confinement.test.ts`: hook/fsmonitor/clean-process/alias/pager/extdiff-textconv/include sentinella, Git_* ostili, config cambiata durante probe, helper che invoca Git stesso, scritture anche fuori repo e rete tentata; provare zero sentinelle/azioni remote/scritture con evidenza positiva del confinamento OS, non soltanto assenza di marker. **Dip.: T010, T011, T012.**
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T009 conclusi, T010–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T010 conclusi, T011–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

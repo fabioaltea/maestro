@@ -20,10 +20,14 @@ non qualificabili producono REPOSITORY_UNSUPPORTED prima di dare evidenza positi
 
 ## Invocazione sicura
 
-- Binario assoluto verificato `/usr/bin/git`; nessuna ricerca PATH e nessuna shell.
+- Ingresso di sistema `/usr/bin/git`, che su macOS è un dispatcher Apple. Risolvere
+  il binario reale tramite `/usr/bin/xcrun --find git` fuori da qualsiasi repository,
+  ammettendo solo i percorsi di sistema Xcode/CommandLineTools qualificati e root-owned
+  non scrivibili da gruppo/altri. Versione e identità ricontrollate; eseguire quel
+  binario assoluto confinato. Nessuna ricerca PATH e nessuna shell.
 - Argv costruito da builtin allowlisted; input non è codice o opzione. Path assoluto
   validato, nomi ref confinati in refs/heads; `--end-of-options`/`--` dove previsti.
-- Ambiente costruito da allowlist: locale stabile, HOME privato del runner,
+- Ambiente costruito da allowlist: locale stabile, HOME=/var/empty senza configurazioni utente,
   GIT_CONFIG_GLOBAL/SYSTEM=/dev/null, GIT_CONFIG_NOSYSTEM=1, GIT_OPTIONAL_LOCKS=0,
   GIT_NO_LAZY_FETCH=1, GIT_TERMINAL_PROMPT=0, GIT_ALLOW_PROTOCOL vuoto.
   Nessuna eredità di GIT_DIR/WORK_TREE/INDEX_FILE/OBJECT_DIRECTORY/CONFIG_COUNT,
@@ -35,7 +39,9 @@ non qualificabili producono REPOSITORY_UNSUPPORTED prima di dare evidenza positi
   rev-parse/config/status, parte già confinato.
 
 Il profilo macOS, fornito da Maestro e non dal repository, nega tutte le scritture
-filesystem, rete e process-fork. Permette soltanto l'exec iniziale del Git verificato,
+filesystem persistenti, rete e process-fork. La sola scrittura a `/dev/null` è
+necessaria allo startup Git e non conserva dati; lettura delle directory antenate
+è permessa come metadato di risoluzione, non come accesso ai contenuti dei file. Permette soltanto l'exec iniziale del Git verificato,
 letture runtime necessarie e letture del repository; niente codice del progetto.
 Parametri del profilo separati dal testo, senza interpolazione di path ostili.
 La qualificazione G1 deve provare anche config cambiata durante il probe, helper

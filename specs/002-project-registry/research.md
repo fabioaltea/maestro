@@ -170,3 +170,14 @@ sostituiscono l'accettazione completa IP-denied FAIL. Il piano non concede derog
 
 **Alternatives considered**: assumere 001 accettata, riciclare benchmark di altri
 carichi o rimandare implicitamente la safety alla futura UI.
+
+## R2 implementation refinement — 2026-11-10
+
+On this Mac `/usr/bin/git` dispatches to the root-owned Xcode Git executable.
+Use trusted `/usr/bin/xcrun --find git` outside repositories, validate its fixed
+system location and fingerprint, then execute that pinned Git inside the sandbox.
+No PATH lookup or repo-configured helper is involved. Git needs read/write access
+to `/dev/null` and read access to the root directory for startup: profile permits
+that nonpersistent sink and required runtime/repository reads, retaining deny-default
+for every persistent write, fork and network operation. Six runner contracts now
+pass; full G1 malicious-config and process-lifecycle qualification remains pending.
