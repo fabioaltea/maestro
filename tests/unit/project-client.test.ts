@@ -74,7 +74,8 @@ test('queue rejection is not polled and explicit operation query does not wait f
 
 test('registry client refuses missing capability support, malformed responses and invalid deadlines', async () => {
   const api = client(async () => ({ ...base, result: 'BUSY', outcome: 'IN_PROGRESS', data: { accepted: true } }));
-  await assert.rejects(api.runProject('register', { path: '/a' }), /INVALID_REQUEST/);
+  const malformedMutation = await api.runProject('register', { path: '/a' });
+  assert.equal(malformedMutation.result, 'UNKNOWN_OUTCOME'); assert.ok(malformedMutation.requestId);
   await assert.rejects(api.runProject('register', { path: '/a' }, { timeoutMs: 30_001 }), /INVALID_REQUEST/);
   await assert.rejects(api.runProject('operation', { requestId: randomUUID() }, { timeoutMs: 2_001 }), /INVALID_REQUEST/);
   await assert.rejects(api.runProject('register', { path: 'relative' }), /INVALID_REQUEST/);

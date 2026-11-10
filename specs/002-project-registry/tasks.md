@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T042 conclusi (42/96), P0 locale
+**Status**: implementazione locale in corso; T001–T043 conclusi (43/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -179,7 +179,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 - [X] T040 [US1] Implementare `src/core/projects/register.ts`: usare intento originale, probe confinato e prove coerenti precommit, accettare unborn/detached/no-base, validare branch esplicito a commit e calcolare i default una volta; niente Discovery o script. **Dip.: T039.**
 - [X] T041 [US1] Implementare dettaglio minimo confermato in `src/core/projects/read.ts` e get offline in `src/core/inspect-main.ts`: ID/config/reference/ultima osservazione e data, DTO senza anchor interni, nessun Git o writer. Permettere l'interrogazione indipendente del MVP senza attendere US2. **Dip.: T040.**
 - [X] T042 [US1] Collegare solo register/get pronti al dispatch in `src/core/projects/dispatch.ts` e `src/core/daemon-main.ts`, dichiarando capability registry v1 e capacità Git effettive senza simulare metodi futuri; richieste non autorizzate o daemon non RUNNING hanno zero effetti. **Dip.: T041.**
-- [ ] T043 [US1] Collegare register/get in `src/client/local-client.ts` e implementare `project add`, `project show`, `project operation` in `src/cli/projects.ts` e `src/cli/main.ts`: path relativo→assoluto prima dell'intento, output umano/JSON, requestId visibile, nextAction ed exit deterministici, nessun autostart. **Dip.: T042.**
+- [X] T043 [US1] Collegare register/get in `src/client/local-client.ts` e implementare `project add`, `project show`, `project operation` in `src/cli/projects.ts` e `src/cli/main.ts`: path relativo→assoluto prima dell'intento, output umano/JSON, requestId visibile, nextAction ed exit deterministici, nessun autostart. **Dip.: T042.**
 - [ ] T044 [US1] Aggiungere ed eseguire 100 retry identici e 20 import concorrenti via alias/main/linked in `tests/acceptance/project-register-concurrency.test.ts`; verificare un solo progetto attivo, stesso ID e zero modifiche implicite, payload diverso/collisione lifecycle rifiutati e disconnect dopo acceptance senza perdita del lavoro. **Dip.: T043.**
 - [ ] T045 [US1] Eseguire `tests/integration/project-register-crash.test.ts` e i contratti/unitari/integrazione US1, registrando checkpoint/esiti in `specs/002-project-registry/reports/recovery.md`; verificare anche storage FULL/IO e ACK perso, senza falso successo/evento. **Dip.: T044.**
 - [ ] T046 [US1] Eseguire il percorso indipendente da due client in `tests/acceptance/project-register.test.ts`, senza rete/provider/UI; includere invalid path/accesso negato/non Git e confronto snapshot di contenuti/index/ref/config/oggetti per tutte le fixture registrabili. **Dip.: T045.**
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T042 conclusi, T043–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T043 conclusi, T044–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

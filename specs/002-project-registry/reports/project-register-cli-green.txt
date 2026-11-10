@@ -1,0 +1,15 @@
+✔ project add/show/operation expose stable IDs, confirmed configuration and dated offline outcomes (3189.861208ms)
+✔ project CLI rejects invalid fields and extra authority; an unavailable daemon never autostarts (764.621666ms)
+✔ Foundation v1 without registry capability receives no mutation from a registry client (18.11675ms)
+✔ registry client sends one immutable intent, polls with the same requestId and preserves its terminal result (56.298834ms)
+✔ client deadline preserves request identity and never repeats a mutation when its observation hangs (26.058667ms)
+✔ queue rejection is not polled and explicit operation query does not wait for terminal completion (0.498667ms)
+✔ registry client refuses missing capability support, malformed responses and invalid deadlines (0.753875ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4068.304084

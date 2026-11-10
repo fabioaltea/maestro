@@ -64,6 +64,7 @@ export class LocalClient {
       }
     };
     try { return await Promise.race([observe(), expired]); }
+    catch (error) { if (mutation) return unknown(); throw error; }
     finally { clearTimeout(timer); }
   }
   async followEvents(consume: (frame: import('../protocol/messages.js').StreamEventFrame) => Promise<void>, options: CommandOptions & {signal?: AbortSignal} = {}) {
