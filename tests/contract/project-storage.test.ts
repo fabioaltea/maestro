@@ -163,6 +163,7 @@ test('registry reads remain available during writer BUSY retry and after a class
     const started = performance.now();
     assert.equal((await f.api.getProjectOperation(first.requestId))?.outcome, 'IN_PROGRESS');
     assert.equal((await f.store.getRequestReservation(first.requestId))?.scope, 'PROJECT');
+    assert.equal(await f.store.getProject(randomUUID()), null);
     assert.equal((await f.api.listPendingProjectOperations()).length, 1);
     assert.ok(performance.now() - started < 500);
   } finally { lock.exec('ROLLBACK'); lock.close(); }
@@ -176,4 +177,5 @@ test('registry reads remain available during writer BUSY retry and after a class
   assert.equal((await f.api.listPendingProjectOperations()).length, 2);
   assert.equal((await f.api.getProjectOperation(first.requestId))?.payloadHash, first.payloadHash);
   assert.equal((await f.store.getRequestReservation(first.requestId))?.payloadHash, first.payloadHash);
+  assert.equal(await f.store.getProject(randomUUID()), null);
 });

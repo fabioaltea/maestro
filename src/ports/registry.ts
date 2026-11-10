@@ -1,4 +1,5 @@
 import type { Project, ProjectObservation, ProjectOperation, ProjectOperationResult, ProjectPhase } from '../domain/projects/model.js';
+import type { RepositoryIdentity, ReferenceCheckout, RepositoryObservationEvidence } from './repository.js';
 
 export type AcceptProjectOperation = Omit<ProjectOperation, 'phase' | 'outcome' | 'completedAt' | 'result'>;
 export interface RequestReservation { readonly scope: 'LIFECYCLE' | 'PROJECT'; readonly action: string; readonly payloadHash: string }
@@ -13,6 +14,15 @@ export interface RegistryOperationsPort {
   completeProjectOperation(requestId: string, result: ProjectOperationResult): Promise<void>;
 }
 export interface ProjectState { readonly project: Project; readonly observation: ProjectObservation | null }
+export interface RegisterProjectCommit {
+  readonly requestId: string; readonly instanceId: string; readonly displayName: string; readonly baseBranch: string | null;
+  readonly repositoryKey: string; readonly repositoryIdentity: RepositoryIdentity; readonly referenceCheckout: ReferenceCheckout;
+  readonly observation: RepositoryObservationEvidence; readonly completedAt: string;
+}
+export interface RegistryRegistrationPort {
+  commitProjectRegistration(input: RegisterProjectCommit): Promise<ProjectOperationResult>;
+  getProject(projectId: string): Promise<ProjectState | null>;
+}
 export interface RegistryPage {
   readonly projects: readonly ProjectState[];
   readonly registryRevision: string;

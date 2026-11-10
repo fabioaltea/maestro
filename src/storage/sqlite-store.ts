@@ -12,10 +12,11 @@ import { dirname, isAbsolute, join } from 'node:path';
 import { initializeSchema, SCHEMA_VERSION } from './schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { transition, type Lifecycle, type Outcome } from '../domain/states.js';
-import { canonicalProjectIntent } from '../domain/projects/intent.js';
+import { canonicalProjectIntent, requireLocalBranch } from '../domain/projects/intent.js';
+import { canonicalRepositoryIdentity, canonicalReferenceCheckout } from '../domain/projects/repository-evidence.js';
 import { PROJECT_ACTIONS, transitionProjectOperation, validateProjectOperationResult,
-  type ProjectOperation, type ProjectOperationResult, type ProjectPhase } from '../domain/projects/model.js';
-import type { AcceptProjectOperation, RequestReservation } from '../ports/registry.js';
+  normalizeProjectName, type Project, type ProjectObservation, type ProjectOperation, type ProjectOperationResult, type ProjectPhase } from '../domain/projects/model.js';
+import type { AcceptProjectOperation, RequestReservation, ProjectState, RegisterProjectCommit } from '../ports/registry.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
   StoreIdentity, StoreSnapshot } from '../ports/storage.js';
@@ -38,7 +39,7 @@ export class SQLiteStore {
   private eventError: string | null = null;
   private archiveVersion = SCHEMA_VERSION;
   private releaseReadLeases: (() => void) | undefined;
-  constructor(options: StorageOptions, private readonly hooks: {checkpoint?(point: string): void} = {}) {
+  constructor(options: StorageOptions, private readonly hooks: {checkpoint?(point: string): void; newProjectId?(): string} = {}) {
     this.directory = dirname(options.path);
     this.readOnly = options.readonly ?? false;
     if (!isAbsolute(options.path)) throw new Error('INVALID_REQUEST');
@@ -160,6 +161,10 @@ export class SQLiteStore {
       return value;
     }).immediate();
     this.hooks.checkpoint?.('event.committed');
+    if (drafts.some(draft => draft.payload.scope === 'project' && draft.type === 'operation.completed')) {
+      this.hooks.checkpoint?.('project.committed');
+      this.hooks.checkpoint?.('project.beforeDrain');
+    }
     try { this.drainEvents(); } catch (error) { this.eventError = error instanceof Error && ['STATE_CORRUPT', 'EVENT_BACKPRESSURE', 'UNAUTHORIZED', 'ENDPOINT_COLLISION'].includes(error.message) ? error.message : 'PERSISTENCE_UNAVAILABLE'; }
     return value;
   }
@@ -260,6 +265,85 @@ export class SQLiteStore {
     requestId = requireUuid(requestId);
     const row = this.registry().prepare('SELECT * FROM project_operations WHERE request_id=?').get(requestId) as Row | undefined;
     return row ? this.projectOperation(row) : null;
+  }
+  getProject(projectId: string): ProjectState | null {
+    projectId = requireUuid(projectId);
+    const database = this.registry();
+    return database.transaction(() => {
+      const row = database.prepare('SELECT * FROM projects WHERE project_id=?').get(projectId) as Row | undefined;
+      if (!row) return null;
+      const project: Project = { projectId, displayName: String(row.display_name), repositoryKey: String(row.repository_key),
+        repositoryIdentity: JSON.parse(String(row.repository_identity)) as Project['repositoryIdentity'],
+        referenceCheckout: JSON.parse(String(row.reference_checkout)) as Project['referenceCheckout'], baseBranch: row.base_branch as string | null,
+        configRevision: String(row.config_revision), createdAt: String(row.created_at), updatedAt: String(row.updated_at), removedAt: row.removed_at as string | null };
+      const observed = database.prepare('SELECT * FROM project_observations WHERE project_id=?').get(projectId) as Row | undefined;
+      const observation = observed ? { ...JSON.parse(String(observed.evidence)) as ProjectObservation, projectId,
+        observationRevision: String(observed.observation_revision), observedConfigRevision: String(observed.observed_config_revision),
+        requestId: String(observed.request_id), observedInstanceId: String(observed.observed_instance_id),
+        startedAt: String(observed.started_at), completedAt: String(observed.completed_at) } : null;
+      return { project, observation };
+    })();
+  }
+  commitProjectRegistration(input: RegisterProjectCommit): ProjectOperationResult {
+    requireUuid(input.requestId); requireUuid(input.instanceId);
+    const displayName = normalizeProjectName(input.displayName);
+    const identity = canonicalRepositoryIdentity(input.repositoryIdentity), reference = canonicalReferenceCheckout(input.referenceCheckout);
+    if (createHash('sha256').update(identity).digest('hex') !== input.repositoryKey) throw new Error('INVALID_REQUEST');
+    const evidence = input.observation;
+    if (input.baseBranch !== null) {
+      requireLocalBranch(input.baseBranch);
+      if (evidence.baseState !== 'VALID' || !evidence.baseOid) throw new Error('INVALID_BASE_BRANCH');
+    } else if (evidence.baseState !== 'UNCONFIGURED' || evidence.baseOid !== null) throw new Error('INVALID_BASE_BRANCH');
+    if (evidence.checkoutAvailability !== 'VERIFIED' || evidence.repositoryIdentityStatus !== 'VERIFIED'
+      || evidence.referencePath !== input.referenceCheckout.root.canonicalPath
+      || evidence.fileStatusScope !== 'REFERENCE_CHECKOUT_DIRECT_ENTRIES'
+      || !Number.isFinite(Date.parse(evidence.startedAt)) || !Number.isFinite(Date.parse(evidence.completedAt))
+      || Date.parse(evidence.completedAt) < Date.parse(evidence.startedAt)) throw new Error('REPOSITORY_CHANGED');
+    for (const flag of [evidence.hasCommits, evidence.trackedChanges, evidence.untrackedChanges, evidence.conflicts]) {
+      if (flag !== null && typeof flag !== 'boolean') throw new Error('INVALID_REQUEST');
+    }
+    const oidLength = evidence.objectFormat === 'sha1' ? 40 : evidence.objectFormat === 'sha256' ? 64 : 0;
+    if (!oidLength || !['BRANCH', 'DETACHED', 'UNBORN'].includes(evidence.headKind)
+      || [evidence.headOid, evidence.baseOid].some(oid => oid !== null && !new RegExp(`^[0-9a-f]{${oidLength}}$`).test(oid))) throw new Error('REPOSITORY_UNSUPPORTED');
+    const error = evidence.error ? foundationError(evidence.error.code, { persisted: true, operationId: input.requestId }) : null;
+    const savedEvidence = { ...evidence, error };
+    const drafts: EventDraft[] = [];
+    return this.mutate(database => {
+      const operation = this.getProjectOperation(input.requestId);
+      if (!operation || operation.action !== 'REGISTER' || operation.outcome !== 'IN_PROGRESS') throw new Error('INVALID_TRANSITION');
+      const instance = this.readSnapshot()?.instance;
+      if (!instance || instance.instanceId !== input.instanceId || operation.owningInstanceId !== input.instanceId || instance.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
+      const common = input.repositoryIdentity.commonDirectory;
+      const candidates = database.prepare(`SELECT project_id,repository_identity FROM projects WHERE removed_at IS NULL AND
+        (repository_key=? OR json_extract(repository_identity,'$.commonDirectory.canonicalPath')=? OR
+        (json_extract(repository_identity,'$.commonDirectory.device')=? AND json_extract(repository_identity,'$.commonDirectory.inode')=?
+        AND json_extract(repository_identity,'$.commonDirectory.birthtimeNs')=?))`).all(input.repositoryKey, common.canonicalPath, common.device, common.inode, common.birthtimeNs) as Row[];
+      if (candidates.some(candidate => candidate.repository_identity !== identity)) throw new Error('REPOSITORY_CHANGED');
+      let projectId: string, effect: 'CREATED' | 'EXISTING';
+      if (candidates.length) { projectId = String(candidates[0]!.project_id); effect = 'EXISTING'; }
+      else {
+        projectId = requireUuid(this.hooks.newProjectId?.() ?? randomUUID()); effect = 'CREATED';
+        database.prepare(`INSERT INTO projects(project_id,display_name,repository_key,repository_identity,reference_checkout,
+          base_branch,config_revision,created_at,updated_at) VALUES(?,?,?,?,?,?,1,?,?)`).run(projectId, displayName, input.repositoryKey,
+          identity, reference, input.baseBranch, input.completedAt, input.completedAt);
+        database.prepare(`INSERT INTO project_observations(project_id,observation_revision,observed_config_revision,request_id,
+          observed_instance_id,started_at,completed_at,evidence) VALUES(?,1,1,?,?,?,?,?)`).run(projectId, input.requestId, input.instanceId,
+          evidence.startedAt, evidence.completedAt, JSON.stringify(savedEvidence));
+        database.prepare('UPDATE registry_metadata SET registry_revision=registry_revision+1 WHERE singleton=1').run();
+      }
+      const state = this.getProject(projectId)!;
+      const result: ProjectOperationResult = { requestId: input.requestId, action: 'REGISTER', projectId, outcome: 'SUCCEEDED', effect,
+        configRevision: state.project.configRevision, observationRevision: state.observation!.observationRevision,
+        completedAt: input.completedAt, error: null };
+      validateProjectOperationResult(result);
+      database.prepare("UPDATE project_operations SET project_id=?,phase='FINALIZED',outcome='SUCCEEDED',completed_at=?,result=? WHERE request_id=?")
+        .run(projectId, result.completedAt, JSON.stringify(result), input.requestId);
+      drafts.push({ type: 'operation.completed', operationId: input.requestId, instanceId: input.instanceId,
+        payload: { scope: 'project', action: 'REGISTER', outcome: 'SUCCEEDED', projectId, effect,
+          configRevision: result.configRevision, observationRevision: result.observationRevision } });
+      this.hooks.checkpoint?.('project.beforeCommit');
+      return result;
+    }, drafts);
   }
   listPendingProjectOperations(): readonly ProjectOperation[] {
     return (this.registry().prepare("SELECT * FROM project_operations WHERE outcome='IN_PROGRESS' ORDER BY accepted_at,request_id").all() as Row[])

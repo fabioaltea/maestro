@@ -4,7 +4,7 @@ import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
 export const methods = ['captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
-  'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
+  'getProject', 'commitProjectRegistration', 'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
 export type Method = typeof methods[number];
@@ -32,7 +32,7 @@ if (!isMainThread) {
     store = new SQLiteStore(workerData as StorageOptions);
     port.postMessage({ ready: true });
     let queue = Promise.resolve();
-    const reads = new Set<Method>(['readSnapshot', 'getOperation', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'getControllerAttempt']);
+    const reads = new Set<Method>(['readSnapshot', 'getOperation', 'getProject', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'getControllerAttempt']);
     port.on('message', (request: Request) => {
       const execute = async () => {
         if (!Number.isSafeInteger(request.id) || !methods.includes(request.method) || !Array.isArray(request.args)) {
@@ -123,7 +123,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
 
   function call<T>(method: Method, args: unknown[]): Promise<T> {
     if (closing || exited) return Promise.reject(new Error('PERSISTENCE_UNAVAILABLE'));
-    if (failure && !['readSnapshot', 'getOperation', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
+    if (failure && !['readSnapshot', 'getOperation', 'getProject', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
     const id = ++nextId;
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -146,6 +146,8 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
 }
 export function createStorageProxy(call: <T>(method: Method, args: unknown[]) => Promise<T>, onFailure: StoragePort['onFailure'], close: StoragePort['close']): StoragePort {
   return {
+    getProject: id => call('getProject', [id]),
+    commitProjectRegistration: input => call('commitProjectRegistration', [input]),
     getRequestReservation: id => call('getRequestReservation', [id]),
     acceptProjectOperation: intent => call('acceptProjectOperation', [intent]),
     getProjectOperation: id => call('getProjectOperation', [id]),
