@@ -6,8 +6,8 @@
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
 **Status**: implementazione locale autorizzata il 2026-11-10; T001 e T002
-conclusi (2/96). Gate con runner esterno rinviati esplicitamente all'accettazione
-finale; P0 attende baseline locale T003 e verdetto T004.
+conclusi insieme alla baseline T003 (3/96). Gate con runner esterno rinviati esplicitamente all'accettazione
+finale; P0 attende solo il verdetto T004.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
 ## Format e convenzioni
@@ -81,7 +81,7 @@ senza switch/merge/reset di branch durante questa consegna.
 
 - [X] T001 Verificare branch, HEAD, modifiche preesistenti e feature selezionata; documentare come allineare `002-project-registry` alla baseline nuova Foundation preservando ogni modifica in `specs/002-project-registry/reports/entry-readiness.md`; nessun reset, cleanup, push o commit estraneo. **Dip.: nessuna.**
 - [X] T002 Registrare la revisione approvata dei gate in `specs/002-project-registry/plan.md`, `specs/002-project-registry/tasks.md` e `specs/002-project-registry/reports/entry-readiness.md`: altro UID/seconda macchina e acceptance IP-denied restano NOT_RUN/FAIL e bloccano solo accettazione finale/rilascio; nessun account, permesso o requisito safety modificato. **Dip.: T001.**
-- [ ] T003 Eseguire build/typecheck/lint e suite ordinarie locali definite in `package.json`, registrando comandi, esiti e campioni in `specs/002-project-registry/reports/local-baseline.md`; la campagna completa IP-denied e il runner esterno restano gate finali non dichiarati PASS. Failure locali pertinenti vanno risolte o segnalate prima di P0. **Dip.: T002.**
+- [X] T003 Eseguire build/typecheck/lint e suite ordinarie locali definite in `package.json`, registrando comandi, esiti e campioni in `specs/002-project-registry/reports/local-baseline.md`; la campagna completa IP-denied e il runner esterno restano gate finali non dichiarati PASS. Failure locali pertinenti vanno risolte o segnalate prima di P0. **Dip.: T002.**
 - [ ] T004 Consolidare verdetto P0 locale, versioni Node/Git/SQLite/macOS/APFS, commit e isolamento test in `specs/002-project-registry/reports/entry-readiness.md`; PASS richiede T003 e branch allineato, non un runner esterno. Riportare i gate finali ancora mancanti senza dichiarare pronti G1 o rilascio. **Dip.: T003.**
 
 **Esito T002 — 2026-11-10**: modifica di sequenza approvata e registrata.
@@ -445,7 +445,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001/T002 conclusi, T003–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T003 conclusi, T004–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
