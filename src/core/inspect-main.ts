@@ -12,6 +12,23 @@ import type { OperationRecord } from '../ports/storage.js';
 import { isEntrypoint, readBootstrap } from './entrypoint.js';
 import { projectOperationStatus, projectOperationView } from './projects/dispatch.js';
 import { requireUuid } from '../domain/identifiers.js';
+import { readProject } from './projects/read.js';
+
+export async function inspectProjectGet(directory: string, projectId: string): Promise<PublicResult> {
+  requireUuid(projectId);
+  const paths = await createPlatformPaths().resolveArchive(directory, 'read');
+  if (!paths) throw new Error('STATE_ABSENT');
+  const store = await openStorage({ path: paths.stateFile, readonly: true });
+  try {
+    const snapshot = await store.readSnapshot();
+    if (!snapshot) throw new Error('STATE_ABSENT');
+    const project = await readProject(store, projectId);
+    return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: snapshot.instance?.instanceId ?? null,
+      result: 'OK', outcome: null, freshness: 'LAST_KNOWN',
+      liveness: !snapshot.instance || snapshot.instance.lifecycle === 'STOPPED' ? 'ABSENT_VERIFIED' : 'UNKNOWN',
+      data: { project }, error: null };
+  } finally { await store.close(); }
+}
 
 /** Pure archive observation: no daemon launch, IPC, Git probe, migration or writes. */
 export async function inspectProjectOperation(directory: string, requestId: string): Promise<PublicResult> {

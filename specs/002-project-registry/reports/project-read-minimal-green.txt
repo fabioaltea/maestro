@@ -1,0 +1,13 @@
+✔ registration core uses real confined probes and commits through the storage worker without a public UI or Git mutation (1116.243875ms)
+✔ registration computes a valid default name from the checkout root and validates explicit names without mutating evidence (2.59225ms)
+✔ unborn, detached and absent base remain complete registrations without inventing a branch or approval (0.250541ms)
+✔ explicit invalid or changed base is rejected even when a repository would be a duplicate (0.356917ms)
+✔ only the winning registration allocates a project UUID; duplicate import preserves config, reference and observation (228.638416ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1220.24425

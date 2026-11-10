@@ -14,6 +14,12 @@ export interface RegistryOperationsPort {
   completeProjectOperation(requestId: string, result: ProjectOperationResult): Promise<void>;
 }
 export interface ProjectState { readonly project: Project; readonly observation: ProjectObservation | null }
+export interface ProjectDetail {
+  readonly projectId: string; readonly displayName: string; readonly referenceCheckout: string;
+  readonly baseBranch: string | null; readonly baseState: import('./repository.js').BaseState;
+  readonly configRevision: string; readonly createdAt: string; readonly updatedAt: string;
+  readonly observation: (ProjectObservation & { readonly freshness: 'LAST_KNOWN' }) | null;
+}
 export interface RegisterProjectCommit {
   readonly requestId: string; readonly instanceId: string; readonly displayName: string; readonly baseBranch: string | null;
   readonly repositoryKey: string; readonly repositoryIdentity: RepositoryIdentity; readonly referenceCheckout: ReferenceCheckout;

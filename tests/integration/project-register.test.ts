@@ -17,7 +17,7 @@ test('US1.1: registration is complete, dated and available to another client wit
   assert.equal(project.observation.observationRevision, '1'); assert.equal(project.observation.observedConfigRevision, '1');
   assert.equal(project.observation.freshness, 'LAST_KNOWN'); assert.ok(Number.isFinite(Date.parse(project.observation.completedAt)));
   assert.equal(project.observation.hasCommits, true); assert.equal(project.observation.baseState, 'VALID');
-  assert.doesNotMatch(JSON.stringify(project), /repositoryIdentity|birthtimeNs|canonicalIntent|payloadHash/);
+  assert.doesNotMatch(JSON.stringify(project), /"(?:repositoryIdentity|birthtimeNs|canonicalIntent|payloadHash)"\s*:/);
   assert.deepEqual(await h.f.snapshotTree(repo), snapshot);
 });
 

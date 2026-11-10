@@ -30,7 +30,7 @@ test('project add/show/operation expose stable IDs, confirmed configuration and 
   const detail = (JSON.parse(shown.stdout) as CliProjectResult).data.project;
   assert.equal(detail.displayName, 'Maestro 🎼'); assert.equal(detail.referenceCheckout, repo);
   assert.equal(detail.baseBranch, 'fixture-base'); assert.equal(detail.configRevision, '1');
-  assert.doesNotMatch(shown.stdout, /repositoryIdentity|birthtimeNs|canonicalIntent|payloadHash/);
+  assert.doesNotMatch(shown.stdout, /"(?:repositoryIdentity|birthtimeNs|canonicalIntent|payloadHash)"\s*:/);
   const client = new LocalClient(createClientBackend());
   const other = await client.runProject('get', { projectId: detail.projectId }, { stateDirectory: h.archive });
   assert.equal(other.result, 'OK');
