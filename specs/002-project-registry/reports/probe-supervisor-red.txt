@@ -1,0 +1,90 @@
+✖ probe cancellation verifies ownership and awaits cooperative process exit within its budget (50.269125ms)
+✖ lifeline EOF interrupts the owned probe without sending commands to unrelated processes (8.042042ms)
+✖ an independently expiring probe returns an explicit deadline result and does not remain owned (7.017291ms)
+✖ uncertain identity is BLOCKED rather than authorization to terminate a saved or reused PID (7.530958ms)
+✖ invalid policy scope and expired intentions are rejected before probe creation (6.432459ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 211.093166
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/project-probe-supervisor.test.js:17:1
+✖ probe cancellation verifies ownership and awaits cooperative process exit within its budget (50.269125ms)
+  AssertionError [ERR_ASSERTION]: required owned probe supervisor has not been implemented
+      at loadSupervisor (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:12:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:21:31)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-probe-supervisor.test.js:38:1
+✖ lifeline EOF interrupts the owned probe without sending commands to unrelated processes (8.042042ms)
+  AssertionError [ERR_ASSERTION]: required owned probe supervisor has not been implemented
+      at loadSupervisor (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:12:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:42:31)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-probe-supervisor.test.js:52:1
+✖ an independently expiring probe returns an explicit deadline result and does not remain owned (7.017291ms)
+  AssertionError [ERR_ASSERTION]: required owned probe supervisor has not been implemented
+      at loadSupervisor (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:12:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:55:31)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-probe-supervisor.test.js:64:1
+✖ uncertain identity is BLOCKED rather than authorization to terminate a saved or reused PID (7.530958ms)
+  AssertionError [ERR_ASSERTION]: required owned probe supervisor has not been implemented
+      at loadSupervisor (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:12:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:70:31)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-probe-supervisor.test.js:78:1
+✖ invalid policy scope and expired intentions are rejected before probe creation (6.432459ms)
+  AssertionError [ERR_ASSERTION]: required owned probe supervisor has not been implemented
+      at loadSupervisor (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:12:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-probe-supervisor.test.js:82:31)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
