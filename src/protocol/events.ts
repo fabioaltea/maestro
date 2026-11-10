@@ -7,9 +7,11 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
   if (!EVENT_TYPES.includes(draft.type)) throw new Error('INVALID_REQUEST');
   if (draft.instanceId != null) requireUuid(draft.instanceId);
   if (draft.operationId != null) requireUuid(draft.operationId);
+  const project = draft.payload.scope === 'project';
+  if (project && draft.operationId == null) throw new Error('INVALID_REQUEST');
   const payload: Record<string, unknown> = {}; let redacted = 0;
   const enums: Record<string, readonly string[]> = {
-    action: ['start', 'stop', 'restart'], outcome: ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
+    action: project ? ['REGISTER', 'VERIFY', 'UPDATE', 'REMOVE'] : ['start', 'stop', 'restart'], outcome: ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
     from: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
     to: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
     phase: ['ACCEPTED', 'PRECHECK', 'SPAWN_INTENT', 'WAIT_READY', 'STOP_REQUESTED', 'DRAINING', 'WAIT_EXIT', 'FINALIZED'],
@@ -20,6 +22,13 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
       if (key === 'code' && typeof value === 'string') { foundationError(value as Parameters<typeof foundationError>[0]); allowed = true; }
       if (['resourceId', 'correlationId'].includes(key) && typeof value === 'string') { requireUuid(value); allowed = true; }
       if (key === 'generation' && typeof value === 'string') { requireDecimal(value); allowed = true; }
+      if (key === 'scope' && value === 'project') allowed = true;
+      if (project && key === 'projectId' && typeof value === 'string') { requireUuid(value); allowed = true; }
+      if (project && ['configRevision', 'observationRevision'].includes(key) && typeof value === 'string') {
+        requireDecimal(value); allowed = value !== '0';
+      }
+      if (project && key === 'effect' && typeof value === 'string'
+        && ['CREATED', 'EXISTING', 'UPDATED', 'OBSERVED', 'REMOVED', 'NONE'].includes(value)) allowed = true;
       if (enums[key] && typeof value === 'string' && enums[key]!.includes(value)) allowed = true;
       if (['pid', 'count'].includes(key) && typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 2_147_483_647) allowed = true;
     } catch { allowed = false; }

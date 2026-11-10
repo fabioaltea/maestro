@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T027 conclusi (27/96), P0 locale
+**Status**: implementazione locale in corso; T001–T028 conclusi (28/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -56,7 +56,7 @@ US2 completa lista/verifica. MVP non equivale ad accettazione completa della fea
 |---|---|---|
 | Finale: 001/T082, FR-016 | NOT_RUN per altro UID reale/seconda macchina | Prova reale necessaria; mock o mancato runner non sono PASS |
 | Finale: 001/T085 | FAIL / OPEN; campagna IP-denied 35 PASS / 11 FAIL / 1 SKIP | Chiusura documentata con campagna completa applicabile |
-| G1: confinement Git/macOS | NOT_RUN | Zero helper/fork/rete/scritture verificati; fallimento blocca ogni probe utente |
+| G1: confinement Git/macOS | PASS locale, T016 | Zero helper/fork/rete/scritture verificati; fallimento blocca ogni probe utente |
 | S1/E1/E2/E3/V1 e SC-001…009 | NOT_RUN | Verifiche future distinte; nessun target già misurato per 002 |
 
 Fonti baseline: [release-readiness 001](../001-core-background-daemon/reports/release-readiness.md)
@@ -144,7 +144,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Implementazione e verifica
 
-- [ ] T028 Integrare eventi registry in `src/protocol/events.ts` e nelle mutate di `src/storage/sqlite-store.ts`: riusare operation.*, niente nuovi store/journal, correlazione esplicita, admission/terminale atomici e degradazione postcommit; rispettare 16 KiB evento/64 KiB outbox e proteggere dati autorevoli dalla rotazione. **Dip.: T027.**
+- [X] T028 Integrare eventi registry in `src/protocol/events.ts` e nelle mutate di `src/storage/sqlite-store.ts`: riusare operation.*, niente nuovi store/journal, correlazione esplicita, admission/terminale atomici e degradazione postcommit; rispettare 16 KiB evento/64 KiB outbox e proteggere dati autorevoli dalla rotazione. **Dip.: T027.**
 
 ### Test richiesti
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T027 conclusi, T028–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T028 conclusi, T029–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

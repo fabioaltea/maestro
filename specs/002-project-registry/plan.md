@@ -2,10 +2,10 @@
 
 **Feature branch**: `002-project-registry` | **Date**: 2026-11-10 | **Spec**: [spec.md](spec.md)  
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/spec.md`  
-**Status**: design per review; nessuna implementazione.  
+**Status**: implementazione locale in corso; T001–T028 conclusi, G1 e primo incremento E1 qualificati.  
 **Checkout osservato**: `001-core-background-daemon-implementation`, baseline `e84e587`.
 Il selettore `.specify/feature.json` individua la 002 indipendentemente dal branch.
-Questa consegna non sposta branch, integra commit o genera tasks.
+Implementazione sul branch 002 allineato alla baseline; un commit locale per task.
 
 ## Summary
 
@@ -22,8 +22,8 @@ checkout confermato resta il riferimento. Nessuna Discovery o lavoro Git implici
 ## Technical Context
 
 **Language/Version**: TypeScript 6.0.3 strict, Node.js 26.13.0, ESM/NodeNext.  
-**Primary Dependencies**: better-sqlite3 13.0.3, API native Node; Git CLI `/usr/bin/git` 2.50.1 (Apple Git-155). Nessun SDK/framework aggiunto.  
-**Storage**: SQLite WAL/synchronous FULL esistente; schema 3 pianificato, oggi schema 2; stesso storeId, outbox e journal bounded.  
+**Primary Dependencies**: better-sqlite3 13.0.3, API native Node; Git Xcode 2.50.1 (Apple Git-155), risolto con xcrun e verificato. Nessun SDK/framework aggiunto.  
+**Storage**: SQLite WAL/synchronous FULL esistente; schema 3 implementato, upgrade esclusivo dalla Foundation schema 2; stesso storeId, outbox e journal bounded.  
 **Testing**: node:test, porte/clock sostituibili, contratti, Git/processi reali temporanei, fault injection e acceptance con rete negata.  
 **Target Platform**: macOS 26.3 arm64/APFS; host ricerca 26.3.1(a). Adapter di confinamento Git qualificato prima dell'uso; nessuna promessa multipiattaforma.  
 **Project Type**: estensione dello stesso servizio headless, CLI e IPC locale.  

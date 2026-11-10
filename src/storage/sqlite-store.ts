@@ -293,7 +293,8 @@ export class SQLiteStore {
         intent.canonicalIntent, intent.projectId, intent.expectedConfigRevision === null ? null : BigInt(intent.expectedConfigRevision),
         intent.owningInstanceId, intent.ownerUid, intent.acceptedAt, intent.deadlineAt);
       return { accepted: true, operation: this.getProjectOperation(intent.requestId)! };
-    });
+    }, [{ type: 'operation.accepted', operationId: intent.requestId, instanceId: intent.owningInstanceId,
+      payload: { scope: 'project', action: intent.action, outcome: 'IN_PROGRESS', ...(intent.projectId ? { projectId: intent.projectId } : {}) } }]);
   }
   setProjectOperationPhase(requestId: string, phase: Exclude<ProjectPhase, 'FINALIZED'>): void {
     this.registry();
@@ -315,13 +316,20 @@ export class SQLiteStore {
         ...(result.error.operationId ? { operationId: result.error.operationId } : {}) });
       if (JSON.stringify(safe) !== JSON.stringify(result.error)) throw new Error('INVALID_REQUEST');
     }
+    const pending = this.getProjectOperation(requestId);
     this.mutate(database => {
       const operation = this.getProjectOperation(requestId);
       if (!operation || operation.action !== result.action || operation.projectId !== result.projectId) throw new Error('INVALID_REQUEST');
       transitionProjectOperation(operation.phase, 'FINALIZED', result.outcome);
       database.prepare("UPDATE project_operations SET phase='FINALIZED',outcome=?,completed_at=?,result=? WHERE request_id=?")
         .run(result.outcome, result.completedAt, JSON.stringify(result), requestId);
-    });
+    }, [{ type: result.outcome === 'BLOCKED' ? 'operation.blocked' : 'operation.failed',
+      operationId: requestId, instanceId: pending?.owningInstanceId ?? null,
+      payload: { scope: 'project', action: result.action, outcome: result.outcome, effect: result.effect,
+        ...(result.projectId ? { projectId: result.projectId } : {}),
+        ...(result.configRevision ? { configRevision: result.configRevision } : {}),
+        ...(result.observationRevision ? { observationRevision: result.observationRevision } : {}),
+        ...(result.error ? { code: result.error.code } : {}) } }]);
   }
   listTickets(requestId: string): readonly LaunchTicket[] {
     requireUuid(requestId);

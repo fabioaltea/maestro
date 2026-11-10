@@ -1,0 +1,8 @@
+{
+  "command": [
+    "npm",
+    "test"
+  ],
+  "exitCode": 0,
+  "durationMs": 29957.74
+}

@@ -1,6 +1,7 @@
 # Data Model — Project Registry
 
-**Design**: schema 3 pianificato; schema Foundation attuale 2. Non è migrazione del
+**Implementation status**: schema 3 e ledger implementati; commit delle storie ancora da aggiungere.
+Upgrade dalla nuova Foundation schema 2 qualificato con crash pre/post commit. Non è migrazione del
 precedente Maestro. UUID e timestamp UTC ISO-8601; revisioni positive rese in JSON
 come stringhe decimali, senza perdita di precisione. Date di ordinamento logico
 non sono identità né sostituiscono clock monotono per le deadline.
