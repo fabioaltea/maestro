@@ -149,3 +149,29 @@ test('readonly registry query on known schema 2 reports uninitialized without up
   finally { await offline.close(); }
   assert.deepEqual(await import('node:fs/promises').then(fs => fs.readFile(path)), before);
 });
+
+test('registry reads remain available during writer BUSY retry and after a classified mutation failure', async t => {
+  const f = await fixture(t);
+  const first = admission(f.storeId, f.instanceId);
+  await f.api.acceptProjectOperation(first);
+  const lock = new Database(f.path);
+  lock.exec('BEGIN IMMEDIATE');
+  const second = admission(f.storeId, f.instanceId);
+  const pending = f.api.acceptProjectOperation(second);
+  try {
+    await new Promise(resolve => setTimeout(resolve, 75));
+    const started = performance.now();
+    assert.equal((await f.api.getProjectOperation(first.requestId))?.outcome, 'IN_PROGRESS');
+    assert.equal((await f.api.listPendingProjectOperations()).length, 1);
+    assert.ok(performance.now() - started < 500);
+  } finally { lock.exec('ROLLBACK'); lock.close(); }
+  assert.equal((await pending).accepted, true);
+  const database = new Database(f.path);
+  database.exec("CREATE TRIGGER owned_reject_registry_insert BEFORE INSERT ON project_operations BEGIN SELECT RAISE(ABORT,'owned sentinel-secret write failure'); END");
+  database.close();
+  const third = admission(f.storeId, f.instanceId);
+  await assert.rejects(f.api.acceptProjectOperation(third), /PERSISTENCE_UNAVAILABLE/);
+  assert.equal(await f.api.getProjectOperation(third.requestId), null);
+  assert.equal((await f.api.listPendingProjectOperations()).length, 2);
+  assert.equal((await f.api.getProjectOperation(first.requestId))?.payloadHash, first.payloadHash);
+});

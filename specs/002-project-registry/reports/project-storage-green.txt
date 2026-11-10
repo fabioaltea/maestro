@@ -1,0 +1,31 @@
+✔ registry ledger coexists with lifecycle pending and resolves cross-scope requestId collisions (133.714875ms)
+✔ original normalized intent and terminal snapshot survive restart; changed payload never changes them (116.618792ms)
+✔ BLOCKED is terminal only for registry and retained beyond event journal retention (93.170083ms)
+✔ ledger projectId refers to retained tombstones and never cascades away with removal (64.314708ms)
+✔ readonly registry query on known schema 2 reports uninitialized without upgrading or writing (28.568084ms)
+✔ registry reads remain available during writer BUSY retry and after a classified mutation failure (187.305791ms)
+✔ global catalog rejects both cross-scope collision directions while allowing independent registry pending work (96.489417ms)
+✔ terminal results and original intents stay immutable; retry ignores live path and current instance defaults (80.39075ms)
+✔ invalid hash, foreign store or unauthorized owner leaves no partial reservation (68.799ms)
+✔ unknown project intent can be recorded without fabricating a project or violating ledger FKs (72.618375ms)
+✔ fresh schema is 3, with separate registry pending and active identity uniqueness (3.527083ms)
+✔ exclusive 2→3 upgrade preserves every Foundation row, cursor, outbox and lifecycle hash (120.950375ms)
+✔ upgrade is not a readonly query and requires matching ownership and both exclusive lease scopes (105.065792ms)
+▶ failure injection before commit rolls back FULL/IO completely; postcommit remains a valid schema 3
+  ✔ SQLITE_FULL (68.863417ms)
+  ✔ SQLITE_IOERR (39.633542ms)
+  ✔ SQLITE_BUSY (20.108708ms)
+✔ failure injection before commit rolls back FULL/IO completely; postcommit remains a valid schema 3 (173.074542ms)
+✔ unknown versions, expired budget and a conflicting live writer never trigger migration (81.431958ms)
+▶ owned process crash pre/post upgrade commit leaves one complete valid schema
+  ✔ registry.upgrade.beforeCommit (64.935334ms)
+  ✔ registry.upgrade.committed (64.396667ms)
+✔ owned process crash pre/post upgrade commit leaves one complete valid schema (129.798542ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 21
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 679.7085
