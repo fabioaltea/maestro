@@ -24,6 +24,8 @@ import { createProjectOperations } from './projects/operations.js';
 import { interruptProjectOperations } from './projects/recovery.js';
 import { drainProjectOperations } from './lifecycle.js';
 import { createProbeSupervisor } from '../platform/macos/git/probe-supervisor.js';
+import { createGitRunner } from '../platform/macos/git/runner.js';
+import { createProjectDispatch, PROJECT_METHODS } from './projects/dispatch.js';
 
 export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependencies = {}): Promise<void> {
   const checkpoint = dependencies.checkpoint ?? (async () => {});
@@ -70,6 +72,9 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
           volatileError = foundationError('PERSISTENCE_UNAVAILABLE');
         });
       } });
+    const inspection = await createGitRunner().capabilities();
+    const capabilities = { projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
+    const projectDispatch = createProjectDispatch({ operations: projects, storage });
     let draining = false;
     let deniedCount = 0, lastDeniedAudit = -Infinity;
     async function auditDenied(correlationId: string, code: 'UNAUTHORIZED' | 'STALE_TARGET') {
@@ -96,9 +101,11 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     }, async (request, peer) => {
       if (volatileError) {
         const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
+        if (request.method === 'projects.operation.get' && lastSnapshot) return projectDispatch(request, peer, lastSnapshot);
         if (request.method !== 'status.get') return { ...base, result: 'BLOCKED', data: { code: 'PERSISTENCE_UNAVAILABLE' } };
         return { ...base, result: 'OK', data: { storeId: lastSnapshot?.store.storeId, instanceId: intent.instanceId,
           pid: process.pid, generation: intent.generation, lifecycle: 'BLOCKED', ready: false, freshness: 'VOLATILE',
+          capabilities,
           revision: lastSnapshot?.store.revision, lastError: volatileError, currentOperation: lastSnapshot?.pendingOperation,
           resourceIssues: [], pendingFinalization: true } };
       }
@@ -109,6 +116,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
       if (request.method === 'status.get') return { ...base, result: 'OK' as const, data: {
         storeId: snapshot.store.storeId, instanceId: instance.instanceId, pid: instance.pid,
+        capabilities,
         generation: instance.generation, lifecycle: instance.lifecycle, ready: instance.lifecycle === 'RUNNING',
         revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation,
         observability: await storage.getEventState(), lastError: instance.lastError, ...await observePendingControl(snapshot, storage, createProcessIdentity()),
@@ -116,6 +124,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
           .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
             kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState })) : [],
       } };
+      if (request.method.startsWith('projects.')) return projectDispatch(request, peer, snapshot);
       if (request.method === 'diagnostics.get' || request.method === 'events.list') {
         try {
           const data = request.method === 'diagnostics.get' ? await diagnosticsData(storage, snapshot)

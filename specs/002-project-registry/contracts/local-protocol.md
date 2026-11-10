@@ -78,7 +78,10 @@ lettura richiesta, non solo della prima pagina, nel carico SC-002.
 
 Get progetto rimosso restituisce PROJECT_REMOVED con ID/revisione tombstone;
 ID sconosciuto PROJECT_NOT_FOUND. Operation query può leggere l'esito della rimozione
-anche dopo una nuova registrazione dello stesso repo.
+anche dopo una nuova registrazione dello stesso repo. Un requestId mai accettato
+restituisce OPERATION_NOT_FOUND; non è un risultato terminale né un progetto mancante.
+`capabilities.projectRegistryMethods` elenca soltanto i metodi implementati nella
+build corrente; il client verifica il metodo oltre alla versione.
 
 Senza daemon, il client passa al core inspect readonly per list/get/operation,
 con envelope LAST_KNOWN e liveness separata. Nessun autostart/upgrade/probe. Mutazioni

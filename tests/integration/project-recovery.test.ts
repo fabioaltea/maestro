@@ -7,6 +7,9 @@ import { openStorage } from '../../src/storage/worker.js';
 import { canonicalProjectIntent } from '../../src/domain/projects/intent.js';
 import { makeDeadline, systemClock } from '../../src/ports/clock.js';
 import { drainProjectOperations } from '../../src/core/lifecycle.js';
+import { createPlatformPaths } from '../../src/platform/macos/paths.js';
+import { createLocalTransport } from '../../src/platform/macos/transport.js';
+import { inspectProjectOperation } from '../../src/core/inspect-main.js';
 
 test('daemon startup interrupts an abandoned durable registry intent before RUNNING without a Git probe', async t => {
   const h = await createCliHarness(t);
@@ -24,6 +27,17 @@ test('daemon startup interrupts an abandoned durable registry intent before RUNN
   await store.close();
   const started = await h.call('start');
   assert.equal(started.code, 0, started.stdout);
+  const platform = createPlatformPaths();
+  const paths = (await platform.resolveArchive(h.archive, 'read'))!;
+  const live = await createLocalTransport().call(paths.daemonEndpoint, await platform.readCredential(paths.clientKeyFile), {
+    protocolVersion: 1, correlationId: randomUUID(), method: 'projects.operation.get', params: { requestId },
+  }, 1_000);
+  assert.equal((live.data as { operation: { outcome: string } }).operation.outcome, 'INTERRUPTED');
+  assert.doesNotMatch(JSON.stringify(live), /canonicalIntent|payloadHash|never-created/);
+  const status = JSON.parse((await h.call('status')).stdout);
+  assert.equal(status.data.capabilities.projectRegistryVersion, 1);
+  assert.deepEqual(status.data.capabilities.projectRegistryMethods, ['projects.operation.get']);
+  assert.equal(status.data.capabilities.gitInspection.version, 1);
   const reader = await openStorage({ path, readonly: true });
   try {
     const current = (await reader.readSnapshot())!;
@@ -38,6 +52,9 @@ test('daemon startup interrupts an abandoned durable registry intent before RUNN
     assert.equal((await reader.listPendingProjectOperations()).length, 0);
   } finally { await reader.close(); }
   assert.equal((await h.call('stop')).code, 0);
+  const offline = await inspectProjectOperation(h.archive, requestId);
+  assert.equal(offline.freshness, 'LAST_KNOWN'); assert.equal(offline.outcome, 'INTERRUPTED');
+  assert.doesNotMatch(JSON.stringify(offline), /canonicalIntent|payloadHash|never-created/);
   assert.equal((await h.call('start')).code, 0);
   const afterRestart = await openStorage({ path, readonly: true });
   try { assert.equal((await afterRestart.getProjectOperation(requestId))?.outcome, 'INTERRUPTED'); }

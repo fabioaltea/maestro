@@ -10,6 +10,27 @@ import { openStorage } from '../storage/worker.js';
 import type { PublicResult } from '../protocol/messages.js';
 import type { OperationRecord } from '../ports/storage.js';
 import { isEntrypoint, readBootstrap } from './entrypoint.js';
+import { projectOperationStatus, projectOperationView } from './projects/dispatch.js';
+import { requireUuid } from '../domain/identifiers.js';
+
+/** Pure archive observation: no daemon launch, IPC, Git probe, migration or writes. */
+export async function inspectProjectOperation(directory: string, requestId: string): Promise<PublicResult> {
+  requireUuid(requestId);
+  const paths = await createPlatformPaths().resolveArchive(directory, 'read');
+  if (!paths) throw new Error('STATE_ABSENT');
+  const store = await openStorage({ path: paths.stateFile, readonly: true });
+  try {
+    const snapshot = await store.readSnapshot();
+    if (!snapshot) throw new Error('STATE_ABSENT');
+    const operation = await store.getProjectOperation(requestId);
+    if (!operation) throw new Error('OPERATION_NOT_FOUND');
+    return { protocolVersion: 1, requestId, storeId: snapshot.store.storeId, instanceId: snapshot.instance?.instanceId ?? null,
+      result: projectOperationStatus(operation), outcome: operation.outcome, freshness: 'LAST_KNOWN',
+      liveness: !snapshot.instance || snapshot.instance.lifecycle === 'STOPPED' ? 'ABSENT_VERIFIED' : 'UNKNOWN',
+      data: { operation: projectOperationView(operation), observabilityDegraded: (await store.getEventState()).degraded },
+      error: operation.result?.error ?? null };
+  } finally { await store.close(); }
+}
 
 export function absentResult(): PublicResult {
   return { protocolVersion: 1, requestId: null, storeId: null, instanceId: null, result: 'OK', outcome: null,
