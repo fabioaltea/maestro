@@ -7,18 +7,25 @@ let server: LocalServer | undefined;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let finished = false;
 let ownership: ProbeOwnership | undefined;
+let acknowledge: (() => void) | undefined;
 async function finish(code: 'INTERRUPTED' | 'DEADLINE_EXCEEDED') {
   if (finished) return;
   finished = true;
   clearTimeout(timer);
   const result: InspectionResult = { ok: false, error: { code, retryable: true, nextAction: 'retry-inspection' } };
   if (process.connected) await new Promise<void>(resolve => {
-    process.send?.({ kind: 'probe.result', ownership, result }, () => resolve());
+    const timer = setTimeout(resolve, 300);
+    acknowledge = () => { clearTimeout(timer); resolve(); };
+    process.send?.({ kind: 'probe.result', ownership, result }, error => { if (error) acknowledge?.(); });
   });
   await server?.close();
   process.exit(0);
 }
-process.once('disconnect', () => { void finish('INTERRUPTED'); });
+process.once('disconnect', () => { acknowledge?.(); void finish('INTERRUPTED'); });
+process.on('message', (value: { kind?: string; ownership?: ProbeOwnership }) => {
+  if (value.kind === 'probe.resultAccepted' && value.ownership?.resourceId === ownership?.resourceId
+    && value.ownership?.generation === ownership?.generation) acknowledge?.();
+});
 process.once('message', async (message: {
   kind: string; ownership: ProbeOwnership; endpoint: string; credentialFile: string; timeoutMs: number;
 }) => {

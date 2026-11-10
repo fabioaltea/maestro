@@ -22,3 +22,18 @@ adding that directory read resolved startup failure without adding write/network
 This checkpoint proves bounded normal invocation, environment isolation and fail-closed
 capability behavior. Malicious helper/config races, actual fork/network/write denial,
 full inspector semantics and supervisor recovery remain mandatory in T011–T016.
+
+## T011 probe supervisor
+
+Five contracts GREEN: authenticated cooperative cancellation within 1.5 s,
+lifeline EOF, independent deadline, uncertain identity blocked and invalid/expired
+ownership refused. Durable resource intent precedes launch; scoped records contain
+nonce/generation and are released only after observed exit and owned cleanup.
+No saved PID is used for termination. An unexpected executing supervisor exit
+without a result remains BLOCKED with unknown descendant state.
+
+Debugging exposed a Node IPC lifecycle race: after parent disconnect, exit was
+observed but close could be omitted. Result acknowledgement now precedes worker
+exit, and exit/close finalization is idempotent. Five GREEN tests include this
+failed-start path; [output](probe-supervisor-green.txt).
+The full real Git worker will be qualified with the inspector in T013–T016.

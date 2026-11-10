@@ -33,17 +33,20 @@ test('probe cancellation verifies ownership and awaits cooperative process exit 
   const own = ownership();
   const probe = await supervisor.start({ kind: 'CANDIDATE', path: context.directory }, own,
     { deadline: makeDeadline(systemClock, 3_000) });
-  assert.deepEqual(probe.ownership, own);
-  assert.equal(resources[0]?.owningInstanceId, own.owningInstanceId);
-  assert.equal(resources[0]?.generation, own.generation);
-  assert.equal(resources[0]?.policyScope, 'foundation');
-  assert.ok(resources[0]?.pid);
-  const started = performance.now();
-  assert.equal(await probe.cancel(), 'ABSENT');
-  assert.ok(performance.now() - started <= 1_500);
-  assert.equal((await probe.result).ok, false);
-  assert.equal(resources.at(-1)?.releaseState, 'RELEASED');
-  assert.equal(await probe.cancel(), 'ABSENT');
+  try {
+    assert.deepEqual(probe.ownership, own);
+    assert.equal(resources[0]?.owningInstanceId, own.owningInstanceId);
+    assert.equal(resources[0]?.generation, own.generation);
+    assert.equal(resources[0]?.policyScope, 'foundation');
+    assert.equal(resources[0]?.pid, null, 'persist resource intent before launching');
+    assert.ok(resources.some(resource => resource.pid !== null));
+    const started = performance.now();
+    assert.equal(await probe.cancel(), 'ABSENT');
+    assert.ok(performance.now() - started <= 1_500);
+    assert.equal((await probe.result).ok, false);
+    assert.equal(resources.at(-1)?.releaseState, 'RELEASED');
+    assert.equal(await probe.cancel(), 'ABSENT');
+  } finally { await probe.cancel(); }
 });
 
 test('lifeline EOF interrupts the owned probe without sending commands to unrelated processes', async t => {

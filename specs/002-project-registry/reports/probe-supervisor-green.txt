@@ -1,0 +1,13 @@
+✔ probe cancellation verifies ownership and awaits cooperative process exit within its budget (101.911875ms)
+✔ lifeline EOF interrupts the owned probe without sending commands to unrelated processes (60.486208ms)
+✔ an independently expiring probe returns an explicit deadline result and does not remain owned (850.767167ms)
+✔ uncertain identity is BLOCKED rather than authorization to terminate a saved or reused PID (996.704416ms)
+✔ invalid policy scope and expired intentions are rejected before probe creation (12.30875ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2107.814084
