@@ -181,3 +181,12 @@ to `/dev/null` and read access to the root directory for startup: profile permit
 that nonpersistent sink and required runtime/repository reads, retaining deny-default
 for every persistent write, fork and network operation. Six runner contracts now
 pass; full G1 malicious-config and process-lifecycle qualification remains pending.
+
+## G1 refinement — bounded configuration, 2026-11-10
+
+Config preflight runs Git config --file/--no-includes from outside a checkout,
+so repository discovery cannot load config before command options are processed.
+Any local include/includeIf is rejected before other metadata queries, because
+those queries otherwise expand unbounded/FIFO includes. Clean/process filters
+still allow safe metadata with UNKNOWN file status. This is fail-closed capability
+handling, not a claim that includes are safely expanded or helpers are supported.

@@ -179,8 +179,10 @@ export function createDirectRepositoryInspector(dependencies: DirectInspectorOpt
         if (config.exitCode !== 0 || config.stderrBytes !== 0) return fail('INSPECTION_UNSAFE');
         for (const record of text(config.stdout).split('\0')) {
           const key = record.split('\n', 1)[0]!.toLowerCase();
-          if (key.startsWith('include.') || key.startsWith('includeif.')
-            || /^filter\..*\.(clean|process)$/.test(key)) unsafeStatus = true;
+          // Other Git metadata commands would expand includes without a generic
+          // no-includes switch. Reject before they can read unbounded/FIFO data.
+          if (key.startsWith('include.') || key.startsWith('includeif.')) return fail('INSPECTION_UNSAFE');
+          if (/^filter\..*\.(clean|process)$/.test(key)) unsafeStatus = true;
         }
       }
       const indexPath = join(current.reference.adminDirectory.canonicalPath, 'index');

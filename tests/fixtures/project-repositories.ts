@@ -79,6 +79,7 @@ export async function createProjectRepositories(test: TestContext) {
           await visit(absolute);
         } else if (info.isFile()) entries[key] = { kind: 'file', mode: info.mode,
           value: createHash('sha256').update(await readFile(absolute)).digest('hex') };
+        else if (info.isFIFO()) entries[key] = { kind: 'fifo', mode: info.mode, value: '' };
         else throw new Error('UNSUPPORTED_FIXTURE_ENTRY');
       }
     }
@@ -87,7 +88,7 @@ export async function createProjectRepositories(test: TestContext) {
   }
 
   return {
-    directory, git, createRepository, snapshotTree,
+    context, directory, git, createRepository, snapshotTree,
     async addWorktree(repository: string, name: string, branch = 'fixture-linked') {
       const path = join(directory, requireName(name));
       // Git must reject an existing checkout rather than adopting or repairing it.

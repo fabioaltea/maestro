@@ -179,7 +179,10 @@ export function createGitRunner(options: { readonly platform?: string } = {}): G
         let stdoutBytes = 0, stderrBytes = 0;
         const output: Buffer[] = [];
         const child = spawn(SANDBOX, sandboxArguments(binary, roots, args), {
-          cwd, env, shell: false, stdio: ['ignore', 'pipe', 'pipe'],
+          // Config preflight must not discover a repository and load its includes
+          // before --file/--no-includes are processed.
+          cwd: (query as GitQuery).kind === 'config-file' ? '/' : cwd,
+          env, shell: false, stdio: ['ignore', 'pipe', 'pipe'],
         });
         let escalation: ReturnType<typeof setTimeout> | undefined;
         const cancel = (reason: InspectionCode) => {

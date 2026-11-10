@@ -63,10 +63,13 @@ non può essere applicato o verificato, INSPECTION_UNAVAILABLE prima dello spawn
 4. Leggere HEAD symbolic oppure detached/unborn, object format e commit esistente.
    Base esplicita: `check-ref-format` e risoluzione esclusiva refs/heads a commit;
    base omessa solo al primo import: branch HEAD valido oppure null.
-5. Preflight bounded dei file config locale/worktree con `config --file ... --no-includes`.
-   Include/includeIf non valutabili e driver clean/process rendono status unsafe.
-   Non lanciare status in quel caso: stato file UNKNOWN/INSPECTION_UNSAFE, mai clean.
-   Metadata/identità provati possono consentire registrazione con osservazione parziale.
+5. Preflight bounded dei file config locale/worktree con `config --file ... --no-includes`,
+   eseguito fuori da qualsiasi checkout per evitare discovery/config preliminari.
+   Include/includeIf sono rifiutati con INSPECTION_UNSAFE prima delle altre query:
+   Git non offre un no-includes generale e i contenuti inclusi potrebbero essere
+   illimitati o FIFO. I driver clean/process rendono invece file status UNKNOWN;
+   non lanciare status e non simulare clean disabilitando i filtri. In quest'ultimo
+   caso metadata/identità provati consentono registrazione con osservazione parziale.
 6. Se sicuro, `status --porcelain=v2 -z --untracked-files=normal --ignore-submodules=all`;
    nessuna patch o contenuto conservato. Record tracciati/untracked/unmerged alimentano
    soltanto booleani. Stato del contenuto interno dei submodule non aggregato;

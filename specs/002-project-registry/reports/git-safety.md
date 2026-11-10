@@ -1,6 +1,6 @@
 # Git inspection qualification — incremental evidence
 
-Date: 2026-11-10. **G1 overall: PENDING**; no user-facing registry probe enabled.
+Date: 2026-11-10. **G1 overall: PASS (qualified local platform/profile)**; no user-facing registry probe enabled.
 
 ## T010 runner
 
@@ -90,3 +90,31 @@ Cancellation proves native process exit independently of delayed durable resourc
 bookkeeping; publication still waits for that bookkeeping. A delayed-write contract
 proves the cancellation budget without falsely claiming persistence completion.
 G1 remains pending the real owned-parent crash/timeout checkpoint T016.
+
+
+## T016 real owner crash and complete checkpoint
+
+`npm test`: **169 PASS, 0 FAIL, 0 CANCELLED, 0 SKIP**. Full captured output:
+[g1-complete-regression.txt](g1-complete-regression.txt); command, exit code and
+wall-clock duration: [g1-complete-regression.json](g1-complete-regression.json).
+Typecheck and architecture lint also pass. Qualification uses the platform and
+Git version recorded above; other OS/Git combinations remain unsupported.
+
+Four real lifecycle cases prove normal result publication follows worker exit and
+resource release; a Git process blocked reading a fixture FIFO terminates on its
+own deadline; killing only the owned parent handle causes IPC EOF and observed
+worker/Git exit; oversized configuration and metadata/config/topology races fail
+safely. Exit observation never sends signals to persisted PIDs. Owned sandbox
+cleanup waits for verified process absence. Repository snapshots stay unchanged.
+
+A configuration include can itself point to a FIFO. Preflight now reads config
+with discovery disabled (cwd outside the checkout) and rejects includes before
+other Git queries. Filter configurations retain partial metadata with UNKNOWN
+file status. This avoids unbounded included reads rather than relying on a
+nonexistent global Git no-includes switch.
+
+G1 qualifies the confinement and owned-process primitives, not daemon-integrated
+registry recovery, the full feature performance targets or Foundation final
+acceptance. No user-facing registry methods are enabled yet. Schema/ledger,
+S1/E1 and story-level recovery remain subsequent checkpoints. Foundation
+001/T082 and 001/T085 remain final acceptance gates with their recorded open status.
