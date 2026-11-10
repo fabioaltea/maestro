@@ -9,14 +9,14 @@ import type { AcceptProjectOperation } from '../../src/ports/registry.js';
 import { foundationError } from '../../src/domain/errors.js';
 import { createTestContext } from './test-context.js';
 
-export async function createRegistryStore(t: TestContext, checkpoint?: (point: string) => void) {
+export async function createRegistryStore(t: TestContext, checkpoint?: (point: string) => void, newProjectId?: () => string) {
   const context = await createTestContext(t);
   const directory = await realpath(context.directory);
   const path = join(directory, 'state.sqlite');
   const storeId = randomUUID(), instanceId = randomUUID(), bootstrap = randomUUID(), ticketId = randomUUID();
   let armed = false;
-  const store = new SQLiteStore({ path, identity: { storeId, schemaVersion: 3, ownerUid: process.getuid!(), canonicalPath: directory, revision: '0' } },
-    { checkpoint: point => { if (armed) checkpoint?.(point); } });
+  const hooks = { checkpoint: (point: string) => { if (armed) checkpoint?.(point); }, ...(newProjectId ? { newProjectId } : {}) };
+  const store = new SQLiteStore({ path, identity: { storeId, schemaVersion: 3, ownerUid: process.getuid!(), canonicalPath: directory, revision: '0' } }, hooks);
   t.after(() => store.close());
   const acceptedAt = '2026-11-10T12:00:00.000Z';
   store.acceptOperation({ requestId: bootstrap, action: 'start', payloadHash: 'c'.repeat(64), ownerUid: process.getuid!(), targetInstanceId: null, acceptedAt });
