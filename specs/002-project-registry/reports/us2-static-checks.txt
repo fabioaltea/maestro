@@ -1,0 +1,9 @@
+
+> @maestro/core@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit
+
+
+> @maestro/core@0.1.0 lint
+> node scripts/check-architecture.mjs
+
+Architecture boundaries verified

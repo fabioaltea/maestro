@@ -1,8 +1,9 @@
 # Quickstart — Review e futura verifica della 002
 
-**Stato al 2026-11-10**: soli artefatti di design. I sottocomandi project descritti
-qui non esistono ancora; nessuna suite di implementazione 002 è stata eseguita.
-Le prove seguenti dovranno essere rese eseguibili dai futuri task, senza rete/provider/UI.
+**Stato al 2026-11-10**: US1/US2 implementate e verificate localmente.
+`project add/list/show/verify/operation` sono disponibili dopo build; update/remove
+restano pianificati. Evidenze e limiti: [US1](reports/us1.md), [US2](reports/us2.md).
+Gli esempi delle storie successive non attestano funzionalità già disponibili.
 
 ## Review documentale
 

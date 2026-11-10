@@ -1,0 +1,8 @@
+{
+  "command": "caffeinate -i npm test",
+  "completedAt": "2026-11-10T20:33:00.038807+00:00",
+  "exitCode": 0,
+  "durationSeconds": 86.25048383302055,
+  "testedCommit": "09a47b85bee9182428960b4399b05ce928819080",
+  "scope": "unit, contract, integration; acceptance separately"
+}
