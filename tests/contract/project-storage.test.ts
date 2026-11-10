@@ -179,3 +179,16 @@ test('registry reads remain available during writer BUSY retry and after a class
   assert.equal((await f.store.getRequestReservation(first.requestId))?.payloadHash, first.payloadHash);
   assert.equal(await f.store.getProject(randomUUID()), null);
 });
+
+test('probe intent records capture their first owned PID once and uncertain exit never permits PID adoption', async t => {
+  const f = await fixture(t);
+  const initial = { resourceId: randomUUID(), owningInstanceId: f.instanceId, kind: 'auxiliary' as const, policyScope: 'foundation' as const,
+    generation: randomUUID(), pid: null, endpoint: null, credentialRef: null, observation: 'UNKNOWN' as const, releaseState: 'OWNED' as const };
+  await f.store.saveResource(initial);
+  await f.store.saveResource({ ...initial, pid: 12345 });
+  assert.equal((await f.store.listResources(f.instanceId))[0]?.pid, 12345);
+  await assert.rejects(f.store.saveResource({ ...initial, pid: 23456 }), /STALE_TARGET/);
+  await f.store.saveResource({ ...initial, releaseState: 'BLOCKED' });
+  assert.equal((await f.store.listResources(f.instanceId))[0]?.pid, null);
+  await assert.rejects(f.store.saveResource({ ...initial, pid: 12345 }), /STALE_TARGET/);
+});

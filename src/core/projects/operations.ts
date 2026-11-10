@@ -16,6 +16,7 @@ export interface ProjectExecution {
   readonly deadline: Deadline;
   readonly signal: AbortSignal;
   probe(request: ProbeRequest): Promise<InspectionResult>;
+  checkpoint(point: string): Promise<void>;
 }
 export interface ProjectOperationsOptions {
   readonly storage: RegistryOperationsPort & { readSnapshot(): Promise<StoreSnapshot | null> };
@@ -26,6 +27,7 @@ export interface ProjectOperationsOptions {
   readonly wakeAfter?: (ms: number, callback: () => void) => () => void;
   readonly execute: (context: ProjectExecution) => Promise<ProjectOperationResult>;
   readonly onBlocked?: (error: SafeError) => void;
+  readonly checkpoint?: (point: string) => Promise<void>;
 }
 export type ProjectAdmission = { readonly accepted: true; readonly operation: ProjectOperation }
   | { readonly accepted: false; readonly error: SafeError };
@@ -119,6 +121,7 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
     try {
       work.probe = await work.starting;
       work.clearProbeTimer = wakeAfter(work.probeDeadline.remainingMs(), () => { void stop(work, 'DEADLINE'); });
+      await options.checkpoint?.('project.probing');
       if (work.reason) throw new Error(work.reason === 'STOP' ? 'INTERRUPTED' : 'DEADLINE_EXCEEDED');
       return await work.probe.result;
     } finally { work.clearProbeTimer(); delete work.probe; delete work.starting; }
@@ -126,6 +129,7 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
   async function execute(work: Work): Promise<void> {
     try {
       const terminal = await options.execute({ operation: work.operation, deadline: work.deadline, signal: work.abort.signal,
+        checkpoint: point => options.checkpoint?.(point) ?? Promise.resolve(),
         probe: request => probe(work, request) });
       if (!work.reason) await finalize(work, terminal);
     } catch (error) {
@@ -182,10 +186,12 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
       const reader = storage as typeof storage & { getProject?: (id: string) => Promise<unknown> };
       if (reader.getProject && await reader.getProject(params.projectId)) projectId = params.projectId;
     }
+    await options.checkpoint?.('project.beforeAccept');
     const admission = await storage.acceptProjectOperation({ requestId, action, payloadHash, canonicalIntent, projectId,
       expectedConfigRevision: params.expectedRevision ?? null, ownerUid: options.ownerUid, owningInstanceId: options.instanceId,
       acceptedAt, deadlineAt: new Date(Date.parse(acceptedAt) + 28_000).toISOString() });
     if (!admission.accepted) return { accepted: true, operation: admission.operation };
+    await options.checkpoint?.('project.accepted');
     const work: Work = { operation: admission.operation, deadline, probeDeadline, abort: new AbortController(), phase: 'QUEUED',
       clearServerTimer: () => {}, clearProbeTimer: () => {} };
     pending.set(requestId, work); queue.push(work);

@@ -26,6 +26,8 @@ import { drainProjectOperations } from './lifecycle.js';
 import { createProbeSupervisor } from '../platform/macos/git/probe-supervisor.js';
 import { createGitRunner } from '../platform/macos/git/runner.js';
 import { createProjectDispatch, PROJECT_METHODS } from './projects/dispatch.js';
+import { registerProject } from './projects/register.js';
+import { createFilesystemIdentity } from '../platform/macos/git/filesystem-identity.js';
 
 export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependencies = {}): Promise<void> {
   const checkpoint = dependencies.checkpoint ?? (async () => {});
@@ -65,8 +67,9 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     const clientKey = await adapter.readCredential(paths.clientKeyFile);
     streams = createLiveEvents(storage, intent.instanceId);
     projects = createProjectOperations({ storage, ownerUid: paths.ownerUid, instanceId: intent.instanceId,
+      checkpoint,
       supervisor: createProbeSupervisor({ paths, onResource: resource => storage.saveResource(resource) }),
-      execute: dependencies.projectExecute ?? (async () => { throw new Error('INVALID_REQUEST'); }),
+      execute: dependencies.projectExecute ?? (context => registerProject(context, storage, createFilesystemIdentity())),
       onBlocked: error => {
         void storage.blockInstance(intent.instanceId, { ...error, persisted: true }).catch(() => {
           volatileError = foundationError('PERSISTENCE_UNAVAILABLE');

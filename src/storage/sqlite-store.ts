@@ -605,11 +605,17 @@ export class SQLiteStore {
       if (owner && owner.owning_instance_id !== resource.owningInstanceId) throw new Error('STALE_TARGET');
       const existing = this.listResources(resource.owningInstanceId).find(r => r.resourceId === resource.resourceId);
       if (!existing && current.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
-      if (existing && ['owningInstanceId', 'kind', 'policyScope', 'generation', 'pid', 'endpoint', 'credentialRef']
+      if (existing && ['owningInstanceId', 'kind', 'policyScope', 'generation', 'endpoint', 'credentialRef']
         .some(key => existing[key as keyof ManagedResource] !== resource[key as keyof ManagedResource])) throw new Error('STALE_TARGET');
+      if (existing && existing.pid !== resource.pid) {
+        const capturedLaunch = existing.pid === null && resource.pid !== null && existing.observation === 'UNKNOWN'
+          && existing.releaseState === 'OWNED' && resource.observation === 'UNKNOWN' && resource.releaseState === 'OWNED';
+        const lostProof = existing.pid !== null && resource.pid === null && resource.observation === 'UNKNOWN' && resource.releaseState === 'BLOCKED';
+        if (!capturedLaunch && !lostProof) throw new Error('STALE_TARGET');
+      }
       if (resource.pid !== null && database.prepare('SELECT 1 FROM controller_attempts WHERE pid=? AND ended_at IS NULL').get(resource.pid)) throw new Error('UNAUTHORIZED');
       return database.prepare(`INSERT INTO managed_resources VALUES (?,?,?,?,?,?,?,?,?,?)
-      ON CONFLICT(resource_id) DO UPDATE SET observation=excluded.observation,release_state=excluded.release_state`)
+      ON CONFLICT(resource_id) DO UPDATE SET pid=excluded.pid,observation=excluded.observation,release_state=excluded.release_state`)
       .run(resource.resourceId, resource.owningInstanceId, resource.kind, resource.policyScope, resource.generation,
         resource.pid, resource.endpoint, resource.credentialRef, resource.observation, resource.releaseState);
     }, resource.releaseState === 'BLOCKED' ? [{type: 'resource.blocked', instanceId: resource.owningInstanceId, payload: {resourceId: resource.resourceId}}] : []);
