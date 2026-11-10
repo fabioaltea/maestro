@@ -1,7 +1,7 @@
 # Entry readiness — 002 Project Registry
 
 Date: 2026-11-10, Europe/Rome. Implementation requested by the user.
-Current decision after approved revision: **P0 LOCAL BASELINE PENDING**.
+Current decision after approved revision and local verification: **P0 LOCAL PASS**.
 User approved local development without the external runner; no final gate is waived.
 The earlier BLOCKED audit below is retained as history and superseded for ordering only.
 
@@ -97,3 +97,18 @@ Updated plan/tasks/research/quickstart and generated agent context consistently.
 requirement was altered, no account/permissions/credentials were created or changed.
 G1 confinement remains mandatory before user-facing Git inspection. T093/T096
 must refuse final readiness if real required evidence is still absent.
+
+## T004 — Local entry verdict
+
+Result: **PASS for local implementation**, 2026-11-10. Branch 002-project-registry
+is aligned with Foundation e84e587; T003 commit 8230734 records 126 ordinary tests
+passing with no failures/skips, passing build/typecheck/lint. Node 26.13.0,
+npm 11.20.0, TypeScript 6.0.3, better-sqlite3 13.0.3; SQLite runtime 3.53.4
+queried from an isolated in-memory connection. macOS 26.3.1(a), arm64; diskutil
+reports APFS for the system volume. Tests use their own temporary directories
+and cooperative owned-process cleanup; no user repository was used as fixture.
+
+G1 inspection remains NOT_RUN and blocks user-facing probes until qualified.
+001/T082 remains NOT_RUN; 001/T085 remains FAIL/OPEN, both final acceptance gates.
+P0 PASS is not Foundation release readiness and is not registry implementation
+acceptance. Raw command outputs retain their original trailing newlines.
