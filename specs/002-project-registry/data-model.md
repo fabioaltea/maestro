@@ -44,7 +44,7 @@ restano associate alla tombstone, non appaiono nella lista attiva.
 | reference_checkout | Riferimento esatto osservato, immutabile rispetto a Project |
 | checkout_availability | VERIFIED / UNAVAILABLE / UNKNOWN |
 | repository_identity_status | VERIFIED / CHANGED / UNVERIFIED; CHANGED non salva una nuova identità |
-| has_commits | true / false / null (non verificato) |
+| has_commits | Commit raggiungibile da HEAD o ref: true / false / null (non verificato); niente inventario di oggetti irraggiungibili |
 | head_kind | BRANCH / DETACHED / UNBORN / UNKNOWN |
 | current_branch / head_oid | Nullable; OID con object format dichiarato SHA-1 o SHA-256 |
 | base_state / base_oid | UNCONFIGURED / VALID / INVALID / UNVERIFIED; OID nullable |

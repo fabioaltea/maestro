@@ -89,6 +89,9 @@ export function createProbeSupervisor(options: Options): ProbeSupervisor {
       const result = new Promise<InspectionResult>(resolve => { resultResolve = resolve; });
       let closeResolve!: () => void;
       const closed = new Promise<void>(resolve => { closeResolve = resolve; });
+      let exitResolve!: () => void;
+      const exitObserved = new Promise<void>(resolve => { exitResolve = resolve; });
+      let exitProof: 'ABSENT' | 'UNKNOWN' = 'UNKNOWN';
       let capturedResult: InspectionResult | undefined;
       let exited = false, executeSent = false;
       let cancellation: Promise<'ABSENT' | 'UNKNOWN'> | undefined;
@@ -105,7 +108,7 @@ export function createProbeSupervisor(options: Options): ProbeSupervisor {
         if (!sameOwner(message.ownership, own)) return;
         if (message.kind === 'probe.ready') readyResolve();
         if (message.kind === 'probe.result' && message.result && typeof message.result === 'object'
-          && JSON.stringify(message.result).length <= 64 * 1024) {
+          && Buffer.byteLength(JSON.stringify(message.result)) <= 64 * 1024) {
           const data = message.result as InspectionResult;
           if (typeof data.ok === 'boolean') {
             capturedResult = data;
@@ -120,6 +123,8 @@ export function createProbeSupervisor(options: Options): ProbeSupervisor {
         finalizing = true;
         void (async () => {
           exited = true;
+          exitProof = !executeSent || capturedResult ? 'ABSENT' : 'UNKNOWN';
+          exitResolve();
           active.delete(own.resourceId);
           inspectionOptions.signal?.removeEventListener('abort', abort);
           readyReject(new Error('CORE_EXITED_BEFORE_ACCEPTANCE'));
@@ -146,24 +151,24 @@ export function createProbeSupervisor(options: Options): ProbeSupervisor {
       child.once('close', finalize); // Covers spawn errors with no process/exit.
 
       async function cancel(): Promise<'ABSENT' | 'UNKNOWN'> {
-        if (exited) { await closed; return resource.releaseState === 'RELEASED' ? 'ABSENT' : 'UNKNOWN'; }
+        if (exited) return exitProof;
         if (cancellation) return cancellation;
         cancellation = (async () => {
           try {
             if (await identity.challenge(endpoint, { identity: own.resourceId, generation: own.generation, key }, 300) !== 'VERIFIED') {
-              await markBlocked(); return 'UNKNOWN' as const;
+              void markBlocked().catch(() => {}); return 'UNKNOWN' as const;
             }
             const response = await transport.call(endpoint, key, { protocolVersion: 1, correlationId: randomUUID(),
               method: 'internal.prepareStop', params: { targetInstanceId: own.resourceId, generation: own.generation } }, 300);
-            if (response.result !== 'OK') { await markBlocked(); return 'UNKNOWN' as const; }
+            if (response.result !== 'OK') { void markBlocked().catch(() => {}); return 'UNKNOWN' as const; }
             let timer: ReturnType<typeof setTimeout> | undefined;
-            const observed = await Promise.race([closed.then(() => true), new Promise<false>(resolve => {
+            const observed = await Promise.race([exitObserved.then(() => true), new Promise<false>(resolve => {
               timer = setTimeout(() => resolve(false), 750);
             })]);
             clearTimeout(timer);
-            if (!observed || resource.releaseState !== 'RELEASED') { await markBlocked(); return 'UNKNOWN' as const; }
+            if (!observed || exitProof !== 'ABSENT') { void markBlocked().catch(() => {}); return 'UNKNOWN' as const; }
             return 'ABSENT' as const;
-          } catch { await markBlocked().catch(() => {}); return 'UNKNOWN' as const; }
+          } catch { void markBlocked().catch(() => {}); return 'UNKNOWN' as const; }
         })();
         return cancellation;
       }

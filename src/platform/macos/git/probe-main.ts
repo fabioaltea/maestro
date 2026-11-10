@@ -90,7 +90,7 @@ async function receive(value: unknown): Promise<void> {
       ? inspector.inspectCandidate(request.path, request.requestedBase, options)
       : inspector.inspectRegistered(request.identity, request.reference, request.configuredBase, options);
     const result = await inspection;
-    if (JSON.stringify(result).length > 64 * 1024) await finish({ ok: false, error: inspectionFailure('OUTPUT_LIMIT') });
+    if (Buffer.byteLength(JSON.stringify(result)) > 64 * 1024) await finish({ ok: false, error: inspectionFailure('OUTPUT_LIMIT') });
     else await finish(result);
   }
 }

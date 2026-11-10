@@ -105,3 +105,21 @@ test('invalid policy scope and expired intentions are rejected before probe crea
     { deadline: makeDeadline(systemClock, 0) }), /DEADLINE_EXCEEDED/);
   assert.equal(resources.length, 0);
 });
+
+test('cancellation proves process exit within budget even when durable resource bookkeeping is delayed', async t => {
+  const context = await createTestContext(t);
+  const paths = (await createPlatformPaths().resolveArchive(context.directory + '/state', 'write'))!;
+  const supervisor = (await loadSupervisor()).createProbeSupervisor({ paths,
+    workerUrl: new URL('../fixtures/project-probe-worker.js', import.meta.url),
+    onResource: async resource => {
+      if (resource.releaseState === 'RELEASED') await new Promise(resolve => setTimeout(resolve, 1_700));
+    } });
+  const probe = await supervisor.start({ kind: 'CANDIDATE', path: context.directory }, ownership(),
+    { deadline: makeDeadline(systemClock, 5_000) });
+  try {
+    const started = performance.now();
+    assert.equal(await probe.cancel(), 'ABSENT');
+    assert.ok(performance.now() - started <= 1_500);
+    await probe.result; // Result publication still waits for durable resource bookkeeping.
+  } finally { await probe.cancel(); }
+});

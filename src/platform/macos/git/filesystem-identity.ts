@@ -3,7 +3,7 @@ import { isAbsolute } from 'node:path';
 import type { FilesystemAnchor, FilesystemIdentity } from '../../../ports/repository.js';
 
 function validPath(value: unknown): value is string {
-  return typeof value === 'string' && isAbsolute(value) && !value.includes('\0')
+  return typeof value === 'string' && value.isWellFormed() && isAbsolute(value) && !value.includes('\0')
     && Buffer.byteLength(value) <= 16 * 1024;
 }
 function validAnchor(value: FilesystemAnchor): boolean {

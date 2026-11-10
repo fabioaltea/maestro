@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T014 conclusi (14/96), P0 locale
+**Status**: implementazione locale in corso; T001–T015 conclusi (15/96), P0 locale
 PASS. Porte e fixture disponibili; G1 ancora da qualificare. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -119,7 +119,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Implementazione e verifica
 
-- [ ] T015 Implementare topologia, refs/commit e parsing status bounded in `src/platform/macos/git/repository-inspector.ts`; usare solo runner confinato, non trim sui path, nessun redirect core.worktree estraneo, niente ricorsione submodule; verificare anchor/topologia/HEAD/base prima-dopo e prima della conferma, senza snapshot atomico promesso. **Dip.: T014.**
+- [X] T015 Implementare topologia, refs/commit e parsing status bounded in `src/platform/macos/git/repository-inspector.ts`; usare solo runner confinato, non trim sui path, nessun redirect core.worktree estraneo, niente ricorsione submodule; verificare anchor/topologia/HEAD/base prima-dopo e prima della conferma, senza snapshot atomico promesso. **Dip.: T014.**
 - [ ] T016 Eseguire i contratti Git e `tests/integration/git-confinement.test.ts`, aggiungendo timeout/output enorme/config-ref-topology race e crash del processo proprietario in harness con probe attivo (il crash del daemon integrato verrà provato nelle storie) in `tests/integration/project-probe-lifecycle.test.ts`; salvare esito G1, primitiva effettiva e limiti in `specs/002-project-registry/reports/git-safety.md`. Nessuna integrazione utente se un requisito safety è FAIL/NOT_RUN. **Dip.: T015.**
 
 ### Test richiesti
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T014 conclusi, T015–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T015 conclusi, T016–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

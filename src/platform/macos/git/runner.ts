@@ -13,8 +13,8 @@ const MAX_STDOUT = 1024 * 1024;
 const MAX_STDERR = 16 * 1024;
 
 export type GitQuery = { readonly kind: 'top-level' | 'common-dir' | 'git-dir'
-  | 'object-format' | 'head-symbolic' | 'head-commit' | 'status' }
-  | { readonly kind: 'check-branch' | 'local-branch'; readonly branch: string }
+  | 'object-format' | 'head-symbolic' | 'head-commit' | 'any-commit' | 'status' }
+  | { readonly kind: 'check-branch' | 'local-branch' | 'branch-exists'; readonly branch: string }
   | { readonly kind: 'config-file'; readonly path: string };
 
 export interface GitRunOptions {
@@ -22,6 +22,7 @@ export interface GitRunOptions {
   readonly deadline: Deadline;
   readonly signal?: AbortSignal;
   readonly maxStdoutBytes?: number;
+  readonly maxStderrBytes?: number;
   readonly readRoots?: readonly string[];
 }
 export type GitRunResult = {
@@ -58,11 +59,11 @@ export function buildInspectionEnvironment(_source: Readonly<Record<string, stri
 }
 
 function absolute(value: unknown): value is string {
-  return typeof value === 'string' && isAbsolute(value) && !value.includes('\0')
+  return typeof value === 'string' && value.isWellFormed() && isAbsolute(value) && !value.includes('\0')
     && Buffer.byteLength(value) <= 16 * 1024;
 }
 function validBranch(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && Buffer.byteLength(value) <= 1024
+  return typeof value === 'string' && value.isWellFormed() && value.length > 0 && Buffer.byteLength(value) <= 1024
     && !/[\x00-\x20\x7f]/.test(value) && !value.startsWith('-') && !value.endsWith('.')
     && !['~', '^', ':', '?', '*', '[', '\\', '@{', '..'].some(token => value.includes(token))
     && !value.split('/').some(part => !part || part.startsWith('.') || part.endsWith('.lock'));
@@ -71,10 +72,11 @@ function argumentsFor(query: unknown): readonly string[] | InspectionFailure {
   if (!query || typeof query !== 'object' || Array.isArray(query)) return inspectionFailure('INVALID_REQUEST');
   const q = query as Record<string, unknown>;
   const keys = Object.keys(q).sort().join(',');
-  if (q.kind === 'local-branch' || q.kind === 'check-branch') {
+  if (q.kind === 'local-branch' || q.kind === 'check-branch' || q.kind === 'branch-exists') {
     if (keys !== 'branch,kind') return inspectionFailure('INVALID_REQUEST');
     if (!validBranch(q.branch)) return inspectionFailure('INVALID_BASE_BRANCH');
-    return q.kind === 'check-branch' ? ['check-ref-format', `refs/heads/${q.branch}`]
+    return q.kind === 'branch-exists' ? ['show-ref', '--exists', `refs/heads/${q.branch}`]
+      : q.kind === 'check-branch' ? ['check-ref-format', `refs/heads/${q.branch}`]
       : ['rev-parse', '--verify', '--quiet', '--end-of-options', `refs/heads/${q.branch}^{commit}`];
   }
   if (q.kind === 'config-file') {
@@ -89,6 +91,7 @@ function argumentsFor(query: unknown): readonly string[] | InspectionFailure {
     case 'object-format': return ['rev-parse', '--show-object-format'];
     case 'head-symbolic': return ['symbolic-ref', '--quiet', 'HEAD'];
     case 'head-commit': return ['rev-parse', '--verify', '--quiet', '--end-of-options', 'HEAD^{commit}'];
+    case 'any-commit': return ['rev-list', '--max-count=1', '--all'];
     case 'status': return ['status', '--porcelain=v2', '-z', '--untracked-files=normal', '--ignore-submodules=all'];
     default: return inspectionFailure('INVALID_REQUEST');
   }
@@ -155,7 +158,9 @@ export function createGitRunner(options: { readonly platform?: string } = {}): G
       if (request.signal?.aborted) return failure('INTERRUPTED');
       if (request.deadline.expired()) return failure('DEADLINE_EXCEEDED');
       const limit = request.maxStdoutBytes ?? MAX_STDOUT;
-      if (!Number.isSafeInteger(limit) || limit < 0 || limit > MAX_STDOUT) return failure('INVALID_REQUEST');
+      const stderrLimit = request.maxStderrBytes ?? MAX_STDERR;
+      if (!Number.isSafeInteger(limit) || limit < 0 || limit > MAX_STDOUT
+        || !Number.isSafeInteger(stderrLimit) || stderrLimit < 0 || stderrLimit > MAX_STDERR) return failure('INVALID_REQUEST');
       if (limit === 0) return failure('OUTPUT_LIMIT');
       if ((await capabilities()).status !== 'AVAILABLE' || !executable) return failure('INSPECTION_UNAVAILABLE');
       let cwd: string, roots: string[];
@@ -196,7 +201,7 @@ export function createGitRunner(options: { readonly platform?: string } = {}): G
         });
         child.stderr.on('data', (chunk: Buffer) => {
           stderrBytes += chunk.byteLength;
-          if (stderrBytes > MAX_STDERR) cancel('OUTPUT_LIMIT');
+          if (stderrBytes > stderrLimit) cancel('OUTPUT_LIMIT');
         });
         child.once('error', () => { error ??= 'INSPECTION_UNAVAILABLE'; });
         child.once('close', (code, signal) => {

@@ -68,3 +68,25 @@ actually exercised. No safety assertion was weakened.
 regressions and the new contracts/integration. [Captured output](g1-regression.txt).
 Full G1 remains pending inspector semantics and real owner-crash qualification in
 T014–T016; no final acceptance gate or performance target is declared passed.
+
+## T015 repository inspector
+
+17 inspector contracts GREEN plus 6 runner and 6 supervisor contracts: **29 PASS**,
+0 FAIL/CANCELLED/SKIP; [output](repository-inspector-green.txt). Build/typecheck/lint
+pass. Cases include empty/unborn and later first commit, unborn HEAD with other
+history, detached, explicit/omitted/removed base, dirty/untracked/conflicts,
+main/linked/bare-common/submodule/nested/clone/alias, SHA-256, unavailable/replaced
+reference, changed branch/history, missing objects, unavailable Git and invalid
+Unicode paths. FIFO metadata is rejected before a blocking open.
+
+Config reads and all subprocess output have cumulative limits. Common/root/admin
+anchors, config fingerprints, index metadata and observed HEAD/base/history are
+rechecked. Unsafe filters preserve verified metadata but expose UNKNOWN file status,
+never a false clean result or automatic base selection. This remains interval
+evidence, not an atomic snapshot or authorization for future Git operations.
+
+The full worker now uses the real inspector. IPC size checks count UTF-8 bytes.
+Cancellation proves native process exit independently of delayed durable resource
+bookkeeping; publication still waits for that bookkeeping. A delayed-write contract
+proves the cancellation budget without falsely claiming persistence completion.
+G1 remains pending the real owned-parent crash/timeout checkpoint T016.

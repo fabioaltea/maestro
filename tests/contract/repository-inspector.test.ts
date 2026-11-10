@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { mkdir, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { makeDeadline, systemClock } from '../../src/ports/clock.js';
@@ -214,9 +216,10 @@ test('unavailable Git capability remains distinct from a missing repository and 
 test('invalid paths and expired observations never initialize or repair a repository', async t => {
   const f = await createProjectRepositories(t);
   const inspector = await loadInspector();
+  await f.createRepository('\ufffd');
   const snapshot = await f.snapshotTree(f.directory);
   for (const [path, code] of [['relative', 'INVALID_REQUEST'], [join(f.directory, 'missing'), 'REPOSITORY_NOT_FOUND'],
-    [f.directory, 'REPOSITORY_NOT_FOUND']] as const) {
+    [join(f.directory, '\ud800'), 'INVALID_REQUEST'], [f.directory, 'REPOSITORY_NOT_FOUND']] as const) {
     const result = await inspector.inspectCandidate(path, undefined, options());
     assert.equal(result.ok, false);
     if (!result.ok) assert.equal(result.error.code, code);
@@ -235,4 +238,31 @@ test('repository configuration cannot silently redirect the reference checkout t
   const result = await (await loadInspector()).inspectCandidate(repo, undefined, options());
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.error.code, 'REPOSITORY_CHANGED');
+});
+
+test('a FIFO substituted for repository metadata is rejected without opening a blocking stream', async t => {
+  const f = await createProjectRepositories(t);
+  const repo = await f.createRepository('hostile-metadata');
+  const config = join(repo, '.git', 'config');
+  await rename(config, config + '.original');
+  await promisify(execFile)('/usr/bin/mkfifo', [config]);
+  const inspector = await loadInspector();
+  assert.equal((await inspector.capabilities()).status, 'AVAILABLE');
+  const started = performance.now();
+  const result = await inspector.inspectCandidate(repo, undefined, { deadline: makeDeadline(systemClock, 2_000) });
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.error.code, 'REPOSITORY_UNSUPPORTED');
+  assert.ok(performance.now() - started < 2_000);
+});
+
+test('a commit appearing on another ref during an unborn observation invalidates its repository-history evidence', async t => {
+  const f = await createProjectRepositories(t);
+  const empty = await f.createRepository('empty-history', { commit: false });
+  const source = await f.createRepository('external-history');
+  const inspector = await loadInspector({ checkpoint: async point => {
+    if (point === 'inspection.beforeRecheck') await f.git(empty, ['fetch', source, 'fixture-base:other']);
+  } });
+  const result = await inspector.inspectCandidate(empty, undefined, options());
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.error.code, 'REPOSITORY_UNSTABLE');
 });
