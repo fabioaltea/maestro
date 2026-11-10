@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T049 conclusi (49/96), P0 locale
+**Status**: implementazione locale in corso; T001–T050 conclusi (50/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -197,7 +197,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 - [X] T048 [P] [US2] Scrivere contratti list/detail/operation offline e verify in `tests/contract/project-read-verify.test.ts`: freshness del registro distinta da osservazione, pagine ≤60 KiB/100 record, cursor store/revision-bound, REGISTRY_CHANGED e assenza/schema2/corruzione/accesso negato espliciti. **Dip.: T047.**
 - [X] T049 [P] [US2] Scrivere policy di osservazione in `tests/unit/project-observation.test.ts`: boolean nullable, base UNCONFIGURED/VALID/INVALID/UNVERIFIED, reference-only/submodule limitation, configRevision invariata, CAS config+observation revision e verify superato non pubblicato. **Dip.: T047.**
-- [ ] T050 [P] [US2] Scrivere i 6 scenari US2 in `tests/integration/project-read-verify.test.ts`: readonly offline senza directory/sidecar/Git/autostart, restart, checkout spostato/negato, repository sostituito e linked reference eliminato con common ancora vivo; niente fallback o rebind. **Dip.: T047.**
+- [X] T050 [P] [US2] Scrivere i 6 scenari US2 in `tests/integration/project-read-verify.test.ts`: readonly offline senza directory/sidecar/Git/autostart, restart, checkout spostato/negato, repository sostituito e linked reference eliminato con common ancora vivo; niente fallback o rebind. **Dip.: T047.**
 - [ ] T051 [P] [US2] Scrivere fault injection verify in `tests/integration/project-verify-lifecycle.test.ts`: disconnessione, stop durante coda/probe, crash→INTERRUPTED, worker failure e outbox bloccata; tempi controllo/letture non occupati da RPC Git e nessun evento di verifica falsa. **Dip.: T047.**
 
 ### Implementazione e verifica
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T049 conclusi, T050–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T050 conclusi, T051–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

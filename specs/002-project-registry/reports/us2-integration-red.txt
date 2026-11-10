@@ -1,0 +1,100 @@
+✖ verify preserves fixed reference and configuration for moved checkout (2427.183083ms)
+✖ verify preserves fixed reference and configuration for denied checkout (2208.366875ms)
+✖ verify preserves fixed reference and configuration for replacement checkout (2254.38075ms)
+✖ verify preserves fixed reference and configuration for linked checkout (2226.590625ms)
+✖ restart preserves IDs/config/dates; offline queries cannot create sidecars, recreate checkout or autostart (3383.198458ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12594.590583
+
+✖ failing tests:
+
+test at dist-tests/tests/integration/project-read-verify.test.js:8:5
+✖ verify preserves fixed reference and configuration for moved checkout (2427.183083ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"dcd0044e-df2d-4b19-b82f-635e75c54f09","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"dcd0044e-df2d-4b19-b82f-635e75c54f09"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-read-verify.test.js:23:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-read-verify.test.js:8:5
+✖ verify preserves fixed reference and configuration for denied checkout (2208.366875ms)
+  Error: EACCES: permission denied, scandir '/private/var/folders/80/f38sd4ld0jbgvvcvmb5d4gl80000gn/T/maestro-test-FfU1y8/main'
+      at async readdir (node:internal/fs/promises:1786:18)
+      at async visit (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-repositories.js:63:33)
+      at async visit (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-repositories.js:71:21)
+      at async Object.snapshotTree (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-repositories.js:82:9)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-read-verify.test.js:21:26)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    errno: -13,
+    code: 'EACCES',
+    syscall: 'scandir',
+    path: '/private/var/folders/80/f38sd4ld0jbgvvcvmb5d4gl80000gn/T/maestro-test-FfU1y8/main'
+  }
+
+test at dist-tests/tests/integration/project-read-verify.test.js:8:5
+✖ verify preserves fixed reference and configuration for replacement checkout (2254.38075ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"9a36bfc3-9f5f-4084-8051-303caeef9699","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"9a36bfc3-9f5f-4084-8051-303caeef9699"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-read-verify.test.js:23:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-read-verify.test.js:8:5
+✖ verify preserves fixed reference and configuration for linked checkout (2226.590625ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"34afdf6d-b475-4f14-b7fa-7149a94dca69","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"34afdf6d-b475-4f14-b7fa-7149a94dca69"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-read-verify.test.js:23:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-read-verify.test.js:40:1
+✖ restart preserves IDs/config/dates; offline queries cannot create sidecars, recreate checkout or autostart (3383.198458ms)
+  Error: UNOWNED_FIXTURE
+      at requireOwned (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-repositories.js:16:19)
+      at async Object.snapshotTree (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-repositories.js:60:22)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-read-verify.test.js:47:22)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
