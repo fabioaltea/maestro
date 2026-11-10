@@ -1,0 +1,10 @@
+✔ unavailable observations preserve unknown facts and distinguish no base from an unverified configured base (82.596167ms)
+✔ verification publishes unavailable state atomically through captured config and observation revisions (82.88175ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 261.866875
