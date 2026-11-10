@@ -1,3 +1,4 @@
+import { normalizeProjectCommand } from '../../domain/projects/intent.js';
 import type { ProjectExecution } from './operations.js';
 import type { StoragePort } from '../../ports/storage.js';
 import type { InspectionFailure, RepositoryObservationEvidence, InspectionResult, FilesystemIdentity } from '../../ports/repository.js';
@@ -14,8 +15,10 @@ export function unavailableObservation(state: ProjectState, error: InspectionFai
     limitations: ['FILE_STATUS_UNVERIFIED', 'SUBMODULE_CONTENTS_NOT_INSPECTED'], error };
 }
 export async function verifyProject(context: ProjectExecution, storage: StoragePort, filesystem: FilesystemIdentity) {
-  if (context.operation.action !== 'VERIFY' || !context.operation.projectId) throw new Error('INVALID_REQUEST');
-  const state = await storage.getProject(context.operation.projectId);
+  if (context.operation.action !== 'VERIFY') throw new Error('INVALID_REQUEST');
+  const command = normalizeProjectCommand('VERIFY', (JSON.parse(context.operation.canonicalIntent) as { params: unknown }).params);
+  if (command.action !== 'VERIFY') throw new Error('INVALID_REQUEST');
+  const state = await storage.getProject(command.params.projectId);
   if (!state) throw new Error('PROJECT_NOT_FOUND');
   if (state.project.removedAt !== null) throw new Error('PROJECT_REMOVED');
   const startedAt = new Date().toISOString();

@@ -36,6 +36,7 @@ test('offline schema 2 registry query reports uninitialized and preserves the kn
   const client = new LocalClient(createClientBackend());
   const result = await client.runProject('operation', { requestId: archive.requestId }, { stateDirectory: directory });
   assert.equal(result.error?.code, 'REGISTRY_NOT_INITIALIZED');
+  assert.equal((await client.runProject('list', {}, { stateDirectory: directory })).error?.code, 'REGISTRY_NOT_INITIALIZED');
   assert.deepEqual(await readFile(archive.path), before);
   assert.deepEqual(await readdir(directory), names);
 });

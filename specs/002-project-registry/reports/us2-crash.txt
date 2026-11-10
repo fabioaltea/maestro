@@ -1,0 +1,14 @@
+✔ VERIFY actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (4732.370792ms)
+✔ VERIFY actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (4189.531084ms)
+✔ VERIFY actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (4433.310791ms)
+✔ VERIFY actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (4463.242333ms)
+✔ VERIFY actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (4450.666ms)
+✔ VERIFY actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (4566.703167ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 26950.291958

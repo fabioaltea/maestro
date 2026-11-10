@@ -35,3 +35,30 @@ test('verify persists OBSERVED with stable configuration; CLI list and offline o
   const historical = await a.client.runProject('operation', { requestId }, { stateDirectory: a.h.archive });
   assert.deepEqual(decodeProjectOperationView(historical.data.operation).result, result);
 });
+
+test('verify of an unknown project is a durable PROJECT_NOT_FOUND outcome rather than invalid input', async t => {
+  const a = await createProjectHarness(t);
+  const result = await a.client.runProject('verify', { projectId: randomUUID() }, { stateDirectory: a.h.archive });
+  assert.equal(result.outcome, 'FAILED', JSON.stringify(result)); assert.equal(result.error?.code, 'PROJECT_NOT_FOUND');
+  assert.equal(decodeProjectOperationView(result.data.operation).result!.effect, 'NONE');
+});
+
+test('corrupt and inaccessible archives report explicit failures without producing an empty successful list', async t => {
+  const { createRegistryStore } = await import('../fixtures/registry-store.js');
+  const { createPlatformPaths } = await import('../../src/platform/macos/paths.js');
+  const { writeFile, chmod, readFile, readdir } = await import('node:fs/promises');
+  const { LocalClient } = await import('../../src/client/local-client.js');
+  const { createClientBackend } = await import('../../src/bootstrap.js');
+  const f = await createRegistryStore(t); f.store.close();
+  const paths = (await createPlatformPaths().resolveArchive(f.directory, 'read'))!;
+  await writeFile(paths.stateFile, 'not a SQLite archive\n', { mode: 0o600 });
+  const client = new LocalClient(createClientBackend()), before = await readFile(paths.stateFile), names = await readdir(f.directory);
+  const corrupt = await client.runProject('list', {}, { stateDirectory: f.directory });
+  assert.equal(corrupt.error?.code, 'STATE_CORRUPT', JSON.stringify(corrupt));
+  assert.deepEqual(await readFile(paths.stateFile), before); assert.deepEqual(await readdir(f.directory), names);
+  await chmod(paths.stateFile, 0);
+  try {
+    const denied = await client.runProject('list', {}, { stateDirectory: f.directory });
+    assert.equal(denied.result, 'ERROR'); assert.ok(denied.error); assert.equal(denied.data.projects, undefined);
+  } finally { await chmod(paths.stateFile, 0o600); }
+});

@@ -34,6 +34,12 @@ await runDaemon(input.intent, {
     return storage;
   },
   projectExecute: async (context: ProjectExecution) => {
+    if (context.operation.action === 'VERIFY') {
+      const module = await import(new URL('../../src/core/projects/verify.js', import.meta.url).href) as {
+        verifyProject(context: ProjectExecution, storage: StoragePort, filesystem: FilesystemIdentity): Promise<ProjectOperationResult>;
+      };
+      return module.verifyProject(context, storage, filesystem);
+    }
     const module = await import(new URL('../../src/core/projects/register.js', import.meta.url).href) as {
       registerProject(context: ProjectExecution, storage: StoragePort, filesystem: FilesystemIdentity): Promise<ProjectOperationResult>;
     };

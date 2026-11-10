@@ -89,3 +89,15 @@ test('registry client refuses missing capability support, malformed responses an
   } } }));
   await assert.rejects(malformed.runProject('operation', { requestId: id }), /INVALID_REQUEST/);
 });
+
+test('failure to read an admitted result preserves UNKNOWN_OUTCOME rather than reporting a rejected mutation', async () => {
+  const id = randomUUID(); let calls = 0;
+  const api = client(async (_directory, method) => {
+    calls++;
+    if (method === 'projects.register') return { ...base, requestId: id, result: 'BUSY', outcome: 'IN_PROGRESS',
+      data: { requestId: id, accepted: true, outcome: 'IN_PROGRESS', pollMethod: 'projects.operation.get' } };
+    return { ...base, requestId: id, result: 'ERROR', data: {}, error: foundationError('PERSISTENCE_UNAVAILABLE') };
+  });
+  const result = await api.runProject('register', { path: '/unavailable' }, { requestId: id });
+  assert.equal(result.result, 'UNKNOWN_OUTCOME'); assert.equal(result.requestId, id); assert.equal(calls, 2);
+});

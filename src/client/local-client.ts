@@ -38,20 +38,23 @@ export class LocalClient {
     const expired = new Promise<PublicResult>(resolve => { timer = setTimeout(() => resolve(unknown()), timeout); });
     const observe = async () => {
       let response = await send(directory, method, original, Math.max(1, expires - performance.now()));
-      let backoff = 50;
+      let backoff = 50, admitted = false;
       for (;;) {
         if (response.requestId !== requestId && (requestId !== null || response.requestId !== null)) throw new Error('INVALID_REQUEST');
         if (response.data.operation !== undefined) {
           const operation = decodeProjectOperationView(response.data.operation);
           if (operation.requestId !== requestId || operation.outcome !== response.outcome) throw new Error('INVALID_REQUEST');
           if (!mutation || operation.outcome !== 'IN_PROGRESS') return response;
+          admitted = true;
         } else if (Object.hasOwn(response.data, 'accepted')) {
           const { storeId: _store, observabilityDegraded: _degraded, ...admission } = response.data;
           validateProjectAdmission(admission);
           if (admission.requestId !== requestId) throw new Error('INVALID_REQUEST');
-          if (admission.accepted === false) return response;
+          if (admission.accepted === false) return admitted && mutation ? unknown() : response;
+          admitted = true;
           if (!mutation || response.outcome !== 'IN_PROGRESS') throw new Error('INVALID_REQUEST');
         } else {
+          if (mutation && admitted) return unknown();
           if (response.outcome === 'IN_PROGRESS' || (mutation && !response.error)) throw new Error('INVALID_REQUEST');
           return response;
         }

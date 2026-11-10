@@ -11,8 +11,8 @@ export function observationInspection(): RepositoryInspection {
       headOid: 'a'.repeat(40), objectFormat: 'sha1', baseState: 'VALID', baseOid: 'a'.repeat(40), trackedChanges: false, untrackedChanges: false,
       conflicts: false, fileStatusScope: 'REFERENCE_CHECKOUT_DIRECT_ENTRIES', limitations: ['SUBMODULE_CONTENTS_NOT_INSPECTED'], error: null } };
 }
-export async function observationStore(t: TestContext) {
-  const f = await createRegistryStore(t), evidence = observationInspection(), intent = f.intent('REGISTER', { path: '/fixture' });
+export async function observationStore(t: TestContext, checkpoint?: (point: string) => void) {
+  const f = await createRegistryStore(t, checkpoint), evidence = observationInspection(), intent = f.intent('REGISTER', { path: '/fixture' });
   f.store.acceptProjectOperation(intent);
   const result = f.store.commitProjectRegistration({ requestId: intent.requestId, instanceId: f.instanceId, displayName: 'Fixture', baseBranch: 'fixture-base',
     repositoryKey: createHash('sha256').update(JSON.stringify(evidence.identity)).digest('hex'), repositoryIdentity: evidence.identity,

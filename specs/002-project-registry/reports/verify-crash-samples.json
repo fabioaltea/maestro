@@ -1,0 +1,178 @@
+{
+  "measuredAt": "2026-11-10T20:25:35.879Z",
+  "required": 6,
+  "completed": 6,
+  "samples": [
+    {
+      "point": "project.accepted",
+      "variant": "clean",
+      "requestId": "da2720c0-ecd0-4ad9-8e61-0b77773393a0",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "VERIFY",
+        "requestId": "da2720c0-ecd0-4ad9-8e61-0b77773393a0",
+        "projectId": "20b71cca-5c03-4c14-b3a6-feb544871655",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-10T20:25:12.832Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "da2720c0-ecd0-4ad9-8e61-0b77773393a0"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.probing",
+      "variant": "clean",
+      "requestId": "1ec2f6ca-e2e9-495e-bb10-958c877db8d7",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "VERIFY",
+        "requestId": "1ec2f6ca-e2e9-495e-bb10-958c877db8d7",
+        "projectId": "9acb9a12-bf63-4576-bc6a-f53f24f28cd4",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-10T20:25:17.077Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "1ec2f6ca-e2e9-495e-bb10-958c877db8d7"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeCommit",
+      "variant": "clean",
+      "requestId": "ea30bda2-a735-4226-9106-c6fd40769c58",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "VERIFY",
+        "requestId": "ea30bda2-a735-4226-9106-c6fd40769c58",
+        "projectId": "16fb74a1-79bb-464f-a5ea-fad180eb9d81",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-10T20:25:21.573Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "ea30bda2-a735-4226-9106-c6fd40769c58"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.committed",
+      "variant": "clean",
+      "requestId": "88029f67-3974-4a66-8ea9-088cac4f3d95",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "action": "VERIFY",
+        "requestId": "88029f67-3974-4a66-8ea9-088cac4f3d95",
+        "projectId": "3dda7bb9-748e-4de9-9f7c-c5b7ccb0d23b",
+        "outcome": "SUCCEEDED",
+        "effect": "OBSERVED",
+        "configRevision": "1",
+        "observationRevision": "2",
+        "completedAt": "2026-11-10T20:25:25.535Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeAck",
+      "variant": "client-deadline",
+      "requestId": "fa7a3348-719c-4d8a-863a-0eb5a322e991",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "action": "VERIFY",
+        "requestId": "fa7a3348-719c-4d8a-863a-0eb5a322e991",
+        "projectId": "2bfda44c-7e2d-41d3-9511-b893eb100845",
+        "outcome": "SUCCEEDED",
+        "effect": "OBSERVED",
+        "configRevision": "1",
+        "observationRevision": "2",
+        "completedAt": "2026-11-10T20:25:29.934Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeDrain",
+      "variant": "clean",
+      "requestId": "0e118216-87db-4e43-9963-5ecef7152934",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "action": "VERIFY",
+        "requestId": "0e118216-87db-4e43-9963-5ecef7152934",
+        "projectId": "d3a33fdf-a831-4ab3-8606-043abcfdc37c",
+        "outcome": "SUCCEEDED",
+        "effect": "OBSERVED",
+        "configRevision": "1",
+        "observationRevision": "2",
+        "completedAt": "2026-11-10T20:25:34.446Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    }
+  ]
+}

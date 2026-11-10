@@ -73,7 +73,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       execute: dependencies.projectExecute ?? (context => context.operation.action === 'VERIFY' ? verifyProject(context, storage, createFilesystemIdentity()) : registerProject(context, storage, createFilesystemIdentity())),
       onBlocked: error => {
         void storage.blockInstance(intent.instanceId, { ...error, persisted: true }).catch(() => {
-          volatileError = foundationError('PERSISTENCE_UNAVAILABLE');
+          volatileError ??= foundationError('PERSISTENCE_UNAVAILABLE');
         });
       } });
     const inspection = await createGitRunner().capabilities();

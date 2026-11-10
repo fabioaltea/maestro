@@ -50,3 +50,36 @@ project/observation/terminal/event together and preserve the accepted intent as
 pending when a terminal cannot be persisted. Driver detail is redacted. This does
 not claim physical disk exhaustion or power-cut testing. UPDATE/REMOVE crash
 campaigns remain future tasks, so total SC-005 feature acceptance is still open.
+
+## T057 — VERIFY / US2 recovery
+
+US2 fault slice: **14 PASS**, 0 FAIL/CANCELLED/SKIP in
+[us2-recovery.txt](us2-recovery.txt); additional client/error contracts:
+**8 PASS** in [us2-client-errors.txt](us2-client-errors.txt).
+Six actual owned daemon SIGKILL cases: **6 PASS** in [us2-crash.txt](us2-crash.txt),
+with [raw samples](verify-crash-samples.json). Accepted, probing and pre-commit
+crashes retain the previous observation and become INTERRUPTED on restart. Committed,
+pre-ACK and pre-drain crashes retain observation revision 2 and the original terminal
+result on identical retry. Configuration, fixed reference and source snapshots survive.
+These VERIFY cases do not replace the required REGISTER/UPDATE/REMOVE SC-005 campaigns.
+
+Six concurrent FIFO-blocked verifies cover four active probes plus queued requests.
+Status stays below its two-second budget; explicit stop completes below ten seconds,
+all six requests become INTERRUPTED, and no new observation is published. Ownership
+proof comes from captured handles/lifelines and observed exit, never a saved PID or
+missing socket alone. Client timeout leaves an admitted verification running.
+
+Terminating the actual production SQLite worker during a probe leaves the daemon
+alive, fenced and VOLATILE, with WORKER_EXIT and its ownership lease held. No durable
+success is invented; explicit process death/restart reconciles the request INTERRUPTED.
+The test found and fixed a secondary error overwriting WORKER_EXIT. A second fix keeps
+UNKNOWN_OUTCOME and the original requestId when polling an already admitted mutation
+fails, instead of presenting that read failure as a rejected mutation.
+
+Injected journal allocation failure after commit preserves the observation/result
+and outbox, rejects a new admission with EVENT_BACKPRESSURE, then replays exactly one
+completion after explicit drain recovery. The failure is injection, not physical disk
+loss. Read-only native SQLite/confinement regressions pass, including writer-close
+races, no WAL creation and no process spawn/write escape. Large whole-record pages
+are additionally checked with 105 synthetic projects; this is a byte/count correctness
+test, not the SC-002 performance workload.
