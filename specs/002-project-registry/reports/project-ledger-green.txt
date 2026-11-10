@@ -1,0 +1,20 @@
+✔ readonly missing archive remains absent and rejects mutations (86.544833ms)
+✔ accepted intent is durable before acknowledgment and retry preserves its identity (115.434542ms)
+✔ ticket claim is atomic and a cancelled generation cannot become an instance (87.929333ms)
+✔ incompatible existing state is preserved instead of reset (48.437666ms)
+✔ global catalog rejects both cross-scope collision directions while allowing independent registry pending work (157.42225ms)
+✔ terminal results and original intents stay immutable; retry ignores live path and current instance defaults (58.758125ms)
+✔ invalid hash, foreign store or unauthorized owner leaves no partial reservation (76.256458ms)
+✔ unknown project intent can be recorded without fabricating a project or violating ledger FKs (38.492667ms)
+✔ BLOCKED retries revalidate the original target; terminal results stay historical (176.044542ms)
+✔ shutdownPrepared is a drain completion marker, not an intention to stop (111.39425ms)
+✔ status client enforces its observation deadline even when backend does not return (16.044167ms)
+✔ client expiry preserves the request identity and does not cancel accepted work (11.483667ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 451.89875

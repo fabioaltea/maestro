@@ -1,5 +1,5 @@
 import { beforeDiagnosticMutation, diagnosticUsage, appendDiagnosticLog, allocated, MiB } from './diagnostic-budget.js';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { openJournal } from './event-journal.js';
 import { redactEventDraft } from '../protocol/events.js';
 import { MAX_OUTBOX_BYTES, type EventDraft, type EventPage, type EventState } from '../protocol/messages.js';
@@ -10,6 +10,10 @@ import { dirname, isAbsolute, join } from 'node:path';
 import { initializeSchema, SCHEMA_VERSION } from './schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { transition, type Lifecycle, type Outcome } from '../domain/states.js';
+import { canonicalProjectIntent } from '../domain/projects/intent.js';
+import { PROJECT_ACTIONS, transitionProjectOperation, validateProjectOperationResult,
+  type ProjectOperation, type ProjectOperationResult, type ProjectPhase } from '../domain/projects/model.js';
+import type { AcceptProjectOperation } from '../ports/registry.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
   StoreIdentity, StoreSnapshot } from '../ports/storage.js';
@@ -76,6 +80,17 @@ export class SQLiteStore {
   private writable(): Database.Database {
     if (this.readOnly || !this.database) throw new Error('UNAUTHORIZED');
     return this.database;
+  }
+  private registry(): Database.Database {
+    if (!this.database) throw new Error('STATE_ABSENT');
+    if (this.archiveVersion !== SCHEMA_VERSION) throw new Error('REGISTRY_NOT_INITIALIZED');
+    return this.database;
+  }
+  private catalog(requestId: string, scope: 'LIFECYCLE' | 'PROJECT', action: string, payloadHash: string): boolean {
+    const row = this.registry().prepare('SELECT scope,action,payload_hash FROM request_catalog WHERE request_id=?').get(requestId) as Row | undefined;
+    if (!row) return false;
+    if (row.scope !== scope || row.action !== action || row.payload_hash !== payloadHash) throw new Error('IDEMPOTENCY_CONFLICT');
+    return true;
   }
   private eventsJournal() {
     if (!this.journal) this.journal = openJournal({directory: join(this.directory, 'events'), readonly: this.readOnly,
@@ -200,20 +215,113 @@ export class SQLiteStore {
     if (!['start', 'stop', 'restart'].includes(intent.action) || !/^[a-f0-9]{64}$/.test(intent.payloadHash)
       || intent.ownerUid !== process.getuid!()) throw new Error('INVALID_REQUEST');
     if (intent.targetInstanceId !== null) requireUuid(intent.targetInstanceId);
-    return this.mutate(database => {
+    this.writable();
+    const resolveExisting = () => {
+      if (!this.catalog(intent.requestId, 'LIFECYCLE', intent.action, intent.payloadHash)) return null;
       const existing = this.getOperation(intent.requestId);
-      if (existing) {
-        if (existing.payloadHash !== intent.payloadHash || existing.action !== intent.action
-          || existing.ownerUid !== intent.ownerUid || existing.targetInstanceId !== intent.targetInstanceId) {
-          throw new Error('IDEMPOTENCY_CONFLICT');
-        }
-        return { operation: existing, accepted: false };
-      }
+      if (!existing || existing.ownerUid !== intent.ownerUid || existing.targetInstanceId !== intent.targetInstanceId) throw new Error('IDEMPOTENCY_CONFLICT');
+      return { operation: existing, accepted: false };
+    };
+    const historical = resolveExisting();
+    if (historical) return historical;
+    return this.mutate(database => {
+      const existing = resolveExisting();
+      if (existing) return existing;
       if (database.prepare("SELECT 1 FROM operations WHERE outcome IN ('IN_PROGRESS','BLOCKED')").get()) throw new Error('BUSY');
+      database.prepare("INSERT INTO request_catalog(request_id,scope,action,payload_hash) VALUES(?,'LIFECYCLE',?,?)")
+        .run(intent.requestId, intent.action, intent.payloadHash);
       database.prepare(`INSERT INTO operations(request_id,action,payload_hash,owner_uid,target_instance_id,phase,outcome,accepted_at)
         VALUES (?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?)`).run(intent.requestId, intent.action, intent.payloadHash, intent.ownerUid, intent.targetInstanceId, intent.acceptedAt);
       return { operation: this.getOperation(intent.requestId)!, accepted: true };
     }, [{type: 'operation.accepted', operationId: intent.requestId, payload: {action: intent.action}}]);
+  }
+  private projectOperation(row: Row): ProjectOperation {
+    return { requestId: String(row.request_id), action: row.action as ProjectOperation['action'],
+      payloadHash: String(row.payload_hash), canonicalIntent: String(row.canonical_intent), projectId: row.project_id as string | null,
+      expectedConfigRevision: row.expected_config_revision === null ? null : String(row.expected_config_revision),
+      owningInstanceId: String(row.owning_instance_id), ownerUid: Number(row.owner_uid), phase: row.phase as ProjectPhase,
+      outcome: row.outcome as ProjectOperation['outcome'], acceptedAt: String(row.accepted_at), deadlineAt: String(row.deadline_at),
+      completedAt: row.completed_at as string | null, result: row.result === null ? null : JSON.parse(String(row.result)) as ProjectOperationResult };
+  }
+  getProjectOperation(requestId: string): ProjectOperation | null {
+    requireUuid(requestId);
+    const row = this.registry().prepare('SELECT * FROM project_operations WHERE request_id=?').get(requestId) as Row | undefined;
+    return row ? this.projectOperation(row) : null;
+  }
+  listPendingProjectOperations(): readonly ProjectOperation[] {
+    return (this.registry().prepare("SELECT * FROM project_operations WHERE outcome='IN_PROGRESS' ORDER BY accepted_at,request_id").all() as Row[])
+      .map(row => this.projectOperation(row));
+  }
+  acceptProjectOperation(intent: AcceptProjectOperation): { accepted: boolean; operation: ProjectOperation } {
+    this.writable(); this.registry();
+    if (intent.ownerUid !== process.getuid!()) throw new Error('UNAUTHORIZED');
+    requireUuid(intent.requestId);
+    if (!PROJECT_ACTIONS.includes(intent.action) || !/^[a-f0-9]{64}$/.test(intent.payloadHash)) throw new Error('INVALID_REQUEST');
+    const resolveExisting = () => {
+      if (!this.catalog(intent.requestId, 'PROJECT', intent.action, intent.payloadHash)) return null;
+      const operation = this.getProjectOperation(intent.requestId);
+      if (!operation || operation.ownerUid !== intent.ownerUid || operation.canonicalIntent !== intent.canonicalIntent) throw new Error('IDEMPOTENCY_CONFLICT');
+      return { accepted: false, operation };
+    };
+    const existing = resolveExisting();
+    if (existing) return existing;
+    if (typeof intent.canonicalIntent !== 'string' || Buffer.byteLength(intent.canonicalIntent) > 64 * 1024) throw new Error('INVALID_REQUEST');
+    let original: { version?: unknown; scope?: unknown; storeId: string; action?: unknown; params: unknown };
+    try { original = JSON.parse(intent.canonicalIntent) as typeof original; }
+    catch { throw new Error('INVALID_REQUEST'); }
+    const snapshot = this.readSnapshot()!;
+    if (!original || original.version !== 1 || original.scope !== 'PROJECT' || original.storeId !== snapshot.store.storeId
+      || original.action !== intent.action || canonicalProjectIntent(original.storeId, intent.action, original.params) !== intent.canonicalIntent
+      || createHash('sha256').update(intent.canonicalIntent).digest('hex') !== intent.payloadHash) throw new Error('INVALID_REQUEST');
+    requireUuid(intent.owningInstanceId);
+    if (snapshot.instance?.instanceId !== intent.owningInstanceId) throw new Error('UNAUTHORIZED');
+    const params = original.params as { projectId?: string; expectedRevision?: string };
+    const knownProjectId = params.projectId && this.registry().prepare('SELECT 1 FROM projects WHERE project_id=?').get(params.projectId)
+      ? params.projectId : null;
+    if (intent.projectId !== knownProjectId || intent.expectedConfigRevision !== (params.expectedRevision ?? null)) throw new Error('INVALID_REQUEST');
+    const start = Date.parse(intent.acceptedAt), end = Date.parse(intent.deadlineAt);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end < start || end - start > 28_000) throw new Error('INVALID_REQUEST');
+    return this.mutate(database => {
+      const historical = resolveExisting();
+      if (historical) return historical;
+      if (this.listPendingProjectOperations().length >= 32) throw new Error('BUSY');
+      database.prepare("INSERT INTO request_catalog(request_id,scope,action,payload_hash) VALUES(?,'PROJECT',?,?)")
+        .run(intent.requestId, intent.action, intent.payloadHash);
+      database.prepare(`INSERT INTO project_operations(request_id,action,payload_hash,canonical_intent,project_id,
+        expected_config_revision,owning_instance_id,owner_uid,phase,outcome,accepted_at,deadline_at)
+        VALUES(?,?,?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?)`).run(intent.requestId, intent.action, intent.payloadHash,
+        intent.canonicalIntent, intent.projectId, intent.expectedConfigRevision === null ? null : BigInt(intent.expectedConfigRevision),
+        intent.owningInstanceId, intent.ownerUid, intent.acceptedAt, intent.deadlineAt);
+      return { accepted: true, operation: this.getProjectOperation(intent.requestId)! };
+    });
+  }
+  setProjectOperationPhase(requestId: string, phase: Exclude<ProjectPhase, 'FINALIZED'>): void {
+    this.registry();
+    this.mutate(database => {
+      const operation = this.getProjectOperation(requestId);
+      if (!operation || operation.outcome !== 'IN_PROGRESS') throw new Error('INVALID_TRANSITION');
+      if (operation.phase === phase) return;
+      transitionProjectOperation(operation.phase, phase, 'IN_PROGRESS');
+      database.prepare('UPDATE project_operations SET phase=? WHERE request_id=?').run(phase, requestId);
+    });
+  }
+  completeProjectOperation(requestId: string, result: ProjectOperationResult): void {
+    this.registry();
+    validateProjectOperationResult(result);
+    // Successful effects are finalized only by a story's atomic project commit.
+    if (result.outcome === 'SUCCEEDED' || result.requestId !== requestId) throw new Error('INVALID_REQUEST');
+    if (result.error) {
+      const safe = foundationError(result.error.code, { persisted: result.error.persisted, cause: result.error.cause,
+        ...(result.error.operationId ? { operationId: result.error.operationId } : {}) });
+      if (JSON.stringify(safe) !== JSON.stringify(result.error)) throw new Error('INVALID_REQUEST');
+    }
+    this.mutate(database => {
+      const operation = this.getProjectOperation(requestId);
+      if (!operation || operation.action !== result.action || operation.projectId !== result.projectId) throw new Error('INVALID_REQUEST');
+      transitionProjectOperation(operation.phase, 'FINALIZED', result.outcome);
+      database.prepare("UPDATE project_operations SET phase='FINALIZED',outcome=?,completed_at=?,result=? WHERE request_id=?")
+        .run(result.outcome, result.completedAt, JSON.stringify(result), requestId);
+    });
   }
   listTickets(requestId: string): readonly LaunchTicket[] {
     requireUuid(requestId);

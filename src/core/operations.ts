@@ -18,6 +18,8 @@ export function createOperations(store: StoragePort, ownerUid: number, clock: Cl
       if (intent.canonicalStateDir !== snapshot.store.canonicalPath) throw new Error('UNAUTHORIZED');
       const payload = JSON.stringify({ action: intent.action, canonicalStateDir: intent.canonicalStateDir,
         targetInstanceId: intent.targetInstanceId });
+      // Preserve the established lifecycle hash. Storage reserves it in the shared
+      // request catalog atomically with the lifecycle ledger, including cross-scope checks.
       return store.acceptOperation({ requestId: intent.requestId, action: intent.action,
         targetInstanceId: intent.targetInstanceId, ownerUid, acceptedAt: clock.wallUtc(),
         payloadHash: createHash('sha256').update(payload).digest('hex') });

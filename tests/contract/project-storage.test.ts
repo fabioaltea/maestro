@@ -55,7 +55,13 @@ async function fixture(t: Parameters<typeof createTestContext>[0]) {
   t.after(() => store.close());
   const api = registry(store);
   const instanceId = randomUUID();
-  await store.recordInstance({ instanceId, pid: process.pid, generation: randomUUID(), lifecycle: 'RUNNING', startedAt: timestamp, shutdownPrepared: false, lastError: null });
+  const bootstrap = randomUUID(), ticketId = randomUUID();
+  await store.acceptOperation({ requestId: bootstrap, action: 'start', payloadHash: 'c'.repeat(64), ownerUid: process.getuid!(),
+    targetInstanceId: null, acceptedAt: timestamp });
+  await store.issueTicket({ requestId: bootstrap, ticketId, instanceId, generation: '1' });
+  await store.claimTicket(ticketId, '1', process.pid);
+  await store.recordInstance({ instanceId, pid: process.pid, generation: '1', lifecycle: 'RUNNING', startedAt: timestamp, shutdownPrepared: false, lastError: null });
+  await store.completeOperation(bootstrap, 'SUCCEEDED', timestamp, null);
   return { path, store, api, storeId, instanceId };
 }
 
