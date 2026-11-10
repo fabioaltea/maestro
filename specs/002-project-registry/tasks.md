@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T057 conclusi (57/96), P0 locale
+**Status**: implementazione locale in corso; T001–T058 conclusi (58/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -208,7 +208,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 - [X] T055 [US2] Collegare list/verify e dettaglio completo in `src/core/projects/dispatch.ts`, `src/client/local-client.ts` e `src/cli/projects.ts`: `project list` paginato e `project verify` con polling, exit 0 solo per osservazione salvata distinguendo availability/error, no autostart. **Dip.: T054.**
 - [X] T056 [US2] Aggiungere ed eseguire verify concorrenti, ref/topology mutate tra probe/commit, primo commit esterno e base eliminata in `tests/integration/project-observation-races.test.ts`; controllare che config revision sia preservata e le evidenze obsolete non vincano. **Dip.: T055.**
 - [X] T057 [US2] Eseguire `tests/integration/project-verify-lifecycle.test.ts` e le prove recovery/read-only del capitolo US2, registrando esiti in `specs/002-project-registry/reports/recovery.md`; provare stop entro budget Foundation e nessun orfano dichiarato assente su sola evidenza PID/socket. **Dip.: T056.**
-- [ ] T058 [US2] Creare ed eseguire `tests/acceptance/project-read-verify.test.ts` con due client, restart e daemon fermo; confrontare 100% ID/config confermati, data/natura storica delle osservazioni e nessuna scrittura/ricreazione repo o state-dir dalle query. **Dip.: T057.**
+- [X] T058 [US2] Creare ed eseguire `tests/acceptance/project-read-verify.test.ts` con due client, restart e daemon fermo; confrontare 100% ID/config confermati, data/natura storica delle osservazioni e nessuna scrittura/ricreazione repo o state-dir dalle query. **Dip.: T057.**
 - [ ] T059 [US2] Consolidare tutti i 6 scenari US2, osservazioni parziali/non verificabili e prove richieste in `specs/002-project-registry/reports/us2.md`; riferire SC-008 e distinguere successo della persistenza da verifica positiva Git. **Dip.: T058.**
 
 **Checkpoint**: US2 completa e indipendente da configurazione/rimozione P2; la prima commit esterna non configura automaticamente la base.
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T057 conclusi, T058–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T058 conclusi, T059–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
