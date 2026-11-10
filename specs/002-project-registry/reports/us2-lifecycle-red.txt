@@ -1,0 +1,43 @@
+✖ a client deadline/disconnection does not cancel an admitted verify (2454.951458ms)
+✖ stop interrupts queued/probing verifies without occupying status RPC or publishing an observation (2180.43325ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4733.036458
+
+✖ failing tests:
+
+test at dist-tests/tests/integration/project-verify-lifecycle.test.js:21:1
+✖ a client deadline/disconnection does not cancel an admitted verify (2454.951458ms)
+  Error: INVALID_REQUEST
+      at projectObject (file:///Users/fabioaltea/Repository/maestro/dist-tests/src/domain/projects/intent.js:5:15)
+      at decodeProjectOperationView (file:///Users/fabioaltea/Repository/maestro/dist-tests/src/protocol/validation.js:107:19)
+      at terminal (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-verify-lifecycle.test.js:14:27)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-verify-lifecycle.test.js:25:23)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at dist-tests/tests/integration/project-verify-lifecycle.test.js:30:1
+✖ stop interrupts queued/probing verifies without occupying status RPC or publishing an observation (2180.43325ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"5c5051be-6d48-463d-91ab-8679352fe945","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"OPERATION_NOT_FOUND","category":"RUNTIME","message":"Intento non presente nel registro delle operazioni.","nextAction":"Verificare archivio e requestId prima di un nuovo comando.","retryable":false,"cause":null,"persisted":false,"operationId":"5c5051be-6d48-463d-91ab-8679352fe945"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'IN_PROGRESS'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-verify-lifecycle.test.js:39:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'IN_PROGRESS',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
