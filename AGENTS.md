@@ -40,7 +40,8 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 - 002-project-registry: piano, ricerca, modello dati e contratti per review; nessuna
   implementazione. Feature selezionata da `.specify/feature.json`: consultare
   `specs/002-project-registry/`. Import da worktree esistenti senza gestione worktree;
-  readiness Foundation T082/T085 e qualificazione confinamento Git restano gate.
+  readiness Foundation T082/T085 restano gate finali; per sviluppo locale basta
+  baseline verde. Qualificazione confinamento Git obbligatoria prima dei probe utente.
   Non avviare automaticamente tasks o implementazione.
 
 - 001-core-background-daemon: Foundation implementata; diagnostica con categorie

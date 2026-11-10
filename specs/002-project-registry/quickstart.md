@@ -14,7 +14,8 @@ target prestazionali e risultati misurati. Il branch dichiarato dalla specifica 
 001-core-background-daemon-implementation a e84e587. Prima della futura implementazione
 allineare esplicitamente branch e baseline senza perdere le modifiche di documentazione.
 
-P0 richiede prove Foundation T082/FR-016 e T085 chiuse, oltre alle suite baseline.
+Revisione approvata il 2026-11-10: P0 richiede baseline locale verde e branch allineato.
+T082/FR-016 e T085 rimangono gate di accettazione finale/rilascio, non dello sviluppo locale.
 G1 richiede confinamento Git qualificato: un flag di ambiente o una prova simulata
 non autorizzano il flusso reale. Nessuna deroga è implicita in questa review.
 

@@ -44,11 +44,15 @@ La baseline è implementata, **non completamente accettata**. Fonti:
 | T085 Foundation | Campagna completa IP-denied: 35 PASS / 11 FAIL / 1 SKIP; FAIL / OPEN | Campagna completa senza fallimenti o casi obbligatori saltati; diagnosi/correzioni nella 001 |
 | T083 idle | PASS: 600 s, RSS max 76,56 MiB inclusi worker, CPU 0,00833% di un core | Misura del solo carico Foundation, non prestazione 002 |
 
-Prima dell'implementazione 002 acquisire baseline pulita e ripetibile di build,
-typecheck, lint, suite ordinarie e chiusura documentata dei due gate aperti.
-Il piano è revisionabile ora; non certifica PASS, non concede deroghe e non corregge
-la 001. I futuri task devono riportare questi prerequisiti. Il gate G1 Git è inoltre
-obbligatorio prima dell'integrazione di probe nei flussi utente.
+**Revisione approvata dall'utente — 2026-11-10**: per iniziare lo sviluppo locale
+002 servono branch allineato, build/typecheck/lint e suite ordinarie locali ripetibili.
+Le prove reali con altro UID/seconda macchina e la campagna completa IP-denied sono
+**gate di accettazione finale/rilascio**, non prerequisiti per scrivere e testare il
+registro sul Mac corrente. I risultati Foundation rimangono NOT_RUN/FAIL finché
+non esistono nuove evidenze reali; nessuna soglia o requisito è eliminato.
+T002 registra questa separazione, T003 verifica la baseline locale e T004 chiude P0.
+T093/T096 devono verificare nuovamente i gate finali; se mancanti la readiness resta
+BLOCKED. G1 Git rimane obbligatorio prima di qualsiasi probe nei flussi utente.
 
 ## Constitution Check
 
@@ -115,7 +119,7 @@ Ordine per i futuri task; questa consegna non genera `tasks.md`.
 
 | Incremento | Contenuto | Uscita verificabile |
 |---|---|---|
-| P0 | Readiness baseline e isolamento test | Gate Foundation chiusi; suite ripetibile |
+| P0 | Baseline locale e isolamento test | Branch allineato, build/typecheck/lint e suite ordinarie verdi; gate esterni tracciati per accettazione finale |
 | G1 | Porta Git, runner confinato, ownership | Sentinelle helper/rete/scritture mai attivate anche con config concorrente; timeout/crash senza orfani non riconciliati; altrimenti STOP |
 | S1 | Schema 3/upgrade, ledger e letture readonly | Crash upgrade conserva storeId/seq/dati; readonly non migra |
 | E1 | Eventi registry persistenti minimi | Stato/esito/evento atomici e redatti, nessun falso evento su errore disco |

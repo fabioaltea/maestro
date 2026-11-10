@@ -161,8 +161,9 @@ interamente nuovo senza un bisogno concreto aumenta il lavoro.
 ## R9 — Evidenza e gate
 
 **Decision**: nessuna soglia 002 presentata come misura. Conservare failure/timeout
-nei campioni. Prerequisiti Foundation T082 e T085 aperti dichiarati nel piano e
-richiesti prima dell'implementazione. G1 e le prove finali producono evidenze nuove.
+nei campioni. Revisione approvata il 2026-11-10: T082 e T085 aperti sono gate di accettazione
+finale/rilascio; prima dello sviluppo 002 sono richieste baseline locale verde e
+tracciabilità esplicita delle prove mancanti. G1 e le prove finali producono evidenze nuove.
 
 **Rationale**: report della baseline e Constitution VII/VIII. Test mirati PASS non
 sostituiscono l'accettazione completa IP-denied FAIL. Il piano non concede deroghe.

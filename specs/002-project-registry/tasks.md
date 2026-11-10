@@ -5,9 +5,9 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione richiesta il 2026-11-10; preparazione T001 completata,
-1/96 task conclusi. T002 BLOCKED/NOT_RUN per runner non disponibile; gate P0
-ancora BLOCKED e nessun codice registry implementato.
+**Status**: implementazione locale autorizzata il 2026-11-10; T001 e T002
+conclusi (2/96). Gate con runner esterno rinviati esplicitamente all'accettazione
+finale; P0 attende baseline locale T003 e verdetto T004.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
 ## Format e convenzioni
@@ -55,16 +55,17 @@ US2 completa lista/verifica. MVP non equivale ad accettazione completa della fea
 
 | Gate | Stato alla generazione | Regola |
 |---|---|---|
-| P0: 001/T082, FR-016 | NOT_RUN per altro UID reale/seconda macchina | Prova reale necessaria; mock o mancato runner non sono PASS |
-| P0: 001/T085 | FAIL / OPEN; campagna IP-denied 35 PASS / 11 FAIL / 1 SKIP | Chiusura documentata con campagna completa applicabile |
+| Finale: 001/T082, FR-016 | NOT_RUN per altro UID reale/seconda macchina | Prova reale necessaria; mock o mancato runner non sono PASS |
+| Finale: 001/T085 | FAIL / OPEN; campagna IP-denied 35 PASS / 11 FAIL / 1 SKIP | Chiusura documentata con campagna completa applicabile |
 | G1: confinement Git/macOS | NOT_RUN | Zero helper/fork/rete/scritture verificati; fallimento blocca ogni probe utente |
 | S1/E1/E2/E3/V1 e SC-001…009 | NOT_RUN | Verifiche future distinte; nessun target già misurato per 002 |
 
 Fonti baseline: [release-readiness 001](../001-core-background-daemon/reports/release-readiness.md)
 e [criteri di ingresso del piano](plan.md#foundation-readiness-e-criteri-di-ingresso).
-La sola generazione dei task può terminare con questi gate aperti. Prima di codice 002
-P0 deve risultare PASS; se un prerequisito è indisponibile, fermare l'esecuzione
-al task relativo mantenendolo aperto. Nessuna deroga automatica o correzione 001 implicita.
+**Revisione approvata dall'utente — 2026-11-10**: P0 verifica la baseline locale.
+I gate 001/T082 e 001/T085 rimangono obbligatori per accettazione finale/rilascio,
+ma non bloccano sviluppo e test locali 002. T093/T096 conservano il controllo dei
+risultati mancanti. G1 non cambia: nessun probe utente prima del confinement qualificato.
 
 Checkout osservato: `001-core-background-daemon-implementation`, HEAD `e84e587`;
 feature selezionata in `.specify/feature.json`: 002. Allineamento futuro esplicito,
@@ -74,21 +75,20 @@ senza switch/merge/reset di branch durante questa consegna.
 
 **Goal**: Preparare l'esecuzione sulla nuova Foundation esistente, senza un nuovo bootstrap o recupero legacy.
 
-**Independent Test / Gate**: Baseline/branch identificati, T082 e T085 della 001 chiusi con evidenza reale e suite ripetibili.
+**Independent Test / Gate**: Baseline/branch identificati, suite locali verdi e gate finali mancanti esplicitamente tracciati, senza simulare PASS.
 
 ### Implementazione e verifica
 
 - [X] T001 Verificare branch, HEAD, modifiche preesistenti e feature selezionata; documentare come allineare `002-project-registry` alla baseline nuova Foundation preservando ogni modifica in `specs/002-project-registry/reports/entry-readiness.md`; nessun reset, cleanup, push o commit estraneo. **Dip.: nessuna.**
-- [ ] T002 Acquisire le prove reali richieste da T082/FR-016 della 001 tramite `tests/acceptance/local-access.test.ts` e `tests/fixtures/multi-user-runner.md`, verificando `specs/001-core-background-daemon/reports/local-access.md`; riportare runner/evidenza in `specs/002-project-registry/reports/entry-readiness.md`. Se manca secondo UID/seconda macchina lasciare NOT_RUN e il task aperto, senza creare account o sostituire la prova con mock. **Dip.: T001.**
-- [ ] T003 Verificare la chiusura di T085 della 001 e ripetere build/typecheck/lint, suite ordinarie e acceptance completa con rete IP negata previste in `package.json`; registrare comandi/esiti in `specs/001-core-background-daemon/reports/acceptance.md` e il riferimento in `specs/002-project-registry/reports/entry-readiness.md`. Failure/skip obbligatori mantengono il gate aperto; eventuali correzioni Foundation richiedono il relativo lavoro autorizzato, non una deroga nei task 002. **Dip.: T002.**
-- [ ] T004 Consolidare verdetto P0, versioni effettive Node/Git/SQLite/macOS/APFS, commit e isolamento degli archivi temporanei in `specs/002-project-registry/reports/entry-readiness.md`; dichiarare PASS soltanto dopo le prove richieste e allineamento effettivo del branch, senza dichiarare già superati G1 o i target 002. **Dip.: T003.**
+- [X] T002 Registrare la revisione approvata dei gate in `specs/002-project-registry/plan.md`, `specs/002-project-registry/tasks.md` e `specs/002-project-registry/reports/entry-readiness.md`: altro UID/seconda macchina e acceptance IP-denied restano NOT_RUN/FAIL e bloccano solo accettazione finale/rilascio; nessun account, permesso o requisito safety modificato. **Dip.: T001.**
+- [ ] T003 Eseguire build/typecheck/lint e suite ordinarie locali definite in `package.json`, registrando comandi, esiti e campioni in `specs/002-project-registry/reports/local-baseline.md`; la campagna completa IP-denied e il runner esterno restano gate finali non dichiarati PASS. Failure locali pertinenti vanno risolte o segnalate prima di P0. **Dip.: T002.**
+- [ ] T004 Consolidare verdetto P0 locale, versioni Node/Git/SQLite/macOS/APFS, commit e isolamento test in `specs/002-project-registry/reports/entry-readiness.md`; PASS richiede T003 e branch allineato, non un runner esterno. Riportare i gate finali ancora mancanti senza dichiarare pronti G1 o rilascio. **Dip.: T003.**
 
-**Esito T002 — 2026-11-10**: runner reale con altro UID/seconda macchina non
-disponibile; gli input del test cross-UID non sono configurati. Task lasciato aperto,
-nessun PASS simulato. T003–T096 non avviati; audit in
-[entry-readiness.md](reports/entry-readiness.md#t002--availability-audit).
+**Esito T002 — 2026-11-10**: modifica di sequenza approvata e registrata.
+La prova 001/T082 resta NOT_RUN, non è il task T002 riprogettato. Nessun PASS di
+sicurezza simulato e nessuna deroga ai requisiti finali.
 
-**Checkpoint**: P0 resta BLOCKED finché i due gate esterni non sono chiusi; nessun task di implementazione 002 può iniziare.
+**Checkpoint**: P0 locale passa dopo T003/T004; gate esterni conservati per T093/T096.
 
 ## Phase 2: Foundational — G1, S1 ed E1
 
@@ -309,7 +309,7 @@ nessun PASS simulato. T003–T096 non avviati; audit in
 ### Implementazione e verifica
 
 - [ ] T092 Estendere/eseguire i controlli esistenti in `tests/contract/architecture.test.ts` e `scripts/check-architecture.mjs` sui nuovi percorsi: dominio/client senza OS/SQLite/processi, stessa infrastruttura daemon/storage/eventi e nessun provider/Discovery/runtime/worktree management/pnpm/Electron; registrare risultato in `specs/002-project-registry/reports/acceptance.md`. **Dip.: T091.**
-- [ ] T093 Eseguire build/typecheck/lint, `npm test`, test:contract/integration e acceptance completa da `package.json` con rete IP negata, archivi temporanei e runner reale per accesso quando richiesto; consolidare regressioni Foundation e registry in `specs/002-project-registry/reports/acceptance.md`, mantenendo fallimenti/skip/timeout visibili e benchmark separati dal carico concorrente. **Dip.: T092.**
+- [ ] T093 Eseguire build/typecheck/lint, `npm test`, test:contract/integration e acceptance completa da `package.json` con rete IP negata, archivi temporanei e runner reale con altro UID/seconda macchina per 001/T082; se indisponibile mantenere il task di accettazione finale aperto e la readiness BLOCKED; verificare anche la chiusura reale di 001/T085 e consolidare regressioni Foundation e registry in `specs/002-project-registry/reports/acceptance.md`, mantenendo fallimenti/skip/timeout visibili e benchmark separati dal carico concorrente. **Dip.: T092.**
 - [ ] T094 Aggiornare `README.md`, `specs/002-project-registry/quickstart.md` e `AGENTS.md` con comandi realmente disponibili, errori/exit/retry, upgrade, piattaforma/profilo qualificato, scope reference/submodule e target vs misure; preservare byte per byte il blocco manuale AGENTS e non dichiarare accettati gate aperti. **Dip.: T093.**
 - [ ] T095 Verificare la copertura di FR-001…020, NFR-001…005, SC-001…009, tutti i 23 scenari delle quattro storie e gli edge case in `specs/002-project-registry/reports/acceptance.md`; controllare ≥10 crash per import/update/remove, 100 retry/20 import concorrenti, 100% configurazioni confermate preservate e 0 segreti/effetti non autorizzati. **Dip.: T094.**
 - [ ] T096 Revisionare diff, evidenze G1/S1/E1/E2/E3/V1 e stato Foundation in `specs/002-project-registry/reports/release-readiness.md`; dichiarare release ready solo con tutti i gate richiesti PASS, altrimenti BLOCKED con cause/nextAction. Una review completata non chiude automaticamente task runtime falliti o autorizza pubblicazione/fasi successive. **Dip.: T095.**
@@ -445,7 +445,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001 concluso, T002–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001/T002 conclusi, T003–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

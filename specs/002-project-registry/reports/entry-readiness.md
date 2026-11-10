@@ -1,8 +1,9 @@
 # Entry readiness — 002 Project Registry
 
 Date: 2026-11-10, Europe/Rome. Implementation requested by the user.
-Current decision: **P0 BLOCKED**. Preparation may be recorded; no registry runtime
-code is authorized by the plan until the required entry gates pass.
+Current decision after approved revision: **P0 LOCAL BASELINE PENDING**.
+User approved local development without the external runner; no final gate is waived.
+The earlier BLOCKED audit below is retained as history and superseded for ordering only.
 
 ## T001 — Inventory and branch alignment
 
@@ -82,3 +83,17 @@ from the request to begin implementation.
 Documentation validation: local links resolve and the manual AGENTS block matches
 baseline. Staged diff checking accepts intentional Markdown two-space hard breaks
 using `core.whitespace=-blank-at-eol`; no runtime tests were claimed or run.
+
+## T002 — Approved sequencing revision, 2026-11-10
+
+Result: **PASS (documentation/sequencing only)**. The user approved moving the
+real cross-UID/separate-machine verification to final acceptance, allowing local
+implementation and tests to proceed. P0 now requires aligned branch and a passing
+local build/typecheck/lint/ordinary-suite baseline. The complete IP-denied acceptance
+also remains a final gate; its historical FAIL is not converted to PASS.
+
+Updated plan/tasks/research/quickstart and generated agent context consistently.
+001/T082 remains NOT_RUN; 001/T085 remains FAIL/OPEN. No Foundation report or
+requirement was altered, no account/permissions/credentials were created or changed.
+G1 confinement remains mandatory before user-facing Git inspection. T093/T096
+must refuse final readiness if real required evidence is still absent.
