@@ -16,7 +16,8 @@ import { canonicalProjectIntent, requireLocalBranch } from '../domain/projects/i
 import { canonicalRepositoryIdentity, canonicalReferenceCheckout } from '../domain/projects/repository-evidence.js';
 import { PROJECT_ACTIONS, transitionProjectOperation, validateProjectOperationResult,
   normalizeProjectName, type Project, type ProjectObservation, type ProjectOperation, type ProjectOperationResult, type ProjectPhase } from '../domain/projects/model.js';
-import type { AcceptProjectOperation, RequestReservation, ProjectState, RegisterProjectCommit } from '../ports/registry.js';
+import type { AcceptProjectOperation, RequestReservation, ProjectState, RegisterProjectCommit, ObservationProjectCommit, RegistryPage } from '../ports/registry.js';
+import { projectDetail } from '../domain/projects/projection.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
   StoreIdentity, StoreSnapshot } from '../ports/storage.js';
@@ -283,6 +284,82 @@ export class SQLiteStore {
         startedAt: String(observed.started_at), completedAt: String(observed.completed_at) } : null;
       return { project, observation };
     })();
+  }
+  listProjects(options: { readonly limit?: number; readonly cursor?: string } = {}): RegistryPage {
+    const limit = options.limit ?? 25;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new Error('INVALID_REQUEST');
+    const database = this.registry();
+    return database.transaction(() => {
+      const storeId = this.readSnapshot()!.store.storeId;
+      const registryRevision = String((database.prepare('SELECT registry_revision FROM registry_metadata WHERE singleton=1').get() as Row).registry_revision);
+      let after = '';
+      if (options.cursor !== undefined) {
+        let cursor: { storeId: string; registryRevision: string; lastProjectId: string };
+        try {
+          if (!/^[A-Za-z0-9_-]{1,512}$/.test(options.cursor)) throw new Error();
+          cursor = JSON.parse(Buffer.from(options.cursor, 'base64url').toString('utf8')) as typeof cursor;
+          if (Object.keys(cursor).sort().join(',') !== 'lastProjectId,registryRevision,storeId') throw new Error();
+          requireUuid(cursor.storeId); requireUuid(cursor.lastProjectId);
+          if (!/^(0|[1-9][0-9]*)$/.test(cursor.registryRevision)) throw new Error();
+        } catch { throw new Error('INVALID_REQUEST'); }
+        if (cursor.storeId !== storeId) throw new Error('WRONG_STORE');
+        if (cursor.registryRevision !== registryRevision) throw new Error('REGISTRY_CHANGED');
+        after = cursor.lastProjectId;
+      }
+      const rows = database.prepare('SELECT project_id FROM projects WHERE removed_at IS NULL AND project_id>? ORDER BY project_id LIMIT ?').all(after, limit + 1) as Row[];
+      const projects: RegistryPage['projects'][number][] = [];
+      const cursorFor = (id: string) => Buffer.from(JSON.stringify({ storeId, registryRevision, lastProjectId: id })).toString('base64url');
+      for (const row of rows.slice(0, limit)) {
+        const detail = projectDetail(this.getProject(String(row.project_id))!);
+        // Reserve envelope/cursor overhead; never split a record or hold a snapshot between pages.
+        if (Buffer.byteLength(JSON.stringify({ projects: [...projects, detail], registryRevision, nextCursor: cursorFor(detail.projectId) })) > 60 * 1024 - 1024) {
+          if (!projects.length) throw new Error('OUTPUT_LIMIT');
+          break;
+        }
+        projects.push(detail);
+      }
+      return { projects, registryRevision, nextCursor: rows.length > projects.length ? cursorFor(projects.at(-1)!.projectId) : null };
+    })();
+  }
+  commitProjectObservation(input: ObservationProjectCommit): ProjectOperationResult {
+    requireUuid(input.requestId); requireUuid(input.instanceId); requireUuid(input.projectId);
+    const evidence = input.observation;
+    if (!Number.isFinite(Date.parse(evidence.startedAt)) || !Number.isFinite(Date.parse(evidence.completedAt))
+      || Date.parse(evidence.completedAt) < Date.parse(evidence.startedAt)
+      || evidence.fileStatusScope !== 'REFERENCE_CHECKOUT_DIRECT_ENTRIES'
+      || [evidence.hasCommits, evidence.trackedChanges, evidence.untrackedChanges, evidence.conflicts].some(flag => flag !== null && typeof flag !== 'boolean')
+      || !['UNCONFIGURED', 'VALID', 'INVALID', 'UNVERIFIED'].includes(evidence.baseState)) throw new Error('INVALID_REQUEST');
+    const drafts: EventDraft[] = [];
+    return this.mutate(database => {
+      const operation = this.getProjectOperation(input.requestId);
+      if (!operation || operation.action !== 'VERIFY' || operation.projectId !== input.projectId || operation.outcome !== 'IN_PROGRESS') throw new Error('INVALID_TRANSITION');
+      const instance = this.readSnapshot()?.instance;
+      if (!instance || instance.instanceId !== input.instanceId || operation.owningInstanceId !== input.instanceId || instance.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
+      const state = this.getProject(input.projectId);
+      if (!state) throw new Error('PROJECT_NOT_FOUND');
+      if (state.project.removedAt !== null) throw new Error('PROJECT_REMOVED');
+      if (state.project.configRevision !== input.expectedConfigRevision || (state.observation?.observationRevision ?? null) !== input.expectedObservationRevision) throw new Error('OBSERVATION_SUPERSEDED');
+      if (evidence.referencePath !== state.project.referenceCheckout.root.canonicalPath
+        || (state.project.baseBranch === null && (evidence.baseState !== 'UNCONFIGURED' || evidence.baseOid !== null))) throw new Error('INVALID_REQUEST');
+      const observationRevision = String(BigInt(state.observation?.observationRevision ?? '0') + 1n);
+      const saved = { ...evidence, error: evidence.error ? foundationError(evidence.error.code, { persisted: true, operationId: input.requestId }) : null };
+      database.prepare(`INSERT INTO project_observations(project_id,observation_revision,observed_config_revision,request_id,observed_instance_id,started_at,completed_at,evidence)
+        VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(project_id) DO UPDATE SET observation_revision=excluded.observation_revision,
+        observed_config_revision=excluded.observed_config_revision,request_id=excluded.request_id,observed_instance_id=excluded.observed_instance_id,
+        started_at=excluded.started_at,completed_at=excluded.completed_at,evidence=excluded.evidence`).run(input.projectId, observationRevision,
+        state.project.configRevision, input.requestId, input.instanceId, evidence.startedAt, evidence.completedAt, JSON.stringify(saved));
+      database.prepare('UPDATE registry_metadata SET registry_revision=registry_revision+1 WHERE singleton=1').run();
+      const result: ProjectOperationResult = { action: 'VERIFY', requestId: input.requestId, projectId: input.projectId, outcome: 'SUCCEEDED', effect: 'OBSERVED',
+        configRevision: state.project.configRevision, observationRevision, completedAt: input.completedAt, error: null };
+      validateProjectOperationResult(result);
+      database.prepare("UPDATE project_operations SET phase='FINALIZED',outcome='SUCCEEDED',completed_at=?,result=? WHERE request_id=?")
+        .run(input.completedAt, JSON.stringify(result), input.requestId);
+      drafts.push({ type: 'operation.completed', operationId: input.requestId, instanceId: input.instanceId,
+        payload: { scope: 'project', action: 'VERIFY', outcome: 'SUCCEEDED', effect: 'OBSERVED', projectId: input.projectId,
+          configRevision: state.project.configRevision, observationRevision } });
+      this.hooks.checkpoint?.('project.beforeCommit');
+      return result;
+    }, drafts);
   }
   commitProjectRegistration(input: RegisterProjectCommit): ProjectOperationResult {
     requireUuid(input.requestId); requireUuid(input.instanceId);

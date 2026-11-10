@@ -30,7 +30,7 @@ export interface RegistryRegistrationPort {
   getProject(projectId: string): Promise<ProjectState | null>;
 }
 export interface RegistryPage {
-  readonly projects: readonly ProjectState[];
+  readonly projects: readonly ProjectDetail[];
   readonly registryRevision: string;
   readonly nextCursor: string | null;
 }
@@ -43,4 +43,14 @@ export interface ProjectCommitContext {
   readonly requestId: string;
   readonly instanceId: string;
   readonly completedAt: string;
+}
+
+export interface ObservationProjectCommit extends ProjectCommitContext {
+  readonly projectId: string;
+  readonly expectedConfigRevision: string;
+  readonly expectedObservationRevision: string | null;
+  readonly observation: RepositoryObservationEvidence;
+}
+export interface RegistryObservationPort {
+  commitProjectObservation(input: ObservationProjectCommit): Promise<ProjectOperationResult>;
 }

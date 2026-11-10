@@ -15,7 +15,7 @@ test('observation CAS preserves config, nullable facts, base states and referenc
   const before = f.store.getProject(f.projectId)!.project;
   for (const baseState of ['VALID', 'INVALID', 'UNVERIFIED'] as const) {
     const old = f.store.getProject(f.projectId)!, intent = f.intent('VERIFY', { projectId: f.projectId });
-    f.store.acceptProjectOperation(intent);
+    f.store.acceptProjectOperation({ ...intent, projectId: f.projectId });
     const observation = { ...f.evidence.observation, baseState, baseOid: baseState === 'VALID' ? 'a'.repeat(40) : null,
       trackedChanges: null, untrackedChanges: null, conflicts: null };
     const result = store.commitProjectObservation({ requestId: intent.requestId, instanceId: f.instanceId, projectId: f.projectId,
@@ -33,7 +33,7 @@ test('a superseded verify cannot overwrite config or observation and cannot emit
   assert.equal(typeof store.commitProjectObservation, 'function');
   const saved = f.store.getProject(f.projectId)!;
   for (const [expectedConfigRevision, expectedObservationRevision] of [['2', '1'], ['1', '9']]) {
-    const intent = f.intent('VERIFY', { projectId: f.projectId }); f.store.acceptProjectOperation(intent);
+    const intent = f.intent('VERIFY', { projectId: f.projectId }); f.store.acceptProjectOperation({ ...intent, projectId: f.projectId });
     assert.throws(() => store.commitProjectObservation({ requestId: intent.requestId, instanceId: f.instanceId, projectId: f.projectId,
       expectedConfigRevision: expectedConfigRevision!, expectedObservationRevision: expectedObservationRevision!,
       observation: f.evidence.observation, completedAt: f.evidence.observation.completedAt }), /OBSERVATION_SUPERSEDED/);
