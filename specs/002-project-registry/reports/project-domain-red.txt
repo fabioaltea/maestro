@@ -1,0 +1,115 @@
+✖ project names trim outside whitespace and count Unicode scalar values rather than UTF-16 units (1.71175ms)
+✖ canonical intent ignores object insertion order but retains store, action and explicit original fields (0.263875ms)
+✖ intent rejects unsupported, ambiguous, oversized and malformed input before hashing (0.187459ms)
+✖ configuration and observation revisions increment independently with exact integer bounds (0.153209ms)
+✖ only IN_PROGRESS is pending for registry; BLOCKED and every terminal outcome forbid replay transitions (0.165458ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 49.091125
+
+✖ failing tests:
+
+test at dist-tests/tests/unit/project-domain.test.js:10:1
+✖ project names trim outside whitespace and count Unicode scalar values rather than UTF-16 units (1.71175ms)
+  AssertionError [ERR_ASSERTION]: Required contract domain/projects/model.js:normalizeProjectName is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-domain.test.js:11:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-domain.test.js:21:1
+✖ canonical intent ignores object insertion order but retains store, action and explicit original fields (0.263875ms)
+  AssertionError [ERR_ASSERTION]: Required contract domain/projects/intent.js:canonicalProjectIntent is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-domain.test.js:22:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-domain.test.js:34:1
+✖ intent rejects unsupported, ambiguous, oversized and malformed input before hashing (0.187459ms)
+  AssertionError [ERR_ASSERTION]: Required contract domain/projects/intent.js:canonicalProjectIntent is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-domain.test.js:35:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-domain.test.js:52:1
+✖ configuration and observation revisions increment independently with exact integer bounds (0.153209ms)
+  AssertionError [ERR_ASSERTION]: Required contract domain/projects/model.js:normalizeProjectName is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-domain.test.js:53:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-domain.test.js:63:1
+✖ only IN_PROGRESS is pending for registry; BLOCKED and every terminal outcome forbid replay transitions (0.165458ms)
+  AssertionError [ERR_ASSERTION]: Required contract domain/projects/model.js:normalizeProjectName is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-domain.test.js:64:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
