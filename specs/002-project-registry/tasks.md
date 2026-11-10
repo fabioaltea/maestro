@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T008 conclusi (8/96), P0 locale
+**Status**: implementazione locale in corso; T001–T009 conclusi (9/96), P0 locale
 PASS. Porte e fixture disponibili; G1 ancora da qualificare. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -104,7 +104,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 - [X] T007 [P] Scrivere contratti del runner in `tests/contract/git-runner.test.ts`: binario assoluto, argv builtin, ambiente allowlisted, sandbox obbligatorio, capacità assente, stdout/config 1 MiB e stderr 16 KiB; nessun output grezzo nel risultato. Verificare il profilo del build compilato anche da un cwd esterno al repository. **Dip.: T006.**
 - [X] T008 [P] Scrivere contratti di lifeline/nonce/generazione/handle posseduto in `tests/contract/project-probe-supervisor.test.ts`: EOF, deadline e stop, riuso PID, socket assente non prova di uscita e cancellazione ≤1,5 s; nessuna policy Agent Runtime. **Dip.: T006.**
-- [ ] T009 [P] Scrivere contratti di anchor APFS e path in `tests/contract/repository-identity.test.ts`: realpath/volume-device/inode/birthtime, alias/spazi/Unicode/newline, common-dir distinto da checkout/admin-dir, replacement e incertezza senza rebind. **Dip.: T006.**
+- [X] T009 [P] Scrivere contratti di anchor APFS e path in `tests/contract/repository-identity.test.ts`: realpath/volume-device/inode/birthtime, alias/spazi/Unicode/newline, common-dir distinto da checkout/admin-dir, replacement e incertezza senza rebind. **Dip.: T006.**
 
 ### Implementazione e verifica
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T008 conclusi, T009–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T009 conclusi, T010–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

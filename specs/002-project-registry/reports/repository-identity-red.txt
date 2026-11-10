@@ -1,0 +1,75 @@
+✖ canonical APFS anchors preserve Unicode, spaces and newlines without trimming and match symlink aliases (4.805083ms)
+✖ common repository and per-worktree admin/root evidence are distinct and do not follow remote or HEAD (655.282417ms)
+✖ same path replacement and moved paths never become verified rebindings (1.483917ms)
+✖ missing, unreadable, invalid and wrong-kind evidence returns safe errors rather than raw filesystem paths (1.040041ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 752.402166
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/repository-identity.test.js:13:1
+✖ canonical APFS anchors preserve Unicode, spaces and newlines without trimming and match symlink aliases (4.805083ms)
+  AssertionError [ERR_ASSERTION]: required filesystem identity evidence adapter has not been implemented
+      at loadIdentity (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-identity.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-identity.test.js:18:28)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-identity.test.js:29:1
+✖ common repository and per-worktree admin/root evidence are distinct and do not follow remote or HEAD (655.282417ms)
+  AssertionError [ERR_ASSERTION]: required filesystem identity evidence adapter has not been implemented
+      at loadIdentity (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-identity.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-identity.test.js:33:28)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-identity.test.js:44:1
+✖ same path replacement and moved paths never become verified rebindings (1.483917ms)
+  AssertionError [ERR_ASSERTION]: required filesystem identity evidence adapter has not been implemented
+      at loadIdentity (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-identity.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-identity.test.js:48:28)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/repository-identity.test.js:57:1
+✖ missing, unreadable, invalid and wrong-kind evidence returns safe errors rather than raw filesystem paths (1.040041ms)
+  AssertionError [ERR_ASSERTION]: required filesystem identity evidence adapter has not been implemented
+      at loadIdentity (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-identity.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/repository-identity.test.js:59:28)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
