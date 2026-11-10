@@ -4,7 +4,9 @@ import { openJournal } from './event-journal.js';
 import { redactEventDraft } from '../protocol/events.js';
 import { MAX_OUTBOX_BYTES, type EventDraft, type EventPage, type EventState } from '../protocol/messages.js';
 import type { EventRecord } from '../ports/storage.js';
-import Database from 'better-sqlite3';
+import Database from './sqlite-driver.js';
+import { openReadonlyDatabase } from './readonly-database.js';
+import { prepareOwnershipLeaseFiles } from '../platform/macos/lease.js';
 import { constants, closeSync, existsSync, lstatSync, openSync } from 'node:fs';
 import { dirname, isAbsolute, join } from 'node:path';
 import { initializeSchema, SCHEMA_VERSION } from './schema.js';
@@ -18,7 +20,9 @@ import { foundationError, type SafeError } from '../domain/errors.js';
 import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
   StoreIdentity, StoreSnapshot } from '../ports/storage.js';
 
-export interface StorageOptions { readonly path: string; readonly readonly?: boolean; readonly identity?: StoreIdentity }
+export interface StorageOptions { readonly path: string; readonly readonly?: boolean; readonly identity?: StoreIdentity;
+  /** Private host attestation: both existing lease handles are held for this read. */
+  readonly readonlyQuiescent?: boolean }
 type Row = Record<string, string | number | bigint | null>;
 const parseError = (raw: Row[string] | undefined): SafeError | null => {
   if (typeof raw !== 'string') return null;
@@ -33,6 +37,7 @@ export class SQLiteStore {
   private journal: ReturnType<typeof openJournal> | undefined;
   private eventError: string | null = null;
   private archiveVersion = SCHEMA_VERSION;
+  private releaseReadLeases: (() => void) | undefined;
   constructor(options: StorageOptions, private readonly hooks: {checkpoint?(point: string): void} = {}) {
     this.directory = dirname(options.path);
     this.readOnly = options.readonly ?? false;
@@ -44,13 +49,16 @@ export class SQLiteStore {
       || (parent.mode & 0o777) !== 0o700) throw new Error('UNAUTHORIZED');
     if (!existed) {
       if (!options.identity) throw new Error('PERSISTENCE_UNAVAILABLE');
+      prepareOwnershipLeaseFiles(dirname(options.path));
       const fd = openSync(options.path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
       closeSync(fd);
     }
     const info = lstatSync(options.path);
     if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1 || info.uid !== process.getuid!()
       || (info.mode & 0o777) !== 0o600) throw new Error('UNAUTHORIZED');
-    const database = new Database(options.path, { readonly: this.readOnly, fileMustExist: true, timeout: 50 });
+    const reader = this.readOnly ? openReadonlyDatabase(options.path, options.readonlyQuiescent) : undefined;
+    this.releaseReadLeases = reader?.release;
+    const database = reader?.database ?? new Database(options.path, { fileMustExist: true, timeout: 50 });
     this.database = database;
     try {
       if (!existed) initializeSchema(database, options.identity!);
@@ -74,7 +82,7 @@ export class SQLiteStore {
       database.pragma('wal_autocheckpoint = 0');
       }
       database.defaultSafeIntegers(true);
-    } catch (error) { database.close(); this.database = null; throw error; }
+    } catch (error) { database.close(); this.releaseReadLeases?.(); this.database = null; throw error; }
   }
 
   private writable(): Database.Database {
@@ -531,7 +539,7 @@ export class SQLiteStore {
       credentialRef: row.credential_ref as string | null, observation: row.observation as ManagedResource['observation'],
       releaseState: row.release_state as ManagedResource['releaseState'] }));
   }
-  close(): void { this.database?.close(); this.database = null; }
+  close(): void { try { this.database?.close(); this.database = null; } finally { this.releaseReadLeases?.(); } }
   recordControllerAttempt(attempt: ControllerAttemptRecord): void {
     requireUuid(attempt.attemptId); requireUuid(attempt.requestId);
     this.mutate(database => database.prepare('INSERT INTO controller_attempts VALUES (?,?,?,?,?,?,?)')

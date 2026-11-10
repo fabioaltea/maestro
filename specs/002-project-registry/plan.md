@@ -2,7 +2,7 @@
 
 **Feature branch**: `002-project-registry` | **Date**: 2026-11-10 | **Spec**: [spec.md](spec.md)  
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/spec.md`  
-**Status**: implementazione locale in corso; T001–T028 conclusi, G1 e primo incremento E1 qualificati.  
+**Status**: implementazione locale in corso; T001–T034 conclusi, G1/S1/E1 comuni qualificati; storie ancora da implementare.  
 **Checkout osservato**: `001-core-background-daemon-implementation`, baseline `e84e587`.
 Il selettore `.specify/feature.json` individua la 002 indipendentemente dal branch.
 Implementazione sul branch 002 allineato alla baseline; un commit locale per task.
@@ -84,12 +84,16 @@ flowchart LR
   R --> G[RepositoryInspector]
   G --> P[Git e confinement macOS]
   C --> O[Core inspect read-only]
-  O --> W
+  O --> RO[Processo read-only confinato]
+  RO --> DB[(SQLite Foundation)]
+  W --> DB
 ```
 
 Il dominio non importa filesystem, processi o driver. I client inviano intenti;
 il core applica policy. Il core inspect apre readonly come nella Foundation,
-senza esporre SQLite ai client. Porte isolano Git, identità filesystem e process
+senza esporre SQLite ai client. Le letture native passano da un processo transitorio
+confinato senza scritture/fork/rete; il writer resta nel worker esistente. Porte
+isolano Git, identità filesystem e process
 ownership. Nessun secondo daemon, database o scheduler generico.
 
 Le mutazioni vengono accettate durevolmente e completate in background; una RPC
@@ -159,6 +163,7 @@ src/core/projects/               # coordinamento registry
 src/ports/registry.ts            # persistenza e query
 src/ports/repository.ts          # ispezione e identità
 src/platform/macos/git/          # processi e confinement
+src/platform/macos/storage/      # profilo delle letture SQLite native
 src/storage/                    # schema/worker/transazioni estesi
 src/protocol/                   # metodi, errori e payload eventi
 src/core/{daemon-main,inspect-main,control-main}.ts
@@ -167,7 +172,7 @@ src/cli/                        # sottocomandi project
 tests/{unit,contract,integration,acceptance}/
 ```
 
-Percorsi nuovi proposti, non implementati. Dominio/client non importano adapter OS
+Porte, adapter e Foundation comune implementati; le storie utente seguono i task. Dominio/client non importano adapter OS
 o SQLite; i composition root collegano le porte esistenti e nuove.
 
 ## Complexity Tracking
@@ -179,4 +184,5 @@ o SQLite; i composition root collegano le porte esistenti e nuove.
 | Schema 2 → 3 | Estensione della nuova Foundation | Secondo DB perde atomicità con outbox; nessuna migrazione del vecchio Maestro |
 | Revisioni config/osservazione distinte | Verify non invalida approvazioni config | Contatore unico violerebbe FR-012 |
 
-Nessuna violazione costituzionale. Consegna limitata agli artefatti di progettazione.
+Nessuna violazione costituzionale. Implementazione autorizzata sul branch 002;
+nessuna pubblicazione o feature successiva implicita.

@@ -106,12 +106,19 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
       void process.bootstrap?.then(value => { bootstrap = value; });
       void process.exit.then(() => { exited = true; });
       while (performance.now() < deadline) {
-        let operation;
-        try { operation = await readOperationFromArchive(intent.canonicalStateDir, intent.requestId); }
-        catch { /* Initialization may not yet have committed its schema. */ }
+        // Give the controller its ownership/admission turn before an offline
+        // snapshot briefly reserves the same leases. Bootstrap acknowledgment is
+        // emitted only after the intent is durable; this never replays effects.
+        if (process.bootstrap && bootstrap === null && !exited) {
+          await new Promise<void>(resolve => setTimeout(resolve, Math.min(25, Math.max(1, deadline - performance.now()))));
+          continue;
+        }
         if (bootstrap !== null && !(bootstrap as {accepted: boolean}).accepted) {
           return failureResult(classifyError(new Error((bootstrap as {errorCode?: string}).errorCode ?? 'INTERNAL_ERROR')), intent.requestId);
         }
+        let operation;
+        try { operation = await readOperationFromArchive(intent.canonicalStateDir, intent.requestId); }
+        catch { /* Initialization may not yet have committed its schema. */ }
         // Exit can arrive while the previous read still held an older SQLite snapshot.
         if (exited && operation?.outcome === 'IN_PROGRESS') {
           try { operation = await readOperationFromArchive(intent.canonicalStateDir, intent.requestId); }

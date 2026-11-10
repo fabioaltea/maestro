@@ -50,6 +50,21 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
   const adapter = createPlatformPaths();
   const paths = await adapter.resolveArchive(directory, 'read');
   if (!paths) return absentResult();
+  // A verified live observation remains available when the daemon's storage
+  // worker has failed and no safe offline WAL view can be opened.
+  try {
+    const key = await adapter.readCredential(paths.clientKeyFile);
+    const response = await createLocalTransport().call(paths.daemonEndpoint, key, {
+      protocolVersion: 1, correlationId: randomUUID(), method: 'status.get', params: {},
+    }, 1_000);
+    const data = response.data as Record<string, unknown> | null;
+    if (response.result === 'OK' && data) {
+      const storeId = requireUuid(data.storeId), instanceId = requireUuid(data.instanceId);
+      return { protocolVersion: 1, requestId: null, storeId, instanceId,
+        result: 'OK', outcome: null, freshness: data.freshness === 'VOLATILE' ? 'VOLATILE' : 'LIVE', liveness: 'LIVE_VERIFIED', error: null,
+        data: { ...data, status: 'PRESENT', observedAt: new Date().toISOString() } };
+    }
+  } catch { /* Offline inspection below preserves files and never repairs sidecars. */ }
   const store = await openStorage({ path: paths.stateFile, readonly: true });
   let snapshot;
   let observability;
@@ -66,20 +81,6 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
   finally { await store.close(); }
   if (!snapshot) return absentResult();
   const instance = snapshot.instance;
-  if (instance) {
-    try {
-      const key = await adapter.readCredential(paths.clientKeyFile);
-      const response = await createLocalTransport().call(paths.daemonEndpoint, key, {
-        protocolVersion: 1, correlationId: randomUUID(), method: 'status.get', params: {},
-      }, 1_000);
-      const data = response.data as Record<string, unknown> | null;
-      if (response.result === 'OK' && data?.storeId === snapshot.store.storeId && data.instanceId === instance.instanceId) {
-        return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: instance.instanceId,
-          result: 'OK', outcome: null, freshness: data.freshness === 'VOLATILE' ? 'VOLATILE' : 'LIVE', liveness: 'LIVE_VERIFIED', error: null,
-          data: { ...data, status: 'PRESENT', observedAt: new Date().toISOString() } };
-      }
-    } catch { /* A failed live observation must not rewrite the saved state. */ }
-  }
   const liveness = instance && instance.lifecycle !== 'STOPPED'
     ? await createProcessIdentity().probeAbsent(instance.pid) : 'ABSENT';
   return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: instance?.instanceId ?? null,

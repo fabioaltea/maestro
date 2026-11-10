@@ -30,7 +30,11 @@ Elenco/dettaglio/operation offline non creano directory, DB o sidecar, non migra
 non drenano e non cancellano socket. Su schema 2 l'assenza di registry è
 REGISTRY_NOT_INITIALIZED; su versione sconosciuta STATE_INCOMPATIBLE. Non inventare
 un elenco vuoto o uno storeId. Se assente: STATE_ABSENT. Apertura readonly segue
-la Foundation, senza passare al writer per aggirare restrizioni WAL/SHM.
+la Foundation: processo transitorio confinato anche per il driver nativo, nessun
+accesso writer allo stato. URI interni RO; eventuale immutable solo con prova
+quiescente sotto entrambi i lease esistenti, tenuti per la singola osservazione.
+Assenza o race dei sidecar non autorizza creazione/riparazione né un immutable
+senza prova. Writer e cataloghi restano nello stesso worker e store Foundation.
 
 ## Admission e intento
 

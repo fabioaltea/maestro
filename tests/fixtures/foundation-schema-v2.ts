@@ -2,6 +2,7 @@
 import Database from 'better-sqlite3';
 import { chmodSync } from 'node:fs';
 import { join } from 'node:path';
+import { prepareOwnershipLeaseFiles } from '../../src/platform/macos/lease.js';
 
 export const FOUNDATION_V2_SQL = `
 CREATE TABLE store (
@@ -88,6 +89,7 @@ INSERT INTO journal_metadata(singleton) VALUES(1);
 CREATE INDEX resources_by_instance ON managed_resources(owning_instance_id, release_state);
 `;
 export function createFoundationV2(directory: string): { path: string; storeId: string; requestId: string } {
+  prepareOwnershipLeaseFiles(directory);
   const path = join(directory, 'state.sqlite');
   const database = new Database(path);
   chmodSync(path, 0o600);

@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
 import { foundationError, type ErrorCode, type SafeError } from '../../domain/errors.js';
 import { requireUuid } from '../../domain/identifiers.js';
 import { canonicalProjectIntent, normalizeProjectCommand } from '../../domain/projects/intent.js';
@@ -157,7 +158,11 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
       return { accepted: false, error: foundationError('BLOCKED') };
     }
     requestId = requireUuid(requestId);
-    const command = normalizeProjectCommand(action, input);
+    const original = normalizeProjectCommand(action, input);
+    // Absolute input was validated first. This is lexical normalization only;
+    // filesystem aliases and Git-derived defaults never change the retry hash.
+    const command = original.action === 'REGISTER'
+      ? { ...original, params: { ...original.params, path: resolve(original.params.path) } } : original;
     const canonicalIntent = canonicalProjectIntent(snapshot.store.storeId, action, command.params);
     const payloadHash = createHash('sha256').update(canonicalIntent).digest('hex');
     const reserved = await storage.getRequestReservation(requestId);

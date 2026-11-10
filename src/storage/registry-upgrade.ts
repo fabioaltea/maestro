@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import Database from './sqlite-driver.js';
 import { lstatSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ArchivePaths, LeaseHandle } from '../ports/platform.js';

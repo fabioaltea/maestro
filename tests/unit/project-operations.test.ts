@@ -217,3 +217,14 @@ test('shutdown retains storage until resource bookkeeping settles even after phy
   assert.equal(await stopping, 'ABSENT');
   assert.equal([...f.records.values()][0]?.outcome, 'INTERRUPTED');
 });
+
+test('core normalizes absolute input paths lexically before idempotency without resolving filesystem aliases', async () => {
+  const f = await fixture();
+  const requestId = randomUUID();
+  await f.api.admit(client, 'REGISTER', requestId, { path: '/unavailable/extra/../original/', name: 'Maestro' });
+  const retry = await f.api.admit(client, 'REGISTER', requestId, { path: '/unavailable/original', name: 'Maestro' });
+  assert.equal(retry.accepted, true);
+  assert.equal(JSON.parse(f.records.get(requestId)!.canonicalIntent).params.path, '/unavailable/original');
+  await flush(); assert.equal(f.invocations.length, 1);
+  await f.api.shutdown();
+});

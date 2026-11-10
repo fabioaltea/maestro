@@ -32,6 +32,7 @@ export interface LeaseHandle {
 export type LeaseAttempt = { readonly status: 'HELD'; readonly handle: LeaseHandle }
   | { readonly status: 'BUSY' | 'UNKNOWN' };
 export interface OwnershipLease { tryAcquire(path: string, scope: LeaseScope): LeaseAttempt }
+export interface ExistingOwnershipLease { tryAcquireExisting(path: string, scope: LeaseScope): LeaseAttempt }
 
 export interface ProcessExit { readonly code: number | null; readonly signal: string | null }
 export interface ObservedProcess {

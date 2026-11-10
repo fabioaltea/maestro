@@ -202,3 +202,33 @@ Crash reali pre/post commit e injection FULL/IO/BUSY confermano atomicità; vedi
 reports/project-schema-upgrade-green.txt. Readonly schema 2 resta leggibile dalla
 Foundation; la query registry esplicita REGISTRY_NOT_INITIALIZED è qualificata
 con il collegamento worker T025, senza upgrade implicito.
+
+
+### T034 — letture SQLite native senza creazione di sidecar
+
+La prova offline ha mostrato che readonly sul driver non basta: può creare WAL/SHM.
+Una race deterministica (writer chiuso dopo apertura del reader ma prima della query)
+ha mostrato che anche readonly_shm=1 può tentare di ricreare WAL. Il vincolo OS è
+quindi applicato al processo transitorio di lettura, non soltanto alle API Node.
+Il profilo shipped nega scritture, fork e rete; il writer resta nel worker originale.
+Non ci sono un nuovo daemon, un secondo store o dipendenze runtime aggiunte.
+
+Il driver qualificato legge SQLITE_USE_URI al primo caricamento nativo: il wrapper
+interno lo imposta prima dell'inizializzazione e costruisce URI escaped con soli
+parametri fissi mode=ro/readonly_shm=1. Non si accettano URI da client. Quando WAL/SHM
+sono assenti, immutable=1 viene usato solo sotto entrambi i lease esistenti realmente
+riservati dal parent, mantenuti fino alla chiusura della query/uscita del reader.
+Prenotare un lease richiede un descrittore RW per il vero lock POSIX, ma non crea o
+modifica il file lease. Le prove hanno rifiutato l'ipotesi iniziale che BEGIN su un
+descrittore RO fornisse quel lock. Le query non aprono mai lo stato come writer.
+
+Ogni richiesta apre/chiude la propria vista: una connessione immutable persistente
+non deve nascondere commit successivi né bloccare controller futuri. Il client
+control attende l'ack bootstrap prima di leggere il ledger, evitando contesa con
+la prenotazione temporanea del medesimo control lease. Status tenta prima IPC
+autenticato: resta VOLATILE osservabile se il worker del daemon è morto.
+
+Riferimenti primari: [SQLite WAL readonly](https://www.sqlite.org/wal.html#read_only_databases)
+e [avvertenza immutable](https://www.sqlite.org/uri.html#uriimmutable). La scelta
+readonly_shm dipende dal VFS della versione SQLite fissata, verificato nel sorgente
+locale della dipendenza e con sentinelle reali; non si promette portabilità implicita.

@@ -1,0 +1,16 @@
+✖ core normalizes absolute input paths lexically before idempotency without resolving filesystem aliases (6.446791ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 51.460708
+
+✖ failing tests:
+
+test at dist-tests/tests/unit/project-operations.test.js:217:1
+✖ core normalizes absolute input paths lexically before idempotency without resolving filesystem aliases (6.446791ms)
+  Error: IDEMPOTENCY_CONFLICT
+      at admitNow (file:///Users/fabioaltea/Repository/maestro/dist-tests/src/core/projects/operations.js:171:23)

@@ -3,11 +3,11 @@ import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
-const methods = ['captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
+export const methods = ['captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
-type Method = typeof methods[number];
+export type Method = typeof methods[number];
 interface Request { id: number; method: Method; args: unknown[] }
 
 export function classifyStorageFailure(error: unknown): SafeError {
@@ -72,6 +72,7 @@ if (!isMainThread) {
 
 export async function openStorage(options: StorageOptions, host: { observeWorker?(worker: Worker): void } = {}): Promise<StoragePort> {
   if (!isMainThread) throw new Error('INVALID_REQUEST');
+  if (options.readonly) return (await import('./readonly-host.js')).openReadonlyStorage(options);
   const worker = new Worker(new URL('./worker.js', import.meta.url), { workerData: options, execArgv: [] });
   host.observeWorker?.(worker);
   let failure: SafeError | null = null;
@@ -134,6 +135,16 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
       worker.postMessage({ id, method, args });
     });
   }
+  return createStorageProxy(call, listener => { listeners.add(listener); if (failure) queueMicrotask(() => listener(failure!)); return () => listeners.delete(listener); }, async () => {
+    if (exited || closing) return;
+    const exit = new Promise<void>(resolve => worker.once('exit', () => resolve()));
+    const result = call<void>('close', []);
+    closing = true;
+    try { await result; await exit; }
+    catch (error) { await worker.terminate(); throw error; }
+  });
+}
+export function createStorageProxy(call: <T>(method: Method, args: unknown[]) => Promise<T>, onFailure: StoragePort['onFailure'], close: StoragePort['close']): StoragePort {
   return {
     getRequestReservation: id => call('getRequestReservation', [id]),
     acceptProjectOperation: intent => call('acceptProjectOperation', [intent]),
@@ -146,7 +157,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
     captureEventState: () => call('captureEventState', []),
     getEventState: verify => call('getEventState', [verify ?? false]),
     listEvents: options => call('listEvents', [options ?? {}]),
-    onFailure: listener => { listeners.add(listener); if (failure) queueMicrotask(() => listener(failure!)); return () => listeners.delete(listener); },
+    onFailure,
     listTickets: id => call('listTickets', [id]),
     reopenOperation: id => call('reopenOperation', [id]),
     retireTicket: (id, generation, pid) => call('retireTicket', [id, generation, pid]),
@@ -172,13 +183,6 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
     recordControllerAttempt: attempt => call('recordControllerAttempt', [attempt]),
     getControllerAttempt: id => call('getControllerAttempt', [id]),
     finishControllerAttempt: (id, endedAt, result) => call('finishControllerAttempt', [id, endedAt, result]),
-    async close() {
-      if (exited || closing) return;
-      const exit = new Promise<void>(resolve => worker.once('exit', () => resolve()));
-      const result = call<void>('close', []);
-      closing = true;
-      try { await result; await exit; }
-      catch (error) { await worker.terminate(); throw error; }
-    },
+    close,
   };
 }

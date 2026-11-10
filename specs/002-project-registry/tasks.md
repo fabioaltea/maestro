@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T033 conclusi (33/96), P0 locale
+**Status**: implementazione locale in corso; T001–T034 conclusi (34/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -156,7 +156,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 - [X] T031 Integrare recovery/stop registry in `src/core/projects/recovery.ts`, `src/core/daemon-main.ts` e `src/core/lifecycle.ts`: riconciliare supervisor verificati e finalizzare pending INTERRUPTED prima di RUNNING; fence prima STOPPING, budget stop 10 s/drain 8 s e BLOCKED se risorse/storage incerti. **Dip.: T030, T011.**
 - [X] T032 Predisporre dispatch autenticato e `projects.operation.get` in `src/core/projects/dispatch.ts`, `src/core/daemon-main.ts`, `src/core/inspect-main.ts` e `src/core/runtime.ts`; usare stato capacità Git cached al bootstrap, nessun probe in status/query, mutazioni solo client/RUNNING e ruolo controller senza permessi registry. **Dip.: T031, T026.**
 - [X] T033 Aggiungere polling condiviso 50–250 ms, requestId stabile e query esito live/offline in `src/client/local-client.ts` e `src/ports/platform.ts`; capability/versione assente rifiutata, timeout UNKNOWN_OUTCOME senza nuovo ID o autostart. **Dip.: T032.**
-- [ ] T034 Eseguire test comuni, upgrade con fault injection e controlli di autorizzazione/lifecycle in `tests/integration/project-foundation.test.ts`; consolidare S1/E1 in `specs/002-project-registry/reports/foundation.md` con run/exit/campioni e verificare che risultati/readonly funzionino anche durante failure worker. **Dip.: T033, T028, T023, T016.**
+- [X] T034 Eseguire test comuni, upgrade con fault injection e controlli di autorizzazione/lifecycle in `tests/integration/project-foundation.test.ts`; consolidare S1/E1 in `specs/002-project-registry/reports/foundation.md` con run/exit/campioni e verificare che risultati/readonly funzionino anche durante failure worker. **Dip.: T033, T028, T023, T016.**
 
 **Checkpoint**: G1, S1 ed E1 PASS; tutti i test foundation verdi. Un G1 FAIL blocca i probe utente: nessun fallback non confinato.
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T033 conclusi, T034–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T034 conclusi, T035–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

@@ -6,7 +6,7 @@ Auto-generated from all feature plans. Last updated: 2026-11-10
 
 - TypeScript 6.0.3 strict, Node.js 26.13.0 LTS, ESM/NodeNext; better-sqlite3 13.0.3; API native Node (001-core-background-daemon).
 - SQLite locale con WAL e synchronous FULL; lease separati; schema 3 con outbox e journal eventi bounded.
-- 002-project-registry (implementazione in corso): Git Xcode 2.50.1 (Apple Git-155) verificato tramite xcrun; adapter macOS di ispezione confinata qualificato G1. Schema 3 e upgrade esclusivo implementati nello stesso store. Nessuna dipendenza runtime aggiunta.
+- 002-project-registry (implementazione in corso): Git Xcode 2.50.1 (Apple Git-155) verificato tramite xcrun; adapter macOS di ispezione confinata qualificato G1. Schema 3 e upgrade esclusivo implementati nello stesso store. Letture SQLite native in processo transitorio confinato; writer nel worker esistente. Nessuna dipendenza runtime aggiunta.
 
 ## Project Structure
 
@@ -37,11 +37,11 @@ npm run bench:foundation
 TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o driver SQLite.
 
 ## Recent Changes
-- 002-project-registry: T001–T028 conclusi, G1 e primo incremento E1 PASS, 207 test ordinari verdi;
-  registro e CLI non ancora disponibili. Feature selezionata da `.specify/feature.json`: consultare
+- 002-project-registry: T001–T034 conclusi, G1/S1/E1 comuni PASS, 231 test ordinari verdi;
+  query esiti registry live/offline disponibile nell’API; comandi delle storie ancora assenti. Feature selezionata da `.specify/feature.json`: consultare
   `specs/002-project-registry/`. Import da worktree esistenti senza gestione worktree;
   readiness Foundation T082/T085 restano gate finali; per sviluppo locale basta
-  baseline verde. Codec registry disponibili, dispatch/CLI ancora da implementare.
+  baseline verde. Codec e query esiti autenticata disponibili; nessuna mutazione registry pubblica ancora abilitata.
   Implementazione autorizzata; un commit locale per task. Nessun push implicito.
 
 - 001-core-background-daemon: Foundation implementata; diagnostica con categorie
