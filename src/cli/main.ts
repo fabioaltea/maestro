@@ -63,7 +63,7 @@ export async function runCli(args: readonly string[]): Promise<number> {
     } });
     json = values.json ?? false;
     if (values.help) {
-      await write('maestro daemon start|status|stop|restart|diagnostics [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon events [--limit 1..1000 | --follow] [--after CURSOR] [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\nmaestro project add|show|operation (maestro project --help)\n');
+      await write('maestro daemon start|status|stop|restart|diagnostics [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon events [--limit 1..1000 | --follow] [--after CURSOR] [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\nmaestro project add|list|show|verify|operation (maestro project --help)\n');
       return 0;
     }
     if (values.version) { await write(VERSION + '\n'); return 0; }

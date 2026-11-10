@@ -9,7 +9,7 @@ test('registry dispatch authorizes before private lookup, projects only public f
   const f = await createRegistryStore(t);
   const input = f.intent(); f.store.acceptProjectOperation(input);
   let reads = 0;
-  const dispatch = createProjectDispatch({ storage: { getEventState: async () => f.store.getEventState(), getProject: async id => f.store.getProject(id) }, operations: {
+  const dispatch = createProjectDispatch({ storage: { getEventState: async () => f.store.getEventState(), getProject: async id => f.store.getProject(id), listProjects: async options => f.store.listProjects(options) }, operations: {
     get: async (_peer, id) => { reads++; return f.store.getProjectOperation(id); }, admit: async () => { throw new Error('unfinished method must not run'); },
   } });
   const request: RpcRequest = { protocolVersion: 1, correlationId: randomUUID(), method: 'projects.operation.get', params: { requestId: input.requestId } };
@@ -20,10 +20,10 @@ test('registry dispatch authorizes before private lookup, projects only public f
   const pending = await dispatch(request, client, snapshot);
   assert.equal(pending.result, 'BUSY'); assert.equal(reads, 1);
   assert.doesNotMatch(JSON.stringify(pending), /payloadHash|canonicalIntent|owningInstanceId|not-present/);
-  assert.deepEqual(PROJECT_METHODS, ['projects.operation.get', 'projects.register', 'projects.get']);
+  assert.deepEqual(PROJECT_METHODS, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify']);
   const missing = await dispatch({ ...request, params: { requestId: randomUUID() } }, client, snapshot);
   assert.equal((missing.data as { code: string }).code, 'OPERATION_NOT_FOUND');
-  const unfinished = await dispatch({ ...request, method: 'projects.verify', params: { requestId: randomUUID(), projectId: randomUUID() } }, client, snapshot);
+  const unfinished = await dispatch({ ...request, method: 'projects.remove', params: { requestId: randomUUID(), projectId: randomUUID(), expectedRevision: '1' } }, client, snapshot);
   assert.equal((unfinished.data as { code: string }).code, 'UNSUPPORTED_VERSION');
   assert.equal((unfinished.data as { accepted: boolean }).accepted, false);
 });

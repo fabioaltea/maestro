@@ -6,10 +6,10 @@ import type { StoragePort, StoreSnapshot } from '../../ports/storage.js';
 import { requireProjectClient, validateProjectParams } from '../../protocol/validation.js';
 import { classifyError } from '../control-main.js';
 import type { createProjectOperations } from './operations.js';
-import { readProject } from './read.js';
+import { readProject, readProjects } from './read.js';
 
 /** Add methods here only as their story implementation becomes available. */
-export const PROJECT_METHODS: readonly string[] = ['projects.operation.get', 'projects.register', 'projects.get'];
+export const PROJECT_METHODS: readonly string[] = ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify'];
 export function projectOperationView(operation: ProjectOperation): ProjectOperationView {
   return { requestId: operation.requestId, action: operation.action, projectId: operation.projectId,
     phase: operation.phase, outcome: operation.outcome, acceptedAt: operation.acceptedAt,
@@ -21,7 +21,7 @@ export function projectOperationStatus(operation: Pick<ProjectOperation, 'outcom
 }
 export function createProjectDispatch(options: {
   readonly operations: Pick<ReturnType<typeof createProjectOperations>, 'get' | 'admit'>;
-  readonly storage: Pick<StoragePort, 'getEventState' | 'getProject'>;
+  readonly storage: Pick<StoragePort, 'getEventState' | 'getProject' | 'listProjects'>;
 }) {
   return async (request: RpcRequest, peer: AuthenticatedPeer, snapshot: StoreSnapshot): Promise<RpcResponse> => {
     const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
@@ -29,14 +29,17 @@ export function createProjectDispatch(options: {
       requireProjectClient(peer.role);
       validateProjectParams(request.method, request.params);
       if (!PROJECT_METHODS.includes(request.method)) throw new Error('UNSUPPORTED_VERSION');
+      if (request.method === 'projects.list') {
+        return { ...base, result: 'OK', data: { storeId: snapshot.store.storeId, ...await readProjects(options.storage, request.params) } };
+      }
       if (request.method === 'projects.get') {
         return { ...base, result: 'OK', data: { storeId: snapshot.store.storeId,
           project: await readProject(options.storage, request.params.projectId as string) } };
       }
-      if (request.method === 'projects.register') {
+      if (request.method === 'projects.register' || request.method === 'projects.verify') {
         if (snapshot.instance?.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
         const { requestId, ...params } = request.params;
-        const admission = await options.operations.admit(peer, 'REGISTER', requestId as string, params);
+        const admission = await options.operations.admit(peer, request.method === 'projects.verify' ? 'VERIFY' : 'REGISTER', requestId as string, params);
         if (!admission.accepted) return { ...base, result: admission.error.code === 'BUSY' ? 'BUSY' : 'BLOCKED',
           data: { storeId: snapshot.store.storeId, requestId, accepted: false, outcome: null, code: admission.error.code, error: admission.error } };
         if (admission.operation.outcome === 'IN_PROGRESS') return { ...base, result: 'BUSY', data: {

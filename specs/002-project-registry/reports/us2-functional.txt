@@ -1,0 +1,22 @@
+✔ registry dispatch authorizes before private lookup, projects only public fields and refuses unfinished methods (73.456625ms)
+✔ live registry pages are bounded and store/revision bound; observations remain LAST_KNOWN (6543.660959ms)
+✔ verify persists OBSERVED with stable configuration; CLI list and offline operation use the same archive (3836.452625ms)
+✔ registry observations on an absent archive have zero filesystem effects and never start the daemon (22.346375ms)
+✔ offline schema 2 registry query reports uninitialized and preserves the known Foundation database (105.380666ms)
+✔ explicit start refuses occupied daemon ownership before upgrade, then upgrades safely once it is released (1348.110875ms)
+✔ real local authentication does not grant controller credentials access to private registry outcomes (57.364166ms)
+✔ verify preserves fixed reference and configuration for moved checkout (2375.967917ms)
+✔ verify preserves fixed reference and configuration for denied checkout (2439.379042ms)
+✔ verify preserves fixed reference and configuration for replacement checkout (2457.875458ms)
+✔ verify preserves fixed reference and configuration for linked checkout (2391.395084ms)
+✔ restart preserves IDs/config/dates; offline queries cannot create sidecars, recreate checkout or autostart (3561.774ms)
+✔ a client deadline/disconnection does not cancel an admitted verify (2909.130667ms)
+✔ stop interrupts queued/probing verifies without occupying status RPC or publishing an observation (3586.512375ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 32254.438916

@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T054 conclusi (54/96), P0 locale
+**Status**: implementazione locale in corso; T001–T055 conclusi (55/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -205,7 +205,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 - [X] T052 [US2] Implementare lista paginata e publish observation CAS in `src/storage/sqlite-store.ts` e `src/storage/worker.ts`, estendendo entrambe le allowlist readonly/failure: registryRevision aggiornata solo su visibilità, nessuna transazione tra pagine, reject OBSERVATION_SUPERSEDED senza sovrascrivere dati nuovi. **Dip.: T048, T049, T050, T051.**
 - [X] T053 [US2] Completare `src/core/projects/read.ts` e `src/core/inspect-main.ts` per list/get/operation: osservazioni datate, reference esplicito, stato base proiettato sulla config corrente, LAST_KNOWN offline, schema2 non migrato e nessun probe/drain/repair nascosto. **Dip.: T052.**
 - [X] T054 [US2] Implementare `src/core/projects/verify.ts`: catturare context revision, ispezionare solo il reference, conservare config/identity su assenza/incertezza e pubblicare osservazione con safe error; base null resta null dopo primo commit esterno, verify non certifica readiness. **Dip.: T053.**
-- [ ] T055 [US2] Collegare list/verify e dettaglio completo in `src/core/projects/dispatch.ts`, `src/client/local-client.ts` e `src/cli/projects.ts`: `project list` paginato e `project verify` con polling, exit 0 solo per osservazione salvata distinguendo availability/error, no autostart. **Dip.: T054.**
+- [X] T055 [US2] Collegare list/verify e dettaglio completo in `src/core/projects/dispatch.ts`, `src/client/local-client.ts` e `src/cli/projects.ts`: `project list` paginato e `project verify` con polling, exit 0 solo per osservazione salvata distinguendo availability/error, no autostart. **Dip.: T054.**
 - [ ] T056 [US2] Aggiungere ed eseguire verify concorrenti, ref/topology mutate tra probe/commit, primo commit esterno e base eliminata in `tests/integration/project-observation-races.test.ts`; controllare che config revision sia preservata e le evidenze obsolete non vincano. **Dip.: T055.**
 - [ ] T057 [US2] Eseguire `tests/integration/project-verify-lifecycle.test.ts` e le prove recovery/read-only del capitolo US2, registrando esiti in `specs/002-project-registry/reports/recovery.md`; provare stop entro budget Foundation e nessun orfano dichiarato assente su sola evidenza PID/socket. **Dip.: T056.**
 - [ ] T058 [US2] Creare ed eseguire `tests/acceptance/project-read-verify.test.ts` con due client, restart e daemon fermo; confrontare 100% ID/config confermati, data/natura storica delle osservazioni e nessuna scrittura/ricreazione repo o state-dir dalle query. **Dip.: T057.**
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T054 conclusi, T055–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T055 conclusi, T056–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

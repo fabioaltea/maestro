@@ -78,7 +78,7 @@ test('real local authentication does not grant controller credentials access to 
   const input = f.intent(); f.store.acceptProjectOperation(input);
   const clientKey = randomBytes(32).toString('hex'), controllerKey = randomBytes(32).toString('hex');
   let privateReads = 0;
-  const dispatch = createProjectDispatch({ storage: { getEventState: async () => f.store.getEventState(), getProject: async id => f.store.getProject(id) }, operations: {
+  const dispatch = createProjectDispatch({ storage: { getEventState: async () => f.store.getEventState(), getProject: async id => f.store.getProject(id), listProjects: async options => f.store.listProjects(options) }, operations: {
     get: async (_peer, id) => { privateReads++; return f.store.getProjectOperation(id); },
     admit: async () => { throw new Error('not enabled'); },
   } });

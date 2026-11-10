@@ -11,9 +11,10 @@ for (const scenario of ['moved', 'denied', 'replacement', 'linked'] as const) {
     const a = await createProjectHarness(t), main = await a.f.createRepository('main');
     const repo = scenario === 'linked' ? await a.f.addWorktree(main, 'linked') : main;
     const added = await a.register(repo), before = await a.get(added.projectId!);
-    if (scenario === 'denied') { await chmod(repo, 0); t.after(() => chmod(repo, 0o755)); }
+    const readableSnapshot = scenario === 'denied' ? await snapshotArchive(a.f.directory) : null;
+    if (scenario === 'denied') { await chmod(repo, 0); t.after(async () => { try { await chmod(repo, 0o755); } catch (error) { if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error; } }); }
     else { await rename(repo, repo + '.saved'); if (scenario === 'replacement') await a.f.createRepository('main'); }
-    const snapshot = await snapshotArchive(a.f.directory);
+    const snapshot = readableSnapshot ?? await snapshotArchive(a.f.directory);
     const result = await a.client.runProject('verify', { projectId: added.projectId }, { stateDirectory: a.h.archive });
     assert.equal(result.outcome, 'SUCCEEDED', JSON.stringify(result));
     assert.equal(decodeProjectOperationView(result.data.operation).result!.effect, 'OBSERVED');
@@ -24,6 +25,7 @@ for (const scenario of ['moved', 'denied', 'replacement', 'linked'] as const) {
     assert.ok(current.observation.error); assert.ok(current.observation.error.nextAction);
     assert.equal(current.observation.trackedChanges, null); assert.equal(current.observation.untrackedChanges, null);
     if (scenario === 'linked') await lstat(join(main, '.git'));
+    if (scenario === 'denied') await chmod(repo, 0o755);
     assert.deepEqual(await snapshotArchive(a.f.directory), snapshot);
   });
 }
