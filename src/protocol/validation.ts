@@ -3,6 +3,9 @@ import type { RpcRequest } from '../ports/platform.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { normalizeProjectCommand, projectObject, requireProjectFields } from '../domain/projects/intent.js';
 import type { ProjectAction } from '../domain/projects/model.js';
+import { PROJECT_ACTIONS, isTerminalProjectOutcome, validateProjectOperationResult } from '../domain/projects/model.js';
+import type { ProjectOperationView } from '../ports/registry.js';
+import { foundationError, type SafeError } from '../domain/errors.js';
 
 export function decodeObject(frame: string | Uint8Array): Record<string, unknown> {
   const bytes = typeof frame === 'string' ? Buffer.from(frame, 'utf8') : frame;
@@ -75,4 +78,36 @@ export function validateProjectAdmission(input: unknown): void {
     if (data.outcome !== null) throw new Error('INVALID_REQUEST');
   } else throw new Error('INVALID_REQUEST');
   projectUuid(data.requestId);
+}
+
+export function decodeProjectOperationView(input: unknown): ProjectOperationView {
+  const value = projectObject(input);
+  requireProjectFields(value, ['requestId', 'action', 'projectId', 'phase', 'outcome', 'acceptedAt', 'deadlineAt', 'completedAt', 'result']);
+  try {
+    requireUuid(value.requestId);
+    if (value.projectId !== null) requireUuid(value.projectId);
+    if (!PROJECT_ACTIONS.includes(value.action as ProjectAction)
+      || !['ACCEPTED', 'PROBING', 'FINALIZED'].includes(value.phase as string)) throw new Error('INVALID_REQUEST');
+    for (const field of ['acceptedAt', 'deadlineAt']) {
+      if (typeof value[field] !== 'string' || !Number.isFinite(Date.parse(value[field]))) throw new Error('INVALID_REQUEST');
+    }
+    const terminal = isTerminalProjectOutcome(value.outcome);
+    if (!terminal) {
+      if (value.phase === 'FINALIZED' || value.result !== null || value.completedAt !== null) throw new Error('INVALID_REQUEST');
+    } else {
+      const result = projectObject(value.result);
+      requireProjectFields(result, ['action', 'requestId', 'projectId', 'outcome', 'effect', 'configRevision', 'observationRevision', 'completedAt', 'error']);
+      validateProjectOperationResult(result as unknown as ProjectOperationView['result'] & {});
+      if (value.phase !== 'FINALIZED' || result.requestId !== value.requestId || result.action !== value.action
+        || result.outcome !== value.outcome || result.projectId !== value.projectId || result.completedAt !== value.completedAt) throw new Error('INVALID_REQUEST');
+      if (result.error !== null) {
+        const error = projectObject(result.error);
+        const safe = foundationError(error.code as SafeError['code'], { persisted: error.persisted as boolean, cause: error.cause as SafeError['cause'],
+          ...(error.operationId ? { operationId: error.operationId as string } : {}) });
+        requireProjectFields(error, Object.keys(safe));
+        if (Object.keys(safe).some(key => error[key] !== safe[key as keyof SafeError])) throw new Error('INVALID_REQUEST');
+      }
+    }
+    return value as unknown as ProjectOperationView;
+  } catch { throw new Error('INVALID_REQUEST'); }
 }

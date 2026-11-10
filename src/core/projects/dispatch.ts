@@ -1,5 +1,6 @@
 import { foundationError } from '../../domain/errors.js';
 import type { ProjectOperation } from '../../domain/projects/model.js';
+import type { ProjectOperationView } from '../../ports/registry.js';
 import type { AuthenticatedPeer, RpcRequest, RpcResponse } from '../../ports/platform.js';
 import type { StoragePort, StoreSnapshot } from '../../ports/storage.js';
 import { requireProjectClient, validateProjectParams } from '../../protocol/validation.js';
@@ -8,7 +9,7 @@ import type { createProjectOperations } from './operations.js';
 
 /** Add methods here only as their story implementation becomes available. */
 export const PROJECT_METHODS: readonly string[] = ['projects.operation.get'];
-export function projectOperationView(operation: ProjectOperation) {
+export function projectOperationView(operation: ProjectOperation): ProjectOperationView {
   return { requestId: operation.requestId, action: operation.action, projectId: operation.projectId,
     phase: operation.phase, outcome: operation.outcome, acceptedAt: operation.acceptedAt,
     deadlineAt: operation.deadlineAt, completedAt: operation.completedAt, result: operation.result };

@@ -93,7 +93,7 @@ export class SQLiteStore {
     return true;
   }
   getRequestReservation(requestId: string): RequestReservation | null {
-    requireUuid(requestId);
+    requestId = requireUuid(requestId);
     const row = this.registry().prepare('SELECT scope,action,payload_hash FROM request_catalog WHERE request_id=?').get(requestId) as Row | undefined;
     return row ? { scope: row.scope as RequestReservation['scope'], action: String(row.action), payloadHash: String(row.payload_hash) } : null;
   }
@@ -249,7 +249,7 @@ export class SQLiteStore {
       completedAt: row.completed_at as string | null, result: row.result === null ? null : JSON.parse(String(row.result)) as ProjectOperationResult };
   }
   getProjectOperation(requestId: string): ProjectOperation | null {
-    requireUuid(requestId);
+    requestId = requireUuid(requestId);
     const row = this.registry().prepare('SELECT * FROM project_operations WHERE request_id=?').get(requestId) as Row | undefined;
     return row ? this.projectOperation(row) : null;
   }
@@ -302,6 +302,7 @@ export class SQLiteStore {
       payload: { scope: 'project', action: intent.action, outcome: 'IN_PROGRESS', ...(intent.projectId ? { projectId: intent.projectId } : {}) } }]);
   }
   setProjectOperationPhase(requestId: string, phase: Exclude<ProjectPhase, 'FINALIZED'>): void {
+    requestId = requireUuid(requestId);
     this.registry();
     this.mutate(database => {
       const operation = this.getProjectOperation(requestId);
@@ -312,6 +313,7 @@ export class SQLiteStore {
     });
   }
   completeProjectOperation(requestId: string, result: ProjectOperationResult): void {
+    requestId = requireUuid(requestId);
     this.registry();
     validateProjectOperationResult(result);
     // Successful effects are finalized only by a story's atomic project commit.

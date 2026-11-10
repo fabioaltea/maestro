@@ -1,0 +1,108 @@
+✖ registry client sends one immutable intent, polls with the same requestId and preserves its terminal result (2.756792ms)
+✖ client deadline preserves request identity and never repeats a mutation when its observation hangs (0.118291ms)
+✖ queue rejection is not polled and explicit operation query does not wait for terminal completion (0.133417ms)
+✖ registry client refuses missing capability support, malformed responses and invalid deadlines (0.357875ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 46.356291
+
+✖ failing tests:
+
+test at dist-tests/tests/unit/project-client.test.js:27:1
+✖ registry client sends one immutable intent, polls with the same requestId and preserves its terminal result (2.756792ms)
+  AssertionError [ERR_ASSERTION]: required registry client has not been implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at client (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-client.test.js:14:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-client.test.js:30:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-client.test.js:47:1
+✖ client deadline preserves request identity and never repeats a mutation when its observation hangs (0.118291ms)
+  AssertionError [ERR_ASSERTION]: required registry client has not been implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at client (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-client.test.js:14:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-client.test.js:50:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-client.test.js:62:1
+✖ queue rejection is not polled and explicit operation query does not wait for terminal completion (0.133417ms)
+  AssertionError [ERR_ASSERTION]: required registry client has not been implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at client (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-client.test.js:14:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-client.test.js:66:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-client.test.js:72:1
+✖ registry client refuses missing capability support, malformed responses and invalid deadlines (0.357875ms)
+  AssertionError [ERR_ASSERTION]: required registry client has not been implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at client (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-client.test.js:14:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-client.test.js:73:17)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

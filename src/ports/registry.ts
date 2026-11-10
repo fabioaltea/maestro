@@ -2,6 +2,8 @@ import type { Project, ProjectObservation, ProjectOperation, ProjectOperationRes
 
 export type AcceptProjectOperation = Omit<ProjectOperation, 'phase' | 'outcome' | 'completedAt' | 'result'>;
 export interface RequestReservation { readonly scope: 'LIFECYCLE' | 'PROJECT'; readonly action: string; readonly payloadHash: string }
+export type ProjectOperationView = Pick<ProjectOperation, 'requestId' | 'action' | 'projectId' | 'phase' | 'outcome'
+  | 'acceptedAt' | 'deadlineAt' | 'completedAt' | 'result'>;
 export interface RegistryOperationsPort {
   getRequestReservation(requestId: string): Promise<RequestReservation | null>;
   acceptProjectOperation(intent: AcceptProjectOperation): Promise<{ readonly accepted: boolean; readonly operation: ProjectOperation }>;

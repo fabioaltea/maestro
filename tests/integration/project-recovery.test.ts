@@ -10,6 +10,8 @@ import { drainProjectOperations } from '../../src/core/lifecycle.js';
 import { createPlatformPaths } from '../../src/platform/macos/paths.js';
 import { createLocalTransport } from '../../src/platform/macos/transport.js';
 import { inspectProjectOperation } from '../../src/core/inspect-main.js';
+import { createClientBackend } from '../../src/bootstrap.js';
+import { LocalClient } from '../../src/client/local-client.js';
 
 test('daemon startup interrupts an abandoned durable registry intent before RUNNING without a Git probe', async t => {
   const h = await createCliHarness(t);
@@ -38,6 +40,11 @@ test('daemon startup interrupts an abandoned durable registry intent before RUNN
   assert.equal(status.data.capabilities.projectRegistryVersion, 1);
   assert.deepEqual(status.data.capabilities.projectRegistryMethods, ['projects.operation.get']);
   assert.equal(status.data.capabilities.gitInspection.version, 1);
+  const client = new LocalClient(createClientBackend());
+  const observed = await client.runProject('operation', { requestId }, { stateDirectory: h.archive });
+  assert.equal(observed.freshness, 'LIVE'); assert.equal(observed.outcome, 'INTERRUPTED');
+  const notYetAvailable = await client.runProject('register', { path: '/never-probed' }, { stateDirectory: h.archive });
+  assert.equal(notYetAvailable.error?.code, 'UNSUPPORTED_VERSION');
   const reader = await openStorage({ path, readonly: true });
   try {
     const current = (await reader.readSnapshot())!;
@@ -55,6 +62,8 @@ test('daemon startup interrupts an abandoned durable registry intent before RUNN
   const offline = await inspectProjectOperation(h.archive, requestId);
   assert.equal(offline.freshness, 'LAST_KNOWN'); assert.equal(offline.outcome, 'INTERRUPTED');
   assert.doesNotMatch(JSON.stringify(offline), /canonicalIntent|payloadHash|never-created/);
+  const offlineClient = await client.runProject('operation', { requestId: requestId.toUpperCase() }, { stateDirectory: h.archive });
+  assert.equal(offlineClient.freshness, 'LAST_KNOWN'); assert.equal(offlineClient.outcome, 'INTERRUPTED');
   assert.equal((await h.call('start')).code, 0);
   const afterRestart = await openStorage({ path, readonly: true });
   try { assert.equal((await afterRestart.getProjectOperation(requestId))?.outcome, 'INTERRUPTED'); }
