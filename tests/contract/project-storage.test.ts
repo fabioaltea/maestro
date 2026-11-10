@@ -8,6 +8,7 @@ import { openStorage } from '../../src/storage/worker.js';
 import type { StoragePort } from '../../src/ports/storage.js';
 import { foundationError } from '../../src/domain/errors.js';
 import { createTestContext } from '../fixtures/test-context.js';
+import { createFoundationV2 } from '../fixtures/foundation-schema-v2.js';
 
 interface Admission {
   requestId: string; action: 'REGISTER'; payloadHash: string; canonicalIntent: string;
@@ -130,4 +131,15 @@ test('ledger projectId refers to retained tombstones and never cascades away wit
     const sql = (database.prepare("SELECT sql FROM sqlite_master WHERE name='projects'").get() as { sql: string }).sql;
     assert.match(sql, /removed_at/);
   } finally { database.close(); }
+});
+
+test('readonly registry query on known schema 2 reports uninitialized without upgrading or writing', async t => {
+  const context = await createTestContext(t);
+  const directory = await realpath(context.directory);
+  const { path, requestId } = createFoundationV2(directory);
+  const before = await import('node:fs/promises').then(fs => fs.readFile(path));
+  const offline = await openStorage({ path, readonly: true });
+  try { await assert.rejects(registry(offline).getProjectOperation(requestId), /REGISTRY_NOT_INITIALIZED/); }
+  finally { await offline.close(); }
+  assert.deepEqual(await import('node:fs/promises').then(fs => fs.readFile(path)), before);
 });

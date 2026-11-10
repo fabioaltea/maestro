@@ -190,3 +190,15 @@ Any local include/includeIf is rejected before other metadata queries, because
 those queries otherwise expand unbounded/FIFO includes. Clean/process filters
 still allow safe metadata with UNKNOWN file status. This is fail-closed capability
 handling, not a claim that includes are safely expanded or helpers are supported.
+
+
+### T023 — grafo FK verificato nella baseline
+
+La baseline reale schema 2 ha store.current_instance_id→instances e nessun riferimento
+inverso a store. L'upgrade ricostruisce soltanto store con CHECK 3, copia tutti i
+valori e mantiene foreign_keys ON. Dipendenze sconosciute verso store vengono
+rifiutate. Non serve disabilitare FK per un ciclo che il codice corrente non ha.
+Crash reali pre/post commit e injection FULL/IO/BUSY confermano atomicità; vedi
+reports/project-schema-upgrade-green.txt. Readonly schema 2 resta leggibile dalla
+Foundation; la query registry esplicita REGISTRY_NOT_INITIALIZED è qualificata
+con il collegamento worker T025, senza upgrade implicito.

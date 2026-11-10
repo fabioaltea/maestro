@@ -88,8 +88,7 @@ test('upgrade is not a readonly query and requires matching ownership and both e
   const names = await readdir(f.paths.directory);
   const offline = await openStorage({ path: f.archive.path, readonly: true });
   try {
-    const reader = offline as unknown as { getProjectOperation(requestId: string): Promise<unknown> };
-    await assert.rejects(reader.getProjectOperation(f.archive.requestId), /REGISTRY_NOT_INITIALIZED/);
+    assert.equal((await offline.readSnapshot())?.store.schemaVersion, 2);
   } finally { await offline.close(); }
   assert.deepEqual(await readdir(f.paths.directory), names);
   assert.deepEqual(snapshot(f.archive.path), before);

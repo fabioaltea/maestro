@@ -28,6 +28,7 @@ export class SQLiteStore {
   private readonly directory: string;
   private journal: ReturnType<typeof openJournal> | undefined;
   private eventError: string | null = null;
+  private archiveVersion = SCHEMA_VERSION;
   constructor(options: StorageOptions, private readonly hooks: {checkpoint?(point: string): void} = {}) {
     this.directory = dirname(options.path);
     this.readOnly = options.readonly ?? false;
@@ -49,10 +50,12 @@ export class SQLiteStore {
     this.database = database;
     try {
       if (!existed) initializeSchema(database, options.identity!);
-      if (database.pragma('user_version', { simple: true }) !== SCHEMA_VERSION) throw new Error('STATE_INCOMPATIBLE');
+      const version = database.pragma('user_version', { simple: true });
+      if (version !== SCHEMA_VERSION && !(this.readOnly && version === 2)) throw new Error('STATE_INCOMPATIBLE');
+      this.archiveVersion = version;
       if (database.pragma('quick_check', { simple: true }) !== 'ok' || (database.pragma('foreign_key_check') as unknown[]).length !== 0) throw new Error('STATE_CORRUPT');
       const store = database.prepare('SELECT * FROM store WHERE singleton=1').get() as Row | undefined;
-      if (!store || Number(store.schema_version) !== SCHEMA_VERSION || Number(store.owner_uid) !== process.getuid!()) {
+      if (!store || Number(store.schema_version) !== version || Number(store.owner_uid) !== process.getuid!()) {
         throw new Error('STATE_INCOMPATIBLE');
       }
       if (store.canonical_path !== dirname(options.path)) throw new Error('UNAUTHORIZED');

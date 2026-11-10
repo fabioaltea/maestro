@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T022 conclusi (22/96), P0 locale
+**Status**: implementazione locale in corso; T001–T023 conclusi (23/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -126,14 +126,14 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 - [X] T017 [P] Scrivere test di nomi Unicode (trim, 120/121 scalar values, Cc e surrogati), normalizzazione intento senza default dinamici, revisioni distinte e transizioni terminali in `tests/unit/project-domain.test.ts`. **Dip.: T016.**
 - [X] T018 [P] Scrivere contratti storage in `tests/contract/project-storage.test.ts`: catalogo globale lifecycle/registry, hash originali immutabili, IN_PROGRESS unico pending registry, BLOCKED terminale, risultati interrogabili e conservati oltre tombstone/rotazione. **Dip.: T016.**
-- [X] T019 [P] Scrivere prove di upgrade in `tests/integration/project-schema-upgrade.test.ts`: schema 2→3 e nuovo 3, lease UID/path, FK cicliche store/instances, crash pre/post commit, FULL/IO/BUSY, schema sconosciuto e writer vivo rifiutati; storeId/seq/outbox/high-water/floor invariati. **Dip.: T016.**
+- [X] T019 [P] Scrivere prove di upgrade in `tests/integration/project-schema-upgrade.test.ts`: schema 2→3 e nuovo 3, lease UID/path, grafo FK store/instances preservato, crash pre/post commit, FULL/IO/BUSY, schema sconosciuto e writer vivo rifiutati; storeId/seq/outbox/high-water/floor invariati. **Dip.: T016.**
 - [X] T020 [P] Scrivere codec/contratti comuni in `tests/contract/project-protocol.test.ts`: metodi projects.*, UUID/decimali/limiti/campi extra, accepted true/false, role client/controller, errori/categorie/nextAction, capability assente e envelope Foundation v1. **Dip.: T016.**
 
 ### Implementazione e verifica
 
 - [X] T021 Implementare tipi/validatori/policy pure in `src/domain/projects/model.ts`, `src/domain/projects/intent.ts` e porta `src/ports/registry.ts`: Project/Observation/Operation, config e observation revision separate, serializzazione canonica deterministica per hash con omissioni distinte, limiti nome/path/branch e outcome coerenti. **Dip.: T017.**
 - [X] T022 Estendere `src/storage/schema.ts` a schema 3 con projects, project_observations, project_operations, request_catalog e registry_metadata, UNIQUE parziale sui progetti attivi e tombstone; mantenere ledger/indice pending lifecycle separati e predisporre fresh create 3. Adeguare le fixture schema corrente in `tests/fixtures/test-context.ts` e i test schema Foundation interessati, mantenendo fixture schema 2 esplicite per l'upgrade. **Dip.: T021, T018, T019.**
-- [ ] T023 Implementare l'upgrade transazionale esclusivo in `src/storage/registry-upgrade.ts`, collegandolo a `src/core/control-main.ts` prima del writer normale su start esplicito: detenere entrambi i lease, ricostruire store senza writable_schema, popolare catalogo con hash lifecycle invariati, verificare FK/integrità e mantenere la deadline start Foundation. **Dip.: T022.**
+- [X] T023 Implementare l'upgrade transazionale esclusivo in `src/storage/registry-upgrade.ts`, collegandolo a `src/core/control-main.ts` prima del writer normale su start esplicito: detenere entrambi i lease, ricostruire store senza writable_schema, popolare catalogo con hash lifecycle invariati, verificare FK/integrità e mantenere la deadline start Foundation. **Dip.: T022.**
 - [ ] T024 Implementare catalogo e admission/esiti registry in `src/storage/sqlite-store.ts` e aggiornare la prenotazione lifecycle in `src/core/operations.ts`: stessa transazione per ID/intento, confronto prima di path/revisione correnti, esito terminale immutabile, collisioni inter-scope rifiutate e nessun riuso del pending globale lifecycle. **Dip.: T023.**
 - [ ] T025 Collegare il ledger e lettura readonly `projects.operation.get` in `src/storage/worker.ts` e `src/ports/storage.ts`, estendendo entrambe le allowlist readonly/failure; SQLite retry bounded, nessun await/probe in transazione, nessuna nuova connessione writer nel client. **Dip.: T024.**
 - [ ] T026 Estendere i codec, allowlist metodi e safe error in `src/protocol/messages.ts`, `src/protocol/validation.ts` e `src/domain/errors.ts` secondo i contratti registry, conservando versione e limiti Foundation; non esporre metodi non ancora implementati come riusciti. **Dip.: T020, T021.**
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T022 conclusi, T023–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T023 conclusi, T024–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

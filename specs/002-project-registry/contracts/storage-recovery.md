@@ -13,10 +13,12 @@ integrità e foreign key; ammettere solo schema 2 noto o 3 già valido. Ricostru
 transazionalmente il piccolo store per il CHECK della versione seguendo la procedura
 SQLite, creare tabelle/indici registry e catalogo requestId, copiare i requestId
 lifecycle con hash originali, impostare entrambe le versioni 3. Verificare integrità
-prima del commit; ripristinare foreign_keys prima del normale servizio. Mai
+prima del commit; foreign_keys resta ON durante tutta la procedura qualificata. Mai
 writable_schema o modifica diretta del journal. StoreId, righe Foundation, next_event_seq,
-outbox, high-water e retention floor devono restare identici. Gestire ciclo FK
-store/instances nella procedura verificata, non con rename improvvisato di parent table.
+outbox, high-water e retention floor devono restare identici. La baseline osservata
+ha solo store→instances, senza ciclo o riferimenti inversi a store: ricostruire
+il solo store conservando le FK attive. Rifiutare dipendenze sconosciute, senza
+rename improvvisato di una parent table referenziata.
 
 Crash precommit lascia schema 2 valido; postcommit lascia schema 3 valido. Spazio
 insufficiente/IO/BUSY oltre budget non produce successo. Nessun backup tramite copia
