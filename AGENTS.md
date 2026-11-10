@@ -1,11 +1,12 @@
 # maestro Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-11-09
+Auto-generated from all feature plans. Last updated: 2026-11-10
 
 ## Active Technologies
 
 - TypeScript 6.0.3 strict, Node.js 26.13.0 LTS, ESM/NodeNext; better-sqlite3 13.0.3; API native Node (001-core-background-daemon).
 - SQLite locale con WAL e synchronous FULL; lease separati; schema 2 con outbox e journal eventi bounded.
+- 002-project-registry (solo piano): Git CLI `/usr/bin/git` 2.50.1 (Apple Git-155), adapter macOS di ispezione confinata; schema 3 pianificato nello stesso store, non implementato. Nessuna dipendenza runtime aggiunta.
 
 ## Project Structure
 
@@ -36,6 +37,11 @@ npm run bench:foundation
 TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o driver SQLite.
 
 ## Recent Changes
+- 002-project-registry: piano, ricerca, modello dati e contratti per review; nessuna
+  implementazione. Feature selezionata da `.specify/feature.json`: consultare
+  `specs/002-project-registry/`. Import da worktree esistenti senza gestione worktree;
+  readiness Foundation T082/T085 e qualificazione confinamento Git restano gate.
+  Non avviare automaticamente tasks o implementazione.
 
 - 001-core-background-daemon: Foundation implementata; diagnostica con categorie
   esplicite, dieci osservatori/6.000 eventi e 1.000 letture, 100 round di dieci start
