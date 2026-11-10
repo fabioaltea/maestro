@@ -1,0 +1,170 @@
+✖ REGISTER actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (1233.123ms)
+✖ REGISTER actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (1158.945625ms)
+✖ REGISTER actual SIGKILL at project.accepted/dirty preserves intent/result/project/event atomically (1168.549417ms)
+✖ REGISTER actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (1184.696666ms)
+✖ REGISTER actual SIGKILL at project.probing/blocked-git preserves intent/result/project/event atomically (1162.299792ms)
+✖ REGISTER actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (1152.435875ms)
+✖ REGISTER actual SIGKILL at project.beforeCommit/dirty preserves intent/result/project/event atomically (1149.658708ms)
+✖ REGISTER actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (1154.772334ms)
+✖ REGISTER actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (1295.791042ms)
+✖ REGISTER actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (1153.971083ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 0
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11913.398
+
+✖ failing tests:
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (1233.123ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (1158.945625ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.accepted/dirty preserves intent/result/project/event atomically (1168.549417ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (1184.696666ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.probing/blocked-git preserves intent/result/project/event atomically (1162.299792ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (1152.435875ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.beforeCommit/dirty preserves intent/result/project/event atomically (1149.658708ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (1154.772334ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (1295.791042ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register-crash.test.js:34:5
+✖ REGISTER actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (1153.971083ms)
+  AssertionError [ERR_ASSERTION]: registration must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
