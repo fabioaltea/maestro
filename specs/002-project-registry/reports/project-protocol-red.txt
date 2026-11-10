@@ -1,0 +1,103 @@
+✖ registry methods extend the existing Foundation v1 envelope with closed typed params (1.506583ms)
+✖ registry codec rejects coercion, extra authority, malformed Unicode and payloads outside limits (0.16775ms)
+✖ client role and actual registry capability are required without granting internal authority (0.114958ms)
+✖ admission separates durable accepted work from BUSY rejection without claiming a terminal result (0.097334ms)
+✖ all registry errors have deterministic allowlisted categories and safe next actions (0.325375ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 44.482
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/project-protocol.test.js:7:1
+✖ registry methods extend the existing Foundation v1 envelope with closed typed params (1.506583ms)
+  AssertionError [ERR_ASSERTION]: Required contract protocol/validation.js:requireProjectClient is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-protocol.test.js:8:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-protocol.test.js:28:1
+✖ registry codec rejects coercion, extra authority, malformed Unicode and payloads outside limits (0.16775ms)
+  AssertionError [ERR_ASSERTION]: Required contract protocol/validation.js:requireProjectClient is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-protocol.test.js:29:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-protocol.test.js:53:1
+✖ client role and actual registry capability are required without granting internal authority (0.114958ms)
+  AssertionError [ERR_ASSERTION]: Required contract protocol/validation.js:requireProjectClient is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-protocol.test.js:54:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-protocol.test.js:63:1
+✖ admission separates durable accepted work from BUSY rejection without claiming a terminal result (0.097334ms)
+  AssertionError [ERR_ASSERTION]: Required contract protocol/validation.js:requireProjectClient is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-protocol.test.js:64:17)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/project-protocol.test.js:76:1
+✖ all registry errors have deterministic allowlisted categories and safe next actions (0.325375ms)
+  Error: INVALID_ERROR_CODE
+      at foundationError (file:///Users/fabioaltea/Repository/maestro/dist-tests/src/domain/errors.js:38:15)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-protocol.test.js:87:23)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
