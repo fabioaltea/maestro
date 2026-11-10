@@ -3,7 +3,7 @@ import { createLocalTransport } from './platform/macos/transport.js';
 import { randomUUID } from 'node:crypto';
 import { createDaemonLauncher } from './platform/macos/launcher.js';
 import { defaultArchiveDirectory } from './platform/macos/paths.js';
-import { inspectArchive, inspectDetails, inspectProjectOperation, inspectProjectGet, readOperationFromArchive, absentResult } from './core/inspect-main.js';
+import { inspectArchive, inspectDetails, inspectProjectOperation, inspectProjectGet, inspectProjectList, readOperationFromArchive, absentResult } from './core/inspect-main.js';
 import { classifyError } from './core/control-main.js';
 import { foundationError, type ErrorCode } from './domain/errors.js';
 import type { ClientBackend } from './ports/platform.js';
@@ -25,7 +25,7 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
       const reading = ['projects.list', 'projects.get', 'projects.operation.get'].includes(method);
       const requestId = typeof params.requestId === 'string' ? requireUuid(params.requestId) : null;
       const offline = () => method === 'projects.operation.get' ? inspectProjectOperation(directory, requestId!)
-        : method === 'projects.get' ? inspectProjectGet(directory, params.projectId as string) : Promise.reject(new Error('UNSUPPORTED_VERSION'));
+        : method === 'projects.list' ? inspectProjectList(directory, params) : method === 'projects.get' ? inspectProjectGet(directory, params.projectId as string) : Promise.reject(new Error('UNSUPPORTED_VERSION'));
       const expires = performance.now() + timeoutMs;
       let sent = false;
       try {
@@ -40,7 +40,7 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
         }, Math.max(1, Math.min(500, expires - performance.now()))); }
         catch (error) {
           if (classifyError(error) === 'UNAUTHORIZED') throw error;
-          if (reading && ['projects.operation.get', 'projects.get'].includes(method)) return await offline();
+          if (reading && ['projects.operation.get', 'projects.get', 'projects.list'].includes(method)) return await offline();
           throw new Error('DAEMON_UNAVAILABLE');
         }
         const state = status.data as Record<string, unknown>;
@@ -67,7 +67,7 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
           error: operation?.result?.error ?? null };
       } catch (error) {
         const code = classifyError(error);
-        if (reading && ['projects.operation.get', 'projects.get'].includes(method)
+        if (reading && ['projects.operation.get', 'projects.get', 'projects.list'].includes(method)
           && (code === 'DEADLINE_EXCEEDED' || (error instanceof Error && 'code' in error
             && ['ENOENT', 'ECONNREFUSED', 'ECONNRESET'].includes(String(error.code))))) {
           try { return await offline(); }

@@ -12,7 +12,22 @@ import type { OperationRecord } from '../ports/storage.js';
 import { isEntrypoint, readBootstrap } from './entrypoint.js';
 import { projectOperationStatus, projectOperationView } from './projects/dispatch.js';
 import { requireUuid } from '../domain/identifiers.js';
-import { readProject } from './projects/read.js';
+import { readProject, readProjects } from './projects/read.js';
+
+export async function inspectProjectList(directory: string, options: { readonly limit?: number; readonly cursor?: string } = {}): Promise<PublicResult> {
+  const paths = await createPlatformPaths().resolveArchive(directory, 'read');
+  if (!paths) throw new Error('STATE_ABSENT');
+  const store = await openStorage({ path: paths.stateFile, readonly: true });
+  try {
+    const snapshot = await store.readSnapshot();
+    if (!snapshot) throw new Error('STATE_ABSENT');
+    const page = await readProjects(store, options);
+    return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: snapshot.instance?.instanceId ?? null,
+      result: 'OK', outcome: null, freshness: 'LAST_KNOWN',
+      liveness: !snapshot.instance || snapshot.instance.lifecycle === 'STOPPED' ? 'ABSENT_VERIFIED' : 'UNKNOWN',
+      data: { ...page }, error: null };
+  } finally { await store.close(); }
+}
 
 export async function inspectProjectGet(directory: string, projectId: string): Promise<PublicResult> {
   requireUuid(projectId);
