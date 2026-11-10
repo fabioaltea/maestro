@@ -92,7 +92,12 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
       let proof: IdentityProof = 'ABSENT';
       try {
         const owned = work.probe ?? await work.starting?.catch(() => undefined);
-        if (owned) proof = await owned.cancel();
+        if (owned) {
+          proof = await owned.cancel();
+          // Cancellation proves physical exit first; keep storage alive until
+          // the supervisor has also settled its durable resource bookkeeping.
+          if (proof === 'ABSENT') await owned.result;
+        }
         if (proof !== 'ABSENT') {
           block(new Error('RESOURCE_IDENTITY_UNKNOWN'));
           await finalize(work, result(work, 'BLOCKED', 'RESOURCE_IDENTITY_UNKNOWN'));

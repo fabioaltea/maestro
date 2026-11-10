@@ -2,6 +2,19 @@ import { randomUUID } from 'node:crypto';
 import type { OwnershipLease, ProcessIdentity, LocalTransport } from '../ports/platform.js';
 export interface StopPorts { leases: OwnershipLease; identity: ProcessIdentity; transport: LocalTransport }
 import type { ControlContext } from './control-main.js';
+import type { Deadline } from '../ports/clock.js';
+import type { createProjectOperations } from './projects/operations.js';
+
+/** Shares the existing stop budget; a timeout never proves that owned probes exited. */
+export async function drainProjectOperations(registry: Pick<ReturnType<typeof createProjectOperations>, 'shutdown'>, deadline: Deadline): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const proof = await Promise.race([registry.shutdown(), new Promise<'UNKNOWN'>(resolve => {
+      timer = setTimeout(() => resolve('UNKNOWN'), deadline.remainingMs());
+    })]);
+    if (proof !== 'ABSENT') throw new Error('RESOURCE_IDENTITY_UNKNOWN');
+  } finally { if (timer) clearTimeout(timer); }
+}
 
 export async function executeStop(context: ControlContext, ports: StopPorts): Promise<void> {
   const { paths, store, operation, controlKey } = context;

@@ -20,6 +20,10 @@ import { createOperations, authorizePrepareStop } from './operations.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { isEntrypoint, readBootstrap, reportBootstrap } from './entrypoint.js';
 import { classifyError } from './control-main.js';
+import { createProjectOperations } from './projects/operations.js';
+import { interruptProjectOperations } from './projects/recovery.js';
+import { drainProjectOperations } from './lifecycle.js';
+import { createProbeSupervisor } from '../platform/macos/git/probe-supervisor.js';
 
 export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependencies = {}): Promise<void> {
   const checkpoint = dependencies.checkpoint ?? (async () => {});
@@ -44,7 +48,8 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     let volatileError: SafeError | null = null;
     let lastSnapshot: StoreSnapshot | null = null;
     let streams: ReturnType<typeof createLiveEvents> | undefined;
-    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); });
+    let projects: ReturnType<typeof createProjectOperations> | undefined;
+    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); void projects?.shutdown(); });
     const ticket = await storage.getTicket(intent.ticketId);
     if (!ticket || ticket.instanceId !== intent.instanceId || ticket.generation !== intent.generation
       || !await createOperations(storage, paths.ownerUid).claimLaunch(intent.ticketId, intent.generation, process.pid)) {
@@ -57,6 +62,14 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     await checkpoint('daemon.recorded');
     const clientKey = await adapter.readCredential(paths.clientKeyFile);
     streams = createLiveEvents(storage, intent.instanceId);
+    projects = createProjectOperations({ storage, ownerUid: paths.ownerUid, instanceId: intent.instanceId,
+      supervisor: createProbeSupervisor({ paths, onResource: resource => storage.saveResource(resource) }),
+      execute: dependencies.projectExecute ?? (async () => { throw new Error('INVALID_REQUEST'); }),
+      onBlocked: error => {
+        void storage.blockInstance(intent.instanceId, { ...error, persisted: true }).catch(() => {
+          volatileError = foundationError('PERSISTENCE_UNAVAILABLE');
+        });
+      } });
     let draining = false;
     let deniedCount = 0, lastDeniedAudit = -Infinity;
     async function auditDenied(correlationId: string, code: 'UNAUTHORIZED' | 'STALE_TARGET') {
@@ -140,13 +153,18 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
           return { ...base, result: 'ERROR', data: { code: classifyError(error) } };
         }
         if (draining) return { ...base, result: 'OK', data: { preparingStop: true } };
-        await storage.transitionInstance(intent.instanceId, 'STOPPING');
         draining = true;
+        const drainDeadline = makeDeadline(systemClock, 8_000);
+        // Fence synchronously before publishing STOPPING; accepted work is independent of the RPC.
+        void projects!.shutdown();
+        try { await storage.transitionInstance(intent.instanceId, 'STOPPING'); }
+        catch (error) { draining = false; throw error; }
         setImmediate(() => {
           void (async () => {
+            await drainProjectOperations(projects!, drainDeadline);
             await drainFoundationAuxiliaries({ store: storage, instanceId: intent.instanceId, paths,
               identity: createProcessIdentity(), transport: createLocalTransport(), platformPaths: adapter,
-              deadline: makeDeadline(systemClock, 8_000), excludedPids: [process.pid, attempt!.pid],
+              deadline: drainDeadline, excludedPids: [process.pid, attempt!.pid],
               sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
             });
             await storage.prepareShutdown(intent.instanceId, intent.generation);
@@ -175,6 +193,8 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       deadline: makeDeadline(systemClock, 8_000), excludedPids: [process.pid, ...(controller ? [controller.pid] : [])],
       sleep: ms => new Promise(resolve => setTimeout(resolve, ms)),
     });
+    await interruptProjectOperations(storage, new Date().toISOString());
+    await checkpoint('daemon.projectsRecovered');
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
     lastSnapshot = await storage.readSnapshot();
     await checkpoint('daemon.running');

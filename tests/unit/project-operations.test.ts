@@ -70,6 +70,7 @@ async function fixture() {
   };
   const invocations: Array<{ deadline: Deadline; finish(result: InspectionResult): void; cancellations: number }> = [];
   let cancellationProof: IdentityProof = 'ABSENT';
+  let holdResultsOnCancel = false;
   const supervisor: ProbeSupervisor = {
     start: async (_request, ownership, options) => {
       let finish!: (result: InspectionResult) => void;
@@ -78,7 +79,7 @@ async function fixture() {
       invocations.push(invocation);
       return { ownership, result, cancel: async () => {
         invocation.cancellations++;
-        finish({ ok: false, error: { code: 'INTERRUPTED', retryable: false, nextAction: 'retry-inspection' } });
+        if (!holdResultsOnCancel) finish({ ok: false, error: { code: 'INTERRUPTED', retryable: false, nextAction: 'retry-inspection' } });
         return cancellationProof;
       } };
     },
@@ -96,6 +97,7 @@ async function fixture() {
         completedAt: clock.wallUtc(), error: foundationError('INSPECTION_UNSAFE', { persisted: true }) };
     } });
   return { api, storage, records, invocations, starts, writes: () => writes, setCancellationProof: (proof: IdentityProof) => { cancellationProof = proof; },
+    setHoldResultsOnCancel: () => { holdResultsOnCancel = true; },
     advance: async (ms: number) => { mono += ms; for (const timer of [...timers].sort((a, b) => a.due - b.due)) {
       if (timer.due <= mono && timers.delete(timer)) timer.callback();
     } await flush(); }, clock };
@@ -199,4 +201,19 @@ test('startup recovery terminalizes old pending once and never reruns it; identi
   await interruptProjectOperations(f.storage, f.clock.wallUtc());
   assert.equal(f.invocations.length, before);
   // The abandoned execution is never completed in this in-memory crash model.
+});
+
+test('shutdown retains storage until resource bookkeeping settles even after physical process exit is verified', async () => {
+  const f = await fixture();
+  await f.api.admit(client, 'REGISTER', randomUUID(), params); await flush();
+  f.setHoldResultsOnCancel();
+  let settled = false;
+  const stopping = f.api.shutdown().then(proof => { settled = true; return proof; });
+  await flush();
+  assert.equal(f.invocations[0]?.cancellations, 1);
+  assert.equal(settled, false);
+  assert.equal(f.api.counts().pending, 1);
+  f.invocations[0]!.finish({ ok: false, error: { code: 'INTERRUPTED', retryable: false, nextAction: 'retry-inspection' } });
+  assert.equal(await stopping, 'ABSENT');
+  assert.equal([...f.records.values()][0]?.outcome, 'INTERRUPTED');
 });

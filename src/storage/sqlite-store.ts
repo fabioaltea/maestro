@@ -329,7 +329,7 @@ export class SQLiteStore {
       database.prepare("UPDATE project_operations SET phase='FINALIZED',outcome=?,completed_at=?,result=? WHERE request_id=?")
         .run(result.outcome, result.completedAt, JSON.stringify(result), requestId);
     }, [{ type: result.outcome === 'BLOCKED' ? 'operation.blocked' : 'operation.failed',
-      operationId: requestId, instanceId: pending?.owningInstanceId ?? null,
+      operationId: requestId, instanceId: this.readSnapshot()?.instance?.instanceId ?? pending?.owningInstanceId ?? null,
       payload: { scope: 'project', action: result.action, outcome: result.outcome, effect: result.effect,
         ...(result.projectId ? { projectId: result.projectId } : {}),
         ...(result.configRevision ? { configRevision: result.configRevision } : {}),
