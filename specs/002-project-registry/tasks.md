@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T036 conclusi (36/96), P0 locale
+**Status**: implementazione locale in corso; T001–T037 conclusi (37/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -170,7 +170,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 - [X] T035 [P] [US1] Scrivere contratti add/show/operation e projects.register/get in `tests/contract/project-register.test.ts`: omissioni/name/base, ID stabili, safe error/exit, role controller negato, assenza daemon/capability, requestId e timeout senza nuovo intento. **Dip.: T034.**
 - [X] T036 [P] [US1] Scrivere test unitari in `tests/unit/project-register.test.ts`: default nome da root valido, base omessa valida oppure null, base esplicita invalida rifiutata anche su duplicato, dedup senza modifiche implicite, UUID generato soltanto per il vincitore. **Dip.: T034.**
-- [ ] T037 [P] [US1] Scrivere integrazione Git reale in `tests/integration/project-register.test.ts`: tutti i 7 scenari US1, spazi/Unicode/alias/subdir, cloni stesso remoto distinti, repo annidati/submodule distinti, main/linked/common-bare equivalenti, bare senza checkout rifiutato e dirty/conflitti/file-status UNKNOWN preservati. **Dip.: T034.**
+- [X] T037 [P] [US1] Scrivere integrazione Git reale in `tests/integration/project-register.test.ts`: tutti i 7 scenari US1, spazi/Unicode/alias/subdir, cloni stesso remoto distinti, repo annidati/submodule distinti, main/linked/common-bare equivalenti, bare senza checkout rifiutato e dirty/conflitti/file-status UNKNOWN preservati. **Dip.: T034.**
 - [ ] T038 [P] [US1] Scrivere almeno 10 casi crash import in `tests/integration/project-register-crash.test.ts`, distribuiti admission/probe/pre-post commit/pre-ACK e drain; dopo restart e retry stesso ID provare 0 conferme perse, parziali e duplicati, nessuna ricreazione repo o auto-riesecuzione del probe. **Dip.: T034.**
 
 ### Implementazione e verifica
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T036 conclusi, T037–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T037 conclusi, T038–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
