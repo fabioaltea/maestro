@@ -1,0 +1,170 @@
+✖ UPDATE actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (1246.603458ms)
+✖ UPDATE actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (1149.882667ms)
+✖ UPDATE actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (1186.889458ms)
+✖ UPDATE actual SIGKILL at project.update.probed/clean preserves intent/result/project/event atomically (1222.693583ms)
+✖ UPDATE actual SIGKILL at project.update.beforeWrite/clean preserves intent/result/project/event atomically (1236.239917ms)
+✖ UPDATE actual SIGKILL at project.update.written/clean preserves intent/result/project/event atomically (1189.114292ms)
+✖ UPDATE actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (1145.526042ms)
+✖ UPDATE actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (1147.219334ms)
+✖ UPDATE actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (1206.150875ms)
+✖ UPDATE actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (1149.600209ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 0
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12029.138667
+
+✖ failing tests:
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (1246.603458ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (1149.882667ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (1186.889458ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.update.probed/clean preserves intent/result/project/event atomically (1222.693583ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.update.beforeWrite/clean preserves intent/result/project/event atomically (1236.239917ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.update.written/clean preserves intent/result/project/event atomically (1189.114292ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (1145.526042ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (1147.219334ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (1206.150875ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update-crash.test.js:34:5
+✖ UPDATE actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (1149.600209ms)
+  AssertionError [ERR_ASSERTION]: update must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
