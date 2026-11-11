@@ -1,0 +1,12 @@
+✔ two real clients removing one revision confirm exactly one tombstone (2580.585917ms)
+✔ remove during verify fences the old observation even when the same repository has already been reimported (112.182833ms)
+✔ a concurrent new import and the old remove retry never share a project ID or remove the new registration (3178.978541ms)
+✔ actual local controller authentication cannot authorize remove or reach private admission (58.8745ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6101.599084
