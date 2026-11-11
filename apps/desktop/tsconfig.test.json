@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.main.json",
+  "compilerOptions": { "types": ["node"], "jsx": "react-jsx" },
+  "include": ["tests/**/*.ts", "src/main/**/*.ts", "src/shared/**/*.ts", "src/renderer/state/**/*.ts", "playwright.config.ts"]
+}
