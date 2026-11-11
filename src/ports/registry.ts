@@ -54,3 +54,13 @@ export interface ObservationProjectCommit extends ProjectCommitContext {
 export interface RegistryObservationPort {
   commitProjectObservation(input: ObservationProjectCommit): Promise<ProjectOperationResult>;
 }
+
+/** Only the immutable admitted patch may be applied; proof is required for explicit set-base. */
+export interface UpdateProjectCommit extends ProjectCommitContext {
+  readonly projectId: string;
+  readonly expectedConfigRevision: string;
+  readonly baseEvidence?: import('./repository.js').RepositoryInspection;
+}
+export interface RegistryUpdatePort {
+  commitProjectUpdate(input: UpdateProjectCommit): Promise<ProjectOperationResult>;
+}

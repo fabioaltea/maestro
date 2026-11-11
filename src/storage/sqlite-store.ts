@@ -12,11 +12,11 @@ import { dirname, isAbsolute, join } from 'node:path';
 import { initializeSchema, SCHEMA_VERSION } from './schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { transition, type Lifecycle, type Outcome } from '../domain/states.js';
-import { canonicalProjectIntent, requireLocalBranch } from '../domain/projects/intent.js';
+import { canonicalProjectIntent, requireLocalBranch, normalizeProjectCommand } from '../domain/projects/intent.js';
 import { canonicalRepositoryIdentity, canonicalReferenceCheckout } from '../domain/projects/repository-evidence.js';
 import { PROJECT_ACTIONS, transitionProjectOperation, validateProjectOperationResult,
-  normalizeProjectName, type Project, type ProjectObservation, type ProjectOperation, type ProjectOperationResult, type ProjectPhase } from '../domain/projects/model.js';
-import type { AcceptProjectOperation, RequestReservation, ProjectState, RegisterProjectCommit, ObservationProjectCommit, RegistryPage } from '../ports/registry.js';
+  normalizeProjectName, requireProjectRevision, type Project, type ProjectObservation, type ProjectOperation, type ProjectOperationResult, type ProjectPhase } from '../domain/projects/model.js';
+import type { AcceptProjectOperation, RequestReservation, ProjectState, RegisterProjectCommit, ObservationProjectCommit, RegistryPage, UpdateProjectCommit } from '../ports/registry.js';
 import { projectDetail } from '../domain/projects/projection.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
@@ -357,6 +357,58 @@ export class SQLiteStore {
       drafts.push({ type: 'operation.completed', operationId: input.requestId, instanceId: input.instanceId,
         payload: { scope: 'project', action: 'VERIFY', outcome: 'SUCCEEDED', effect: 'OBSERVED', projectId: input.projectId,
           configRevision: state.project.configRevision, observationRevision } });
+      this.hooks.checkpoint?.('project.beforeCommit');
+      return result;
+    }, drafts);
+  }
+  commitProjectUpdate(input: UpdateProjectCommit): ProjectOperationResult {
+    requireUuid(input.requestId); requireUuid(input.instanceId); requireUuid(input.projectId); requireProjectRevision(input.expectedConfigRevision);
+    const drafts: EventDraft[] = [];
+    return this.mutate(database => {
+      const operation = this.getProjectOperation(input.requestId);
+      if (!operation || operation.action !== 'UPDATE' || operation.projectId !== input.projectId || operation.outcome !== 'IN_PROGRESS') throw new Error('INVALID_TRANSITION');
+      const instance = this.readSnapshot()?.instance;
+      if (!instance || instance.instanceId !== input.instanceId || operation.owningInstanceId !== input.instanceId || instance.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
+      const command = normalizeProjectCommand('UPDATE', (JSON.parse(operation.canonicalIntent) as { params: unknown }).params);
+      if (command.action !== 'UPDATE' || command.params.projectId !== input.projectId
+        || command.params.expectedRevision !== input.expectedConfigRevision || operation.expectedConfigRevision !== input.expectedConfigRevision) throw new Error('INVALID_REQUEST');
+      const state = this.getProject(input.projectId);
+      if (!state) throw new Error('PROJECT_NOT_FOUND');
+      if (state.project.removedAt !== null) throw new Error('PROJECT_REMOVED');
+      if (state.project.configRevision !== input.expectedConfigRevision) throw new Error('REVISION_CONFLICT');
+      const { patch } = command.params;
+      if (typeof patch.baseBranch === 'string') {
+        const proof = input.baseEvidence;
+        if (!proof) throw new Error('INVALID_BASE_BRANCH');
+        if (canonicalRepositoryIdentity(proof.identity) !== canonicalRepositoryIdentity(state.project.repositoryIdentity)
+          || canonicalReferenceCheckout(proof.reference) !== canonicalReferenceCheckout(state.project.referenceCheckout)) throw new Error('REPOSITORY_CHANGED');
+        const observation = proof.observation;
+        const oidLength = observation.objectFormat === 'sha1' ? 40 : observation.objectFormat === 'sha256' ? 64 : 0;
+        if (proof.proposedBaseBranch !== patch.baseBranch || observation.baseState !== 'VALID' || !observation.baseOid
+          || !oidLength || !new RegExp(`^[0-9a-f]{${oidLength}}$`).test(observation.baseOid)
+          || observation.repositoryIdentityStatus !== 'VERIFIED' || observation.checkoutAvailability !== 'VERIFIED'
+          || observation.referencePath !== state.project.referenceCheckout.root.canonicalPath) throw new Error('INVALID_BASE_BRANCH');
+      } else if (input.baseEvidence !== undefined) throw new Error('INVALID_REQUEST');
+      const displayName = patch.name ?? state.project.displayName;
+      const baseBranch = Object.hasOwn(patch, 'baseBranch') ? patch.baseBranch! : state.project.baseBranch;
+      const changed = displayName !== state.project.displayName || baseBranch !== state.project.baseBranch;
+      const configRevision = changed ? String(BigInt(state.project.configRevision) + 1n) : state.project.configRevision;
+      this.hooks.checkpoint?.('project.update.beforeWrite');
+      if (changed) {
+        database.prepare('UPDATE projects SET display_name=?,base_branch=?,config_revision=?,updated_at=? WHERE project_id=? AND config_revision=? AND removed_at IS NULL')
+          .run(displayName, baseBranch, configRevision, input.completedAt, input.projectId, input.expectedConfigRevision);
+        database.prepare('UPDATE registry_metadata SET registry_revision=registry_revision+1 WHERE singleton=1').run();
+      }
+      this.hooks.checkpoint?.('project.update.written');
+      const result: ProjectOperationResult = { requestId: input.requestId, action: 'UPDATE', projectId: input.projectId, outcome: 'SUCCEEDED',
+        effect: changed ? 'UPDATED' : 'NONE', configRevision, observationRevision: state.observation?.observationRevision ?? null,
+        completedAt: input.completedAt, error: null };
+      validateProjectOperationResult(result);
+      database.prepare("UPDATE project_operations SET phase='FINALIZED',outcome='SUCCEEDED',completed_at=?,result=? WHERE request_id=?")
+        .run(input.completedAt, JSON.stringify(result), input.requestId);
+      drafts.push({ type: 'operation.completed', operationId: input.requestId, instanceId: input.instanceId,
+        payload: { scope: 'project', action: 'UPDATE', projectId: input.projectId, outcome: 'SUCCEEDED', effect: result.effect,
+          configRevision, observationRevision: result.observationRevision } });
       this.hooks.checkpoint?.('project.beforeCommit');
       return result;
     }, drafts);

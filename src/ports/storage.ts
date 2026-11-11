@@ -1,6 +1,6 @@
 import type { Lifecycle, Outcome } from '../domain/states.js';
 import type { SafeError } from '../domain/errors.js';
-import type { RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort } from './registry.js';
+import type { RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort, RegistryUpdatePort } from './registry.js';
 
 export interface StoreIdentity {
   readonly storeId: string;
@@ -87,7 +87,7 @@ export interface ControllerAttemptRecord {
   readonly endedAt: string | null;
   readonly result: string | null;
 }
-export interface StoragePort extends EventStoragePort, RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort, RegistryReadPort, RegistryObservationPort {
+export interface StoragePort extends EventStoragePort, RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort, RegistryUpdatePort {
   onFailure(callback: (error: SafeError) => void): () => void;
   listTickets(requestId: string): Promise<readonly LaunchTicket[]>;
   reopenOperation(requestId: string): Promise<OperationRecord>;
