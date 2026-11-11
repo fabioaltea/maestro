@@ -29,7 +29,7 @@ async function inspect(path) {
       const allowed = zone === 'domain' ? ['domain/', 'ports/'] : ['client/', 'domain/', 'ports/', 'protocol/'];
       forbidden = !allowed.some(prefix => target.startsWith(prefix));
     } else {
-      forbidden = zone === 'domain' || specifier === 'better-sqlite3'
+      forbidden = zone === 'domain' || !specifier.startsWith('node:') || specifier === 'better-sqlite3'
         || specifier === 'node:sqlite' || specifier === 'node:child_process';
     }
     if (forbidden) violations.push(`${local}: forbidden dependency ${specifier}`);
