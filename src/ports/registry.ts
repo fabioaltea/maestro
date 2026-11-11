@@ -78,3 +78,10 @@ export interface ProjectTombstone {
   readonly configRevision: string;
   readonly removedAt: string;
 }
+
+export interface ProjectRegistryDiagnostics {
+  readonly activeProbes: number; readonly pending: number; readonly queued: number; readonly fenced: boolean;
+  readonly limits: { readonly probes: 4; readonly pending: 32 };
+  readonly categories: { readonly busy: number; readonly backpressure: number; readonly persistence: number; readonly deadlines: number };
+  readonly maxQueueWaitMs: number;
+}

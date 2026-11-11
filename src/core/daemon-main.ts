@@ -133,7 +133,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       if (request.method.startsWith('projects.')) return projectDispatch(request, peer, snapshot);
       if (request.method === 'diagnostics.get' || request.method === 'events.list') {
         try {
-          const data = request.method === 'diagnostics.get' ? await diagnosticsData(storage, snapshot)
+          const data = request.method === 'diagnostics.get' ? await diagnosticsData(storage, snapshot, projects?.diagnostics())
             : {events: await readEventPage(storage, snapshot.store.storeId, request.params)};
           return {...base, result: 'OK', data: {storeId: snapshot.store.storeId, ...data, ...(request.method === 'diagnostics.get' ? {subscriptions: streams!.diagnostics()} : {})}};
         } catch (error) { return {...base, result: 'ERROR', data: {code: classifyError(error), ...(error instanceof EventStreamError && error.gap ? error.gap : {})}}; }

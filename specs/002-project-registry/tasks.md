@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T089 conclusi (89/96), P0 locale
+**Status**: implementazione locale in corso; T001–T090 conclusi (90/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -294,7 +294,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Implementazione e verifica
 
-- [ ] T090 Completare osservabilità delle attese e degli esaurimenti in `src/core/diagnostics.ts` e `src/core/projects/operations.ts`: conteggi bounded di pending/probe, categorie BUSY/backpressure/persistenza, letture disponibili e nessun path/output/secret nei log; applicare le stesse ammissioni anche agli errori e verify senza aggirare outbox. **Dip.: T088.**
+- [X] T090 Completare osservabilità delle attese e degli esaurimenti in `src/core/diagnostics.ts` e `src/core/projects/operations.ts`: conteggi bounded di pending/probe, categorie BUSY/backpressure/persistenza, letture disponibili e nessun path/output/secret nei log; applicare le stesse ammissioni anche agli errori e verify senza aggirare outbox. **Dip.: T088.**
 - [ ] T091 Eseguire `tests/integration/project-backpressure.test.ts` e `tests/acceptance/project-performance.test.ts`, poi idle reale con `tests/acceptance/idle-resources.test.ts` e `tests/acceptance/benchmark-foundation.ts` separatamente; salvare campioni/p95/max/error rate e memoria/CPU attiva vs idle in `specs/002-project-registry/reports/performance.md`. Target: p95 letture ≤500 ms/tutte ≤2 s, probe p95 ≤5 s/tutti ≤30 s, idle 150 MiB/1% per 600 s e budget diagnostici invariati. **Dip.: T090, T089.**
 
 **Checkpoint**: E2, E3 e V1 hanno evidenze distinte; nessuna implementazione monolitica del sistema eventi e nessun limite Foundation aumentato.
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T089 conclusi, T090–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T090 conclusi, T091–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

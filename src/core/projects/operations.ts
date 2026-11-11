@@ -4,7 +4,7 @@ import { foundationError, type ErrorCode, type SafeError } from '../../domain/er
 import { requireUuid } from '../../domain/identifiers.js';
 import { canonicalProjectIntent, normalizeProjectCommand } from '../../domain/projects/intent.js';
 import type { ProjectAction, ProjectOperation, ProjectOperationResult } from '../../domain/projects/model.js';
-import type { RegistryOperationsPort } from '../../ports/registry.js';
+import type { RegistryOperationsPort, ProjectRegistryDiagnostics } from '../../ports/registry.js';
 import type { StoreSnapshot } from '../../ports/storage.js';
 import type { IdentityProof } from '../../ports/platform.js';
 import type { InspectionResult, OwnedProbe, ProbeRequest, ProbeSupervisor } from '../../ports/repository.js';
@@ -55,13 +55,20 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
   const queue: Work[] = [];
   let active = 0, fenced = false, failure: SafeError | null = null;
   let admissions = Promise.resolve();
+  const categories = { busy: 0, backpressure: 0, persistence: 0, deadlines: 0 };
+  let maxQueueWaitMs = 0;
+  function pressure(code: string) {
+    const key = code === 'BUSY' ? 'busy' : code === 'EVENT_BACKPRESSURE' ? 'backpressure'
+      : ['PERSISTENCE_UNAVAILABLE', 'STATE_CORRUPT', 'STATE_INCOMPATIBLE'].includes(code) ? 'persistence' : code === 'DEADLINE_EXCEEDED' ? 'deadlines' : null;
+    if (key) categories[key] = Math.min(65535, categories[key] + 1);
+  }
   let shutdown: Promise<IdentityProof> | undefined;
   function block(error: unknown) {
     fenced = true;
     let safe: SafeError;
     try { safe = foundationError(error instanceof Error ? error.message as ErrorCode : 'PERSISTENCE_UNAVAILABLE'); }
     catch { safe = foundationError('PERSISTENCE_UNAVAILABLE'); }
-    failure = safe;
+    failure = safe; pressure(safe.code);
     options.onBlocked?.(safe);
   }
   async function authorize(peer: { readonly role: string }): Promise<StoreSnapshot> {
@@ -89,7 +96,7 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
   }
   function stop(work: Work, reason: 'STOP' | 'DEADLINE'): Promise<IdentityProof> {
     if (work.stopping) return work.stopping;
-    work.reason = reason;
+    work.reason = reason; if (reason === 'DEADLINE') pressure('DEADLINE_EXCEEDED');
     work.abort.abort();
     work.stopping = (async () => {
       let proof: IdentityProof = 'ABSENT';
@@ -152,6 +159,7 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
       const work = queue.shift()!;
       if (!pending.has(work.operation.requestId) || work.reason) continue;
       if (work.deadline.expired() || work.probeDeadline.expired()) { void stop(work, 'DEADLINE'); continue; }
+      maxQueueWaitMs = Math.max(maxQueueWaitMs, Math.round(Math.min(28000, Math.max(0, 28000 - work.deadline.remainingMs()))));
       work.phase = 'ACTIVE'; active++;
       void execute(work).catch(block);
     }
@@ -176,7 +184,7 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
       if (!existing || existing.ownerUid !== options.ownerUid || existing.canonicalIntent !== canonicalIntent) throw new Error('IDEMPOTENCY_CONFLICT');
       return { accepted: true, operation: existing };
     }
-    if (pending.size >= 32) return { accepted: false, error: foundationError('BUSY') };
+    if (pending.size >= 32) { pressure('BUSY'); return { accepted: false, error: foundationError('BUSY') }; }
     const acceptedAt = clock.wallUtc();
     const deadline = makeDeadline(clock, 28_000), probeDeadline = makeDeadline(clock, 26_000);
     const params = command.params as { projectId?: string; expectedRevision?: string };
@@ -201,7 +209,7 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
   }
   return {
     admit(peer: { readonly role: string }, action: ProjectAction, requestId: string, params: unknown): Promise<ProjectAdmission> {
-      const next = admissions.then(() => admitNow(peer, action, requestId, params));
+      const next = admissions.then(async () => { try { return await admitNow(peer, action, requestId, params); } catch (error) { pressure(error instanceof Error ? error.message : 'PERSISTENCE_UNAVAILABLE'); throw error; } });
       admissions = next.then(() => {}, () => {});
       return next;
     },
@@ -217,6 +225,9 @@ export function createProjectOperations(options: ProjectOperationsOptions) {
       })();
       return shutdown;
     },
+    diagnostics(): ProjectRegistryDiagnostics { return { activeProbes: [...pending.values()].filter(work => Boolean(work.probe || work.starting)).length,
+      pending: pending.size, queued: queue.filter(work => pending.has(work.operation.requestId) && !work.reason).length, fenced,
+      limits: { probes: 4, pending: 32 }, categories: { ...categories }, maxQueueWaitMs }; },
     counts() { return { activeProbes: [...pending.values()].filter(work => Boolean(work.probe || work.starting)).length,
       pending: pending.size, queued: queue.filter(work => pending.has(work.operation.requestId) && !work.reason).length, fenced }; },
   };
