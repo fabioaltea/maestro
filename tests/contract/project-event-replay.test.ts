@@ -10,6 +10,12 @@ import { EVENT_TYPES, MAX_EVENT_PAGE_BYTES } from '../../src/protocol/messages.j
 import { openJournal } from '../../src/storage/event-journal.js';
 import type { EventRecord } from '../../src/ports/storage.js';
 
+// A live writer's SHM read marks are volatile. Durable DB/WAL/history bytes
+// remain exact; offline tests separately compare every file without exclusions.
+async function durableHistory(directory: string) {
+  return (await snapshotArchive(directory) as { relative: string }[]).filter(file => file.relative !== 'state.sqlite-shm');
+}
+
 async function collect(f: Awaited<ReturnType<typeof createMixedProjectHistory>>, limit: number) {
   const records: EventRecord[] = []; let after: EventCursor = { storeId: f.storeId, seq: '0' };
   for (;;) {
@@ -40,15 +46,12 @@ test('E2 mixed Foundation/registry history keeps original envelope, exact revisi
 
 test('E2 cursor rejects foreign store, malformed or future sequence without advancing, rewriting or draining history', async t => {
   const f = await createMixedProjectHistory(t);
-  // Live SQLite readers may update existing SHM read marks; durable DB/WAL and
-  // journal/log bytes must remain identical. Offline zero-write is checked separately.
-  const durable = async () => (await snapshotArchive(f.directory) as { relative: string }[]).filter(file => file.relative !== 'state.sqlite-shm');
-  const before = await durable();
+  const before = await durableHistory(f.directory);
   for (const [after, code] of [[{ storeId: randomUUID(), seq: '0' }, 'WRONG_STORE'], [{ storeId: f.storeId, seq: '9223372036854775807' }, 'INVALID_REQUEST'],
     [{ storeId: f.storeId, seq: '-1' }, 'INVALID_REQUEST'], ['0', 'INVALID_REQUEST']] as const) {
     await assert.rejects(readEventPage(f.reader, f.storeId, { after }), new RegExp(code));
   }
-  assert.deepEqual(await durable(), before);
+  assert.deepEqual(await durableHistory(f.directory), before);
 });
 
 test('E2 redacted mixed pages remain at most 60 KiB with whole records and exact decimal revisions', async t => {
@@ -73,10 +76,10 @@ test('E2 expired retained history reports a store-bound gap instead of silently 
     operationId: randomUUID(), instanceId: f.instanceId, payload: { scope: 'project', action: 'VERIFY', projectId: f.projectId,
       outcome: 'FAILED', effect: 'NONE', code: 'REVISION_CONFLICT', configRevision: '9007199254740993', observationRevision: '9007199254740993' } })));
   const bounds = f.store.getEventState(true); assert.ok(BigInt(bounds.firstAvailable) > 1n);
-  const before = await snapshotArchive(f.directory);
+  const before = await durableHistory(f.directory);
   await assert.rejects(readEventPage(f.reader, f.storeId, { after: { storeId: f.storeId, seq: '0' } }), error => {
     assert.ok(error instanceof EventStreamError); assert.equal(error.message, 'CURSOR_EXPIRED');
     assert.deepEqual(error.gap, { storeId: f.storeId, firstAvailable: bounds.firstAvailable, highWater: bounds.highWater, nextAction: 'reread-status' }); return true;
   });
-  assert.deepEqual(await snapshotArchive(f.directory), before);
+  assert.deepEqual(await durableHistory(f.directory), before);
 });

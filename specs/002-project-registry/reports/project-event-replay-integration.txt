@@ -1,0 +1,14 @@
+✔ E2 updated client replays actual Foundation v2 prefix and all registry actions before/after daemon restart and offline (4550.1015ms)
+✔ E2 REGISTER completion survives post-sync drain failure/reopen with exactly one original journal record (122.320042ms)
+✔ E2 VERIFY completion survives post-sync drain failure/reopen with exactly one original journal record (127.535209ms)
+✔ E2 UPDATE completion survives post-sync drain failure/reopen with exactly one original journal record (128.770958ms)
+✔ E2 REMOVE completion survives post-sync drain failure/reopen with exactly one original journal record (127.759542ms)
+✔ E2 retention overtaking a mixed paged replay emits a verified gap and never pins old segments (1049.393167ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6173.717041

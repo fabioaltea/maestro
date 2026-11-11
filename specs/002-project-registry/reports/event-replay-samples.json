@@ -1,0 +1,199 @@
+{
+  "measuredAt": "2026-11-11T13:58:16.001Z",
+  "legacySchema": 2,
+  "currentSchema": 3,
+  "historicalRecords": 42,
+  "historicalPrefixPreserved": true,
+  "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+  "afterMutations": 55,
+  "afterRestart": 62,
+  "offline": 66,
+  "offlineWrites": 0,
+  "requests": [
+    {
+      "requestId": "57b13ab1-6f61-400a-ba89-6cdb1170473c",
+      "action": "REGISTER",
+      "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10",
+      "outcome": "SUCCEEDED",
+      "effect": "CREATED",
+      "configRevision": "1",
+      "observationRevision": "1",
+      "completedAt": "2026-11-11T13:58:13.724Z",
+      "error": null
+    },
+    {
+      "action": "VERIFY",
+      "requestId": "91892d6e-c137-4d59-a3db-b73783e805fe",
+      "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10",
+      "outcome": "SUCCEEDED",
+      "effect": "OBSERVED",
+      "configRevision": "1",
+      "observationRevision": "2",
+      "completedAt": "2026-11-11T13:58:14.097Z",
+      "error": null
+    },
+    {
+      "requestId": "fe8e42d1-5290-4ad5-adc1-044630c6f128",
+      "action": "UPDATE",
+      "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10",
+      "outcome": "SUCCEEDED",
+      "effect": "UPDATED",
+      "configRevision": "2",
+      "observationRevision": "2",
+      "completedAt": "2026-11-11T13:58:14.115Z",
+      "error": null
+    },
+    {
+      "requestId": "aefa1050-f9e8-4e3b-a08d-4b38156c3a88",
+      "action": "REMOVE",
+      "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10",
+      "outcome": "SUCCEEDED",
+      "effect": "REMOVED",
+      "configRevision": "3",
+      "observationRevision": "2",
+      "completedAt": "2026-11-11T13:58:14.180Z",
+      "error": null
+    }
+  ],
+  "events": [
+    {
+      "protocolVersion": 1,
+      "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+      "eventId": "ca3a40aa-b2de-4651-b161-715e5124f91e",
+      "seq": "48",
+      "occurredAt": "2026-11-11T13:58:13.358Z",
+      "type": "operation.accepted",
+      "instanceId": "8201f613-b8e8-4a68-9b91-f9c008b8433b",
+      "operationId": "57b13ab1-6f61-400a-ba89-6cdb1170473c",
+      "payload": {
+        "scope": "project",
+        "action": "REGISTER",
+        "outcome": "IN_PROGRESS"
+      }
+    },
+    {
+      "protocolVersion": 1,
+      "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+      "eventId": "7a6e07c6-ef47-4811-8c71-6aedda3982dd",
+      "seq": "49",
+      "occurredAt": "2026-11-11T13:58:13.725Z",
+      "type": "operation.completed",
+      "instanceId": "8201f613-b8e8-4a68-9b91-f9c008b8433b",
+      "operationId": "57b13ab1-6f61-400a-ba89-6cdb1170473c",
+      "payload": {
+        "scope": "project",
+        "action": "REGISTER",
+        "outcome": "SUCCEEDED",
+        "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10",
+        "effect": "CREATED",
+        "configRevision": "1",
+        "observationRevision": "1"
+      }
+    },
+    {
+      "protocolVersion": 1,
+      "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+      "eventId": "f90c190a-f2f5-48e3-8715-43c459a2d602",
+      "seq": "50",
+      "occurredAt": "2026-11-11T13:58:13.737Z",
+      "type": "operation.accepted",
+      "instanceId": "8201f613-b8e8-4a68-9b91-f9c008b8433b",
+      "operationId": "91892d6e-c137-4d59-a3db-b73783e805fe",
+      "payload": {
+        "scope": "project",
+        "action": "VERIFY",
+        "outcome": "IN_PROGRESS",
+        "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10"
+      }
+    },
+    {
+      "protocolVersion": 1,
+      "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+      "eventId": "ca3cfbfc-45a3-4d4f-bfff-a8056d1e9f46",
+      "seq": "51",
+      "occurredAt": "2026-11-11T13:58:14.097Z",
+      "type": "operation.completed",
+      "instanceId": "8201f613-b8e8-4a68-9b91-f9c008b8433b",
+      "operationId": "91892d6e-c137-4d59-a3db-b73783e805fe",
+      "payload": {
+        "scope": "project",
+        "action": "VERIFY",
+        "outcome": "SUCCEEDED",
+        "effect": "OBSERVED",
+        "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10",
+        "configRevision": "1",
+        "observationRevision": "2"
+      }
+    },
+    {
+      "protocolVersion": 1,
+      "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+      "eventId": "2bd65d35-4e3c-4d31-aab5-1ef78c922e34",
+      "seq": "52",
+      "occurredAt": "2026-11-11T13:58:14.108Z",
+      "type": "operation.accepted",
+      "instanceId": "8201f613-b8e8-4a68-9b91-f9c008b8433b",
+      "operationId": "fe8e42d1-5290-4ad5-adc1-044630c6f128",
+      "payload": {
+        "scope": "project",
+        "action": "UPDATE",
+        "outcome": "IN_PROGRESS",
+        "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10"
+      }
+    },
+    {
+      "protocolVersion": 1,
+      "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+      "eventId": "fb4ab710-cbcb-4e9e-8f17-c075373d164f",
+      "seq": "53",
+      "occurredAt": "2026-11-11T13:58:14.115Z",
+      "type": "operation.completed",
+      "instanceId": "8201f613-b8e8-4a68-9b91-f9c008b8433b",
+      "operationId": "fe8e42d1-5290-4ad5-adc1-044630c6f128",
+      "payload": {
+        "scope": "project",
+        "action": "UPDATE",
+        "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10",
+        "outcome": "SUCCEEDED",
+        "effect": "UPDATED",
+        "configRevision": "2",
+        "observationRevision": "2"
+      }
+    },
+    {
+      "protocolVersion": 1,
+      "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+      "eventId": "91370add-4340-4024-9323-369560e045f4",
+      "seq": "54",
+      "occurredAt": "2026-11-11T13:58:14.172Z",
+      "type": "operation.accepted",
+      "instanceId": "8201f613-b8e8-4a68-9b91-f9c008b8433b",
+      "operationId": "aefa1050-f9e8-4e3b-a08d-4b38156c3a88",
+      "payload": {
+        "scope": "project",
+        "action": "REMOVE",
+        "outcome": "IN_PROGRESS",
+        "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10"
+      }
+    },
+    {
+      "protocolVersion": 1,
+      "storeId": "25c6b95f-253b-49c4-9825-ff0abbe98f3a",
+      "eventId": "8cb631c0-4145-4a93-abcb-c93d5b249b53",
+      "seq": "55",
+      "occurredAt": "2026-11-11T13:58:14.181Z",
+      "type": "operation.completed",
+      "instanceId": "8201f613-b8e8-4a68-9b91-f9c008b8433b",
+      "operationId": "aefa1050-f9e8-4e3b-a08d-4b38156c3a88",
+      "payload": {
+        "scope": "project",
+        "action": "REMOVE",
+        "projectId": "5820ce29-47ca-46e4-99e6-afa03be47c10",
+        "outcome": "SUCCEEDED",
+        "effect": "REMOVED",
+        "configRevision": "3",
+        "observationRevision": "2"
+      }
+    }
+  ]
+}

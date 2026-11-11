@@ -1,0 +1,18 @@
+✔ E2 mixed Foundation/registry history keeps original envelope, exact revisions and correlation across pages (122.678ms)
+✔ E2 cursor rejects foreign store, malformed or future sequence without advancing, rewriting or draining history (95.592625ms)
+✔ E2 redacted mixed pages remain at most 60 KiB with whole records and exact decimal revisions (823.6405ms)
+✔ E2 expired retained history reports a store-bound gap instead of silently resuming at a newer event (1165.293667ms)
+✔ E2 updated client replays actual Foundation v2 prefix and all registry actions before/after daemon restart and offline (3692.187375ms)
+✔ E2 REGISTER completion survives post-sync drain failure/reopen with exactly one original journal record (123.355208ms)
+✔ E2 VERIFY completion survives post-sync drain failure/reopen with exactly one original journal record (128.520208ms)
+✔ E2 UPDATE completion survives post-sync drain failure/reopen with exactly one original journal record (131.969875ms)
+✔ E2 REMOVE completion survives post-sync drain failure/reopen with exactly one original journal record (130.349084ms)
+✔ E2 retention overtaking a mixed paged replay emits a verified gap and never pins old segments (1052.912083ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7595.343209

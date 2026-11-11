@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T082 conclusi (82/96), P0 locale
+**Status**: implementazione locale in corso; T001–T083 conclusi (83/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -275,7 +275,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Implementazione e verifica
 
-- [ ] T083 Creare ed eseguire `tests/integration/project-event-replay.test.ts` su journal/outbox reali: replay prima/dopo restart e drain failure, seq continui/univoci, retention floor/gap e tutte le mutazioni registry; qualificare il riuso di event-pump/journal esistenti senza introdurre duplicati. **Dip.: T082.**
+- [X] T083 Creare ed eseguire `tests/integration/project-event-replay.test.ts` su journal/outbox reali: replay prima/dopo restart e drain failure, seq continui/univoci, retention floor/gap e tutte le mutazioni registry; qualificare il riuso di event-pump/journal esistenti senza introdurre duplicati. **Dip.: T082.**
 - [ ] T084 Eseguire il checkpoint E2 e consolidare prove/comandi in `specs/002-project-registry/reports/events.md`; dimostrare che un client aggiornato legge anche eventi Foundation precedenti, senza promettere compatibilità dei vecchi binari con schema/nuovi metodi. **Dip.: T083.**
 
 ### Test richiesti
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T082 conclusi, T083–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T083 conclusi, T084–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
