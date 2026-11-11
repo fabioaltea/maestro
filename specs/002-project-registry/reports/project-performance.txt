@@ -1,0 +1,9 @@
+✔ V1 SC-002/003: 100 projects, 1000 full paginated reads/10 clients, 30 bounded inspections including inaccessible/slow reference (95638.252084ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 95704.264083

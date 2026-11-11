@@ -1,0 +1,29 @@
+[
+  {
+    "label": "idle",
+    "command": [
+      "caffeinate",
+      "-i",
+      "node",
+      "--test",
+      "--test-concurrency=1",
+      "dist-tests/tests/acceptance/idle-resources.test.js"
+    ],
+    "completedAt": "2026-11-11T15:19:21.118210+00:00",
+    "exitCode": 0,
+    "durationSeconds": 601.3626130000921
+  },
+  {
+    "label": "benchmark",
+    "command": [
+      "caffeinate",
+      "-i",
+      "npm",
+      "run",
+      "bench:foundation"
+    ],
+    "completedAt": "2026-11-11T15:29:26.146033+00:00",
+    "exitCode": 0,
+    "durationSeconds": 605.0256071250187
+  }
+]
