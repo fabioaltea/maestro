@@ -1,0 +1,9 @@
+✔ US4 CLI: dirty/absent removal, reimport and old retry preserve all Git data and durable correlated history (7134.106ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7236.748041

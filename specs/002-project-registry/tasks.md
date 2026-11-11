@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T079 conclusi (79/96), P0 locale
+**Status**: implementazione locale in corso; T001–T080 conclusi (80/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -258,7 +258,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 - [X] T077 [US4] Collegare projects.remove e `project remove --expected-revision` in `src/core/projects/dispatch.ts`, `src/client/local-client.ts` e `src/cli/projects.ts`; distinguere progetto sconosciuto/rimosso, restituire esito originale prima dei controlli sullo stato corrente nei retry. **Dip.: T076.**
 - [X] T078 [US4] Creare ed eseguire `tests/integration/project-remove-verify-races.test.ts`: remove durante verify, due rimozioni stessa revisione, nuova registrazione durante vecchio retry, intento non autorizzato; nessuna resurrezione o cancellazione del nuovo UUID. **Dip.: T077.**
 - [X] T079 [US4] Eseguire `tests/integration/project-remove-crash.test.ts` e le suite US4; appendere ≥10 campioni in `specs/002-project-registry/reports/recovery.md` e controllare insieme ai campioni import/update il totale SC-005 ≥30. **Dip.: T078.**
-- [ ] T080 [US4] Creare ed eseguire `tests/acceptance/project-remove.test.ts` da CLI con repo dirty/assente e secondo client; confrontare snapshot integrali, osservare eventi correlati e interrogare l'esito anche offline dopo stop/restart. **Dip.: T079.**
+- [X] T080 [US4] Creare ed eseguire `tests/acceptance/project-remove.test.ts` da CLI con repo dirty/assente e secondo client; confrontare snapshot integrali, osservare eventi correlati e interrogare l'esito anche offline dopo stop/restart. **Dip.: T079.**
 - [ ] T081 [US4] Consolidare i 4 scenari US4 e la prova nuovo UUID/vecchio retry in `specs/002-project-registry/reports/us4.md`; confermare che rimozione registro non significa cancellazione, cleanup worktree o ripristino automatico della registrazione. **Dip.: T080.**
 
 **Checkpoint**: Tutti i 4 scenari US4 verdi, ≥10 crash remove; nessun comando di cleanup o rebind e nessuna perdita di dati idempotenti.
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T079 conclusi, T080–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T080 conclusi, T081–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
