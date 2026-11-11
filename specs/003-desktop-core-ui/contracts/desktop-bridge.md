@@ -10,7 +10,7 @@ API esposta `window.maestro`:
 
 | Metodo | Input aggiuntivo | Esito / limite |
 |--------|------------------|----------------|
-| chooseArchive | nessuno | dialog cartella; annullamento esplicito; nuovo contesto opaco, nessuna creazione |
+| chooseArchive | newArchiveName?:nome singolo validato | dialog cartella; annullamento esplicito; nuovo contesto opaco, nessuna creazione |
 | context | nessuno | archivio attivo/stato bootstrap/runtime sicuro |
 | status / diagnostics | nessuno | lettura corrente o LAST_KNOWN core |
 | listProjects | cursor?:opaque, limit?:25 | pagina validata, invalidazione REGISTRY_CHANGED |
