@@ -20,7 +20,7 @@ Predisporre build desktop separata senza alterare build/runtime core.
 
 Verificare confini privilegiati e runtime prima di qualsiasi user story; scrivere test critici prima delle rispettive implementazioni.
 
-- [ ] T004 [P] Scrivere contratti negativi e unit test per input/epoch/sender/frame, limiti32KiB e chiamate nominate in apps/desktop/tests/contract/bridge.test.ts, secondo contracts/desktop-bridge.md.
+- [X] T004 [P] Scrivere contratti negativi e unit test per input/epoch/sender/frame, limiti32KiB e chiamate nominate in apps/desktop/tests/contract/bridge.test.ts, secondo contracts/desktop-bridge.md.
 - [ ] T005 [P] Scrivere test Node per runtime assoluto, env allowlist, shell:false, JSON valido a exit≠0, overflow/watchdog e ownership CLI in apps/desktop/tests/unit/core-cli.test.ts; fixture risposte generate dalla CLI reale, non inventate.
 - [ ] T006 Definire DTO plain, validatori chiusi, enum/errori bridge e porte sostituibili in apps/desktop/src/shared/bridge-contract.ts, apps/desktop/src/shared/validation.ts e apps/desktop/src/main/ports.ts; revisioni/seq stringhe, nessun import implementativo core.
 - [ ] T007 Implementare adapter CLI con Node26 esterno validato, argv sicuri, quote-free shell:false, parser PublicResult per comando e limiti2letture/1mutazione/1stream in apps/desktop/src/main/core-cli.ts e apps/desktop/src/main/runtime.ts; esporre letture, mantenere mutazioni non raggiungibili fino a US2.
