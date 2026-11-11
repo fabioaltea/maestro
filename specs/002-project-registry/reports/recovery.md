@@ -83,3 +83,37 @@ loss. Read-only native SQLite/confinement regressions pass, including writer-clo
 races, no WAL creation and no process spawn/write escape. Large whole-record pages
 are additionally checked with 105 synthetic projects; this is a byte/count correctness
 test, not the SC-002 performance workload.
+
+## T068 — UPDATE / US3 recovery
+
+2026-11-11. The US3 slice has **28 PASS**, 0 FAIL/CANCELLED/SKIP in
+[us3-recovery.txt](us3-recovery.txt): contracts, SQL/core policy, real Git scenarios,
+concurrency and ten actual owned daemon SIGKILL cases. The expanded crash/failure
+slice has **12 PASS** in [us3-crash-failures.txt](us3-crash-failures.txt), including
+completion-event correlation and injected FULL/IO rollback. These slices overlap;
+counts are not independent crash samples. [Ten raw cases](update-crash-samples.json).
+
+Crash windows cover before acceptance, accepted, active probe, after the first base
+proof, before/after project-row writes within the SQL transaction, before commit,
+committed, client timeout before ACK and before outbox drain. Before-commit cases
+retain the entire original name/base/configuration and historical observation;
+accepted requests recover INTERRUPTED with no automatic execution. After-commit
+cases preserve both fields, configRevision 2, the immutable terminal result and
+exactly one completion event linked to the original project/request/revision.
+The never-accepted request can be explicitly admitted after restart. Identical
+retries retain the original result and do not increment store/config revisions.
+
+Source snapshots remain identical. Ownership comes from captured handles and
+lifeline/verified probe exit, never a persisted PID. An interrupted client retains
+its request ID and cannot cancel or automatically repeat an admitted patch.
+
+Injected SQLITE_FULL and SQLITE_IOERR_FSYNC after the project UPDATE statement
+roll back configuration, registry revision, terminal success and event together.
+Classification preserves DISK_FULL/IO_ERROR and removes raw driver path/sentinel.
+These two update storage failures are injection, not physical disk failure or a
+native page-allocation exhaustion experiment; actual SQLITE_FULL allocation was
+qualified separately for REGISTER. No failed persistence is labelled SUCCEEDED.
+
+SC-005 progress: ten REGISTER and ten UPDATE crash cases are qualified. The ten
+REMOVE cases and combined final SC-005 acceptance remain US4/final-work tasks;
+VERIFY crashes are additional evidence and do not substitute for those cases.

@@ -1,0 +1,20 @@
+✔ UPDATE actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (4797.731416ms)
+✔ UPDATE actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (3568.390458ms)
+✔ UPDATE actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (4112.7215ms)
+✔ UPDATE actual SIGKILL at project.update.probed/clean preserves intent/result/project/event atomically (3841.989ms)
+✔ UPDATE actual SIGKILL at project.update.beforeWrite/clean preserves intent/result/project/event atomically (4408.04275ms)
+✔ UPDATE actual SIGKILL at project.update.written/clean preserves intent/result/project/event atomically (6343.398417ms)
+✔ UPDATE actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (7037.818833ms)
+✔ UPDATE actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (4638.033917ms)
+✔ UPDATE actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (4346.454417ms)
+✔ UPDATE actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (4469.373ms)
+✔ injected SQLITE_FULL after UPDATE row write rolls back config, terminal result and success event together (84.236ms)
+✔ injected SQLITE_IOERR_FSYNC after UPDATE row write rolls back config, terminal result and success event together (61.335958ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 47974.890292

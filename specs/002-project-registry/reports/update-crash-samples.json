@@ -1,0 +1,431 @@
+{
+  "measuredAt": "2026-11-11T12:19:53.997Z",
+  "required": 10,
+  "completed": 10,
+  "samples": [
+    {
+      "point": "project.beforeAccept",
+      "variant": "clean",
+      "requestId": "e6fea8b5-8651-4833-851f-52144d415a28",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": false,
+      "originalOutcome": null,
+      "originalResult": null,
+      "retryOutcome": "SUCCEEDED",
+      "expectedConfigRevision": "2",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "Updated 🎼",
+        "base_branch": "candidate-base",
+        "config_revision": 2
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.accepted",
+      "variant": "clean",
+      "requestId": "62d86f73-b64d-4145-aafb-68c6c6a7902b",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "UPDATE",
+        "requestId": "62d86f73-b64d-4145-aafb-68c6c6a7902b",
+        "projectId": "a2ffafb8-53a1-4cb5-81d4-eef90defed8a",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-11T12:19:13.912Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "62d86f73-b64d-4145-aafb-68c6c6a7902b"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.probing",
+      "variant": "clean",
+      "requestId": "e7d26260-b855-44bc-99e7-6651e31f4926",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "UPDATE",
+        "requestId": "e7d26260-b855-44bc-99e7-6651e31f4926",
+        "projectId": "d5b2414f-41b7-4bd1-9f3b-773b874d09fd",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-11T12:19:17.987Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "e7d26260-b855-44bc-99e7-6651e31f4926"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.update.probed",
+      "variant": "clean",
+      "requestId": "510b84ce-117b-4038-be02-418f865842d3",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "UPDATE",
+        "requestId": "510b84ce-117b-4038-be02-418f865842d3",
+        "projectId": "bd70ee69-48c3-42e5-b180-67715143d21e",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-11T12:19:21.936Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "510b84ce-117b-4038-be02-418f865842d3"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.update.beforeWrite",
+      "variant": "clean",
+      "requestId": "fd504c7b-bd0d-49ca-8173-61806fb0c63b",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "UPDATE",
+        "requestId": "fd504c7b-bd0d-49ca-8173-61806fb0c63b",
+        "projectId": "ae31777f-87cd-4d16-8d45-485532e80424",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-11T12:19:26.327Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "fd504c7b-bd0d-49ca-8173-61806fb0c63b"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.update.written",
+      "variant": "clean",
+      "requestId": "ad7fc29a-8313-4f76-b6bc-cee31b2a01e6",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "UPDATE",
+        "requestId": "ad7fc29a-8313-4f76-b6bc-cee31b2a01e6",
+        "projectId": "e64e025d-297e-40e2-ba3d-29e8064184ec",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-11T12:19:30.927Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "ad7fc29a-8313-4f76-b6bc-cee31b2a01e6"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeCommit",
+      "variant": "clean",
+      "requestId": "83d065ec-aedd-46c5-8c70-cf770cbf9904",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "UPDATE",
+        "requestId": "83d065ec-aedd-46c5-8c70-cf770cbf9904",
+        "projectId": "ab41b7ee-6925-49e8-b7bb-08bc7d724a49",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-11T12:19:39.667Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "83d065ec-aedd-46c5-8c70-cf770cbf9904"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.committed",
+      "variant": "clean",
+      "requestId": "c0356674-a087-40dc-bca6-789b20dbc196",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "requestId": "c0356674-a087-40dc-bca6-789b20dbc196",
+        "action": "UPDATE",
+        "projectId": "b6036374-f887-45eb-9558-ce8d1d819a99",
+        "outcome": "SUCCEEDED",
+        "effect": "UPDATED",
+        "configRevision": "2",
+        "observationRevision": "1",
+        "completedAt": "2026-11-11T12:19:43.765Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "expectedConfigRevision": "2",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "Updated 🎼",
+        "base_branch": "candidate-base",
+        "config_revision": 2
+      },
+      "completedEvents": [
+        {
+          "protocolVersion": 1,
+          "storeId": "af8ff921-a0c5-4e2d-a880-66e786b4dd2d",
+          "eventId": "75206bdc-2867-47b7-acf3-da0c2729773a",
+          "seq": "18",
+          "occurredAt": "2026-11-11T12:19:43.767Z",
+          "type": "operation.completed",
+          "instanceId": "8a59833e-767d-49c9-96b7-b8b390c4ea99",
+          "operationId": "c0356674-a087-40dc-bca6-789b20dbc196",
+          "payload": {
+            "scope": "project",
+            "action": "UPDATE",
+            "projectId": "b6036374-f887-45eb-9558-ce8d1d819a99",
+            "outcome": "SUCCEEDED",
+            "effect": "UPDATED",
+            "configRevision": "2",
+            "observationRevision": "1"
+          }
+        }
+      ],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeAck",
+      "variant": "client-deadline",
+      "requestId": "d8544eec-db82-4457-ab76-3216c14ec428",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "requestId": "d8544eec-db82-4457-ab76-3216c14ec428",
+        "action": "UPDATE",
+        "projectId": "2207de8e-846c-4f8b-810a-da7cc638a8b2",
+        "outcome": "SUCCEEDED",
+        "effect": "UPDATED",
+        "configRevision": "2",
+        "observationRevision": "1",
+        "completedAt": "2026-11-11T12:19:48.187Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "expectedConfigRevision": "2",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "Updated 🎼",
+        "base_branch": "candidate-base",
+        "config_revision": 2
+      },
+      "completedEvents": [
+        {
+          "protocolVersion": 1,
+          "storeId": "0255ef46-a437-44d3-993d-32ca8262df14",
+          "eventId": "3b095a8f-a330-45ca-8e27-6b66dee3e403",
+          "seq": "18",
+          "occurredAt": "2026-11-11T12:19:48.188Z",
+          "type": "operation.completed",
+          "instanceId": "1b1901dc-00d1-4025-9117-ae2471fa375a",
+          "operationId": "d8544eec-db82-4457-ab76-3216c14ec428",
+          "payload": {
+            "scope": "project",
+            "action": "UPDATE",
+            "projectId": "2207de8e-846c-4f8b-810a-da7cc638a8b2",
+            "outcome": "SUCCEEDED",
+            "effect": "UPDATED",
+            "configRevision": "2",
+            "observationRevision": "1"
+          }
+        }
+      ],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeDrain",
+      "variant": "clean",
+      "requestId": "a175c27a-cc64-4f94-8cd5-10d2427ceb5a",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "requestId": "a175c27a-cc64-4f94-8cd5-10d2427ceb5a",
+        "action": "UPDATE",
+        "projectId": "3b68c904-e852-41dc-855b-51a396185348",
+        "outcome": "SUCCEEDED",
+        "effect": "UPDATED",
+        "configRevision": "2",
+        "observationRevision": "1",
+        "completedAt": "2026-11-11T12:19:52.606Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "expectedConfigRevision": "2",
+      "atomicNameAndBase": true,
+      "confirmedConfiguration": {
+        "display_name": "Updated 🎼",
+        "base_branch": "candidate-base",
+        "config_revision": 2
+      },
+      "completedEvents": [
+        {
+          "protocolVersion": 1,
+          "storeId": "45e572e1-85d4-4bdf-903f-29f2e5538bc3",
+          "eventId": "95d62354-56f3-494e-9a1e-e8d65a688cb5",
+          "seq": "18",
+          "occurredAt": "2026-11-11T12:19:52.608Z",
+          "type": "operation.completed",
+          "instanceId": "2feb026e-aedd-4e13-8181-ca08630bd5fa",
+          "operationId": "a175c27a-cc64-4f94-8cd5-10d2427ceb5a",
+          "payload": {
+            "scope": "project",
+            "action": "UPDATE",
+            "projectId": "3b68c904-e852-41dc-855b-51a396185348",
+            "outcome": "SUCCEEDED",
+            "effect": "UPDATED",
+            "configRevision": "2",
+            "observationRevision": "1"
+          }
+        }
+      ],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    }
+  ]
+}
