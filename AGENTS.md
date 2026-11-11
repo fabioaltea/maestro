@@ -37,11 +37,11 @@ npm run bench:foundation
 TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o driver SQLite.
 
 ## Recent Changes
-- 002-project-registry: T001–T070 conclusi, US1/US2/US3 e G1/S1/E1 PASS, 320 test ordinari verdi;
-  project add/list/show/verify/update/operation disponibili da CLI/API, anche esiti/dettaglio offline. Feature selezionata da `.specify/feature.json`: consultare
+- 002-project-registry: T001–T081 conclusi, US1/US2/US3/US4 e G1/S1/E1 PASS, 348 test ordinari verdi;
+  project add/list/show/verify/update/remove/operation disponibili da CLI/API, anche esiti/dettaglio offline. Feature selezionata da `.specify/feature.json`: consultare
   `specs/002-project-registry/`. Import da worktree esistenti senza gestione worktree;
   readiness Foundation T082/T085 restano gate finali; per sviluppo locale basta
-  baseline verde. 20 import concorrenti, 100 retry e 10 SIGKILL REGISTER qualificati; US2: letture storiche/paginazione CAS, verify esplicito e 6 SIGKILL qualificati; US3: configurazione CAS e 10 SIGKILL UPDATE qualificati; US4 ancora da completare.
+  baseline verde. 20 import concorrenti, 100 retry e 10 SIGKILL REGISTER qualificati; US2: letture storiche/paginazione CAS, verify esplicito e 6 SIGKILL qualificati; US3: configurazione CAS e 10 SIGKILL UPDATE qualificati; US4: sola rimozione registro, tombstone e 10 SIGKILL REMOVE qualificati; E2/E3/V1 e gate finali restano aperti.
   Implementazione autorizzata; un commit locale per task. Nessun push implicito.
 
 - 001-core-background-daemon: Foundation implementata; diagnostica con categorie

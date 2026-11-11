@@ -76,7 +76,8 @@ misti. Un singolo record fuori budget produce OUTPUT_LIMIT, non troncamento sile
 Raccolte di 100 progetti possono richiedere più pagine: misurare il tempo dell'intera
 lettura richiesta, non solo della prima pagina, nel carico SC-002.
 
-Get progetto rimosso restituisce PROJECT_REMOVED con ID/revisione tombstone;
+Get progetto rimosso restituisce PROJECT_REMOVED con `data.tombstone` contenente
+soltanto `projectId`, `configRevision` e `removedAt`, anche nelle letture offline;
 ID sconosciuto PROJECT_NOT_FOUND. Operation query può leggere l'esito della rimozione
 anche dopo una nuova registrazione dello stesso repo. Un requestId mai accettato
 restituisce OPERATION_NOT_FOUND; non è un risultato terminale né un progetto mancante.

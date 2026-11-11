@@ -1,6 +1,6 @@
 # Contract — Maestro project CLI v1
 
-Add/list/show/verify/update/operation implementati; remove resta pianificato.
+Add/list/show/verify/update/remove/operation implementati e qualificati nei checkpoint locali US1–US4.
 Entry point nello stesso build Foundation: `node dist/cli/main.js`; alias installato `maestro`.
 
 ## Sintassi

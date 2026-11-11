@@ -1,9 +1,8 @@
 # Quickstart — Review e futura verifica della 002
 
-**Stato al 2026-11-11**: US1/US2/US3 implementate e verificate localmente.
-`project add/list/show/verify/update/operation` sono disponibili dopo build; remove
-resta pianificato. Evidenze e limiti: [US1](reports/us1.md), [US2](reports/us2.md), [US3](reports/us3.md).
-Gli esempi delle storie successive non attestano funzionalità già disponibili.
+**Stato al 2026-11-11**: US1/US2/US3/US4 implementate e verificate localmente.
+`project add/list/show/verify/update/remove/operation` sono disponibili dopo build. Evidenze e limiti: [US1](reports/us1.md), [US2](reports/us2.md), [US3](reports/us3.md), [US4](reports/us4.md).
+Replay/stream/backpressure e accettazione finale richiedono ancora i loro checkpoint.
 
 ## Review documentale
 
