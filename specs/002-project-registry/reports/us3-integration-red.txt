@@ -1,0 +1,94 @@
+✖ local branch configuration persists on detached dirty checkout without changing any Git file (2434.255583ms)
+✖ remote-only, missing and unborn branch values reject an atomic name/base patch (2219.88325ms)
+✖ rename/clear work with an unavailable reference and never require a Git probe or change the saved identity (2198.274166ms)
+✖ explicit first base selection is separate from verify; deleting it never substitutes another branch (2712.655584ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9670.397208
+
+✖ failing tests:
+
+test at dist-tests/tests/integration/project-update.test.js:9:1
+✖ local branch configuration persists on detached dirty checkout without changing any Git file (2434.255583ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"ce046202-ee8c-4c1a-bae4-ba00994e66a0","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"ce046202-ee8c-4c1a-bae4-ba00994e66a0"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update.test.js:18:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update.test.js:28:1
+✖ remote-only, missing and unborn branch values reject an atomic name/base patch (2219.88325ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"1b8a7f50-6592-4d16-baed-3c5b49836187","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"1b8a7f50-6592-4d16-baed-3c5b49836187"},"data":{}}
+  + actual - expected
+  
+  + 'UNSUPPORTED_VERSION'
+  - 'INVALID_BASE_BRANCH'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update.test.js:35:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'UNSUPPORTED_VERSION',
+    expected: 'INVALID_BASE_BRANCH',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update.test.js:44:1
+✖ rename/clear work with an unavailable reference and never require a Git probe or change the saved identity (2198.274166ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"b637b04e-6425-459b-a592-6084bfef8212","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"b637b04e-6425-459b-a592-6084bfef8212"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update.test.js:49:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-update.test.js:56:1
+✖ explicit first base selection is separate from verify; deleting it never substitutes another branch (2712.655584ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"9f57bf47-2edb-4098-9a81-1e5f3d699e67","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"9f57bf47-2edb-4098-9a81-1e5f3d699e67"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-update.test.js:66:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
