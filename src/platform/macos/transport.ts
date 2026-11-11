@@ -298,7 +298,7 @@ async function subscribeLocal(endpoint: string, key: string, request: import('..
     if (object.kind !== 'event' || object.instanceId !== identity || !object.event || typeof object.event !== 'object') throw new Error('INVALID_REQUEST');
     const event = object.event as StreamEventFrame['event'];
     if (event.protocolVersion !== 1 || event.storeId !== storeId || !EVENT_TYPES.includes(event.type as typeof EVENT_TYPES[number])
-      || BigInt(requireDecimal(event.seq)) <= BigInt(lastReceived ?? startAfter) || Buffer.byteLength(JSON.stringify(event)) + 36 > MAX_EVENT_BYTES) throw new Error('INVALID_REQUEST');
+      || BigInt(requireDecimal(event.seq)) !== BigInt(lastReceived ?? startAfter) + 1n || Buffer.byteLength(JSON.stringify(event)) + 36 > MAX_EVENT_BYTES) throw new Error('INVALID_REQUEST');
     if (typeof event.occurredAt !== 'string' || event.occurredAt.length > 40 || !Number.isFinite(Date.parse(event.occurredAt))
       || !event.payload || typeof event.payload !== 'object' || Array.isArray(event.payload)) throw new Error('INVALID_REQUEST');
     requireUuid(event.eventId);

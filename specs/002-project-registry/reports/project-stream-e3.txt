@@ -1,0 +1,14 @@
+✔ E3 registry client success: preserve payload and consume cursor only after successful application (39.280792ms)
+✔ E3 registry client callback-failure: preserve payload and consume cursor only after successful application (16.927333ms)
+✔ E3 registry client sequence-gap: preserve payload and consume cursor only after successful application (13.140084ms)
+✔ E3 ten actual clients replay then observe all registry actions, disconnect and resume across restart (2565.192083ms)
+✔ E3 a physical post-commit pending tail is not streamed until journal drain is acknowledged (150.90575ms)
+✔ E3 stalled registry observer is evicted within existing buffer/deadline limits while a healthy client progresses (21352.081709ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 24516.954125

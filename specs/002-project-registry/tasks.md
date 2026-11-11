@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T086 conclusi (86/96), P0 locale
+**Status**: implementazione locale in corso; T001–T087 conclusi (87/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -285,7 +285,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Implementazione e verifica
 
-- [ ] T087 Eseguire i test E3 e adeguare soltanto i codec/cursor necessari ai contratti di `src/core/live-events.ts`, `src/protocol/event-pump.ts` e `src/client/local-client.ts` già riusati; appendere prove in `specs/002-project-registry/reports/events.md` e bloccare il checkpoint se il nuovo payload/cursor non è preservato. **Dip.: T085, T086.**
+- [X] T087 Eseguire i test E3 e adeguare soltanto i codec/cursor necessari ai contratti di `src/core/live-events.ts`, `src/protocol/event-pump.ts` e `src/client/local-client.ts` già riusati; appendere prove in `specs/002-project-registry/reports/events.md` e bloccare il checkpoint se il nuovo payload/cursor non è preservato. **Dip.: T085, T086.**
 
 ### Test richiesti
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T086 conclusi, T087–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T087 conclusi, T088–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

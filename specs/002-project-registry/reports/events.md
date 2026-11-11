@@ -102,3 +102,23 @@ E3/T085–T087, V1/T088–T091 and final review/acceptance T092–T096 remain op
 Foundation 001/T082 second UID/machine is still NOT_RUN; 001/T085 complete IP-denied
 acceptance remains OPEN. No feature performance target or release gate is promoted
 to PASS by this checkpoint. No publication or next phase is implicitly authorized.
+
+## E3 — registry streaming (T085–T087)
+
+2026-11-11. **6 PASS**, 0 FAIL/SKIP/CANCELLED in [project-stream-e3.txt](project-stream-e3.txt).
+Actual clients preserve scoped payload/revisions and advance lastReceived only after
+the application callback succeeds. Callback failure and rejected frame retain the
+previous cursor; no reconnect/control/new intent is issued. The new gap test exposed
+that the transport accepted increasing but non-contiguous sequences. The one-line
+transport check now requires exactly lastApplied+1; [initial evidence](project-stream-contract-red.txt).
+
+Ten actual authenticated observers replay then receive all four committed registry
+actions; the eleventh is BUSY. Disconnect leaves the daemon running; saved cursor
+resumes across explicit restart and stop closes sessions. A real pending post-sync
+outbox tail is withheld until drain acknowledgement. A stalled actual observer is
+evicted while a healthy observer reaches high water and status remains usable;
+reported peak buffers stay <=1 MiB/client. The load events in that slow-client test
+are synthetic scoped drafts, not additional executed project mutations. Callback
+and malformed-peer tests use controlled local peers; mutation streaming uses real Git.
+Existing pump/daemon limits and event taxonomy are unchanged. V1 and final acceptance
+remain separate; this checkpoint does not certify their thresholds.
