@@ -1,0 +1,2 @@
+:root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #eceeef; background: #17191c; color-scheme: dark; }
+body { margin: 0; } main { padding: 32px; } h1 { font-size: 24px; letter-spacing: -.7px; } p { color: #b9bec4; } :focus-visible { outline: 2px solid #b5d9a6; outline-offset: 4px; }
