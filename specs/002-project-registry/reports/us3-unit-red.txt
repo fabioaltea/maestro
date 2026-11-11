@@ -1,0 +1,52 @@
+✖ rename changes only confirmed config; no-op preserves revisions and dates; historical observations are not invented (83.294417ms)
+✖ stale revisions and invalid explicit base reject the whole patch with no partial rename or success event (46.176583ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 0
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 221.681083
+
+✖ failing tests:
+
+test at dist-tests/tests/unit/project-update.test.js:16:1
+✖ rename changes only confirmed config; no-op preserves revisions and dates; historical observations are not invented (83.294417ms)
+  AssertionError [ERR_ASSERTION]: atomic update CAS is missing
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at fixture (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-update.test.js:7:12)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-update.test.js:17:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-update.test.js:40:1
+✖ stale revisions and invalid explicit base reject the whole patch with no partial rename or success event (46.176583ms)
+  AssertionError [ERR_ASSERTION]: atomic update CAS is missing
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at fixture (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-update.test.js:7:12)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-update.test.js:41:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
