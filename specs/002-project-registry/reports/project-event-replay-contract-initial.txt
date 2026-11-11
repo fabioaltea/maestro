@@ -1,0 +1,46 @@
+✔ E2 mixed Foundation/registry history keeps original envelope, exact revisions and correlation across pages (124.997125ms)
+✖ E2 cursor rejects foreign store, malformed or future sequence without advancing, rewriting or draining history (86.671416ms)
+✔ E2 redacted mixed pages remain at most 60 KiB with whole records and exact decimal revisions (764.755542ms)
+✔ E2 expired retained history reports a store-bound gap instead of silently resuming at a newer event (1134.309667ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 3
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2167.179916
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/project-event-replay.test.js:48:1
+✖ E2 cursor rejects foreign store, malformed or future sequence without advancing, rewriting or draining history (86.671416ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  ... Skipped lines
+  
+    [
+      {
+        hash: null,
+        mode: 16832,
+        relative: '',
+  ...
+      {
+  +     hash: 'ac40ca6be6f48dc8058395898dcaa325ffbcd2aa831643bf74785cdc85937f9d',
+  -     hash: 'b2ef31115cf99452b44ea19221596e9cd03f9abac692ff5a0a0e0b4e2b52802b',
+        mode: 33152,
+        relative: 'state.sqlite-shm',
+        size: 32768
+      },
+      {
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-event-replay.test.js:54:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ { relative: '', mode: 16832, size: 0, hash: null }, { relative: 'control-lease.sqlite', mode: 33152, size: 0, hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }, { relative: 'daemon-lease.sqlite', mode: 33152, size: 0, hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }, { relative: 'events', mode: 16832, size: 0, hash: null }, { relative: 'events/segment-00000000000000000001.journal', mode: 33152, size: 4969, hash: '1df56223a92acf18d9bb1dd7e4dded9f4e6c4003aa5e8b179e382165f297d256' }, { relative: 'logs', mode: 16832, size: 0, hash: null }, { relative: 'logs/foundation-0.log', mode: 33152, size: 4584, hash: '85ef0cad941861f9c8c3453111c5442b255e9486f04ce731970366eab9731af1' }, { relative: 'state.sqlite', mode: 33152, size: 147456, hash: 'e8063d98e5606df04d5250f550692c15c352f84873b220b68dd6289b071af1e4' }, { relative: 'state.sqlite-shm', mode: 33152, size: 32768, hash: 'ac40ca6be6f48dc8058395898dcaa325ffbcd2aa831643bf74785cdc85937f9d' }, { relative: 'state.sqlite-wal', mode: 33152, size: 436752, hash: '78e45ad0b07a1659b53e93dfae7fb75960177bf2426678cd2c433476539623c5' } ],
+    expected: [ { relative: '', mode: 16832, size: 0, hash: null }, { relative: 'control-lease.sqlite', mode: 33152, size: 0, hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }, { relative: 'daemon-lease.sqlite', mode: 33152, size: 0, hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' }, { relative: 'events', mode: 16832, size: 0, hash: null }, { relative: 'events/segment-00000000000000000001.journal', mode: 33152, size: 4969, hash: '1df56223a92acf18d9bb1dd7e4dded9f4e6c4003aa5e8b179e382165f297d256' }, { relative: 'logs', mode: 16832, size: 0, hash: null }, { relative: 'logs/foundation-0.log', mode: 33152, size: 4584, hash: '85ef0cad941861f9c8c3453111c5442b255e9486f04ce731970366eab9731af1' }, { relative: 'state.sqlite', mode: 33152, size: 147456, hash: 'e8063d98e5606df04d5250f550692c15c352f84873b220b68dd6289b071af1e4' }, { relative: 'state.sqlite-shm', mode: 33152, size: 32768, hash: 'b2ef31115cf99452b44ea19221596e9cd03f9abac692ff5a0a0e0b4e2b52802b' }, { relative: 'state.sqlite-wal', mode: 33152, size: 436752, hash: '78e45ad0b07a1659b53e93dfae7fb75960177bf2426678cd2c433476539623c5' } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
