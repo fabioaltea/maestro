@@ -1,0 +1,36 @@
+✔ remove requires ID/revision only and CLI offers no force, cleanup or filesystem authority (3026.555333ms)
+✔ removed outcomes and tombstone are durable across reimport, offline query and identical retry (3767.382708ms)
+✔ tombstone DTO rejects private authority and malformed identity/revision/date fields (0.563417ms)
+✔ REMOVE actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (3663.614541ms)
+✔ REMOVE actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (3920.844792ms)
+✔ REMOVE actual SIGKILL at project.remove.prepared/clean preserves intent/result/project/event atomically (4033.132667ms)
+✔ REMOVE actual SIGKILL at project.remove.beforeWrite/dirty preserves intent/result/project/event atomically (3994.562417ms)
+✔ REMOVE actual SIGKILL at project.remove.written/dirty preserves intent/result/project/event atomically (4047.586708ms)
+✔ REMOVE actual SIGKILL at project.remove.beforeFinalize/clean preserves intent/result/project/event atomically (3972.182625ms)
+✔ REMOVE actual SIGKILL at project.beforeCommit/conflicted preserves intent/result/project/event atomically (4196.279292ms)
+✔ REMOVE actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (3912.876417ms)
+✔ REMOVE actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (3580.779584ms)
+✔ REMOVE actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (3932.430958ms)
+✔ injected SQLITE_FULL after REMOVE tombstone write rolls back config, terminal result and success event together (77.900875ms)
+✔ injected SQLITE_IOERR_FSYNC after REMOVE tombstone write rolls back config, terminal result and success event together (61.500292ms)
+✔ two real clients removing one revision confirm exactly one tombstone (2289.98075ms)
+✔ remove during verify fences the old observation even when the same repository has already been reimported (102.589959ms)
+✔ a concurrent new import and the old remove retry never share a project ID or remove the new registration (3195.658291ms)
+✔ actual local controller authentication cannot authorize remove or reach private admission (55.704708ms)
+✔ remove dirty registration preserves all repository files, other checkouts and other projects (3283.65875ms)
+✔ remove conflicted registration preserves all repository files, other checkouts and other projects (6212.661416ms)
+✔ remove linked registration preserves all repository files, other checkouts and other projects (3548.220667ms)
+✔ remove absent registration preserves all repository files, other checkouts and other projects (3576.250375ms)
+✔ unknown/stale IDs never remove another project; reimport allocates a new UUID immune to the old removal retry (3392.711583ms)
+✔ registration-only removal requires no Git capability, repository filesystem or probe (77.182583ms)
+✔ unknown IDs fail explicitly before removal and stale revisions cannot authorize a different target (65.22125ms)
+✔ remove persists an immutable tombstone with one config/registry increment and retains every historical observation/operation (75.325583ms)
+✔ stale revision, mismatched target and a second distinct remove leave all project data intact (77.667875ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 72736.749125

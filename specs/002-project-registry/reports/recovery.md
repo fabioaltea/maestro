@@ -117,3 +117,32 @@ qualified separately for REGISTER. No failed persistence is labelled SUCCEEDED.
 SC-005 progress: ten REGISTER and ten UPDATE crash cases are qualified. The ten
 REMOVE cases and combined final SC-005 acceptance remain US4/final-work tasks;
 VERIFY crashes are additional evidence and do not substitute for those cases.
+
+## T079 — REMOVE / US4 and combined mutation crash campaign
+
+2026-11-11. **28 PASS**, 0 FAIL/CANCELLED/SKIP in
+[us4-recovery.txt](us4-recovery.txt): API/CLI and tombstone contracts, SQL/core,
+Git preservation, concurrency/authentication, ten actual daemon SIGKILL cases and
+injected FULL/IO rollback. [Raw REMOVE cases](remove-crash-samples.json).
+
+The crash cases cover before acceptance, accepted, prepared, before/after tombstone
+write, before ledger finalization, precommit with conflict state, committed,
+client deadline before producer ACK and before outbox drain. Dirty and conflicted
+sources remain identical. An accepted precommit request becomes INTERRUPTED and
+retains the complete ACTIVE project; a committed request retains removedAt,
+configRevision 2, the unchanged historical observation, original REMOVED result and
+exactly one completion event with the correct request/project/revision. A never-
+accepted request can be explicitly admitted later. Retry neither deletes files nor
+replays an old removal against a new project ID. No Git probe is part of REMOVE.
+
+Injected SQLITE_FULL and SQLITE_IOERR_FSYNC after the tombstone statement roll back
+the tombstone, registry revision, terminal result and event together. Their raw
+sentinel/path never reaches the safe failure. These are controlled persistence
+faults, not claimed physical disk failures or native allocation exhaustion.
+
+[Combined summary](mutation-crash-summary.json): **30 actual SIGKILL cases PASS**,
+ten each for REGISTER, UPDATE and REMOVE, with thirty distinct request IDs,
+source preservation and verified owned-probe absence where applicable. VERIFY's
+six cases are additional and excluded from this count. This qualifies the exercised
+SC-005 mutation campaign; final coverage review, E2/E3/V1 and external Foundation
+release gates remain separate work and are not declared complete here.
