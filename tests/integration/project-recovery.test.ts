@@ -38,7 +38,7 @@ test('daemon startup interrupts an abandoned durable registry intent before RUNN
   assert.doesNotMatch(JSON.stringify(live), /canonicalIntent|payloadHash|never-created/);
   const status = JSON.parse((await h.call('status')).stdout);
   assert.equal(status.data.capabilities.projectRegistryVersion, 1);
-  assert.deepEqual(status.data.capabilities.projectRegistryMethods, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify']);
+  assert.deepEqual(status.data.capabilities.projectRegistryMethods, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify', 'projects.update']);
   assert.equal(status.data.capabilities.gitInspection.version, 1);
   const client = new LocalClient(createClientBackend());
   const observed = await client.runProject('operation', { requestId }, { stateDirectory: h.archive });

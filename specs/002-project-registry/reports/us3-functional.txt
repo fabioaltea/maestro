@@ -1,0 +1,14 @@
+✔ update requires a nonempty closed patch and exact revision; CLI base/clear flags are exclusive (3224.948ms)
+✔ identical update retry returns its original snapshot before checking current revision or repository (2830.537917ms)
+✔ local branch configuration persists on detached dirty checkout without changing any Git file (3291.583209ms)
+✔ remote-only, missing and unborn branch values reject an atomic name/base patch (4133.033875ms)
+✔ rename/clear work with an unavailable reference and never require a Git probe or change the saved identity (2439.435959ms)
+✔ explicit first base selection is separate from verify; deleting it never substitutes another branch (3960.757ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20069.9175

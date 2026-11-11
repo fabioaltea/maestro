@@ -20,7 +20,7 @@ test('registry dispatch authorizes before private lookup, projects only public f
   const pending = await dispatch(request, client, snapshot);
   assert.equal(pending.result, 'BUSY'); assert.equal(reads, 1);
   assert.doesNotMatch(JSON.stringify(pending), /payloadHash|canonicalIntent|owningInstanceId|not-present/);
-  assert.deepEqual(PROJECT_METHODS, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify']);
+  assert.deepEqual(PROJECT_METHODS, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify', 'projects.update']);
   const missing = await dispatch({ ...request, params: { requestId: randomUUID() } }, client, snapshot);
   assert.equal((missing.data as { code: string }).code, 'OPERATION_NOT_FOUND');
   const unfinished = await dispatch({ ...request, method: 'projects.remove', params: { requestId: randomUUID(), projectId: randomUUID(), expectedRevision: '1' } }, client, snapshot);

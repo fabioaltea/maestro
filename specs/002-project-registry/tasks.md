@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T065 conclusi (65/96), P0 locale
+**Status**: implementazione locale in corso; T001–T066 conclusi (66/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -230,7 +230,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 - [X] T064 [US3] Implementare commit UPDATE CAS in `src/storage/sqlite-store.ts`, collegandolo al worker in `src/storage/worker.ts`: expected configRevision e progetto attivo verificati, incremento solo su cambi effettivi, registryRevision coerente e atomicità config/esito/evento; mantenere identità/reference immutabili. **Dip.: T060, T061, T062, T063.**
 - [X] T065 [US3] Implementare `src/core/projects/update.ts`: rinomina/clear-base senza probe, set-base con Git confinato e identità/ref coerenti ricontrollate prima della conferma; invalidare evidenze della vecchia base senza cancellare lo storico o inventare osservazioni. **Dip.: T064.**
-- [ ] T066 [US3] Collegare projects.update e `project update --expected-revision` in `src/core/projects/dispatch.ts`, `src/client/local-client.ts` e `src/cli/projects.ts`; autorizzazione/rilettura revisioni nel core, intento immutabile per retry, nessun checkout o prompt aggiuntivo. **Dip.: T065.**
+- [X] T066 [US3] Collegare projects.update e `project update --expected-revision` in `src/core/projects/dispatch.ts`, `src/client/local-client.ts` e `src/cli/projects.ts`; autorizzazione/rilettura revisioni nel core, intento immutabile per retry, nessun checkout o prompt aggiuntivo. **Dip.: T065.**
 - [ ] T067 [US3] Creare ed eseguire `tests/integration/project-update-verify-races.test.ts`: due update stessa revisione, verify completato dopo update, verify che non invalida rename, base cambiata durante probe e update da client non autorizzato; uno solo vince ove richiesto, zero sovrascritture silenziose. **Dip.: T066.**
 - [ ] T068 [US3] Eseguire `tests/integration/project-update-crash.test.ts`, unitari/contratti e integrazione US3; appendere ≥10 campioni con config/revisioni/esiti/eventi a `specs/002-project-registry/reports/recovery.md` includendo timeout e failure. **Dip.: T067.**
 - [ ] T069 [US3] Creare ed eseguire `tests/acceptance/project-update.test.ts`: flusso CLI da due client, restart/retry, repo non accessibile per rename/clear e snapshot HEAD/index/ref/config/contenuti invariati; nessuna dipendenza da US4 per il gate. **Dip.: T068.**
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T065 conclusi, T066–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T066 conclusi, T067–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

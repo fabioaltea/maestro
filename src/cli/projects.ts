@@ -4,6 +4,7 @@ import { LocalClient } from '../client/local-client.js';
 import { createClientBackend, failureResult } from '../bootstrap.js';
 import { classifyError } from '../core/control-main.js';
 import { requireUuid } from '../domain/identifiers.js';
+import { requireProjectRevision } from '../domain/projects/model.js';
 import { randomUUID } from 'node:crypto';
 import type { PublicResult } from '../protocol/messages.js';
 
@@ -55,35 +56,41 @@ export async function runProjectCli(args: readonly string[]): Promise<number> {
   try {
     const { values, positionals } = parseArgs({ args: [...args], allowPositionals: true, strict: true, options: {
       help: { type: 'boolean', short: 'h' }, json: { type: 'boolean' }, 'state-dir': { type: 'string' },
-      'request-id': { type: 'string' }, 'timeout-ms': { type: 'string' }, name: { type: 'string' }, 'base-branch': { type: 'string' }, limit: { type: 'string' }, cursor: { type: 'string' },
+      'request-id': { type: 'string' }, 'timeout-ms': { type: 'string' }, name: { type: 'string' }, 'base-branch': { type: 'string' }, limit: { type: 'string' }, cursor: { type: 'string' }, 'expected-revision': { type: 'string' }, 'clear-base-branch': { type: 'boolean' },
     } });
     if (values.help) {
-      await write('maestro project add PATH [--name NAME] [--base-branch BRANCH]\nmaestro project list [--limit N] [--cursor CURSOR]\nmaestro project verify PROJECT_ID\nmaestro project show PROJECT_ID\nmaestro project operation REQUEST_ID\n--state-dir ABSOLUTE_PATH --json --request-id UUID --timeout-ms MILLISECONDS\n');
+      await write('maestro project add PATH [--name NAME] [--base-branch BRANCH]\nmaestro project list [--limit N] [--cursor CURSOR]\nmaestro project verify PROJECT_ID\nmaestro project update PROJECT_ID --expected-revision REV [--name NAME] [--base-branch BRANCH | --clear-base-branch]\nmaestro project show PROJECT_ID\nmaestro project operation REQUEST_ID\n--state-dir ABSOLUTE_PATH --json --request-id UUID --timeout-ms MILLISECONDS\n');
       return 0;
     }
     const command = positionals[0];
-    if (!command || !['add', 'show', 'operation', 'list', 'verify'].includes(command) || positionals.length !== (command === 'list' ? 1 : 2)) throw new Error('INVALID_REQUEST');
+    if (!command || !['add', 'show', 'operation', 'list', 'verify', 'update'].includes(command) || positionals.length !== (command === 'list' ? 1 : 2)) throw new Error('INVALID_REQUEST');
     if (values['state-dir'] !== undefined && (!values['state-dir'] || !isAbsolute(values['state-dir']))) throw new Error('INVALID_REQUEST');
-    if (command !== 'add' && (values.name !== undefined || values['base-branch'] !== undefined)) throw new Error('INVALID_REQUEST');
+    if (!['add', 'update'].includes(command) && (values.name !== undefined || values['base-branch'] !== undefined)) throw new Error('INVALID_REQUEST');
     if (command !== 'list' && (values.limit !== undefined || values.cursor !== undefined)) throw new Error('INVALID_REQUEST');
-    if (!['add', 'verify'].includes(command) && values['request-id'] !== undefined) throw new Error('INVALID_REQUEST');
+    if (!['add', 'verify', 'update'].includes(command) && values['request-id'] !== undefined) throw new Error('INVALID_REQUEST');
+    if (command !== 'update' && (values['expected-revision'] !== undefined || values['clear-base-branch'] !== undefined)) throw new Error('INVALID_REQUEST');
+    if (command === 'update' && values['base-branch'] !== undefined && values['clear-base-branch'] === true) throw new Error('INVALID_REQUEST');
     if (values.limit !== undefined && !/^[1-9][0-9]*$/.test(values.limit)) throw new Error('INVALID_REQUEST');
-    if (command === 'add' || command === 'verify') requestId = values['request-id'] === undefined ? randomUUID() : requireUuid(values['request-id']);
+    if (command === 'add' || command === 'verify' || command === 'update') requestId = values['request-id'] === undefined ? randomUUID() : requireUuid(values['request-id']);
     const timeout = values['timeout-ms'] === undefined ? undefined : Number(values['timeout-ms']);
     if (values['timeout-ms'] !== undefined && (!/^[1-9][0-9]*$/.test(values['timeout-ms']) || !Number.isSafeInteger(timeout))) throw new Error('INVALID_REQUEST');
     const params = command === 'add' ? { path: resolve(positionals[1]!),
       ...(values.name === undefined ? {} : { name: values.name }),
       ...(values['base-branch'] === undefined ? {} : { baseBranch: values['base-branch'] }) }
+      : command === 'update' ? { projectId: requireUuid(positionals[1]), expectedRevision: requireProjectRevision(values['expected-revision']), patch: {
+        ...(values.name === undefined ? {} : { name: values.name }),
+        ...(values['clear-base-branch'] === true ? { baseBranch: null } : values['base-branch'] === undefined ? {} : { baseBranch: values['base-branch'] }),
+      } }
       : command === 'list' ? { ...(values.limit === undefined ? {} : { limit: Number(values.limit) }), ...(values.cursor === undefined ? {} : { cursor: values.cursor }) }
       : command === 'show' || command === 'verify' ? { projectId: requireUuid(positionals[1]) } : { requestId: requireUuid(positionals[1]) };
     const client = new LocalClient(createClientBackend());
-    result = await client.runProject(command === 'add' ? 'register' : command === 'show' ? 'get' : command === 'list' ? 'list' : command === 'verify' ? 'verify' : 'operation', params, {
+    result = await client.runProject(command === 'add' ? 'register' : command === 'show' ? 'get' : command === 'list' ? 'list' : command === 'verify' ? 'verify' : command === 'update' ? 'update' : 'operation', params, {
       ...(values['state-dir'] ? { stateDirectory: values['state-dir'] } : {}), ...(requestId ? { requestId } : {}),
       ...(timeout === undefined ? {} : { timeoutMs: timeout }),
     });
     const operation = result.data.operation as { result?: Record<string, unknown> | null } | undefined;
     if (operation) result = { ...result, data: { ...result.data, ...(operation.result ?? {}), accepted: true } };
-    else if (command === 'add' || command === 'verify') result = { ...result, data: { ...result.data, accepted: result.result === 'UNKNOWN_OUTCOME' ? null : false } };
+    else if (command === 'add' || command === 'verify' || command === 'update') result = { ...result, data: { ...result.data, accepted: result.result === 'UNKNOWN_OUTCOME' ? null : false } };
   } catch (error) {
     const code = error instanceof Error && (error.message === 'INVALID_IDENTIFIER' || error.name === 'TypeError') ? 'INVALID_REQUEST' : classifyError(error);
     result = failureResult(code, requestId);
