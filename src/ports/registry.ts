@@ -72,3 +72,9 @@ export interface RemoveProjectCommit extends ProjectCommitContext {
 export interface RegistryRemovalPort {
   commitProjectRemoval(input: RemoveProjectCommit): Promise<ProjectOperationResult>;
 }
+
+export interface ProjectTombstone {
+  readonly projectId: string;
+  readonly configRevision: string;
+  readonly removedAt: string;
+}

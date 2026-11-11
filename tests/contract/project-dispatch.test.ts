@@ -5,7 +5,7 @@ import { createProjectDispatch, PROJECT_METHODS } from '../../src/core/projects/
 import { createRegistryStore } from '../fixtures/registry-store.js';
 import type { AuthenticatedPeer, RpcRequest } from '../../src/ports/platform.js';
 
-test('registry dispatch authorizes before private lookup, projects only public fields and refuses unfinished methods', async t => {
+test('registry dispatch authorizes before private lookup, projects only public fields and rejects invalid methods', async t => {
   const f = await createRegistryStore(t);
   const input = f.intent(); f.store.acceptProjectOperation(input);
   let reads = 0;
@@ -20,10 +20,10 @@ test('registry dispatch authorizes before private lookup, projects only public f
   const pending = await dispatch(request, client, snapshot);
   assert.equal(pending.result, 'BUSY'); assert.equal(reads, 1);
   assert.doesNotMatch(JSON.stringify(pending), /payloadHash|canonicalIntent|owningInstanceId|not-present/);
-  assert.deepEqual(PROJECT_METHODS, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify', 'projects.update']);
+  assert.deepEqual(PROJECT_METHODS, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify', 'projects.update', 'projects.remove']);
   const missing = await dispatch({ ...request, params: { requestId: randomUUID() } }, client, snapshot);
   assert.equal((missing.data as { code: string }).code, 'OPERATION_NOT_FOUND');
-  const unfinished = await dispatch({ ...request, method: 'projects.remove', params: { requestId: randomUUID(), projectId: randomUUID(), expectedRevision: '1' } }, client, snapshot);
-  assert.equal((unfinished.data as { code: string }).code, 'UNSUPPORTED_VERSION');
-  assert.equal((unfinished.data as { accepted: boolean }).accepted, false);
+  const unfinished = await dispatch({ ...request, method: 'projects.unknown', params: { requestId: randomUUID(), projectId: randomUUID(), expectedRevision: '1' } }, client, snapshot);
+  assert.equal((unfinished.data as { code: string }).code, 'INVALID_REQUEST');
+  assert.equal(reads, 2);
 });

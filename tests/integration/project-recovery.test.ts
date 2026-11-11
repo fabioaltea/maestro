@@ -38,13 +38,13 @@ test('daemon startup interrupts an abandoned durable registry intent before RUNN
   assert.doesNotMatch(JSON.stringify(live), /canonicalIntent|payloadHash|never-created/);
   const status = JSON.parse((await h.call('status')).stdout);
   assert.equal(status.data.capabilities.projectRegistryVersion, 1);
-  assert.deepEqual(status.data.capabilities.projectRegistryMethods, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify', 'projects.update']);
+  assert.deepEqual(status.data.capabilities.projectRegistryMethods, ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify', 'projects.update', 'projects.remove']);
   assert.equal(status.data.capabilities.gitInspection.version, 1);
   const client = new LocalClient(createClientBackend());
   const observed = await client.runProject('operation', { requestId }, { stateDirectory: h.archive });
   assert.equal(observed.freshness, 'LIVE'); assert.equal(observed.outcome, 'INTERRUPTED');
-  const notYetAvailable = await client.runProject('remove', { projectId: randomUUID(), expectedRevision: '1' }, { stateDirectory: h.archive });
-  assert.equal(notYetAvailable.error?.code, 'UNSUPPORTED_VERSION');
+  const missingProject = await client.runProject('remove', { projectId: randomUUID(), expectedRevision: '1' }, { stateDirectory: h.archive });
+  assert.equal(missingProject.error?.code, 'PROJECT_NOT_FOUND');
   const reader = await openStorage({ path, readonly: true });
   try {
     const current = (await reader.readSnapshot())!;

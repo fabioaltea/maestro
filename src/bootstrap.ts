@@ -8,7 +8,7 @@ import { classifyError } from './core/control-main.js';
 import { foundationError, type ErrorCode } from './domain/errors.js';
 import type { ClientBackend } from './ports/platform.js';
 import type { PublicResult } from './protocol/messages.js';
-import { decodeProjectOperationView, requireProjectCapability, validateProjectParams } from './protocol/validation.js';
+import { decodeProjectOperationView, decodeProjectTombstone, requireProjectCapability, validateProjectParams } from './protocol/validation.js';
 import { requireUuid } from './domain/identifiers.js';
 
 export function failureResult(code: ErrorCode, requestId: string | null): PublicResult {
@@ -58,6 +58,13 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
         const operation = data.operation === undefined ? null : decodeProjectOperationView(data.operation);
         if (!operation && typeof data.code === 'string') {
           const failure = failureResult(foundationError(data.code as ErrorCode).code, requestId);
+          if (method === 'projects.get' && data.code === 'PROJECT_REMOVED') {
+            const tombstone = decodeProjectTombstone(data.tombstone);
+            if (tombstone.projectId !== params.projectId) throw new Error('INVALID_REQUEST');
+            if (data.storeId !== state.storeId) throw new Error('WRONG_STORE');
+            return { ...failure, storeId: requireUuid(state.storeId), instanceId: requireUuid(state.instanceId),
+              freshness: state.freshness === 'VOLATILE' ? 'VOLATILE' : 'LIVE', liveness: 'LIVE_VERIFIED', data: { tombstone } };
+          }
           return { ...failure, data: data.accepted === false ? { requestId, accepted: false, outcome: null } : {} };
         }
         if (data.storeId !== state.storeId) throw new Error('WRONG_STORE');

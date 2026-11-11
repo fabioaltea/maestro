@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createProjectHarness } from '../fixtures/project-client.js';
 import { invokeCli } from '../fixtures/cli-harness.js';
-import { decodeProjectOperationView, validateProjectParams } from '../../src/protocol/validation.js';
+import { decodeProjectOperationView, decodeProjectTombstone, validateProjectParams } from '../../src/protocol/validation.js';
 
 const detail = (projectId: string) => ({ projectId, expectedRevision: '1' });
 
@@ -47,4 +47,14 @@ test('removed outcomes and tombstone are durable across reimport, offline query 
   const tombstone = await a.client.runProject('get', { projectId: first.projectId }, { stateDirectory: a.h.archive });
   assert.equal(tombstone.error?.code, 'PROJECT_REMOVED'); assert.equal(tombstone.freshness, 'LAST_KNOWN');
   assert.equal((tombstone.data.tombstone as { configRevision: string }).configRevision, '2');
+});
+
+
+test('tombstone DTO rejects private authority and malformed identity/revision/date fields', () => {
+  const value = { projectId: randomUUID(), configRevision: '2', removedAt: '2026-11-11T12:00:00.000Z' };
+  assert.deepEqual(decodeProjectTombstone(value), value);
+  for (const invalid of [{ ...value, repositoryIdentity: 'private' }, { ...value, projectId: 'unknown' },
+    { ...value, configRevision: 2 }, { ...value, configRevision: '0' }, { ...value, removedAt: 'yesterday' }]) {
+    assert.throws(() => decodeProjectTombstone(invalid), /INVALID_REQUEST/);
+  }
 });

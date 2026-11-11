@@ -12,7 +12,7 @@ import type { OperationRecord } from '../ports/storage.js';
 import { isEntrypoint, readBootstrap } from './entrypoint.js';
 import { projectOperationStatus, projectOperationView } from './projects/dispatch.js';
 import { requireUuid } from '../domain/identifiers.js';
-import { readProject, readProjects } from './projects/read.js';
+import { readProject, readProjects, ProjectRemovedError } from './projects/read.js';
 
 export async function inspectProjectList(directory: string, options: { readonly limit?: number; readonly cursor?: string } = {}): Promise<PublicResult> {
   const paths = await createPlatformPaths().resolveArchive(directory, 'read');
@@ -37,7 +37,15 @@ export async function inspectProjectGet(directory: string, projectId: string): P
   try {
     const snapshot = await store.readSnapshot();
     if (!snapshot) throw new Error('STATE_ABSENT');
-    const project = await readProject(store, projectId);
+    let project;
+    try { project = await readProject(store, projectId); }
+    catch (error) {
+      if (!(error instanceof ProjectRemovedError)) throw error;
+      return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: snapshot.instance?.instanceId ?? null,
+        result: 'ERROR', outcome: null, freshness: 'LAST_KNOWN',
+        liveness: !snapshot.instance || snapshot.instance.lifecycle === 'STOPPED' ? 'ABSENT_VERIFIED' : 'UNKNOWN',
+        data: { tombstone: error.tombstone }, error: foundationError('PROJECT_REMOVED') };
+    }
     return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: snapshot.instance?.instanceId ?? null,
       result: 'OK', outcome: null, freshness: 'LAST_KNOWN',
       liveness: !snapshot.instance || snapshot.instance.lifecycle === 'STOPPED' ? 'ABSENT_VERIFIED' : 'UNKNOWN',

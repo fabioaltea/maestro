@@ -1,0 +1,18 @@
+✔ registry dispatch authorizes before private lookup, projects only public fields and rejects invalid methods (88.276292ms)
+✔ remove requires ID/revision only and CLI offers no force, cleanup or filesystem authority (3073.839541ms)
+✔ removed outcomes and tombstone are durable across reimport, offline query and identical retry (3765.185209ms)
+✔ daemon startup interrupts an abandoned durable registry intent before RUNNING without a Git probe (3622.400167ms)
+✔ registry stop shares the existing drain budget and never turns uncertain ownership into absence (21.219333ms)
+✔ remove dirty registration preserves all repository files, other checkouts and other projects (2765.814458ms)
+✔ remove conflicted registration preserves all repository files, other checkouts and other projects (3392.99075ms)
+✔ remove linked registration preserves all repository files, other checkouts and other projects (3326.984625ms)
+✔ remove absent registration preserves all repository files, other checkouts and other projects (3264.877542ms)
+✔ unknown/stale IDs never remove another project; reimport allocates a new UUID immune to the old removal retry (3360.682709ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 27029.66625

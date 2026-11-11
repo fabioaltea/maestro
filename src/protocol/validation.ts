@@ -3,8 +3,8 @@ import type { RpcRequest } from '../ports/platform.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { normalizeProjectCommand, projectObject, requireProjectFields } from '../domain/projects/intent.js';
 import type { ProjectAction } from '../domain/projects/model.js';
-import { PROJECT_ACTIONS, isTerminalProjectOutcome, validateProjectOperationResult } from '../domain/projects/model.js';
-import type { ProjectOperationView } from '../ports/registry.js';
+import { PROJECT_ACTIONS, requireProjectRevision, isTerminalProjectOutcome, validateProjectOperationResult } from '../domain/projects/model.js';
+import type { ProjectOperationView, ProjectTombstone } from '../ports/registry.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 
 export function decodeObject(frame: string | Uint8Array): Record<string, unknown> {
@@ -109,5 +109,16 @@ export function decodeProjectOperationView(input: unknown): ProjectOperationView
       }
     }
     return value as unknown as ProjectOperationView;
+  } catch { throw new Error('INVALID_REQUEST'); }
+}
+
+export function decodeProjectTombstone(input: unknown): ProjectTombstone {
+  try {
+    const value = projectObject(input);
+    requireProjectFields(value, ['projectId', 'configRevision', 'removedAt']);
+    const projectId = requireUuid(value.projectId), configRevision = requireProjectRevision(value.configRevision);
+    if (typeof value.removedAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.removedAt)
+      || !Number.isFinite(Date.parse(value.removedAt))) throw new Error('INVALID_REQUEST');
+    return { projectId, configRevision, removedAt: value.removedAt };
   } catch { throw new Error('INVALID_REQUEST'); }
 }

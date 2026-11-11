@@ -1,0 +1,9 @@
+✔ tombstone DTO rejects private authority and malformed identity/revision/date fields (12.061291ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 179.331292
