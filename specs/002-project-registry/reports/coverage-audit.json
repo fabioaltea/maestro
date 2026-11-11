@@ -1,0 +1,21 @@
+{
+  "reviewedAt": "2026-11-11T15:39:46.781703+00:00",
+  "requirementMappings": 34,
+  "storyScenarioMappings": 23,
+  "missingRequirements": [],
+  "missingScenarios": [],
+  "status": "mapping complete; runtime evidence and external gates assessed separately",
+  "externalGatesNotWaived": [
+    "001/T082",
+    "001/T085",
+    "002/T093"
+  ],
+  "finalReviewedAt": "2026-11-11T16:00:14.927179+00:00",
+  "crashCases": 30,
+  "concurrentImports": 20,
+  "identicalRetries": 100,
+  "confirmedConfigurationPreservationPercent": 100,
+  "fixtureSourcePreservation": true,
+  "scope": "coverage review complete; global runtime gates not waived",
+  "acceptanceTask": "T093 OPEN/BLOCKED"
+}

@@ -149,3 +149,15 @@ entrypoint processes for this workspace after the interrupted campaign.
 Documentation/coverage/readiness review proceeds after this recorded blocked attempt
 as requested, without waiving its runtime dependency or checking T093 off. Review
 can complete with BLOCKED; release cannot. See release-readiness.md for next actions.
+
+## T095 — coverage review complete
+
+[Machine-audited mapping](coverage-audit.json): all 20 FR, 5 NFR and 9 SC IDs
+and all 23 story scenarios are mapped. Latest native artifacts retain 30 distinct
+actual mutation SIGKILL cases (ten/action), 20 equivalent concurrent imports,
+100 identical retries, one active project and unchanged original configuration.
+US2 preserves 100% of confirmed fixture configurations; US3/US4 source snapshots
+are unchanged. Event/log/error sentinel and no-authority cases pass in the local
+suites. These are assertions of the exercised cases, not a proof over arbitrary
+inputs or a waiver of external gates. T093 remains OPEN; NFR-001/full IP-denied
+and Foundation real-UID/machine verification remain unaccepted globally.
