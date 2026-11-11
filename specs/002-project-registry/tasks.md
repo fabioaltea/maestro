@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T087 conclusi (87/96), P0 locale
+**Status**: implementazione locale in corso; T001–T088 conclusi (88/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -289,7 +289,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Test richiesti
 
-- [ ] T088 [P] Scrivere V1 in `tests/integration/project-backpressure.test.ts`: 4 probe/32 pending, 33esima richiesta BUSY accepted=false, stdout/config/stderr bounded, outbox/journal/WAL saturi, drain FULL/IO e client lento; dati autorevoli/esiti non ruotati e nessun falso commit/evento. **Dip.: T087.**
+- [X] T088 [P] Scrivere V1 in `tests/integration/project-backpressure.test.ts`: 4 probe/32 pending, 33esima richiesta BUSY accepted=false, stdout/config/stderr bounded, outbox/journal/WAL saturi, drain FULL/IO e client lento; dati autorevoli/esiti non ruotati e nessun falso commit/evento. **Dip.: T087.**
 - [ ] T089 [P] Creare carichi ripetibili in `tests/acceptance/project-performance.test.ts`: SC-002 (100 progetti, 1.000 letture, 10 client) e SC-003 (30 import/verify fino a 10 branch/100 commit), includendo repo lento/inaccessibile e tempi status/stop; campioni end-to-end comprensivi di pagine/coda/polling, errori e timeout. **Dip.: T087.**
 
 ### Implementazione e verifica
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T087 conclusi, T088–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T088 conclusi, T089–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
