@@ -1,0 +1,14 @@
+import { spawn } from 'node:child_process';
+import { realpath, access } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import electron from 'electron';
+if (process.version !== 'v26.13.0') throw new Error('RUNTIME_UNAVAILABLE: use Node 26.13.0');
+const app = fileURLToPath(new URL('../dist-desktop', import.meta.url));
+await access(`${app}/main/index.js`);
+const env = {};
+for (const k of ['HOME', 'USER', 'LOGNAME', 'TMPDIR', 'LANG', 'LC_ALL', 'PATH']) if (process.env[k]) env[k] = process.env[k];
+env.MAESTRO_NODE_BINARY = await realpath(process.execPath);
+const child = spawn(electron, [app], { env, stdio: 'inherit', shell: false });
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
+child.on('error', () => { console.error('Desktop launch failed.'); process.exitCode = 1; });
+child.on('exit', code => { process.exitCode = code ?? 1; });
