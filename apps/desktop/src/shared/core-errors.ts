@@ -1,0 +1,238 @@
+// Public core v1 safe error catalog; no runtime dependency on core adapters.
+export const CORE_ERRORS = {
+  "INVALID_REQUEST": {
+    "code": "INVALID_REQUEST",
+    "message": "Richiesta non valida.",
+    "nextAction": "Controllare argomenti e aiuto locale."
+  },
+  "INVALID_NAME": {
+    "code": "INVALID_NAME",
+    "message": "Nome progetto non valido.",
+    "nextAction": "Usare da 1 a 120 caratteri Unicode senza controlli."
+  },
+  "INVALID_BASE_BRANCH": {
+    "code": "INVALID_BASE_BRANCH",
+    "message": "Branch base locale non valido.",
+    "nextAction": "Selezionare esplicitamente un branch locale con un commit."
+  },
+  "PATH_ACCESS_DENIED": {
+    "code": "PATH_ACCESS_DENIED",
+    "message": "Percorso locale non accessibile.",
+    "nextAction": "Ripristinare esplicitamente i permessi di accesso."
+  },
+  "REVISION_CONFLICT": {
+    "code": "REVISION_CONFLICT",
+    "message": "Revisione configurazione non più corrente.",
+    "nextAction": "Rileggere il progetto prima di una nuova richiesta."
+  },
+  "OBSERVATION_SUPERSEDED": {
+    "code": "OBSERVATION_SUPERSEDED",
+    "message": "Osservazione superata da una modifica concorrente.",
+    "nextAction": "Rileggere il progetto e richiedere una nuova verifica."
+  },
+  "REGISTRY_CHANGED": {
+    "code": "REGISTRY_CHANGED",
+    "message": "Registro cambiato durante la lettura paginata.",
+    "nextAction": "restart-list"
+  },
+  "REPOSITORY_NOT_FOUND": {
+    "code": "REPOSITORY_NOT_FOUND",
+    "message": "Repository locale non trovato.",
+    "nextAction": "Rendere disponibile il percorso senza ricrearlo automaticamente."
+  },
+  "REFERENCE_CHECKOUT_UNAVAILABLE": {
+    "code": "REFERENCE_CHECKOUT_UNAVAILABLE",
+    "message": "Checkout di riferimento non disponibile.",
+    "nextAction": "Ripristinare il riferimento originale senza sostituirlo."
+  },
+  "REPOSITORY_UNSUPPORTED": {
+    "code": "REPOSITORY_UNSUPPORTED",
+    "message": "Formato repository non supportato.",
+    "nextAction": "Usare un checkout e un formato supportati."
+  },
+  "GIT_UNAVAILABLE": {
+    "code": "GIT_UNAVAILABLE",
+    "message": "Git qualificato non disponibile.",
+    "nextAction": "Installare una versione Git supportata."
+  },
+  "REPOSITORY_CHANGED": {
+    "code": "REPOSITORY_CHANGED",
+    "message": "Identità del repository cambiata o incerta.",
+    "nextAction": "Rivedere il riferimento senza un rebind automatico."
+  },
+  "REPOSITORY_UNSTABLE": {
+    "code": "REPOSITORY_UNSTABLE",
+    "message": "Repository cambiato durante la verifica.",
+    "nextAction": "Richiedere una nuova verifica quando il repository è stabile."
+  },
+  "INSPECTION_UNAVAILABLE": {
+    "code": "INSPECTION_UNAVAILABLE",
+    "message": "Ispezione confinata non disponibile.",
+    "nextAction": "Verificare piattaforma e profilo di confinamento."
+  },
+  "INSPECTION_UNSAFE": {
+    "code": "INSPECTION_UNSAFE",
+    "message": "Ispezione non sicura con la configurazione corrente.",
+    "nextAction": "Rivedere la configurazione senza eseguire helper o fallback."
+  },
+  "UNKNOWN_OUTCOME": {
+    "code": "UNKNOWN_OUTCOME",
+    "message": "Esito della richiesta non ancora verificato.",
+    "nextAction": "Interrogare lo stesso requestId prima di un nuovo intento."
+  },
+  "INTERRUPTED": {
+    "code": "INTERRUPTED",
+    "message": "Operazione interrotta senza riesecuzione automatica.",
+    "nextAction": "read-project-then-new-request"
+  },
+  "OUTPUT_LIMIT": {
+    "code": "OUTPUT_LIMIT",
+    "message": "Output di ispezione oltre il limite consentito.",
+    "nextAction": "Ridurre il carico o attendere supporto senza assumere uno stato pulito."
+  },
+  "PROJECT_NOT_FOUND": {
+    "code": "PROJECT_NOT_FOUND",
+    "message": "Progetto non registrato.",
+    "nextAction": "Verificare il projectId nel registro corrente."
+  },
+  "OPERATION_NOT_FOUND": {
+    "code": "OPERATION_NOT_FOUND",
+    "message": "Intento non presente nel registro delle operazioni.",
+    "nextAction": "Verificare archivio e requestId prima di un nuovo comando."
+  },
+  "PROJECT_REMOVED": {
+    "code": "PROJECT_REMOVED",
+    "message": "Registrazione del progetto rimossa.",
+    "nextAction": "Rileggere il registro senza riusare il vecchio projectId."
+  },
+  "DAEMON_UNAVAILABLE": {
+    "code": "DAEMON_UNAVAILABLE",
+    "message": "Daemon non disponibile per la mutazione.",
+    "nextAction": "Avviare esplicitamente il daemon e interrogare il requestId."
+  },
+  "UNSUPPORTED_VERSION": {
+    "code": "UNSUPPORTED_VERSION",
+    "message": "Versione del protocollo non supportata.",
+    "nextAction": "Usare un client compatibile."
+  },
+  "UNSUPPORTED_PLATFORM": {
+    "code": "UNSUPPORTED_PLATFORM",
+    "message": "Piattaforma non supportata.",
+    "nextAction": "Usare macOS 26.3 arm64 su APFS locale."
+  },
+  "UNAUTHORIZED": {
+    "code": "UNAUTHORIZED",
+    "message": "Operazione non autorizzata.",
+    "nextAction": "Verificare proprietario e credenziali locali."
+  },
+  "STALE_TARGET": {
+    "code": "STALE_TARGET",
+    "message": "Istanza di destinazione non più corrente.",
+    "nextAction": "Rileggere lo stato prima di una nuova richiesta."
+  },
+  "IDEMPOTENCY_CONFLICT": {
+    "code": "IDEMPOTENCY_CONFLICT",
+    "message": "Identificativo già usato per un intento diverso.",
+    "nextAction": "Usare lo stesso payload o un nuovo requestId."
+  },
+  "INVALID_TRANSITION": {
+    "code": "INVALID_TRANSITION",
+    "message": "Transizione non consentita per lo stato corrente.",
+    "nextAction": "Rileggere lo stato e conservare gli esiti già conclusi."
+  },
+  "BUSY": {
+    "code": "BUSY",
+    "message": "Operazione già in corso.",
+    "nextAction": "Interrogare la richiesta attiva o riprovare."
+  },
+  "BLOCKED": {
+    "code": "BLOCKED",
+    "message": "Operazione bloccata per sicurezza.",
+    "nextAction": "Verificare risorse e diagnostica prima del retry."
+  },
+  "EVENT_BACKPRESSURE": {
+    "code": "EVENT_BACKPRESSURE",
+    "message": "Osservabilità bloccata: il batch precedente non è drenato.",
+    "nextAction": "Consultare diagnostics e preservare il journal prima di riprovare."
+  },
+  "PERSISTENCE_UNAVAILABLE": {
+    "code": "PERSISTENCE_UNAVAILABLE",
+    "message": "Stato persistente non disponibile.",
+    "nextAction": "Verificare spazio, permessi e disponibilità del disco."
+  },
+  "STATE_INCOMPATIBLE": {
+    "code": "STATE_INCOMPATIBLE",
+    "message": "Versione dello stato non compatibile.",
+    "nextAction": "Usare una versione compatibile senza ricreare lo stato."
+  },
+  "STATE_ABSENT": {
+    "code": "STATE_ABSENT",
+    "message": "Archivio locale assente.",
+    "nextAction": "Avviare esplicitamente il daemon per inizializzare lo stato."
+  },
+  "REGISTRY_NOT_INITIALIZED": {
+    "code": "REGISTRY_NOT_INITIALIZED",
+    "message": "Registro progetti non inizializzato.",
+    "nextAction": "Eseguire daemon start esplicito per aggiornare lo schema."
+  },
+  "STATE_CORRUPT": {
+    "code": "STATE_CORRUPT",
+    "message": "Integrità dello stato non verificabile.",
+    "nextAction": "Preservare i file e richiedere un intervento manuale."
+  },
+  "DEADLINE_EXCEEDED": {
+    "code": "DEADLINE_EXCEEDED",
+    "message": "Attesa conclusa senza esito verificato.",
+    "nextAction": "Interrogare il requestId; non ripetere effetti alla cieca."
+  },
+  "RESOURCE_IDENTITY_UNKNOWN": {
+    "code": "RESOURCE_IDENTITY_UNKNOWN",
+    "message": "Proprietà di una risorsa non verificata.",
+    "nextAction": "Verificare la risorsa senza terminare processi da un PID salvato."
+  },
+  "ENDPOINT_COLLISION": {
+    "code": "ENDPOINT_COLLISION",
+    "message": "Endpoint locale già occupato o incerto.",
+    "nextAction": "Verificare proprietario e stato senza eliminare artefatti estranei."
+  },
+  "CURSOR_EXPIRED": {
+    "code": "CURSOR_EXPIRED",
+    "message": "Parte degli eventi non è più conservata.",
+    "nextAction": "Rileggere lo stato e scegliere da dove riprendere."
+  },
+  "WRONG_STORE": {
+    "code": "WRONG_STORE",
+    "message": "Cursore riferito a un altro archivio.",
+    "nextAction": "Usare il cursore dell’archivio corrente."
+  },
+  "SLOW_CONSUMER": {
+    "code": "SLOW_CONSUMER",
+    "message": "Osservatore scollegato per limite del buffer.",
+    "nextAction": "Riprendere con il cursore dell’ultimo evento ricevuto."
+  },
+  "DAEMON_ABSENT": {
+    "code": "DAEMON_ABSENT",
+    "message": "Il processo del daemon risulta cessato.",
+    "nextAction": "Eseguire un controllo esplicito per riconciliare lo stato salvato."
+  },
+  "SERVICE_UNREACHABLE": {
+    "code": "SERVICE_UNREACHABLE",
+    "message": "Servizio locale non raggiungibile.",
+    "nextAction": "Interrogare status e conservare l’ultima sequenza ricevuta."
+  },
+  "CONTROL_INTERRUPTED": {
+    "code": "CONTROL_INTERRUPTED",
+    "message": "Controller terminato senza esito verificato.",
+    "nextAction": "Interrogare e riprovare lo stesso requestId per riconciliare l’esito."
+  },
+  "CORE_EXITED_BEFORE_ACCEPTANCE": {
+    "code": "CORE_EXITED_BEFORE_ACCEPTANCE",
+    "message": "Core terminato prima della conferma di accettazione.",
+    "nextAction": "Verificare runtime e interrogare il requestId."
+  },
+  "INTERNAL_ERROR": {
+    "code": "INTERNAL_ERROR",
+    "message": "Errore interno non classificato.",
+    "nextAction": "Consultare la diagnostica redatta e preservare lo stato."
+  }
+} as const;
