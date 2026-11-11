@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T059 conclusi (59/96), P0 locale
+**Status**: implementazione locale in corso; T001–T060 conclusi (60/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -221,7 +221,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Test richiesti
 
-- [ ] T060 [P] [US3] Scrivere contratti projects.update e CLI update in `tests/contract/project-update.test.ts`: expectedRevision obbligatoria, patch non vuota, omissione/null/stringa distinti, flag clear/base esclusivi, stesso requestId interrogabile e safe error senza autorità aggiuntiva. **Dip.: T059.**
+- [X] T060 [P] [US3] Scrivere contratti projects.update e CLI update in `tests/contract/project-update.test.ts`: expectedRevision obbligatoria, patch non vuota, omissione/null/stringa distinti, flag clear/base esclusivi, stesso requestId interrogabile e safe error senza autorità aggiuntiva. **Dip.: T059.**
 - [ ] T061 [P] [US3] Scrivere unitari CAS/no-op/nome/base in `tests/unit/project-update.test.ts`: revisione obsoleta zero effetti, nome-only indipendente da Git, base esplicita validata a commit, patch atomica e osservazione precedente dichiarata storica sulla config nuova. **Dip.: T059.**
 - [ ] T062 [P] [US3] Scrivere integrazione dei 6 scenari US3 in `tests/integration/project-update.test.ts`: branch locale valido/detached, remote/inesistente/unborn rifiutati, base cancellata esternamente conservata INVALID, primo commit esterno conserva ID/base null e Git invariato. **Dip.: T059.**
 - [ ] T063 [P] [US3] Scrivere almeno 10 casi crash update in `tests/integration/project-update-crash.test.ts` prima/durante/dopo commit e prima ACK; retry deve restituire configurazione/esito originali completi, mai patch parziale o successo senza persistenza. **Dip.: T059.**
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T059 conclusi, T060–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T060 conclusi, T061–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.
