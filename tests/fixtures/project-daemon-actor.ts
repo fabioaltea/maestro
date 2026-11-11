@@ -34,6 +34,12 @@ await runDaemon(input.intent, {
     return storage;
   },
   projectExecute: async (context: ProjectExecution) => {
+    if (context.operation.action === 'REMOVE') {
+      const module = await import(new URL('../../src/core/projects/remove.js', import.meta.url).href) as {
+        removeProject(context: ProjectExecution, storage: StoragePort): Promise<ProjectOperationResult>;
+      };
+      return module.removeProject(context, storage);
+    }
     if (context.operation.action === 'UPDATE') {
       const module = await import(new URL('../../src/core/projects/update.js', import.meta.url).href) as {
         updateProject(context: ProjectExecution, storage: StoragePort, filesystem: FilesystemIdentity): Promise<ProjectOperationResult>;

@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T073 conclusi (73/96), P0 locale
+**Status**: implementazione locale in corso; T001–T074 conclusi (74/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -249,7 +249,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 - [X] T071 [P] [US4] Scrivere contratti projects.remove/CLI remove in `tests/contract/project-remove.test.ts`: ID/revisione richiesti, autorizzazione e intenti diversi rifiutati, query tombstone e outcome storico dopo reimport, nessun flag force/cleanup. **Dip.: T059.**
 - [X] T072 [P] [US4] Scrivere policy ACTIVE→REMOVED e retry in `tests/unit/project-remove.test.ts`: stale revision/ID errato zero effetti, stessa rimozione restituisce risultato originale, Git indisponibile non impedisce la sola rimozione del registro. **Dip.: T059.**
 - [X] T073 [P] [US4] Scrivere i 4 scenari US4 in `tests/integration/project-remove.test.ts`: dirty/untracked/conflitti preservati, main/linked e altri progetti intatti, tombstone conserva ledger, reimport nuovo UUID e vecchio retry non rimuove il nuovo progetto. **Dip.: T059.**
-- [ ] T074 [P] [US4] Scrivere almeno 10 casi crash remove in `tests/integration/project-remove-crash.test.ts`: pre/post commit/ACK e journal drain, stato ACTIVE oppure tombstone completa con esito/evento, zero cancellazioni Git e retry sicuro. **Dip.: T059.**
+- [X] T074 [P] [US4] Scrivere almeno 10 casi crash remove in `tests/integration/project-remove-crash.test.ts`: pre/post commit/ACK e journal drain, stato ACTIVE oppure tombstone completa con esito/evento, zero cancellazioni Git e retry sicuro. **Dip.: T059.**
 
 ### Implementazione e verifica
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T073 conclusi, T074–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T074 conclusi, T075–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

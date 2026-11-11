@@ -1,0 +1,170 @@
+✖ REMOVE actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (1193.315458ms)
+✖ REMOVE actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (1151.686792ms)
+✖ REMOVE actual SIGKILL at project.remove.prepared/clean preserves intent/result/project/event atomically (1190.302833ms)
+✖ REMOVE actual SIGKILL at project.remove.beforeWrite/dirty preserves intent/result/project/event atomically (1152.663791ms)
+✖ REMOVE actual SIGKILL at project.remove.written/dirty preserves intent/result/project/event atomically (1154.801666ms)
+✖ REMOVE actual SIGKILL at project.remove.beforeFinalize/clean preserves intent/result/project/event atomically (1157.6605ms)
+✖ REMOVE actual SIGKILL at project.beforeCommit/conflicted preserves intent/result/project/event atomically (1175.411625ms)
+✖ REMOVE actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (1152.556375ms)
+✖ REMOVE actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (1163.587083ms)
+✖ REMOVE actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (1147.72175ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 0
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11737.891125
+
+✖ failing tests:
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (1193.315458ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (1151.686792ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.remove.prepared/clean preserves intent/result/project/event atomically (1190.302833ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.remove.beforeWrite/dirty preserves intent/result/project/event atomically (1152.663791ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.remove.written/dirty preserves intent/result/project/event atomically (1154.801666ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.remove.beforeFinalize/clean preserves intent/result/project/event atomically (1157.6605ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.beforeCommit/conflicted preserves intent/result/project/event atomically (1175.411625ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (1152.556375ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (1163.587083ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove-crash.test.js:34:5
+✖ REMOVE actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (1147.72175ms)
+  AssertionError [ERR_ASSERTION]: remove must be implemented before the actual crash campaign
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove-crash.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
