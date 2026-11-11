@@ -26,6 +26,7 @@ import { drainProjectOperations } from './lifecycle.js';
 import { createProbeSupervisor } from '../platform/macos/git/probe-supervisor.js';
 import { createGitRunner } from '../platform/macos/git/runner.js';
 import { createProjectDispatch, PROJECT_METHODS } from './projects/dispatch.js';
+import { updateProject } from './projects/update.js';
 import { verifyProject } from './projects/verify.js';
 import { registerProject } from './projects/register.js';
 import { createFilesystemIdentity } from '../platform/macos/git/filesystem-identity.js';
@@ -70,7 +71,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     projects = createProjectOperations({ storage, ownerUid: paths.ownerUid, instanceId: intent.instanceId,
       checkpoint,
       supervisor: createProbeSupervisor({ paths, onResource: resource => storage.saveResource(resource) }),
-      execute: dependencies.projectExecute ?? (context => context.operation.action === 'VERIFY' ? verifyProject(context, storage, createFilesystemIdentity()) : registerProject(context, storage, createFilesystemIdentity())),
+      execute: dependencies.projectExecute ?? (context => context.operation.action === 'UPDATE' ? updateProject(context, storage, createFilesystemIdentity()) : context.operation.action === 'VERIFY' ? verifyProject(context, storage, createFilesystemIdentity()) : registerProject(context, storage, createFilesystemIdentity())),
       onBlocked: error => {
         void storage.blockInstance(intent.instanceId, { ...error, persisted: true }).catch(() => {
           volatileError ??= foundationError('PERSISTENCE_UNAVAILABLE');
