@@ -2,7 +2,8 @@
 
 **Stato al 2026-11-11**: US1/US2/US3/US4 implementate e verificate localmente.
 `project add/list/show/verify/update/remove/operation` sono disponibili dopo build. Evidenze e limiti: [US1](reports/us1.md), [US2](reports/us2.md), [US3](reports/us3.md), [US4](reports/us4.md).
-Replay/stream/backpressure e accettazione finale richiedono ancora i loro checkpoint.
+Replay E2 qualificato: [evidenze eventi](reports/events.md). Streaming E3, backpressure V1
+e accettazione finale richiedono ancora i loro checkpoint.
 
 ## Review documentale
 

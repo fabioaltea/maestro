@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-11-11T13:27:10.750636+00:00",
+  "measuredAt": "2026-11-11T14:00:58.343047+00:00",
   "criterion": "SC-005 mutation crash campaign",
   "result": "PASS",
   "totalCases": 30,
@@ -8,7 +8,7 @@
     {
       "action": "REGISTER",
       "source": "register-crash-samples.json",
-      "sourceMeasuredAt": "2026-11-11T13:26:12.566Z",
+      "sourceMeasuredAt": "2026-11-11T13:59:51.868Z",
       "completed": 10,
       "requiredMinimum": 10,
       "result": "PASS"
@@ -16,7 +16,7 @@
     {
       "action": "UPDATE",
       "source": "update-crash-samples.json",
-      "sourceMeasuredAt": "2026-11-11T13:26:24.833Z",
+      "sourceMeasuredAt": "2026-11-11T14:00:04.218Z",
       "completed": 10,
       "requiredMinimum": 10,
       "result": "PASS"
@@ -24,7 +24,7 @@
     {
       "action": "REMOVE",
       "source": "remove-crash-samples.json",
-      "sourceMeasuredAt": "2026-11-11T13:26:20.792Z",
+      "sourceMeasuredAt": "2026-11-11T13:59:58.757Z",
       "completed": 10,
       "requiredMinimum": 10,
       "result": "PASS"
