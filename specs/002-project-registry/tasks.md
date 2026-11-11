@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T084 conclusi (84/96), P0 locale
+**Status**: implementazione locale in corso; T001–T085 conclusi (85/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -280,7 +280,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Test richiesti
 
-- [ ] T085 [P] Scrivere E3 in `tests/contract/project-event-stream.test.ts`: payload registry mantenuti dal client, cursor avanzato solo dopo callback riuscita, callback fallita/frame rifiutato non consumano il cursor, nessuna riconnessione/retry di intenti nascosta. **Dip.: T084.**
+- [X] T085 [P] Scrivere E3 in `tests/contract/project-event-stream.test.ts`: payload registry mantenuti dal client, cursor avanzato solo dopo callback riuscita, callback fallita/frame rifiutato non consumano il cursor, nessuna riconnessione/retry di intenti nascosta. **Dip.: T084.**
 - [ ] T086 [P] Scrivere E3 in `tests/integration/project-event-stream.test.ts`: replay→live senza buchi, frame solo dopo commit, eventi di tutte le azioni, 10 client/client lento, disconnect e stop/restart; buffer ≤1 MiB/client e deadline Foundation immutate. **Dip.: T084.**
 
 ### Implementazione e verifica
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T084 conclusi, T085–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T085 conclusi, T086–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

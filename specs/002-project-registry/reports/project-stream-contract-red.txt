@@ -1,0 +1,33 @@
+✔ E3 registry client success: preserve payload and consume cursor only after successful application (44.734917ms)
+✔ E3 registry client callback-failure: preserve payload and consume cursor only after successful application (21.12ms)
+✖ E3 registry client sequence-gap: preserve payload and consume cursor only after successful application (263.029541ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 384.56375
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/project-event-stream.test.js:10:5
+✖ E3 registry client sequence-gap: preserve payload and consume cursor only after successful application (263.029541ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'ACCEPTED_GAP'
+  - 'INVALID_REQUEST'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/project-event-stream.test.js:44:24)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'ACCEPTED_GAP',
+    expected: 'INVALID_REQUEST',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
