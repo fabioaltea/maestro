@@ -1,7 +1,7 @@
 {
-  "measuredAt": "2026-11-08T21:17:32.508Z",
+  "measuredAt": "2026-11-11T15:41:57.758Z",
   "version": {
-    "schema": 2,
+    "schema": 3,
     "node": "26.13.0",
     "macOS": "26.3.1",
     "arch": "arm64"

@@ -1,0 +1,196 @@
+[
+  {
+    "label": "ordinary-native",
+    "command": [
+      "caffeinate",
+      "-i",
+      "npm",
+      "test"
+    ],
+    "ipDenied": false,
+    "exitCode": 0,
+    "counts": {
+      "tests": 367,
+      "pass": 367,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "durationSeconds": 83.42861220799387,
+    "completedAt": "2026-11-11T15:32:20.281323+00:00"
+  },
+  {
+    "label": "build-ip-denied",
+    "command": [
+      "caffeinate",
+      "-i",
+      "/usr/bin/sandbox-exec",
+      "-f",
+      "/Users/fabioaltea/Repository/maestro/tests/fixtures/ip-denied.sb",
+      "npm",
+      "run",
+      "build"
+    ],
+    "ipDenied": true,
+    "exitCode": 0,
+    "counts": {},
+    "durationSeconds": 1.6283712909789756,
+    "completedAt": "2026-11-11T15:32:21.910840+00:00"
+  },
+  {
+    "label": "typecheck-ip-denied",
+    "command": [
+      "caffeinate",
+      "-i",
+      "/usr/bin/sandbox-exec",
+      "-f",
+      "/Users/fabioaltea/Repository/maestro/tests/fixtures/ip-denied.sb",
+      "npm",
+      "run",
+      "typecheck"
+    ],
+    "ipDenied": true,
+    "exitCode": 0,
+    "counts": {},
+    "durationSeconds": 2.898250082973391,
+    "completedAt": "2026-11-11T15:32:24.809248+00:00"
+  },
+  {
+    "label": "lint-ip-denied",
+    "command": [
+      "caffeinate",
+      "-i",
+      "/usr/bin/sandbox-exec",
+      "-f",
+      "/Users/fabioaltea/Repository/maestro/tests/fixtures/ip-denied.sb",
+      "npm",
+      "run",
+      "lint"
+    ],
+    "ipDenied": true,
+    "exitCode": 0,
+    "counts": {},
+    "durationSeconds": 0.4105677920160815,
+    "completedAt": "2026-11-11T15:32:25.220008+00:00"
+  },
+  {
+    "label": "ordinary-ip-denied",
+    "command": [
+      "caffeinate",
+      "-i",
+      "/usr/bin/sandbox-exec",
+      "-f",
+      "/Users/fabioaltea/Repository/maestro/tests/fixtures/ip-denied.sb",
+      "npm",
+      "test"
+    ],
+    "ipDenied": true,
+    "exitCode": 130,
+    "status": "FAILED_AND_INTERRUPTED",
+    "counts": {
+      "tests": 172,
+      "pass": 58,
+      "fail": 44,
+      "cancelled": 70,
+      "skipped": 0
+    },
+    "completedAt": "2026-11-11T15:34:51.468207+00:00",
+    "reason": "Repeated nested sandbox_apply and ps EPERM; owned campaign interrupted, cancellations retained; not PASS"
+  },
+  {
+    "label": "contract-ip-denied",
+    "command": [
+      "npm",
+      "run",
+      "test:contract"
+    ],
+    "ipDenied": true,
+    "status": "BLOCKED_NOT_RUN",
+    "reason": "Reproducible platform denial of nested sandbox and ps; full application campaign unavailable under this profile"
+  },
+  {
+    "label": "integration-ip-denied",
+    "command": [
+      "npm",
+      "run",
+      "test:integration"
+    ],
+    "ipDenied": true,
+    "status": "BLOCKED_NOT_RUN",
+    "reason": "Reproducible platform denial of nested sandbox and ps; full application campaign unavailable under this profile"
+  },
+  {
+    "label": "acceptance-ip-denied",
+    "command": [
+      "npm",
+      "run",
+      "test:acceptance"
+    ],
+    "ipDenied": true,
+    "status": "BLOCKED_NOT_RUN",
+    "reason": "Reproducible platform denial of nested sandbox and ps; full application campaign unavailable under this profile"
+  },
+  {
+    "label": "contract-native",
+    "command": [
+      "caffeinate",
+      "-i",
+      "npm",
+      "run",
+      "test:contract"
+    ],
+    "ipDenied": false,
+    "exitCode": 0,
+    "counts": {
+      "tests": 101,
+      "pass": 101,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "durationSeconds": 16.74959141702857,
+    "completedAt": "2026-11-11T15:36:50.458725+00:00"
+  },
+  {
+    "label": "integration-native",
+    "command": [
+      "caffeinate",
+      "-i",
+      "npm",
+      "run",
+      "test:integration"
+    ],
+    "ipDenied": false,
+    "exitCode": 0,
+    "counts": {
+      "tests": 207,
+      "pass": 207,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "durationSeconds": 72.4898655420402,
+    "completedAt": "2026-11-11T15:38:02.948986+00:00"
+  },
+  {
+    "label": "acceptance-native",
+    "command": [
+      "caffeinate",
+      "-i",
+      "npm",
+      "run",
+      "test:acceptance"
+    ],
+    "ipDenied": false,
+    "exitCode": 0,
+    "counts": {
+      "tests": 54,
+      "pass": 53,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 1
+    },
+    "durationSeconds": 1054.2162117499392,
+    "completedAt": "2026-11-11T15:55:37.167602+00:00"
+  }
+]

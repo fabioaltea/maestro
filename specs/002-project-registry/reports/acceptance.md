@@ -108,3 +108,44 @@ contract tests pass, including provider SDK and Electron negative fixtures and t
 real source tree. [Output](architecture-final.txt). No extra runtime package or
 service was introduced. T091 V1 and both independent 600-second idle observations
 pass; actual samples are in performance.md. These are separate from T093 below.
+
+## T093 — final verification attempts
+
+**BLOCKED / task remains unchecked.** [Structured commands/exits/counts](final-verification-runs.json).
+
+| Campaign | Result |
+|---|---|
+| Native npm test | 367 PASS, 0 FAIL/SKIP/CANCELLED |
+| Separate native test:contract | 101 PASS, 0 FAIL/SKIP/CANCELLED |
+| Separate native test:integration | 207 PASS, 0 FAIL/SKIP/CANCELLED |
+| Complete native test:acceptance | 53 PASS, 0 FAIL/CANCELLED, 1 SKIP (real UID NOT_RUN), exit 0 |
+| IP-denied build/typecheck/lint | all exit 0 |
+| IP-denied ordinary runtime attempt | interrupted after repeated platform failures; 58 PASS / 44 FAIL / 70 CANCELLED; exit 130 |
+| Separate IP-denied contract/integration/full acceptance | BLOCKED_NOT_RUN under this incompatible outer profile |
+
+The complete native acceptance takes its own real idle observation; it also executes
+100 concurrent-start rounds, 100 restart retries, event load/retention/corruption,
+slow observer, the 002 workload and all story CLI acceptances, plus Foundation's
+30 crash/recovery cases and 1,000-record/ten-auxiliary recovery. All available native
+cases pass. The mandatory real second-UID case explicitly skips, so this is not
+full access/release acceptance despite exit 0. Timings/failures are retained.
+
+The scoped [IP profile](../../../tests/fixtures/ip-denied.sb) denies loopback bind
+and connect with EPERM, including a child, while its outside positive bind succeeds:
+[ip check](ip-denial-check.txt), [positive control](ip-positive-control.txt).
+However macOS rejects nested sandbox_apply and ps execution inside the outer profile:
+[nested probe](nested-sandbox-check.txt), [process probe](sandbox-process-check.txt).
+This prevents the required qualified OS confinement/identity/readonly helpers; no
+fallback or privilege change was added. The inherited campaign was interrupted via
+its owned tool session after reproducible repeated failures. Raw cancelled tests
+remain in [ordinary-ip-denied.txt](ordinary-ip-denied.txt), never relabelled PASS.
+
+Native reruns and standalone Git confinement qualify the available behavior, not
+the missing complete IP-denied campaign. Foundation 001/T082 real UID/machine and
+001/T085 remain open. No accounts, capabilities, global firewall rules or permissions
+were changed to manufacture a pass. A final read-only process audit found no daemon
+entrypoint processes for this workspace after the interrupted campaign.
+
+Documentation/coverage/readiness review proceeds after this recorded blocked attempt
+as requested, without waiving its runtime dependency or checking T093 off. Review
+can complete with BLOCKED; release cannot. See release-readiness.md for next actions.

@@ -1,0 +1,1 @@
+{"measuredAt":"2026-11-11T15:08:24.792Z","expected":"IP_DENIED","results":[{"kind":"bind","result":"EPERM"},{"kind":"connect","result":"EPERM"}],"child":{"exitCode":0,"output":"EPERM"}}

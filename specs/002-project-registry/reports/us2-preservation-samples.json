@@ -1,5 +1,5 @@
 {
-  "measuredAt": "2026-11-10T20:28:47.462Z",
+  "measuredAt": "2026-11-11T15:54:18.695Z",
   "confirmed": 3,
   "preserved": 3,
   "configurationsPreservedPercent": 100,
@@ -8,27 +8,27 @@
   "sourceUnchanged": true,
   "projects": [
     {
-      "projectId": "fe94b742-1914-4f76-9615-d15cdb2a13fd",
+      "projectId": "ae0228d4-8c52-448c-951c-d987edda49bb",
       "configRevision": "1",
       "baseBranch": "fixture-base",
       "observationRevision": "1",
-      "completedAt": "2026-11-10T20:28:42.735Z",
+      "completedAt": "2026-11-11T15:54:15.482Z",
       "freshness": "LAST_KNOWN"
     },
     {
-      "projectId": "70d73b86-4396-48d6-a4bf-25aa4baa81d3",
+      "projectId": "73e313c4-f7bd-4cdd-93d5-5bcd7e686965",
       "configRevision": "1",
       "baseBranch": null,
       "observationRevision": "1",
-      "completedAt": "2026-11-10T20:28:43.656Z",
+      "completedAt": "2026-11-11T15:54:16.113Z",
       "freshness": "LAST_KNOWN"
     },
     {
-      "projectId": "b1f620c8-64cd-4c7e-a318-451beb67fbb6",
+      "projectId": "b180af3c-e5fb-4c68-823f-1b2a56e4229f",
       "configRevision": "1",
       "baseBranch": "fixture-linked",
       "observationRevision": "2",
-      "completedAt": "2026-11-10T20:28:45.041Z",
+      "completedAt": "2026-11-11T15:54:17.194Z",
       "freshness": "LAST_KNOWN"
     }
   ]

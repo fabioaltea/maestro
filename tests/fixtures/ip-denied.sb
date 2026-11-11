@@ -1,0 +1,6 @@
+(version 1)
+(allow default)
+; Keep local filesystem/process measurements and Unix-domain IPC available.
+; Deny IP traffic for the entire inherited process tree.
+(deny network-outbound (remote ip "*:*"))
+(deny network-inbound (local ip "*:*"))

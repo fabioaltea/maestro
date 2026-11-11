@@ -84,3 +84,17 @@ isolation and a measurement method that supports the platform tools, or an
 explicitly approved change to that verification requirement. A passing benchmark
 alone does not close it. FR-016/T082 independently requires real runner evidence.
 No thresholds, specification or Constitution were changed; no release is authorized.
+## 2026-11-11 — feature 002 final revalidation
+
+Available native regression: 367 ordinary, 101 separate contract and 207 separate
+integration tests pass; complete combined native acceptance has 53 PASS, 0 FAIL,
+1 SKIP for the still-unprovisioned real second UID. Both additional qualified idle
+runs pass and the combined acceptance performs its own third idle observation.
+These combined Foundation/registry runs are not a replacement for the IP-denied gate.
+
+The effective outer IP-denial profile rejects nested sandbox_apply and ps with
+EPERM. The new ordinary IP-denied attempt was interrupted after repeated platform
+failures, retaining 58 PASS / 44 FAIL / 70 CANCELLED. Complete acceptance under that
+profile remains unavailable. T082 and T085 remain unchecked/open; no waiver or
+network/process-confinement fallback was introduced. Exact commands/raw outputs:
+../../002-project-registry/reports/final-verification-runs.json and acceptance.md.

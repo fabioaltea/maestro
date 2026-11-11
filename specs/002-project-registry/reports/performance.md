@@ -14,7 +14,7 @@ in recovery.md; they are not all physical disk-failure experiments.
 
 ## Registry workload
 
-[SC-002/003 output](project-performance.txt), [all raw samples](project-performance-samples.json).
+[SC-002/003 output](project-performance.txt), [retained qualified samples](project-performance-qualified-samples.json).
 The end-to-end reading samples include every page/status handshake, not just the
 first page. Ten clients perform 1,000 complete inventories of 100 projects, including
 while one reference is blocked on a FIFO. Full read results contain all 100 unique IDs.
@@ -62,3 +62,7 @@ Both resource observations: **PASS**, each >=600 s, no anomalies.
 
 The V1 workload, bounded-pressure checks and both idle observations pass on this
 qualified host. This does not close the distinct IP-denied/real-UID release gates.
+
+The qualified workload samples are retained separately before final acceptance.
+The full acceptance suite may regenerate project-performance-samples.json; its
+command/outcome is recorded independently in final-verification-runs.json.

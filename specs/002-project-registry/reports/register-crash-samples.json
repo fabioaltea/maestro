@@ -1,12 +1,12 @@
 {
-  "measuredAt": "2026-11-11T13:59:51.868Z",
+  "measuredAt": "2026-11-11T15:37:43.910Z",
   "required": 10,
   "completed": 10,
   "samples": [
     {
       "point": "project.beforeAccept",
       "variant": "clean",
-      "requestId": "a0a4b3d3-c313-4788-9fb0-19ce568d282f",
+      "requestId": "d209be85-9beb-4590-a70a-05ca3ea24957",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": false,
@@ -20,20 +20,20 @@
     {
       "point": "project.accepted",
       "variant": "clean",
-      "requestId": "5a132770-6265-424b-885f-a21b23954069",
+      "requestId": "0ccaebe5-ccbf-4724-a691-53acd8fd227c",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REGISTER",
-        "requestId": "5a132770-6265-424b-885f-a21b23954069",
+        "requestId": "0ccaebe5-ccbf-4724-a691-53acd8fd227c",
         "projectId": null,
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-11T13:59:22.925Z",
+        "completedAt": "2026-11-11T15:37:12.724Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -42,7 +42,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "5a132770-6265-424b-885f-a21b23954069"
+          "operationId": "0ccaebe5-ccbf-4724-a691-53acd8fd227c"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -53,20 +53,20 @@
     {
       "point": "project.accepted",
       "variant": "dirty",
-      "requestId": "33aff4ea-112a-4f16-95a5-b2923880697d",
+      "requestId": "b783ae60-d8a7-4803-8223-9d6390703fa9",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REGISTER",
-        "requestId": "33aff4ea-112a-4f16-95a5-b2923880697d",
+        "requestId": "b783ae60-d8a7-4803-8223-9d6390703fa9",
         "projectId": null,
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-11T13:59:25.736Z",
+        "completedAt": "2026-11-11T15:37:15.960Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -75,7 +75,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "33aff4ea-112a-4f16-95a5-b2923880697d"
+          "operationId": "b783ae60-d8a7-4803-8223-9d6390703fa9"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -86,20 +86,20 @@
     {
       "point": "project.probing",
       "variant": "clean",
-      "requestId": "e59ea5b0-ecd3-447c-b999-a1fea3fba7e7",
+      "requestId": "f7f3f48e-fde7-4eeb-8913-e88a93254607",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REGISTER",
-        "requestId": "e59ea5b0-ecd3-447c-b999-a1fea3fba7e7",
+        "requestId": "f7f3f48e-fde7-4eeb-8913-e88a93254607",
         "projectId": null,
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-11T13:59:29.009Z",
+        "completedAt": "2026-11-11T15:37:19.265Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -108,7 +108,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "e59ea5b0-ecd3-447c-b999-a1fea3fba7e7"
+          "operationId": "f7f3f48e-fde7-4eeb-8913-e88a93254607"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -119,20 +119,20 @@
     {
       "point": "project.probing",
       "variant": "blocked-git",
-      "requestId": "5a45d0b1-c232-4d18-9906-e68875cbd6e4",
+      "requestId": "de735dde-5dad-4c7e-8356-b01e6dcf47bf",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REGISTER",
-        "requestId": "5a45d0b1-c232-4d18-9906-e68875cbd6e4",
+        "requestId": "de735dde-5dad-4c7e-8356-b01e6dcf47bf",
         "projectId": null,
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-11T13:59:32.149Z",
+        "completedAt": "2026-11-11T15:37:22.718Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -141,7 +141,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "5a45d0b1-c232-4d18-9906-e68875cbd6e4"
+          "operationId": "de735dde-5dad-4c7e-8356-b01e6dcf47bf"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -152,20 +152,20 @@
     {
       "point": "project.beforeCommit",
       "variant": "clean",
-      "requestId": "ec93d3c8-674a-4fef-95ec-066ba12a0451",
+      "requestId": "2577c0c8-8dd0-4ae2-b689-a40268e3d4d9",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REGISTER",
-        "requestId": "ec93d3c8-674a-4fef-95ec-066ba12a0451",
+        "requestId": "2577c0c8-8dd0-4ae2-b689-a40268e3d4d9",
         "projectId": null,
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-11T13:59:36.025Z",
+        "completedAt": "2026-11-11T15:37:26.773Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -174,7 +174,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "ec93d3c8-674a-4fef-95ec-066ba12a0451"
+          "operationId": "2577c0c8-8dd0-4ae2-b689-a40268e3d4d9"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -185,20 +185,20 @@
     {
       "point": "project.beforeCommit",
       "variant": "dirty",
-      "requestId": "066d9565-6831-431f-bf28-651d6d1230fb",
+      "requestId": "994a05b9-450f-45ba-81d3-22f590bf681d",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REGISTER",
-        "requestId": "066d9565-6831-431f-bf28-651d6d1230fb",
+        "requestId": "994a05b9-450f-45ba-81d3-22f590bf681d",
         "projectId": null,
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-11T13:59:39.746Z",
+        "completedAt": "2026-11-11T15:37:31.192Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -207,7 +207,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "066d9565-6831-431f-bf28-651d6d1230fb"
+          "operationId": "994a05b9-450f-45ba-81d3-22f590bf681d"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -218,20 +218,20 @@
     {
       "point": "project.committed",
       "variant": "clean",
-      "requestId": "ceda593d-d12d-4e16-8205-98ae443f55c8",
+      "requestId": "3e82f9d8-082d-4c26-91bd-0e9074c8c762",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "SUCCEEDED",
       "originalResult": {
-        "requestId": "ceda593d-d12d-4e16-8205-98ae443f55c8",
+        "requestId": "3e82f9d8-082d-4c26-91bd-0e9074c8c762",
         "action": "REGISTER",
-        "projectId": "c3d6bb7a-f843-48a1-9a9f-17def97f9571",
+        "projectId": "3eed3f7f-6c57-49dd-8c9a-77348703bce6",
         "outcome": "SUCCEEDED",
         "effect": "CREATED",
         "configRevision": "1",
         "observationRevision": "1",
-        "completedAt": "2026-11-11T13:59:42.883Z",
+        "completedAt": "2026-11-11T15:37:34.918Z",
         "error": null
       },
       "retryOutcome": "SUCCEEDED",
@@ -242,20 +242,20 @@
     {
       "point": "project.beforeAck",
       "variant": "client-deadline",
-      "requestId": "d48e23a5-6b53-436c-a985-297899610f5c",
+      "requestId": "f61c964c-338b-4ce8-9cd9-ea14c906e636",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "SUCCEEDED",
       "originalResult": {
-        "requestId": "d48e23a5-6b53-436c-a985-297899610f5c",
+        "requestId": "f61c964c-338b-4ce8-9cd9-ea14c906e636",
         "action": "REGISTER",
-        "projectId": "73c52079-e482-4ce4-aaff-3aca766f9c9a",
+        "projectId": "b3019471-b25d-4968-bf9b-7165b3b46689",
         "outcome": "SUCCEEDED",
         "effect": "CREATED",
         "configRevision": "1",
         "observationRevision": "1",
-        "completedAt": "2026-11-11T13:59:46.771Z",
+        "completedAt": "2026-11-11T15:37:38.645Z",
         "error": null
       },
       "retryOutcome": "SUCCEEDED",
@@ -266,20 +266,20 @@
     {
       "point": "project.beforeDrain",
       "variant": "clean",
-      "requestId": "271297bd-f111-46fe-a913-bfe47d0de748",
+      "requestId": "55ad61f6-3751-4792-aef6-dad53c6515e3",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "SUCCEEDED",
       "originalResult": {
-        "requestId": "271297bd-f111-46fe-a913-bfe47d0de748",
+        "requestId": "55ad61f6-3751-4792-aef6-dad53c6515e3",
         "action": "REGISTER",
-        "projectId": "59917b64-f7ba-4750-b5e4-2074d6ba3b78",
+        "projectId": "c536cfb9-f1f2-410b-ae0e-30235524ff8e",
         "outcome": "SUCCEEDED",
         "effect": "CREATED",
         "configRevision": "1",
         "observationRevision": "1",
-        "completedAt": "2026-11-11T13:59:50.361Z",
+        "completedAt": "2026-11-11T15:37:42.428Z",
         "error": null
       },
       "retryOutcome": "SUCCEEDED",
