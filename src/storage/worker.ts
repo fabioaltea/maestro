@@ -4,7 +4,7 @@ import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
 export const methods = ['captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
-  'getProject', 'listProjects', 'commitProjectRegistration', 'commitProjectObservation', 'commitProjectUpdate', 'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
+  'getProject', 'listProjects', 'commitProjectRegistration', 'commitProjectObservation', 'commitProjectUpdate', 'commitProjectRemoval', 'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
 export type Method = typeof methods[number];
@@ -150,6 +150,7 @@ export function createStorageProxy(call: <T>(method: Method, args: unknown[]) =>
     listProjects: options => call('listProjects', [options ?? {}]),
     commitProjectObservation: input => call('commitProjectObservation', [input]),
     commitProjectUpdate: input => call('commitProjectUpdate', [input]),
+    commitProjectRemoval: input => call('commitProjectRemoval', [input]),
     commitProjectRegistration: input => call('commitProjectRegistration', [input]),
     getRequestReservation: id => call('getRequestReservation', [id]),
     acceptProjectOperation: intent => call('acceptProjectOperation', [intent]),

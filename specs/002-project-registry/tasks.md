@@ -5,7 +5,7 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T074 conclusi (74/96), P0 locale
+**Status**: implementazione locale in corso; T001–T075 conclusi (75/96), P0 locale
 PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
@@ -253,7 +253,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 ### Implementazione e verifica
 
-- [ ] T075 [US4] Implementare commit REMOVE CAS e tombstone in `src/storage/sqlite-store.ts` e `src/storage/worker.ts`: configRevision e registryRevision incrementate, esclusione da lista attiva, risultati idempotenti conservati, nessuna cancellazione di file o altri progetti. **Dip.: T071, T072, T073, T074.**
+- [X] T075 [US4] Implementare commit REMOVE CAS e tombstone in `src/storage/sqlite-store.ts` e `src/storage/worker.ts`: configRevision e registryRevision incrementate, esclusione da lista attiva, risultati idempotenti conservati, nessuna cancellazione di file o altri progetti. **Dip.: T071, T072, T073, T074.**
 - [ ] T076 [US4] Implementare `src/core/projects/remove.ts`: autorizzare solo projectId/expectedRevision, non richiedere repo disponibile o probe, impedire a verifiche in volo di ripubblicare progetto/osservazioni dopo la tombstone. **Dip.: T075.**
 - [ ] T077 [US4] Collegare projects.remove e `project remove --expected-revision` in `src/core/projects/dispatch.ts`, `src/client/local-client.ts` e `src/cli/projects.ts`; distinguere progetto sconosciuto/rimosso, restituire esito originale prima dei controlli sullo stato corrente nei retry. **Dip.: T076.**
 - [ ] T078 [US4] Creare ed eseguire `tests/integration/project-remove-verify-races.test.ts`: remove durante verify, due rimozioni stessa revisione, nuova registrazione durante vecchio retry, intento non autorizzato; nessuna resurrezione o cancellazione del nuovo UUID. **Dip.: T077.**
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T074 conclusi, T075–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T075 conclusi, T076–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

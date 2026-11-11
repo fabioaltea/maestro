@@ -64,3 +64,11 @@ export interface UpdateProjectCommit extends ProjectCommitContext {
 export interface RegistryUpdatePort {
   commitProjectUpdate(input: UpdateProjectCommit): Promise<ProjectOperationResult>;
 }
+
+export interface RemoveProjectCommit extends ProjectCommitContext {
+  readonly projectId: string;
+  readonly expectedConfigRevision: string;
+}
+export interface RegistryRemovalPort {
+  commitProjectRemoval(input: RemoveProjectCommit): Promise<ProjectOperationResult>;
+}

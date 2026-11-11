@@ -16,7 +16,7 @@ import { canonicalProjectIntent, requireLocalBranch, normalizeProjectCommand } f
 import { canonicalRepositoryIdentity, canonicalReferenceCheckout } from '../domain/projects/repository-evidence.js';
 import { PROJECT_ACTIONS, transitionProjectOperation, validateProjectOperationResult,
   normalizeProjectName, requireProjectRevision, type Project, type ProjectObservation, type ProjectOperation, type ProjectOperationResult, type ProjectPhase } from '../domain/projects/model.js';
-import type { AcceptProjectOperation, RequestReservation, ProjectState, RegisterProjectCommit, ObservationProjectCommit, RegistryPage, UpdateProjectCommit } from '../ports/registry.js';
+import type { AcceptProjectOperation, RequestReservation, ProjectState, RegisterProjectCommit, ObservationProjectCommit, RegistryPage, UpdateProjectCommit, RemoveProjectCommit } from '../ports/registry.js';
 import { projectDetail } from '../domain/projects/projection.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { AcceptOperation, ControllerAttemptRecord, ControlPhase, InstanceRecord, LaunchTicket, ManagedResource, OperationRecord,
@@ -357,6 +357,41 @@ export class SQLiteStore {
       drafts.push({ type: 'operation.completed', operationId: input.requestId, instanceId: input.instanceId,
         payload: { scope: 'project', action: 'VERIFY', outcome: 'SUCCEEDED', effect: 'OBSERVED', projectId: input.projectId,
           configRevision: state.project.configRevision, observationRevision } });
+      this.hooks.checkpoint?.('project.beforeCommit');
+      return result;
+    }, drafts);
+  }
+  commitProjectRemoval(input: RemoveProjectCommit): ProjectOperationResult {
+    requireUuid(input.requestId); requireUuid(input.instanceId); requireUuid(input.projectId); requireProjectRevision(input.expectedConfigRevision);
+    const drafts: EventDraft[] = [];
+    return this.mutate(database => {
+      const operation = this.getProjectOperation(input.requestId);
+      if (!operation || operation.action !== 'REMOVE' || operation.outcome !== 'IN_PROGRESS') throw new Error('INVALID_TRANSITION');
+      const instance = this.readSnapshot()?.instance;
+      if (!instance || instance.instanceId !== input.instanceId || operation.owningInstanceId !== input.instanceId || instance.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
+      const command = normalizeProjectCommand('REMOVE', (JSON.parse(operation.canonicalIntent) as { params: unknown }).params);
+      if (command.action !== 'REMOVE' || command.params.projectId !== input.projectId || operation.projectId !== input.projectId
+        || command.params.expectedRevision !== input.expectedConfigRevision || operation.expectedConfigRevision !== input.expectedConfigRevision) throw new Error('INVALID_REQUEST');
+      const state = this.getProject(input.projectId);
+      if (!state) throw new Error('PROJECT_NOT_FOUND');
+      if (state.project.removedAt !== null) throw new Error('PROJECT_REMOVED');
+      if (state.project.configRevision !== input.expectedConfigRevision) throw new Error('REVISION_CONFLICT');
+      const configRevision = String(BigInt(state.project.configRevision) + 1n);
+      this.hooks.checkpoint?.('project.remove.beforeWrite');
+      const changed = database.prepare('UPDATE projects SET removed_at=?,updated_at=?,config_revision=? WHERE project_id=? AND config_revision=? AND removed_at IS NULL')
+        .run(input.completedAt, input.completedAt, configRevision, input.projectId, input.expectedConfigRevision);
+      if (changed.changes !== 1) throw new Error('REVISION_CONFLICT');
+      database.prepare('UPDATE registry_metadata SET registry_revision=registry_revision+1 WHERE singleton=1').run();
+      this.hooks.checkpoint?.('project.remove.written');
+      const result: ProjectOperationResult = { requestId: input.requestId, action: 'REMOVE', projectId: input.projectId, outcome: 'SUCCEEDED', effect: 'REMOVED',
+        configRevision, observationRevision: state.observation?.observationRevision ?? null, completedAt: input.completedAt, error: null };
+      validateProjectOperationResult(result);
+      this.hooks.checkpoint?.('project.remove.beforeFinalize');
+      database.prepare("UPDATE project_operations SET phase='FINALIZED',outcome='SUCCEEDED',completed_at=?,result=? WHERE request_id=?")
+        .run(input.completedAt, JSON.stringify(result), input.requestId);
+      drafts.push({ type: 'operation.completed', operationId: input.requestId, instanceId: input.instanceId,
+        payload: { scope: 'project', action: 'REMOVE', projectId: input.projectId, outcome: 'SUCCEEDED', effect: 'REMOVED',
+          configRevision, observationRevision: result.observationRevision } });
       this.hooks.checkpoint?.('project.beforeCommit');
       return result;
     }, drafts);
