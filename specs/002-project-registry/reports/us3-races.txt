@@ -1,0 +1,15 @@
+✔ two real clients updating the same revision confirm exactly one change (2599.720125ms)
+✔ verify completed after update cannot publish evidence against the previous configuration (943.049417ms)
+✔ a completed verify does not consume configuration revision or invalidate an admitted rename (910.976416ms)
+✔ set-base rechecks delete-base during probe and never commits a partial name/base patch (912.643042ms)
+✔ set-base rechecks move-base during probe and never commits a partial name/base patch (968.187958ms)
+✔ set-base rechecks concurrent-rename during probe and never commits a partial name/base patch (946.836209ms)
+✔ a controller role cannot authorize UPDATE or reach the admission/private lookup (503.299084ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7888.154583
