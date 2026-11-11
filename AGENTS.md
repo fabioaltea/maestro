@@ -38,6 +38,9 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
+- Stato finale 002: 95/96 task completati, T093 aperto/BLOCKED; review T096 conclusa
+  con readiness BLOCKED. Non promuovere failure/skip esterni a PASS.
+
 - 002-project-registry: codice delle quattro storie ed E1/E2/E3/V1 qualificati
   localmente. CLI add/list/show/verify/update/remove/operation disponibile; stesso
   daemon, SQLite schema 3, journal/outbox e credenziali Foundation. Nessun provider,

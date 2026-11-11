@@ -17,7 +17,7 @@ test('domain and client reject OS, SQLite and core policy imports across syntax 
   await writeFile(join(root, 'client', 'good.ts'), "import type { State } from '../domain/states.js';\n");
   assert.equal(run(root).status, 0);
   await writeFile(join(root, 'domain', 'bad.ts'), "import fs from 'node:fs';\nexport { x } from '../storage/store.js';\n");
-  await writeFile(join(root, 'client', 'bad.ts'), "await import('../core/operations.js');\nconst db = require('better-sqlite3');\nimport provider from '@vendor/provider-sdk';\nimport electron from 'electron';\n");
+  await writeFile(join(root, 'client', 'bad.ts'), "await import('../core/operations.js');\nconst db = require('better-sqlite3');\nimport provider from '@vendor/provider-sdk';\nimport electron from 'electron';\nimport filesystem from 'node:fs/promises';\nimport process from 'node:child_process';\n");
   const rejected = run(root);
   assert.equal(rejected.status, 1, rejected.stdout + rejected.stderr);
   assert.match(rejected.stderr, /domain\/bad.ts.*node:fs/);
@@ -26,6 +26,8 @@ test('domain and client reject OS, SQLite and core policy imports across syntax 
   assert.match(rejected.stderr, /client\/bad.ts.*better-sqlite3/);
   assert.match(rejected.stderr, /client\/bad.ts.*provider-sdk/);
   assert.match(rejected.stderr, /client\/bad.ts.*electron/);
+  assert.match(rejected.stderr, /client\/bad.ts.*node:fs/);
+  assert.match(rejected.stderr, /client\/bad.ts.*node:child_process/);
 });
 
 test('actual production sources obey the architecture boundaries', () => {

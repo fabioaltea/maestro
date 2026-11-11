@@ -30,7 +30,7 @@ async function inspect(path) {
       forbidden = !allowed.some(prefix => target.startsWith(prefix));
     } else {
       forbidden = zone === 'domain' || !specifier.startsWith('node:') || specifier === 'better-sqlite3'
-        || specifier === 'node:sqlite' || specifier === 'node:child_process';
+        || specifier === 'node:sqlite' || ['node:fs', 'node:os', 'node:process', 'node:child_process', 'node:worker_threads', 'node:cluster', 'node:net', 'node:tls', 'node:http', 'node:https', 'node:http2', 'node:dgram'].some(prefix => specifier === prefix || specifier.startsWith(prefix + '/'));
     }
     if (forbidden) violations.push(`${local}: forbidden dependency ${specifier}`);
   }

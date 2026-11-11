@@ -2,7 +2,7 @@
 
 **Feature branch**: `002-project-registry` | **Date**: 2026-11-10 | **Spec**: [spec.md](spec.md)  
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/spec.md`  
-**Status**: implementazione locale in corso; T001–T084 conclusi, G1/S1/E1/E2 e US1–US4 qualificati; E3/V1 seguono i task.  
+**Status**: implementazione e review locali concluse; 95/96 task completati, T093 aperto/BLOCKED. G1/S1/E1/E2/E3/V1 e US1–US4 qualificati localmente; gate finali 001/T082/T085 non derogati.  
 **Checkout osservato**: `001-core-background-daemon-implementation`, baseline `e84e587`.
 Il selettore `.specify/feature.json` individua la 002 indipendentemente dal branch.
 Implementazione sul branch 002 allineato alla baseline; un commit locale per task.
