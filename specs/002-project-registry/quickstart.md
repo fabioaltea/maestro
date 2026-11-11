@@ -1,9 +1,10 @@
-# Quickstart — Review e futura verifica della 002
+# Quickstart — registro locale 002
 
 **Stato al 2026-11-11**: US1/US2/US3/US4 implementate e verificate localmente.
 `project add/list/show/verify/update/remove/operation` sono disponibili dopo build. Evidenze e limiti: [US1](reports/us1.md), [US2](reports/us2.md), [US3](reports/us3.md), [US4](reports/us4.md).
-Replay E2 qualificato: [evidenze eventi](reports/events.md). Streaming E3, backpressure V1
-e accettazione finale richiedono ancora i loro checkpoint.
+E1/E2/E3 e carico/idle V1 hanno evidenze locali: [eventi](reports/events.md),
+[performance](reports/performance.md). L’accettazione finale e il gate reale UID/macchina
+restano distinti: [acceptance](reports/acceptance.md), [readiness](reports/release-readiness.md).
 
 ## Review documentale
 
@@ -11,16 +12,15 @@ Leggere [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md) e [contracts](contracts/local-protocol.md).
 Controllare gli otto gate costituzionali e mantenere separati design conforme,
 target prestazionali e risultati misurati. Il branch dichiarato dalla specifica è
-002-project-registry; il checkout osservato durante il piano era
-001-core-background-daemon-implementation a e84e587. Prima della futura implementazione
-allineare esplicitamente branch e baseline senza perdere le modifiche di documentazione.
+002-project-registry, allineato alla Foundation greenfield. Il selettore
+`.specify/feature.json` identifica la feature indipendentemente dal branch di checkout.
 
 Revisione approvata il 2026-11-10: P0 richiede baseline locale verde e branch allineato.
 T082/FR-016 e T085 rimangono gate di accettazione finale/rilascio, non dello sviluppo locale.
 G1 richiede confinamento Git qualificato: un flag di ambiente o una prova simulata
 non autorizzano il flusso reale. Nessuna deroga è implicita in questa review.
 
-## Preparazione futura
+## Preparazione
 
 Dalla root reale del repository, usare build e test già disponibili:
 
@@ -41,17 +41,18 @@ npm run test:acceptance
 npm run bench:foundation
 ```
 
-Questi comandi esistono per la Foundation; oggi non attestano copertura 002.
-I task dovranno aggiungere le prove registry nelle suite pertinenti e un carico
-SC-002/003 riproducibile, senza dare per esistente un nuovo script npm.
+Le suite comprendono Foundation e registro. `npm test` esclude acceptance.
+Acceptance e benchmark contengono osservazioni idle reali di dieci minuti: non
+sovrapporre quei carichi. Il carico SC-002/003 è in
+`tests/acceptance/project-performance.test.ts`; campioni completi nei report.
 Acquisire versioni Node/Git/SQLite, OS/architettura/filesystem, commit, comandi esatti,
 exit code, ambiente di rete negata e percorso dello state-dir temporaneo nel report.
 Nessun uso di repository dell'utente come fixture; nessun cleanup di directory non
 create dalla prova. Per test distruttivi usare esclusivamente risorse temporanee possedute.
 
-## Percorso manuale futuro
+## Percorso manuale su fixture possedute
 
-Comandi esemplificativi **da eseguire soltanto dopo implementazione autorizzata**.
+I sottocomandi seguenti sono implementati; scegliere un archivio e repository di prova.
 Definire state-dir e repo fixture con path assoluti prima dei comandi; annotare
 requestId, projectId e revisione restituiti, senza copiare segnaposto come valori reali.
 
@@ -126,7 +127,7 @@ prima ack, outbox drain, worker failure, perdita connessione, stop e recovery.
 Confrontare dati confermati, catalogo, progetti attivi, esiti e sequenze eventi.
 Per crash con outcome ignoto, prima query/retry stesso ID: non generare un nuovo intento.
 
-## Evidenze da consegnare in implementazione
+## Evidenze e gate finali
 
 Report separati per Git safety/confinamento, upgrade/recovery, acceptance e performance,
 con tutti i fallimenti e NOT_RUN visibili. Continuare i report Foundation senza
@@ -135,16 +136,16 @@ misurare idle Foundation e attività registry separatamente. Rilascio non pronto
 finché uno dei gate obbligatori rimane aperto; questa guida non autorizza esecuzione
 codice, task generation o pubblicazione.
 
-## Verifica documentale eseguita — 2026-11-10
 
-PASS: otto artefatti del piano presenti, link locali risolti, blocchi di codice
-bilanciati e segnaposto del template assenti. Controllata la presenza nella matrice
-di FR-001…020, NFR-001…005 e SC-001…009; review semantica di intenti, revisioni,
-crash, deduplica, eventi e limiti tra i contratti. `git diff --check` senza errori.
-Lo script `update-agent-context.sh codex` è stato eseguito; il blocco manuale di
-AGENTS.md risulta identico a HEAD. Corretta l'attribuzione automatica del piano al
-branch di checkout: la nuova voce è riferita alla 002 e dichiarata solo pianificata.
+Piattaforma qualificata: macOS 26.3 arm64/APFS, Node 26.13.0, Git Xcode 2.50.1.
+Schema 2 noto: solo lo start esplicito migra a schema 3 con entrambi i lease; una
+query offline non migra. Schemi sconosciuti, corruzione o identità non provata non
+vengono riparati automaticamente. Le osservazioni riguardano il primo checkout
+confermato e non i contenuti interni dei submodule. LIVE riguarda il registro;
+le osservazioni restano datate LAST_KNOWN.
 
-Questi controlli non sono prove runtime: G1 e i criteri SC restano da eseguire,
-T082/T085 Foundation restano aperti. Nessun codice, test di implementazione,
-tasks.md, commit o cambio branch prodotto da questa pianificazione.
+Per un retry conservare requestId e intento originale: un timeout non autorizza
+un ID nuovo. Revisioni obsolete richiedono rilettura e intento esplicito. Rimozione
+significa sola tombstone del registro, mai cleanup di file/branch/worktree. Dopo
+reimport l’ID è nuovo e una vecchia rimozione non lo può colpire. Codici/exit e sintassi
+completi sono nel [contratto CLI](contracts/cli.md) e nel [README](../../README.md).

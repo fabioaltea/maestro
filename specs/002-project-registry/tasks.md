@@ -5,8 +5,8 @@
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/002-project-registry/`  
 **Prerequisites**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md),
 [data-model.md](data-model.md), [contracts/](contracts/) e [quickstart.md](quickstart.md).  
-**Status**: implementazione locale in corso; T001–T092 conclusi (92/96), P0 locale
-PASS. Porte, fixture e confinement G1 qualificati localmente. Gate esterni finali invariati.
+**Status**: T001–T092, T094 conclusi (93/96); aperti: T093, T095–T096. T093 BLOCKED, gate reali non derogati.
+G1/S1/E1/E2/E3/V1 qualificati localmente; accettazione finale distinta dalla review.
 Dettagli in [reports/entry-readiness.md](reports/entry-readiness.md).
 
 ## Format e convenzioni
@@ -309,7 +309,7 @@ sicurezza simulato e nessuna deroga ai requisiti finali.
 
 - [X] T092 Estendere/eseguire i controlli esistenti in `tests/contract/architecture.test.ts` e `scripts/check-architecture.mjs` sui nuovi percorsi: dominio/client senza OS/SQLite/processi, stessa infrastruttura daemon/storage/eventi e nessun provider/Discovery/runtime/worktree management/pnpm/Electron; registrare risultato in `specs/002-project-registry/reports/acceptance.md`. **Dip.: T091.**
 - [ ] T093 Eseguire build/typecheck/lint, `npm test`, test:contract/integration e acceptance completa da `package.json` con rete IP negata, archivi temporanei e runner reale con altro UID/seconda macchina per 001/T082; se indisponibile mantenere il task di accettazione finale aperto e la readiness BLOCKED; verificare anche la chiusura reale di 001/T085 e consolidare regressioni Foundation e registry in `specs/002-project-registry/reports/acceptance.md`, mantenendo fallimenti/skip/timeout visibili e benchmark separati dal carico concorrente. **Dip.: T092.**
-- [ ] T094 Aggiornare `README.md`, `specs/002-project-registry/quickstart.md` e `AGENTS.md` con comandi realmente disponibili, errori/exit/retry, upgrade, piattaforma/profilo qualificato, scope reference/submodule e target vs misure; preservare byte per byte il blocco manuale AGENTS e non dichiarare accettati gate aperti. **Dip.: T093.**
+- [X] T094 Aggiornare `README.md`, `specs/002-project-registry/quickstart.md` e `AGENTS.md` con comandi realmente disponibili, errori/exit/retry, upgrade, piattaforma/profilo qualificato, scope reference/submodule e target vs misure; preservare byte per byte il blocco manuale AGENTS e non dichiarare accettati gate aperti. **Dip.: T093.**
 - [ ] T095 Verificare la copertura di FR-001…020, NFR-001…005, SC-001…009, tutti i 23 scenari delle quattro storie e gli edge case in `specs/002-project-registry/reports/acceptance.md`; controllare ≥10 crash per import/update/remove, 100 retry/20 import concorrenti, 100% configurazioni confermate preservate e 0 segreti/effetti non autorizzati. **Dip.: T094.**
 - [ ] T096 Revisionare diff, evidenze G1/S1/E1/E2/E3/V1 e stato Foundation in `specs/002-project-registry/reports/release-readiness.md`; dichiarare release ready solo con tutti i gate richiesti PASS, altrimenti BLOCKED con cause/nextAction. Una review completata non chiude automaticamente task runtime falliti o autorizza pubblicazione/fasi successive. **Dip.: T095.**
 
@@ -444,7 +444,7 @@ registry. I risultati idempotenti sono dati autorevoli, non log ruotabili.
 
 ## Validazione della lista
 
-96 task generati; T001–T092 conclusi, T093–T096 ancora aperti. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
+96 task generati; T001–T092, T094 conclusi (93/96); aperti: T093, T095–T096. T093 BLOCKED, gate reali non derogati. ID T001–T096 univoci e consecutivi; 30 label `[P]` nelle wave
 sopra; ogni task ha path e dipendenze precedenti, senza cicli. Label storia soltanto
 nelle quattro fasi US. Matrice completa: 20 FR, 5 NFR, 9 SC e 23 scenari.
 Questa è validazione documentale, non prova runtime o PASS dei gate aperti.

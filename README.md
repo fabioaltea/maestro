@@ -1,27 +1,27 @@
-# Maestro Foundation
+# Maestro local core
 
-Local headless daemon, CLI, durable lifecycle operations, conservative recovery,
-diagnostics and replayable events. Providers, Agent Runtime, Git/worktree management,
-project dependency management and Electron are outside this Foundation.
+Headless local daemon and CLI with durable lifecycle, a project registry and
+bounded replayable events. CLI clients can disconnect without stopping accepted
+work. The current implementation is qualified on macOS 26.3 arm64/APFS, Node
+26.13.0, TypeScript 6.0.3 and better-sqlite3 13.0.3. Other platforms are not qualified.
 
-Implementation is available; full acceptance is **blocked**, not certified. Real
-second-UID/remote access is NOT_RUN (T082), and complete IP-isolated acceptance
-must be resolved (T085). See [acceptance](specs/001-core-background-daemon/reports/acceptance.md).
-
-## Requirements
-
-Verified on macOS 26.3.1 arm64/APFS, Apple M3, Node 26.13.0; TypeScript 6.0.3 and
-better-sqlite3 13.0.3 are pinned. Other platforms and schema migrations are not supported.
+Full release acceptance remains gated: a real second UID/separate-machine access
+check and complete IP-denied acceptance must have real passing evidence. A skipped
+external check is NOT_RUN, not PASS. See the [002 readiness report](specs/002-project-registry/reports/release-readiness.md).
 
 ```sh
 npm ci
 npm run build
 node dist/cli/main.js --help
+node dist/cli/main.js project --help
 ```
 
-## Run
+Run commands from the repository root (or use an absolute path to the compiled
+entrypoint). A relative `dist/cli/main.js` from your home directory points elsewhere.
 
-Use a new archive for an isolated exercise. Keep its path to inspect or stop it later.
+## Local lifecycle
+
+Choose a new absolute archive path and retain it to inspect/stop the instance:
 
 ```sh
 state_dir="/private/tmp/maestro-demo-$(uuidgen)"
@@ -32,18 +32,71 @@ node dist/cli/main.js daemon events --state-dir "$state_dir" --limit 100 --json
 node dist/cli/main.js daemon stop --state-dir "$state_dir" --json
 ```
 
-Restart is one durable stop/start operation. Use `--request-id UUID` to retry the
-same intent and `daemon operation UUID` to inspect its outcome; a retry must not
-be a new effect. `events --follow` observes live events, `--after CURSOR` adds replay.
-Closing the observer does not stop the daemon. Expired history reports an explicit gap.
+Restart is an explicit durable stop/start. Stop uses the existing Foundation budget;
+uncertain ownership never authorizes termination of a saved PID. There is no force
+reset. Read-only commands do not initialize an absent archive or repair storage.
+Historical RUNNING is not liveness: inspect freshness, liveness and ready.
 
-Status, diagnostics and events can read stopped archives without starting the
-daemon. An absent archive is not initialized by a read. Historical RUNNING is not
-proof of liveness: inspect freshness, liveness, ready and pendingFinalization.
-BUSY means control contention; BLOCKED requires the reported nextAction. Unknown
-process identity never authorizes killing a saved PID. No force/reset is provided.
+## Project registry
 
-## Verify
+Start the daemon explicitly, then use an existing local checkout. `project add PATH`
+accepts optional `--name NAME` and `--base-branch BRANCH`. Save the returned projectId,
+configRevision and requestId; names need not be unique and are not selectors.
+
+- `project list [--limit 1..100] [--cursor CURSOR]`: stable whole-record pages. If
+  REGISTRY_CHANGED is reported, restart the list rather than combining revisions.
+- `project show PROJECT_ID`: confirmed configuration and dated observation.
+- `project verify PROJECT_ID`: save an explicit new observation of the original
+  reference checkout without changing configuration. SUCCEEDED/OBSERVED can mean a
+  saved UNAVAILABLE/UNVERIFIED observation; it is not a claim of Git readiness.
+- `project update PROJECT_ID --expected-revision REV [--name NAME] [--base-branch BRANCH | --clear-base-branch]`:
+  atomically update configuration. At least one field is required. Rename/clear do
+  not require an accessible repository. Explicit base requires a valid local commit
+  ref and never checks out a branch. A no-op preserves configuration revision/date.
+- `project remove PROJECT_ID --expected-revision REV`: remove only that registration.
+  Files, Git objects, refs, index, local changes and other worktrees are preserved.
+  Get returns PROJECT_REMOVED with a dated tombstone. Reimport creates a new UUID;
+  an old removal retry cannot affect it. No force/cleanup flags exist.
+- `project operation REQUEST_ID`: query the original pending/terminal outcome,
+  including offline and after subsequent mutations.
+
+Every command accepts `--state-dir ABSOLUTE_PATH --json`. Mutations accept
+`--request-id UUID` and `--timeout-ms` up to 30,000; reads up to 2,000. Omission of a
+request ID generates one. After timeout, inspect/retry the same immutable intent/ID;
+do not generate another ID to guess whether a mutation committed. A disconnected
+client never cancels admitted work. No project mutation automatically starts a daemon.
+
+Exit codes: 0 successful read/confirmed mutation; 2 invalid input/revision/idempotency
+conflict; 3 BUSY; 4 blocked/interrupted/unavailable project; 5 timeout/unknown outcome
+or unavailable daemon; 6 denied access; 7 persistence/integrity/runtime failure.
+Errors include safe cause, retryable and nextAction. BUSY accepted=false has no ledger
+promise. UNKNOWN_OUTCOME retains the original request ID. A stale configuration
+revision requires rereading and an explicit new intent, not an automatic retry.
+
+Schema 3 upgrades this greenfield Foundation's known schema 2 only on explicit
+start with exclusive leases; storeId, journal and outcome history remain intact.
+Read-only schema 2 registry requests return REGISTRY_NOT_INITIALIZED without upgrade.
+Unknown versions/corrupt or uncertain storage fail explicitly; there is no migration
+from the earlier Maestro product and no automatic rebind/recreation of a checkout.
+
+## Observations and events
+
+A repository shared by main/linked checkouts has one active registration; the first
+confirmed reference remains fixed. File status refers to that checkout's direct
+entries, excluding submodule contents. Nullable facts mean unverified, never clean.
+Empty/unborn/detached repositories can be registered with no configured base; a
+first external commit does not select one. Stored observations are LAST_KNOWN even
+when the registry envelope is LIVE. Changing configuration keeps older evidence dated.
+
+`daemon events --after CURSOR` replays the same Foundation/registry journal;
+`--follow` observes replay/live events. A cursor advances only after successful
+application; a gap requires reread-status and an explicit resync. Client failure
+never silently reconnects or repeats a mutation. Names, paths, contents, environment,
+credentials and raw stderr do not enter diagnostic payloads. Limits remain 16 KiB/event,
+64 KiB/outbox, 60 KiB/page and 1 MiB/client. Pressure diagnostics expose bounded queue,
+probe and failure counts. At most four probes and 32 admitted pending operations run.
+
+## Verification and scope
 
 ```sh
 npm run typecheck
@@ -55,17 +108,17 @@ npm run test:acceptance
 npm run bench:foundation
 ```
 
-Benchmark duration is at least ten minutes. Keep the machine awake and run resource
-workloads separately. The latest idle run sampled 76.56 MiB maximum RSS including
-workers and 0.00833% CPU of one core over 600s, below 150 MiB / 1% targets. These are
-idle measurements, not guarantees under arbitrary load. Diagnostic budget targets
-are 50 MiB plus 5 MiB temporary and <=1 MiB per observer; see checkpoint reports.
+Ordinary tests exclude acceptance. Acceptance includes a real ten-minute idle test;
+benchmark is a separate ten-minute observation. Keep the host awake and run load,
+idle and benchmark campaigns separately. The 500 ms/2 s read, 5 s/30 s inspection,
+150 MiB/1% idle targets are not blanket guarantees. Current raw measurements and
+errors are in [performance](specs/002-project-registry/reports/performance.md).
 
-The acceptance suite skips the real second-UID test when its runner is unavailable;
-exit 0 with that skip is not full FR-016 verification. A restrictive sandbox can
-also prevent ps/lsof measurements; failures must remain explicit, not relabelled PASS.
-
-Details: [quickstart](specs/001-core-background-daemon/quickstart.md),
-[performance](specs/001-core-background-daemon/reports/performance.md),
-[local-access runner](tests/fixtures/multi-user-runner.md),
-[tasks](specs/001-core-background-daemon/tasks.md).
+All four user stories and E1/E2/E3 have separate evidence in
+[002 reports](specs/002-project-registry/reports/), with bounded-pressure and final
+acceptance status recorded separately. Provider integrations, Agent Runtime,
+Discovery approval, Git/worktree management, dependency execution and Electron
+are future scope. No registration declares a project ready or approves future work.
+See [quickstart](specs/002-project-registry/quickstart.md),
+[contracts](specs/002-project-registry/contracts/) and
+[real local-access runner](tests/fixtures/multi-user-runner.md).

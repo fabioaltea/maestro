@@ -37,21 +37,25 @@ npm run bench:foundation
 TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o driver SQLite.
 
 ## Recent Changes
-- 002-project-registry: T001–T084 conclusi, US1/US2/US3/US4 e G1/S1/E1/E2 PASS, 358 test ordinari verdi;
-  project add/list/show/verify/update/remove/operation disponibili da CLI/API, anche esiti/dettaglio offline. Feature selezionata da `.specify/feature.json`: consultare
-  `specs/002-project-registry/`. Import da worktree esistenti senza gestione worktree;
-  readiness Foundation T082/T085 restano gate finali; per sviluppo locale basta
-  baseline verde. 20 import concorrenti, 100 retry e 10 SIGKILL REGISTER qualificati; US2: letture storiche/paginazione CAS, verify esplicito e 6 SIGKILL qualificati; US3: configurazione CAS e 10 SIGKILL UPDATE qualificati; US4: sola rimozione registro, tombstone e 10 SIGKILL REMOVE qualificati; E2 replay misto/schema 2→3, recovery outbox e gap qualificati; E3/V1 e gate finali restano aperti.
-  Implementazione autorizzata; un commit locale per task. Nessun push implicito.
 
-- 001-core-background-daemon: Foundation implementata; diagnostica con categorie
-  esplicite, dieci osservatori/6.000 eventi e 1.000 letture, 100 round di dieci start
-  e 100 retry verificati. Replay/live e backpressure restano bounded; schema 2 invariato.
-  Ultimo idle: 600s, massimo RSS campionato 76,56 MiB inclusi worker, CPU 0,00833% di
-  un core. Recovery con 1.000 record e dieci ausiliari verificato; campioni nei report.
-  Non dichiarare 001 completamente accettata: T082/FR-016 NOT_RUN, T085 offline bloccato.
-  La campagna completa IP-denied ha 35 PASS/11 FAIL/1 SKIP; riprove mirate senza sandbox
-  passate non la sostituiscono. Vedere reports/acceptance.md e reports/performance.md.
+- 002-project-registry: codice delle quattro storie ed E1/E2/E3/V1 qualificati
+  localmente. CLI add/list/show/verify/update/remove/operation disponibile; stesso
+  daemon, SQLite schema 3, journal/outbox e credenziali Foundation. Nessun provider,
+  Discovery, runtime agenti, gestione worktree/dipendenze o Electron aggiunto.
+- Verifiche native: 367 test ordinari, 101 contratti e 207 integrazione PASS;
+  acceptance completa 53 PASS, 0 FAIL, 1 SKIP reale UID NOT_RUN. 30 SIGKILL distribuiti
+  su REGISTER/UPDATE/REMOVE, 100 retry e 20 import concorrenti verificati.
+- Misure V1 sul profilo macOS/APFS qualificato: 100 progetti/1000 letture complete/
+  10 client, p95 76,14 ms; 30 ispezioni p95 672,87 ms con timeout conservato.
+  Due idle separati >=600 s PASS, massimo 78,88 MiB e CPU 0,003333% di un core.
+  I target non sono garanzie generali: consultare campioni e limiti nei report.
+- T093 resta BLOCKED/aperto: la campagna IP-denied runtime è fallita/interrotta
+  perché l’outer sandbox impedisce sandbox annidato e ps; il runner reale
+  secondo UID/macchina non è configurato. 001/T082 e 001/T085 non sono derogati.
+  Review/documentazione possono concludersi BLOCKED, mai promuovere questi gate a PASS.
+- Consultare specs/002-project-registry/plan.md, contracts e reports/acceptance.md,
+  reports/performance.md, reports/events.md e reports/release-readiness.md.
+  Un commit locale per task; nessun push/pubblicazione implicito.
 
 <!-- MANUAL ADDITIONS START -->
 
