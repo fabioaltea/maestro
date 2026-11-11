@@ -1,0 +1,8 @@
+{
+  "name": "@maestro/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "main/index.js",
+  "description": "Local desktop client for Maestro Core"
+}
