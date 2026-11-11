@@ -1,7 +1,7 @@
 # Contract — Maestro project CLI v1
 
-Comandi pianificati, **non ancora disponibili**. Entry point futuro nello stesso
-build Foundation: `node dist/cli/main.js`; alias installato `maestro`.
+Add/list/show/verify/update/operation implementati; remove resta pianificato.
+Entry point nello stesso build Foundation: `node dist/cli/main.js`; alias installato `maestro`.
 
 ## Sintassi
 

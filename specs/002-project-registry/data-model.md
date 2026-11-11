@@ -1,6 +1,6 @@
 # Data Model — Project Registry
 
-**Implementation status**: schema 3 e ledger implementati; commit delle storie ancora da aggiungere.
+**Implementation status**: schema 3, ledger e commit REGISTER/VERIFY/UPDATE implementati; REMOVE resta da aggiungere.
 Upgrade dalla nuova Foundation schema 2 qualificato con crash pre/post commit. Non è migrazione del
 precedente Maestro. UUID e timestamp UTC ISO-8601; revisioni positive rese in JSON
 come stringhe decimali, senza perdita di precisione. Date di ordinamento logico

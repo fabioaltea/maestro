@@ -1,6 +1,6 @@
 # maestro Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-11-10
+Auto-generated from all feature plans. Last updated: 2026-11-11
 
 ## Active Technologies
 
@@ -37,11 +37,11 @@ npm run bench:foundation
 TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o driver SQLite.
 
 ## Recent Changes
-- 002-project-registry: T001–T059 conclusi, US1/US2 e G1/S1/E1 PASS, 290 test ordinari verdi;
-  project add/list/show/verify/operation disponibili da CLI/API, anche esiti/dettaglio offline. Feature selezionata da `.specify/feature.json`: consultare
+- 002-project-registry: T001–T070 conclusi, US1/US2/US3 e G1/S1/E1 PASS, 320 test ordinari verdi;
+  project add/list/show/verify/update/operation disponibili da CLI/API, anche esiti/dettaglio offline. Feature selezionata da `.specify/feature.json`: consultare
   `specs/002-project-registry/`. Import da worktree esistenti senza gestione worktree;
   readiness Foundation T082/T085 restano gate finali; per sviluppo locale basta
-  baseline verde. 20 import concorrenti, 100 retry e 10 SIGKILL REGISTER qualificati; US2: letture storiche/paginazione CAS, verify esplicito e 6 SIGKILL qualificati; US3/US4 ancora da completare.
+  baseline verde. 20 import concorrenti, 100 retry e 10 SIGKILL REGISTER qualificati; US2: letture storiche/paginazione CAS, verify esplicito e 6 SIGKILL qualificati; US3: configurazione CAS e 10 SIGKILL UPDATE qualificati; US4 ancora da completare.
   Implementazione autorizzata; un commit locale per task. Nessun push implicito.
 
 - 001-core-background-daemon: Foundation implementata; diagnostica con categorie

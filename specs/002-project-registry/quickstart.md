@@ -1,8 +1,8 @@
 # Quickstart — Review e futura verifica della 002
 
-**Stato al 2026-11-10**: US1/US2 implementate e verificate localmente.
-`project add/list/show/verify/operation` sono disponibili dopo build; update/remove
-restano pianificati. Evidenze e limiti: [US1](reports/us1.md), [US2](reports/us2.md).
+**Stato al 2026-11-11**: US1/US2/US3 implementate e verificate localmente.
+`project add/list/show/verify/update/operation` sono disponibili dopo build; remove
+resta pianificato. Evidenze e limiti: [US1](reports/us1.md), [US2](reports/us2.md), [US3](reports/us3.md).
 Gli esempi delle storie successive non attestano funzionalità già disponibili.
 
 ## Review documentale
