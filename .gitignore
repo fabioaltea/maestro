@@ -19,3 +19,6 @@ Thumbs.db
 *.sqlite-shm
 *.sqlite-journal
 *.sock
+dist-desktop/
+playwright-report/
+test-results/

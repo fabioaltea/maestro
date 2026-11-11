@@ -13,7 +13,7 @@ Ogni riga task contiene checkbox, ID sequenziale, `[P]` soltanto dove indipenden
 Predisporre build desktop separata senza alterare build/runtime core.
 
 - [X] T001 Definire manifest privato desktop e pin Electron45.3.0/React19.3.1/esbuild0.28.2/Playwright1.65.0, risolvere tipi React19 compatibili, script npm desktop e lockfile unico in package.json, package-lock.json e apps/desktop/package.json; nessun electron-rebuild o workspace aggiuntivo.
-- [ ] T002 Configurare build main ESM/preload CJS/renderer ESM e typecheck isolati in scripts/build-desktop.mjs, apps/desktop/tsconfig.main.json, apps/desktop/tsconfig.renderer.json e .gitignore; output dist-desktop separato, nessun dev server.
+- [X] T002 Configurare build main ESM/preload CJS/renderer ESM e typecheck isolati in scripts/build-desktop.mjs, apps/desktop/tsconfig.main.json, apps/desktop/tsconfig.renderer.json e .gitignore; output dist-desktop separato, nessun dev server.
 - [ ] T003 Preparare fixture temporanee con ownership, dialog stub solo test, CLI reale, clock/fault controllabili e configurazione Electron Playwright in apps/desktop/tests/fixtures/desktop.ts, apps/desktop/tsconfig.test.json e apps/desktop/playwright.config.ts; usare Node test runner e Playwright senza nuovo runner generico.
 
 ## Phase 2: Foundational — gate G0
