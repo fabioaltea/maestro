@@ -47,7 +47,7 @@ Archivio selezionabile, lista e dettaglio coerenti live/offline; nessun autostar
 
 Controllare daemon con UUID e conferme, senza possederne il lifecycle. Independent test:10cicli avvio/chiusura/CLI status/riapertura/arresto e crash/reply loss senza reinvio.
 
-- [ ] T021 [P] [US2] Scrivere unit test di conferme monouso/TTL60s/hash/epoch e blocchi delle operazioni incerte in apps/desktop/tests/unit/confirmations.test.ts.
+- [X] T021 [P] [US2] Scrivere unit test di conferme monouso/TTL60s/hash/epoch e blocchi delle operazioni incerte in apps/desktop/tests/unit/confirmations.test.ts.
 - [ ] T022 [P] [US2] Scrivere integrazione ricevute crash-safe fsync-before-spawn,100file/4KiB, permessi/symlink/corruzione, query ID assente e store diverso in apps/desktop/tests/integration/receipts.test.ts; nessuna eviction unresolved o replay payload.
 - [ ] T023 [US2] Implementare ricevute minime atomiche0700/0600 con fsync file+directory, validazione e limite100 in apps/desktop/src/main/receipt-store.ts; nessuna scrittura allo store core, fallimento persistenza blocca invio.
 - [ ] T024 [US2] Implementare prepare/confirm/cancel con token scoped e UUID stabile, preflight liveness/store e blocco equivalenti incerte in apps/desktop/src/main/confirmations.ts e apps/desktop/src/main/action-handlers.ts; ricevuta prima di singolo spawn, mai resubmit automatica.
