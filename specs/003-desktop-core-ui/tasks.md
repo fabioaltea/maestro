@@ -62,7 +62,7 @@ Controllare daemon con UUID e conferme, senza possederne il lifecycle. Independe
 
 Esporre importazione/verifica/update/remove esistenti, con snapshot repository invariati. Independent test:20sequenze reali con confronto CLI, duplicati e revisione concorrente.
 
-- [ ] T031 [P] [US3] Scrivere contratti per handle repository, patch keep/set/clear, expectedRevision, richieste offline e token/intent variato in apps/desktop/tests/contract/project-actions.test.ts.
+- [X] T031 [P] [US3] Scrivere contratti per handle repository, patch keep/set/clear, expectedRevision, richieste offline e token/intent variato in apps/desktop/tests/contract/project-actions.test.ts.
 - [ ] T032 [P] [US3] Scrivere integrazione su import duplicato, unborn/detached, dirty/conflitti, verify negativo salvato, CAS/update/remove/reimport nuovo UUID in apps/desktop/tests/integration/project-actions.test.ts, con snapshot repository prima/dopo.
 - [ ] T033 [US3] Implementare picker repository e handler prepare/confirm project.register/verify/update/remove sulla ricevuta comune in apps/desktop/src/main/project-actions.ts; verificare LIVE prima invio, UUID/revisioni allowlist, nessuna coda offline o Git diretto.
 - [ ] T034 [US3] Implementare form import con riepilogo e azione intenzionale, duplicato che seleziona registrazione esistente e input correggibile in apps/desktop/src/renderer/views/ImportProject.tsx; nessun clone/init/install.
