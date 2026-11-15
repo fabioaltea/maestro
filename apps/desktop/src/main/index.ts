@@ -6,6 +6,7 @@ import { validateRuntime } from './runtime.ts';
 import { CoreCli } from './core-cli.ts';
 import { secureSession, secureWindow } from './security.ts';
 import { installProtocol } from './protocol.ts';
+import { installReads } from './read-handlers.ts';
 import { installBridge } from './bridge.ts';
 app.setName('Maestro');
 const data = app.commandLine.getSwitchValue('user-data-dir');
@@ -27,10 +28,11 @@ else {
     window = new BrowserWindow({ width: 1280, height: 800, minWidth: 1024, minHeight: 700, title: 'Maestro', backgroundColor: '#17191c',
       webPreferences: { preload: fileURLToPath(new URL('../preload/index.cjs', import.meta.url)), sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, webviewTag: false } });
     secureWindow(window);
-    installBridge(window, { core, runtimeError, log: new SafeLog(join(app.getPath('userData'), 'logs')), dialogs: { async chooseDirectory(title) {
+    const router = installBridge(window, { core, runtimeError, log: new SafeLog(join(app.getPath('userData'), 'logs')), dialogs: { async chooseDirectory(title) {
       const result = await dialog.showOpenDialog(window!, { title, properties: ['openDirectory', 'createDirectory'] });
       return result.canceled ? null : result.filePaths[0] ?? null;
     } } });
+    installReads(router);
     window.on('closed', () => { window = null; });
     await window.loadURL('maestro://app/index.html');
   }).catch(() => { console.error('Desktop startup unavailable.'); app.quit(); });
