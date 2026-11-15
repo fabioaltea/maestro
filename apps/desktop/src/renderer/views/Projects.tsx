@@ -14,6 +14,7 @@ export function Projects({ desktop }: { desktop: Desktop }) {
   const [status, setStatus] = useState<PublicResult | null>(null), [freshness, setFreshness] = useState('');
   const [currentCursor, setCurrentCursor] = useState<string | undefined>(undefined);
   const detailGeneration = useRef(0);
+  const selectedId = useRef<string | null>(null);
   const [history, setHistory] = useState<(string | undefined)[]>([]);
   const polling = useRef(false);
   const updateStatus = useCallback(async () => {
@@ -43,22 +44,23 @@ export function Projects({ desktop }: { desktop: Desktop }) {
     finally { setLoading(false); }
   }, [core, epoch, setNotice]);
   useEffect(() => {
-    dispatch({ type: 'context', epoch, storeId: context?.storeId ?? null }); detailGeneration.current++; setStatus(null); setImporting(false); setReadError(null); setFreshness(''); setHistory([]); setCurrentCursor(undefined);
+    dispatch({ type: 'context', epoch, storeId: context?.storeId ?? null }); detailGeneration.current++; selectedId.current = null; setStatus(null); setImporting(false); setReadError(null); setFreshness(''); setHistory([]); setCurrentCursor(undefined);
     if (!context) return;
     void updateStatus(); void loadPage();
     const timer = setInterval(() => { if (document.visibilityState === 'visible') void updateStatus(); }, 5000);
     return () => clearInterval(timer);
   }, [epoch, core, loadPage, updateStatus]);
-  async function select(projectId: string) {
+  async function select(projectId: string, quiet = false) {
+    selectedId.current = projectId;
     const generation = ++detailGeneration.current;
-    setDetailLoading(true);
+    if (!quiet) setDetailLoading(true);
     try {
       const result = await core('getProject', { projectId });
       if (!result || generation !== detailGeneration.current) return;
       if (result.error?.code === 'PROJECT_REMOVED') { dispatch({ type: 'detail', epoch, project: null }); await loadPage(); return; }
       if (result.result === 'OK') dispatch({ type: 'detail', epoch, project: decodeProject(result.data.project) });
     } catch { setNotice('Dettaglio non disponibile. Aggiorna il registro.'); }
-    finally { if (generation === detailGeneration.current) setDetailLoading(false); }
+    finally { if (!quiet && generation === detailGeneration.current) setDetailLoading(false); }
   }
   if (!context) return null;
   if (importing) return <ImportProject desktop={desktop} live={status?.liveness === 'LIVE_VERIFIED'} onClose={() => setImporting(false)} onImported={async id => { setImporting(false); setHistory([]); await loadPage(); await select(id); }} />;
@@ -67,6 +69,6 @@ export function Projects({ desktop }: { desktop: Desktop }) {
     <div className="status-strip"><div><span className="badge">{status ? labels[status.liveness] : 'Verifica stato…'}</span><p className="muted">{freshness === 'LAST_KNOWN' ? 'Ultimo stato noto · dati salvati localmente' : freshness === 'LIVE' ? 'Registro live · le osservazioni Git restano datate' : 'Consultazione del registro locale'}</p></div><button className="button subtle" disabled={loading} onClick={() => { setHistory([]); void updateStatus(); void loadPage(); }}>Aggiorna registro</button></div>
     <div className="toolbar"><button className="button primary" disabled={status?.liveness !== 'LIVE_VERIFIED'} onClick={() => setImporting(true)}>Importa progetto</button><p className="muted">{loading ? 'Caricamento progetti…' : `${view.projects.length} progetti in questa pagina`}</p>{history.length > 0 && <span className="hint">Pagina {history.length + 1}</span>}</div>
     {view.notice && <p role="status" className="hint">{view.notice}</p>}
-    {!loading && !view.projects.length ? <div className="empty-state"><h3>{readError ? 'Registro non disponibile' : 'Nessun progetto registrato'}</h3><p>{readError ?? (status?.data.status === 'ABSENT' ? 'Archivio non inizializzato. L’avvio esplicito del servizio creerà lo stato locale.' : 'Questo archivio non contiene progetti. Le registrazioni sono gestite dal servizio locale.')}</p></div> : <div className="project-grid"><div className="project-list"><div aria-label="Progetti registrati">{view.projects.map(project => <button key={project.projectId} className="project-row" aria-current={view.detail?.projectId === project.projectId} onClick={() => void select(project.projectId)}><strong>{project.displayName}</strong><small>{project.referenceCheckout}</small><small>Aggiornato {dateLabel(project.updatedAt)}</small></button>)}</div><div className="pagination"><button className="button subtle" disabled={loading || history.length === 0} onClick={() => { const previous = history.at(-1); setHistory(h => h.slice(0, -1)); void loadPage(previous); }}>Precedente</button><button className="button subtle" disabled={loading || !view.cursor} onClick={() => { const cursor = view.cursor; if (cursor) { setHistory(h => [...h, currentCursor]); void loadPage(cursor); } }}>Successiva</button></div></div><ProjectDetail project={view.detail} loading={detailLoading} /></div>}
+    {!loading && !view.projects.length ? <div className="empty-state"><h3>{readError ? 'Registro non disponibile' : 'Nessun progetto registrato'}</h3><p>{readError ?? (status?.data.status === 'ABSENT' ? 'Archivio non inizializzato. L’avvio esplicito del servizio creerà lo stato locale.' : 'Questo archivio non contiene progetti. Le registrazioni sono gestite dal servizio locale.')}</p></div> : <div className="project-grid"><div className="project-list"><div aria-label="Progetti registrati">{view.projects.map(project => <button key={project.projectId} className="project-row" aria-current={view.detail?.projectId === project.projectId} onClick={() => void select(project.projectId)}><strong>{project.displayName}</strong><small>{project.referenceCheckout}</small><small>Aggiornato {dateLabel(project.updatedAt)}</small></button>)}</div><div className="pagination"><button className="button subtle" disabled={loading || history.length === 0} onClick={() => { const previous = history.at(-1); setHistory(h => h.slice(0, -1)); void loadPage(previous); }}>Precedente</button><button className="button subtle" disabled={loading || !view.cursor} onClick={() => { const cursor = view.cursor; if (cursor) { setHistory(h => [...h, currentCursor]); void loadPage(cursor); } }}>Successiva</button></div></div><ProjectDetail project={view.detail} loading={detailLoading} desktop={desktop} live={status?.liveness === 'LIVE_VERIFIED'} onUpdated={async id => { if (selectedId.current === id) await select(id, true); }} /></div>}
   </section>;
 }

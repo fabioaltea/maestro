@@ -20,6 +20,17 @@ test('repository picker and explicit import display the actual registered projec
       const list = (await f.cli(['project', 'list'])).result.data.projects;
       expect(list).toHaveLength(1); expect(list[0].displayName).toBe('Progetto UI'); expect(list[0].baseBranch).toBe('main');
       expect(await f.snapshot(repo.path)).toEqual(before);
+      const { writeFile, rename } = await import('node:fs/promises'); const { join } = await import('node:path');
+      await writeFile(join(repo.path, 'untracked.txt'), 'local work'); const changed = await f.snapshot(repo.path);
+      await page.getByRole('button', { name: 'Verifica repository', exact: true }).click();
+      await expect(page.getByText('Non tracciati: Sì', { exact: true })).toBeVisible();
+      await expect(page.getByText('Osservazione salvata. Disponibilità ed eventuali errori sono riportati sopra.', { exact: true })).toBeVisible();
+      expect(await f.snapshot(repo.path)).toEqual(changed);
+      await rename(repo.path, `${repo.path}-moved`);
+      await page.getByRole('button', { name: 'Verifica repository', exact: true }).click();
+      await expect(page.getByText('Non disponibile all’ultima verifica', { exact: true })).toBeVisible();
+      await expect(page.getByText('Modifiche: Non verificato', { exact: true })).toBeVisible();
+      expect(await f.snapshot(`${repo.path}-moved`)).toEqual(changed);
     } finally { await app.close(); }
   } finally { await f.cleanup(); }
 });
