@@ -9,6 +9,16 @@ export function operationProjectId(result: PublicResult): string | null {
   const value = operation?.result ? record(operation.result) : null;
   return typeof value?.projectId === 'string' ? value.projectId : null;
 }
+export function projectMutationEffect(result: PublicResult): { type: 'created' | 'existing' | 'updated' | 'observed' | 'removed' | 'unchanged' | 'unknown' | 'none'; projectId: string | null } {
+  const projectId = operationProjectId(result);
+  if (result.result === 'UNKNOWN_OUTCOME' || result.outcome === null) return { type: 'unknown', projectId };
+  if (result.result !== 'OK' || result.outcome !== 'SUCCEEDED') return { type: 'none', projectId };
+  const operation = result.data.operation ? record(result.data.operation) : null;
+  const data = operation?.result ? record(operation.result) : result.data;
+  const types = { CREATED: 'created', EXISTING: 'existing', UPDATED: 'updated', OBSERVED: 'observed', REMOVED: 'removed', NONE: 'unchanged' } as const;
+  const effect = String(data.effect);
+  return { type: Object.hasOwn(types, effect) ? types[effect as keyof typeof types] : 'none', projectId };
+}
 export function useProjectAction(desktop: Desktop, onSuccess: (result: PublicResult) => void | Promise<void>) {
   const [prepared, setPrepared] = useState<PreparedAction | null>(null), [busy, setBusy] = useState(false), [last, setLast] = useState<PublicResult | null>(null);
   const working = useRef(false);
@@ -17,7 +27,8 @@ export function useProjectAction(desktop: Desktop, onSuccess: (result: PublicRes
     setPrepared(null);
     if (!value) return;
     const result = record(value).result as PublicResult; setLast(result);
-    if (result.outcome === 'SUCCEEDED') await onSuccess(result);
+    const effect = projectMutationEffect(result);
+    if (effect.type !== 'unknown' && effect.type !== 'none') await onSuccess(result);
   }
   async function prepare(action: string, params: Params, immediate = false) {
     if (working.current) return; working.current = true; setBusy(true); setLast(null); desktop.setNotice(null);

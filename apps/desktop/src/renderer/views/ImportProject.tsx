@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import type { Desktop } from '../state/desktop.ts';
-import { useProjectAction, operationProjectId } from '../state/project-actions.ts';
+import { useProjectAction, operationProjectId, projectMutationEffect } from '../state/project-actions.ts';
 import { ConfirmationDialog } from '../components/ConfirmationDialog.tsx';
 import { record, projectName, localBranchInput } from '../../shared/validation.ts';
 interface ChosenRepository { repositoryHandle: string; displayPath: string }
-export function ImportProject({ desktop, live, onImported, onClose }: { desktop: Desktop; live: boolean; onImported(id: string): Promise<void>; onClose(): void }) {
+export function ImportProject({ desktop, live, onImported, onClose }: { desktop: Desktop; live: boolean; onImported(id: string, existing: boolean): Promise<void>; onClose(): void }) {
   const [repository, setRepository] = useState<ChosenRepository | null>(null), [name, setName] = useState(''), [base, setBase] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null), [choosing, setChoosing] = useState(false);
-  const action = useProjectAction(desktop, async result => { const id = operationProjectId(result); if (id) await onImported(id); });
+  const action = useProjectAction(desktop, async result => { const id = operationProjectId(result); if (id) await onImported(id, projectMutationEffect(result).type === 'existing'); });
   async function choose() { setChoosing(true); try { const value = await desktop.invoke('chooseRepository'); if (value && record(value).repository) setRepository(record(value).repository as unknown as ChosenRepository); } finally { setChoosing(false); } }
   async function submit() {
     setFieldError(null);

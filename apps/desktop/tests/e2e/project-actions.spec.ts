@@ -60,6 +60,7 @@ test('stale configuration approval is rejected and a new explicit review can cle
       await page.getByRole('button', { name: 'Rivedi modifica', exact: true }).click();
       await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Proposta', exact: true })).toBeVisible();
+      await expect(page.locator('.project-row strong').first()).toHaveText('Proposta');
       const final = (await f.cli(['project', 'show', projectId])).result.data.project;
       expect(final.configRevision).toBe('3'); expect(final.baseBranch).toBeNull(); expect(await f.snapshot(repo.path)).toEqual(before);
     } finally { await app.close(); }
