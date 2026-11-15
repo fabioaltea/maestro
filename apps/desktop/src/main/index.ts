@@ -7,6 +7,7 @@ import { CoreCli } from './core-cli.ts';
 import { secureSession, secureWindow } from './security.ts';
 import { installProtocol } from './protocol.ts';
 import { ClientLifecycle } from './client-lifecycle.ts';
+import { installProjectActions } from './project-actions.ts';
 import { installLifecycle } from './lifecycle.ts';
 import { installReads } from './read-handlers.ts';
 import { installBridge } from './bridge.ts';
@@ -40,6 +41,7 @@ else {
     } } });
     const archiveContext = installReads(router);
     const lifecycle = installLifecycle(router, archiveContext, app.getPath('userData'));
+    installProjectActions(router, archiveContext, lifecycle.actions);
     clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
     archiveContext.onChange(() => clients?.archiveChanged());
     window.webContents.once('render-process-gone', () => window?.destroy());

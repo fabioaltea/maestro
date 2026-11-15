@@ -18,6 +18,18 @@ export function uuid(value: unknown): string {
 export function revision(value: unknown): string {
   const v = text(value, 20); if (!/^[1-9][0-9]*$/.test(v)) throw new Error('INVALID_INPUT'); return v;
 }
+// Client input convenience only: repository state, ownership and Git policy remain in the core.
+export function projectName(value: unknown): string {
+  const name = text(value, 256).trim().normalize('NFC');
+  if (!name || !name.isWellFormed() || [...name].length > 120 || /\p{Cc}/u.test(name)) throw new Error('INVALID_NAME');
+  return name;
+}
+export function localBranchInput(value: unknown): string {
+  const name = text(value, 1024);
+  if (!name.isWellFormed() || new TextEncoder().encode(name).byteLength > 1024 || /[\x00-\x20\x7f]/.test(name) || name.startsWith('-') || name.startsWith('refs/') || name.endsWith('.') || name === '@'
+    || ['~', '^', ':', '?', '*', '[', '\\', '@{', '..'].some(token => name.includes(token)) || name.split('/').some(part => !part || part.startsWith('.') || part.endsWith('.lock'))) throw new Error('INVALID_BASE_BRANCH');
+  return name;
+}
 export const ACTIONS = ['daemon.start', 'daemon.stop', 'daemon.restart', 'project.register', 'project.verify', 'project.update', 'project.remove'] as const;
 export function validateAction(action: unknown, input: unknown): Params {
   if (!ACTIONS.includes(action as typeof ACTIONS[number])) throw new Error('INVALID_INPUT');
@@ -25,15 +37,15 @@ export function validateAction(action: unknown, input: unknown): Params {
   if (String(action).startsWith('daemon.')) { keys(p, []); return p; }
   if (action === 'project.register') {
     keys(p, ['repositoryHandle', 'name', 'baseBranch']); uuid(p.repositoryHandle);
-    if (p.name !== undefined) text(p.name, 256); if (p.baseBranch !== undefined) text(p.baseBranch); return p;
+    if (p.name !== undefined) projectName(p.name); if (p.baseBranch !== undefined) localBranchInput(p.baseBranch); return p;
   }
   keys(p, action === 'project.verify' ? ['projectId'] : action === 'project.remove' ? ['projectId', 'expectedRevision'] : ['projectId', 'expectedRevision', 'patch']);
   uuid(p.projectId);
   if (action !== 'project.verify') revision(p.expectedRevision);
   if (action === 'project.update') {
     const patch = record(p.patch); keys(patch, ['name', 'baseBranch']); if (!Object.keys(patch).length) throw new Error('INVALID_INPUT');
-    if (patch.name !== undefined) text(patch.name, 256);
-    if (patch.baseBranch !== undefined && patch.baseBranch !== null) text(patch.baseBranch);
+    if (patch.name !== undefined) projectName(patch.name);
+    if (patch.baseBranch !== undefined && patch.baseBranch !== null) localBranchInput(patch.baseBranch);
   }
   return p;
 }

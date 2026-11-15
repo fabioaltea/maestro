@@ -33,13 +33,15 @@ export class ActionService {
     const status = await this.options.core.call({ namespace: 'daemon', action: 'status', archive: c.path });
     this.options.context.apply(c, status);
     if (status.result !== 'OK' || (command.namespace === 'daemon' && command.action === 'start' ? !['LIVE_VERIFIED', 'ABSENT_VERIFIED'].includes(status.liveness) : status.liveness !== 'LIVE_VERIFIED')) throw new Error(status.error?.code ?? 'DAEMON_UNAVAILABLE');
-    if (command.namespace === 'project' && ['update', 'remove'].includes(command.action)) {
+    let project: Params | null = null;
+    if (command.namespace === 'project' && command.action !== 'register') {
       const detail = await this.options.core.call({ namespace: 'project', action: 'get', archive: c.path, params: { projectId: command.params?.projectId } });
       this.options.context.apply(c, detail);
       if (detail.result !== 'OK') throw new Error(detail.error?.code ?? 'PROJECT_NOT_FOUND');
-      if (record(detail.data.project).configRevision !== command.params?.expectedRevision) throw new Error('REVISION_CONFLICT');
+      project = record(detail.data.project);
+      if (['update', 'remove'].includes(command.action) && project.configRevision !== command.params?.expectedRevision) throw new Error('REVISION_CONFLICT');
     }
-    return status;
+    return { status, project };
   }
   async prepare(action: string, params: Params) {
     validateAction(action, params);
@@ -48,9 +50,10 @@ export class ActionService {
     const command: CliCommand = action.startsWith('daemon.') ? { namespace: 'daemon', action: action.slice(7), archive: c.path } : this.resolveProject ? await this.resolveProject(action, params) : (() => { throw new Error('CONFIRMATION_REQUIRED'); })();
     const namespace = command.namespace === 'daemon' ? 'foundation' : 'project';
     if (blocksMutation(await this.options.receipts.list(), c.path, namespace, command.action, typeof command.params?.projectId === 'string' ? command.params.projectId : undefined)) throw new Error('OPERATION_UNCERTAIN');
-    await this.preflight(command);
-    const summary = [command.namespace === 'daemon' ? command.action === 'start' ? 'Avvia il servizio locale' : command.action === 'stop' ? 'Arresta il servizio locale e termina il lavoro Foundation secondo il core' : 'Riavvia il servizio locale' : action,
-      `Archivio: ${c.path}`, ...(command.params?.projectId ? [`Progetto: ${command.params.projectId}`] : []), ...(command.params?.expectedRevision ? [`Revisione approvata: ${command.params.expectedRevision}`] : []), ...(command.params?.patch ? [`Modifiche: ${JSON.stringify(command.params.patch)}`] : []), ...(command.action === 'remove' ? ['Viene rimossa soltanto la registrazione. Repository e file conservati.'] : [])];
+    const checked = await this.preflight(command);
+    const descriptions: Record<string, string> = { register: 'Importa repository locale', verify: 'Verifica il checkout di riferimento', update: 'Aggiorna la configurazione del progetto', remove: 'Rimuovi la registrazione del progetto' };
+    const summary = [command.namespace === 'daemon' ? command.action === 'start' ? 'Avvia il servizio locale' : command.action === 'stop' ? 'Arresta il servizio locale e termina il lavoro Foundation secondo il core' : 'Riavvia il servizio locale' : descriptions[command.action] ?? 'Operazione progetto',
+      `Archivio: ${c.path}`, ...(checked.project ? [`Nome: ${checked.project.displayName}`] : []), ...(command.params?.path ? [`Repository: ${command.params.path}`] : []), ...(command.params?.name ? [`Nome: ${command.params.name}`] : []), ...(command.params?.baseBranch ? [`Branch base: ${command.params.baseBranch}`] : []), ...(command.params?.projectId ? [`Progetto: ${command.params.projectId}`] : []), ...(command.params?.expectedRevision ? [`Revisione approvata: ${command.params.expectedRevision}`] : []), ...(command.params?.patch ? Object.entries(record(command.params.patch)).map(([key, value]) => key === 'name' ? `Nome: ${value}` : value === null ? 'Branch base: cancella configurazione' : `Branch base: ${value}`) : []), ...(command.action === 'remove' ? ['Viene rimossa soltanto la registrazione. Repository e file conservati.'] : [])];
     return this.confirmations.prepare(command, this.scope(), summary);
   }
   async confirm(confirmationId: string) {
