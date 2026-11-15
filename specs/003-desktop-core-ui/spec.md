@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-desktop-core-ui`  
 **Created**: 2026-11-11  
-**Status**: Draft — pronta per review  
+**Status**: Implementata localmente — review umana/picker nativo pendente
 **Input**: Prima versione UI sul core 001 e 002, integrati prima della specifica; produrre anche piano e task, senza implementazione.
 
 ## User Scenarios & Testing *(mandatory)*

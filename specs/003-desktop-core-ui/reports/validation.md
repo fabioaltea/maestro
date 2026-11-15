@@ -191,3 +191,11 @@ README/quickstart: avvio dalla radice, Node esterno, setup Electron esplicito,
 nessun autostart, offline/confirm/receipt/reconnect e limiti. AGENTS aggiornato solo
 nelle parti generate; manual block confrontato byte per byte con baselinea890860,
 invariato. Link locali verificati. Nessun installer o promessa di release aggiunta.
+
+### T059 — review e tracciabilità concluse, readiness pendente
+
+release-readiness.md mappa19scenari,14FR,5NFR e7SC a test/evidenze e limiti.
+G0–G4 PASS locale; T054/SC-006 review umana/picker NOT_RUN.58/59task completati.
+Readiness locale REVIEW_PENDING e globale BLOCKED per gate001/002 invariati.
+Nessun merge003/push/release eseguito. File non tracciato preesistente del manifest
+lock desktop preservato; nessuna pulizia dell’ambiente dell’utente.

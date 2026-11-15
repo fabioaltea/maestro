@@ -100,7 +100,7 @@ Completare verifica003 e documentazione, senza promuovere gate esterni bloccati 
 - [X] T056 Misurare30aperture100progetti e30dettagli per modalità live/offline, p95/massimi/ambiente e raw campioni in apps/desktop/tests/e2e/performance.spec.ts e specs/003-desktop-core-ui/reports/performance.md; distinguere target SC-001/002 da misure senza riusare risultati002.
 - [X] T057 Eseguire build/typecheck/lint e npm test core più suite desktop, controllando che core resti eseguibile senza UI; registrare esiti reali/failure/skip in specs/003-desktop-core-ui/reports/validation.md, senza rilanciare campagne600s immotivate.
 - [X] T058 Documentare avvio checkout, runtime esterno, offline, conferme, recovery receipt e limiti della prima UI in README.md e specs/003-desktop-core-ui/quickstart.md; aggiornare soltanto parti generate di AGENTS.md preservando manual block.
-- [ ] T059 Mappare ogni scenario/FR/NFR/SC ai test/evidenze, valutare gate G0–G4 e readiness003 in specs/003-desktop-core-ui/reports/release-readiness.md; mantenere001/T082,001/T085,002/T093 BLOCKED finché non qualificati realmente, nessuna release/merge/push automatica.
+- [X] T059 Mappare ogni scenario/FR/NFR/SC ai test/evidenze, valutare gate G0–G4 e readiness003 in specs/003-desktop-core-ui/reports/release-readiness.md; mantenere001/T082,001/T085,002/T093 BLOCKED finché non qualificati realmente, nessuna release/merge/push automatica.
 
 ## Dipendenze e parallelismo
 
@@ -146,4 +146,4 @@ Per la review finale mappare anche ciascuno scenario numerato della specifica, n
 
 ## Conteggio
 
-59 task totali: setup 3, foundation 10, US1 7, US2 10, US3 9, US4 14, polish 6. Nessun task completato.
+59 task totali: setup 3, foundation 10, US1 7, US2 10, US3 9, US4 14, polish 6. Completati58/59; T054 aperto soltanto per review umana/picker nativo reale. Automatici T054 PASS. Qualifica eventi ridotta su richiesta dell’utente; campagne di volume/durata DEFERRED.
