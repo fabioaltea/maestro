@@ -20,7 +20,7 @@ test('primary flows accept keyboard activation, dialog trap/focus return, inert 
  test.setTimeout(120000);const f=await createScratch(),screens=join(repositoryRoot,'specs/003-desktop-core-ui/reports/screenshots');await mkdir(screens,{recursive:true});
  try{const repo=await f.repository('tastiera');const {app,page}=await launchDesktop(f);try{
   const bounds=await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0]!.getBounds());expect([bounds.width,bounds.height]).toEqual([1280,800]);
-  await chooseDirectory(app,f.archive);await activate(page,page.getByRole('button',{name:'Scegli archivio',exact:true}));await activate(page,page.getByRole('button',{name:'Servizio',exact:true}));
+  await chooseDirectory(app,f.archive);await activate(page,page.getByRole('button',{name:'Apri archivio',exact:true}));await activate(page,page.getByRole('button',{name:'Servizio',exact:true}));
   const start=page.getByRole('button',{name:'Avvia servizio',exact:true});await activate(page,start);await expect(page.getByRole('button',{name:'Annulla',exact:true})).toBeFocused();
   await page.keyboard.press('Shift+Tab');await expect(page.getByRole('button',{name:'Conferma operazione',exact:true})).toBeFocused();await page.keyboard.press('Escape');await expect(start).toBeFocused();
   await activate(page,start);await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByText('Attivo',{exact:true})).toBeVisible();

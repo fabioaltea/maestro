@@ -199,3 +199,20 @@ G0–G4 PASS locale; T054/SC-006 review umana/picker NOT_RUN.58/59task completat
 Readiness locale REVIEW_PENDING e globale BLOCKED per gate001/002 invariati.
 Nessun merge003/push/release eseguito. File non tracciato preesistente del manifest
 lock desktop preservato; nessuna pulizia dell’ambiente dell’utente.
+
+### T060 — archivio e progetti, correzione da review utente
+
+Primo avvio «Un archivio, più progetti», form cartella dati distinto dal repository,
+setup che apre Servizio senza inizializzazione/autostart; Apri archivio distinto da
+Importa progetto. Marker.git file/directory senza state.sqlite respinto con errore
+ARCHIVE_IS_REPOSITORY prima del cambio contesto; nessun comando Git/chmod/scrittura.
+Store presenti ancora soggetti ai controlli autorevoli del core.
+
+Unitari scritti/eseguiti RED2 e E2E RED2 prima della correzione. Dopo:28unit/contract
+PASS,5integrazioni PASS,7casi Electron qualificati (6PASS nella prima prova mirata,
+assertion errata del test cancel sul titolo del registro assente corretta, file
+setup ripetuto3PASS). Due repository reali nello stesso archivio, snapshot invariati,
+selezione precedente conservata e cancel senza creazioni. Typecheck/build desktop
+e lint PASS. Screenshot di onboarding/form ispezionati. Dettaglio nel JSON dedicato.
+Non ripetuti core/benchmark completi: nessun cambiamento al core; regressione finale
+precedente rimane registrata.59/60task, T054 review umana completa ancora pendente.

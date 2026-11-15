@@ -62,8 +62,10 @@ Regressione build/typecheck/lint/npm test core obbligatoria; contratti/integrazi
 
 ## Uso quotidiano e recovery
 
-Avviare npm run desktop dalla radice. Scegliere un archivio; Nuovo archivio sceglie
-soltanto contenitore/nome senza crearlo. Avviare esplicitamente in Servizio con
+Avviare npm run desktop dalla radice. Al primo avvio scegliere Configura archivio Maestro,
+oppure Apri archivio per dati già esistenti. Il setup sceglie contenitore/nome senza
+crearlo e apre la sezione Servizio. Un archivio raccoglie più progetti; i repository
+si collegano da Progetti → Importa progetto e restano nelle cartelle originali. Avviare esplicitamente in Servizio con
 riepilogo/conferma. Alla riapertura selezionare di nuovo l’archivio. Progetti e storia
 sono leggibili offline; modifiche non accodate. Ogni osservazione è datata.
 

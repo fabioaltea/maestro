@@ -29,7 +29,7 @@ export function installReads(router: BridgeRouter, context = new ArchiveContext(
     if (choosing) throw new Error('LOCAL_BUSY');
     choosing = true;
     try {
-      const path = await router.services.dialogs.chooseDirectory(request.newArchiveName ? 'Scegli la cartella che conterrà il nuovo archivio' : 'Scegli archivio Maestro');
+      const path = await router.services.dialogs.chooseDirectory(request.newArchiveName ? 'Scegli una cartella contenitore per i dati di Maestro' : 'Apri la cartella dati di Maestro');
       if (!path) return { context: router.context, canceled: true };
       await router.services.core?.cancelViewReads?.();
       const selected = await context.select(request.newArchiveName ? join(path, String(request.newArchiveName)) : path);

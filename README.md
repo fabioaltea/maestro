@@ -30,7 +30,11 @@ npm run desktop
 ```
 
 Il comando compila core e UI e avvia Electron con il Node esterno corrente verificato.
-Non avvia il daemon. Scegli un archivio locale; per inizializzarlo/avviarlo usa
+Non avvia il daemon. **Un archivio dati Maestro può raccogliere più progetti**,
+ciascuno collegato a un repository Git locale che resta nella propria cartella.
+Al primo avvio usa **Configura archivio Maestro**; per dati già esistenti usa
+**Apri archivio**. Il setup prepara il percorso e apre il controllo del servizio.
+Per inizializzarlo/avviarlo usa
 **Servizio → Avvia servizio → Conferma**. Chiudere l’app lascia attivo il daemon.
 Alla riapertura scegli nuovamente l’archivio; non si conserva una selezione implicita.
 

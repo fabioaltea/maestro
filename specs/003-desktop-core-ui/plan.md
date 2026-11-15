@@ -129,3 +129,12 @@ Il test con100progetti ha riprodotto OUTPUT_LIMIT a daemon fermo: inspectArchive
 ## Adeguamento qualifica eventi — 2026-11-15
 
 L’utente ha richiesto di ridurre la verifica al necessario per la prima UI. G4 conserva E1–E4, un campione di10operazioni CLI reali e prove bounded su ordine, duplicati, recovery, gap, ACK2s, backlog256KiB e FIFO500/4MiB. SC-005 aggiornato: nessuna campagna100eventi/s per10min o1000campioni obbligatoria. Non si aggiunge un produttore eventi alla distribuzione/test ordinari. Campagne prolungate rinviate; le prove interrotte/fallite restano dichiarate e non dimostrano stabilità di lungo periodo.
+
+## Correzione UX da review — T060
+
+Archivio dati Maestro1:Nprogetti esplicitato nelle viste iniziali e di importazione.
+Il setup prepara il percorso e apre Servizio, senza autostart. ArchiveContext respinge
+la scelta erronea di un checkout con marker.git e senza state.sqlite, mantenendo il
+contesto precedente; soli lstat, nessun probe Git, modifica permessi o storage.
+Store già presenti vengono ancora validati dal core. Errori bridge chiusi e test
+unitari/Electron con snapshot prima/dopo, due progetti nello stesso archivio e cancel.

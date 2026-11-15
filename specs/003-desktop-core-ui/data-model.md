@@ -2,6 +2,10 @@
 
 Nessuna modifica al dominio/schema3 del core. I DTO di progetto, operazione, PublicResult ed EventRecord restano quelli di001/002. Il desktop conserva soltanto stato di presentazione e ricevute non autorevoli.
 
+Un archivio dati Maestro raccoglie più registrazioni progetto (1:N). I file dei
+repository rimangono nelle cartelle originali; la UI gestisce un archivio attivo
+alla volta. Non vengono introdotti contenitori o copie dei repository.
+
 ## ArchiveContext
 
 - `selectionEpoch`: intero incrementale main, mai fornito come autorità dal renderer.

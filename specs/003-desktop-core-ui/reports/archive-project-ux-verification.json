@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-15",
+  "task": "T060",
+  "scope": "Archive data versus Git projects: guided setup, safe picker rejection and one archive to many projects",
+  "checks": {
+    "desktopTypecheck": "PASS",
+    "architectureLint": "PASS",
+    "desktopBuild": "PASS"
+  },
+  "tests": {
+    "unitContract": {
+      "pass": 28,
+      "fail": 0,
+      "skipped": 0
+    },
+    "targetedIntegration": {
+      "pass": 5,
+      "fail": 0,
+      "skipped": 0,
+      "files": [
+        "project-reads.test.ts",
+        "action-dispatch.test.ts"
+      ]
+    },
+    "electronCases": {
+      "pass": 7,
+      "fail": 0,
+      "skipped": 0,
+      "files": [
+        "archive-setup.spec.ts",
+        "accessibility.spec.ts",
+        "bootstrap.spec.ts",
+        "security.spec.ts"
+      ],
+      "execution": "Initial targeted run6PASS/1FAIL due incorrect empty-heading assertion on absent archive; assert return to project view instead; setup file repeated3PASS. Other4cases PASS in targeted run."
+    }
+  },
+  "redBeforeImplementation": {
+    "unit": 2,
+    "electron": 2,
+    "reason": "Missing rejection and onboarding"
+  },
+  "invariants": [
+    "Selection and inspection never initialize an archive",
+    "Two repositories import into the same archive",
+    "Repository file and metadata snapshots unchanged",
+    "Wrong picker selection retains previous archive/epoch",
+    "Picker cancellation retains form/input/selection",
+    "Existing archive storage remains validated by core"
+  ],
+  "manualReview": "PENDING; real picker feedback received, correction requires human confirmation",
+  "previousFullRegression": "final-verification.json; unchanged headless core",
+  "excluded": "No repetition of long volume benchmarks or UID/network acceptance",
+  "screenshots": [
+    "screenshots/archive-intro.png",
+    "screenshots/archive-setup.png"
+  ]
+}

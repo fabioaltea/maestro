@@ -102,6 +102,10 @@ Completare verifica003 e documentazione, senza promuovere gate esterni bloccati 
 - [X] T058 Documentare avvio checkout, runtime esterno, offline, conferme, recovery receipt e limiti della prima UI in README.md e specs/003-desktop-core-ui/quickstart.md; aggiornare soltanto parti generate di AGENTS.md preservando manual block.
 - [X] T059 Mappare ogni scenario/FR/NFR/SC ai test/evidenze, valutare gate G0–G4 e readiness003 in specs/003-desktop-core-ui/reports/release-readiness.md; mantenere001/T082,001/T085,002/T093 BLOCKED finché non qualificati realmente, nessuna release/merge/push automatica.
 
+## Correzioni da review utente
+
+- [X] T060 Chiarire archivio dati Maestro1:Nprogetti con primo avvio guidato, selettori distinti e errore ARCHIVE_IS_REPOSITORY prima del cambio contesto; nessun autostart o modifica al repository. Aggiornare apps/desktop/src/{main/archive-context.ts,renderer/App.tsx,shared/validation.ts} e viste collegate; verificare snapshot, cancel e due importazioni nello stesso archivio in tests/unit/archive-context.test.ts e tests/e2e/archive-setup.spec.ts.
+
 ## Dipendenze e parallelismo
 
 ```text
@@ -146,4 +150,4 @@ Per la review finale mappare anche ciascuno scenario numerato della specifica, n
 
 ## Conteggio
 
-59 task totali: setup 3, foundation 10, US1 7, US2 10, US3 9, US4 14, polish 6. Completati58/59; T054 aperto soltanto per review umana/picker nativo reale. Automatici T054 PASS. Qualifica eventi ridotta su richiesta dell’utente; campagne di volume/durata DEFERRED.
+60 task totali: setup 3, foundation 10, US1 7, US2 10, US3 9, US4 14, polish 6, correzione UX 1. Completati59/60; T054 aperto soltanto per review umana/picker nativo reale. Automatici T054 PASS. Qualifica eventi ridotta su richiesta dell’utente; campagne di volume/durata DEFERRED.

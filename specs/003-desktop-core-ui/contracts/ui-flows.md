@@ -4,7 +4,7 @@
 
 Singola finestra1280×800, minimo1024×700 con scroll accessibile. Header: archivio selezionato e stato servizio indipendente dalla freschezza dei dati; controllo servizio nel menu dedicato. Sinistra elenco paginato progetti/importazione; centro dettaglio/configurazione; pannello separato Attività/Diagnostica. Nessuna scheda futura agente/sessione/Discovery/merge. Testo locale italiano, asset/font locali, CSS statico.
 
-Primo avvio: scegliere cartella archivio esistente oppure un percorso ancora assente attraverso picker del contenitore+nome archivio validato nel main. L'app spiega che la scelta non crea dati; Avvia inizializza attraverso core dopo conferma. Percorsi non possono provenire da testo eseguibile nel renderer: il main costruisce il percorso da cartella scelta e singolo nome validato senza separatori/traversal. Annullamento mantiene contesto precedente. Non salvare preferenza archivio in questa feature; le ricevute consentono riaprire gli archivi con operazioni sospese dopo conferma di selezione, senza iniziare operazioni.
+Primo avvio: spiegare «Un archivio, più progetti» con distinzione fra dati Maestro e repository Git. Azione primaria Configura archivio Maestro: nome e picker del contenitore; Apri archivio seleziona invece un archivio esistente. Dopo la preparazione del nuovo percorso aprire Servizio, dove l’avvio rimane esplicito e confermato. L'app spiega che la scelta non crea dati; Avvia inizializza attraverso core dopo conferma. Percorsi non possono provenire da testo eseguibile nel renderer: il main costruisce il percorso da cartella scelta e singolo nome validato senza separatori/traversal. Annullamento mantiene contesto precedente. Non salvare preferenza archivio in questa feature; le ricevute consentono riaprire gli archivi con operazioni sospese dopo conferma di selezione, senza iniziare operazioni.
 
 ## Matrice azioni
 
@@ -33,3 +33,12 @@ Primo avvio: scegliere cartella archivio esistente oppure un percorso ancora ass
 Focus visibile e restituito al trigger dopo dialog; focus trap solo dialog; Esc annulla, Enter non conferma accidentalmente una rimozione. Campi con label/error associato, heading gerarchici, stato via testo+icona e aria-live non invadente. Contrasto testo normale≥4.5:1. Tutti i controlli primari raggiungibili da tastiera a1280×800. Test automatico semantico più review manuale tastiera/contrasto/dialog picker reale; screenshot come evidenza, non unica verifica.
 
 Nomi, path, branch ed errori sicuri vengono resi come testo; niente HTML/raw Markdown, terminale o link eseguibile proveniente dai repository. Nessuna notifica che includa credenziali, raw stderr o contenuto file.
+
+## Selezione repository nel picker archivio
+
+Se la cartella scelta presenta un marker.git (file o directory) senza state.sqlite,
+il main restituisce ARCHIVE_IS_REPOSITORY con istruzione Progetti → Importa progetto,
+prima di cambiare contesto. È un suggerimento UX tramite soli metadata filesystem,
+non una verifica Git né un’autorizzazione core. Nessun comando Git, chmod, creazione
+o riparazione. Un archivio preesistente resta raggiungibile e soggetto ai controlli
+autorevoli del core. Annullare il picker conserva selezione e input del form.

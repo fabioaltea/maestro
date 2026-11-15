@@ -1,6 +1,8 @@
 # Review manuale desktop — da completare
 
-Stato: **NOT_RUN**. I test Electron automatici restituiscono risultati controllati dei
+Stato: **PENDING / review umana parziale**. L’utente ha segnalato un errore durante
+la selezione reale di un repository come archivio; la distinzione e il messaggio
+sono stati corretti in T060. La campagna manuale completa resta da eseguire. I test Electron automatici restituiscono risultati controllati dei
 picker; non costituiscono una review umana del dialog nativo. Non è stata richiesta
 né modificata alcuna autorizzazione macOS per automatizzarlo.
 
@@ -21,3 +23,12 @@ repository temporanei dedicati alla review:
 
 Registrare data, OS, esecutore, esito e difetti osservati. Finché manca questa review,
 SC-006 e T054 non sono completamente qualificati; nessuna dichiarazione di release.
+
+### Riscontro T060
+
+Al primo avvio usare Configura archivio Maestro; Apri archivio riguarda la cartella
+dati. Verificare ora che scegliere un repository per errore mostri il percorso
+Progetti → Importa progetto conservando la selezione precedente. Per importare
+due repository distinti nello stesso archivio usare due volte Importa progetto.
+Questo flusso e l’annullamento sono già verificati automaticamente; serve il riscontro
+umano con i dialog nativi effettivi.

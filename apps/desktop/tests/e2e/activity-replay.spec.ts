@@ -6,7 +6,7 @@ import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
 for(const expired of [false,true])test(`explicit replay after real daemon restart; expired history=${expired}`,async()=>{
  const f=await createScratch();try{
   await f.cli(['daemon','start']);const {app,page}=await launchDesktop(f);let closed=false;try{
-   await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Scegli archivio',exact:true}).click();await page.getByRole('button',{name:'Attività',exact:true}).click();
+   await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();await page.getByRole('button',{name:'Attività',exact:true}).click();
    await expect(page.locator('.event-row').first()).toBeVisible();await page.getByRole('button',{name:'Segui attività',exact:true}).click();await expect(page.getByText('Osservazione live',{exact:true})).toBeVisible();
    await page.getByRole('button',{name:'Interrompi osservazione',exact:true}).click();
    await f.cli(['daemon','stop']);

@@ -50,3 +50,16 @@ input[aria-invalid=true] { border-color:#d39a6c; }
 .event-row summary { cursor:pointer; color:#bdcfb5; font-size:12px; padding:12px 0 0; }
 pre { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.7 ui-monospace,monospace; color:#bec7d0; }
 .diagnostics-data { padding:22px; border:1px solid var(--line); border-radius:7px; margin-top:22px; }
+.archive-help { font-size:11px; line-height:1.6; margin-bottom:0; }
+.archive-intro { gap:18px; flex:1; min-height:0; padding:12px 0; }
+.archive-intro>p { max-width:550px; }
+.archive-intro .row-actions { justify-content:center; margin-top:6px; }
+.archive-model { display:grid; grid-template-columns:1fr 1fr; max-width:640px; margin:5px 0; text-align:left; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.archive-model>div { padding:18px 22px; }
+.archive-model>div+div { border-left:1px solid var(--line); }
+.archive-model dt { font-size:13px; font-weight:650; color:#e7e9ec; margin:0 0 8px; }
+.archive-model dd { font-size:13px; color:var(--muted); }
+.archive-setup { max-width:650px; }
+.archive-setup>p { margin-top:14px; }
+.archive-setup form { margin-top:25px; max-width:550px; }
+@media(max-width:1100px) { .archive-intro .row-actions { flex-direction:column; } }

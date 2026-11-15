@@ -7,7 +7,7 @@ test('repository picker and explicit import display the actual registered projec
     await f.cli(['daemon', 'start']); const repo = await f.repository('repo con spazi'); const before = await f.snapshot(repo.path);
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await page.getByRole('button', { name: 'Importa progetto', exact: true }).click();
       await chooseDirectory(app, repo.path); await page.getByRole('button', { name: 'Scegli repository', exact: true }).click();
       await page.getByLabel('Nome progetto (facoltativo)', { exact: true }).fill('Progetto UI');
@@ -42,7 +42,7 @@ test('stale configuration approval is rejected and a new explicit review can cle
     const projectId = added.data.projectId as string, before = await f.snapshot(repo.path);
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Modifica progetto', exact: true }).click();
       await page.getByLabel('Nome progetto', { exact: true }).fill('Proposta');
       await page.getByLabel('Configurazione branch base', { exact: true }).selectOption('clear');
@@ -74,7 +74,7 @@ test('remove touches only registration and a UI reimport gets a new UUID', async
     const before = await f.snapshot(repo.path), oldId = added.data.projectId as string;
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await page.locator('.project-row').first().click();
       await page.getByRole('button', { name: 'Rimuovi dal registro', exact: true }).click();
       await expect(page.getByText('Viene rimossa soltanto la registrazione. Repository e file conservati.', { exact: true })).toBeVisible();
@@ -103,7 +103,7 @@ test('twenty complete UI import verify update remove sequences agree with CLI an
     const { app, page } = await launchDesktop(f);
     const results: { sequence: number; configRevision: string; filesPreserved: boolean }[] = [];
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       for (let i = 0; i < 20; i++) {
         const name = `Sequenza ${i}`, repository = await f.repository(`repo-${i}`);
         const { writeFile } = await import('node:fs/promises'); const { join } = await import('node:path');

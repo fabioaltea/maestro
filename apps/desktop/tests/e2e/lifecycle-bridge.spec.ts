@@ -6,7 +6,7 @@ test('named bridge requires confirmation, returns no private receipt fields and 
   try {
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await expect(page.getByText('Servizio fermo', { exact: true })).toBeVisible();
       const prepared = await page.evaluate(async () => {
         const context = await window.maestro.context({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: 0 });

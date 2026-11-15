@@ -108,7 +108,7 @@ Come sviluppatore consulto diagnostica ed eventi recenti, seguo le nuove attivit
 
 ### Key Entities
 
-- **Archivio selezionato**: ambito locale corrente e sua identità verificata, distinto dal percorso scelto e dalle richieste di una selezione precedente.
+- **Archivio selezionato**: cartella dati di Maestro con stato del servizio, registro, operazioni ed eventi; può raccogliere più progetti. I repository collegati conservano i file nelle proprie cartelle. Un archivio attivo alla volta, distinto dal percorso scelto e dalle richieste di una selezione precedente.
 - **Vista progetto**: identità, configurazione/versione e osservazione datata; il core resta l'unica fonte autorevole.
 - **Operazione utente**: azione, ambito, identificativo, riepilogo/precondizione approvata e stato/esito originale riconciliabile.
 - **Vista attività**: finestra limitata di eventi ordinati, cursore applicato e stato di continuità/connessione.
@@ -146,3 +146,11 @@ Come sviluppatore consulto diagnostica ed eventi recenti, seguo le nuove attivit
 ## Adeguamento dello scope — 2026-11-15
 
 Su richiesta esplicita dell’utente: qualifica eventi limitata a stato/operazioni reali, ordine, recovery e limiti. Il brief richiede eventi osservabili, non100eventi/s per10min. Rinviate le campagne di volume/durata; nessuna promessa di throughput o di stabilità prolungata. E1–E4 restano incrementi verificabili con test funzionali bounded.
+
+## Precisazione UX da review — 2026-11-15
+
+L’utente ha segnalato la confusione fra archivio dati e repository Git. La UI deve
+esplicitare il rapporto1:N, distinguere Configura archivio/Apri archivio da Importa
+progetto, guidare al servizio dopo la preparazione del percorso e spiegare una
+selezione errata prima di sostituire l’archivio attivo. Nessuna creazione/autostart
+implicita; repository invariati. La validazione autorevole dello store resta al core.

@@ -43,7 +43,7 @@ Prepare→confirm è l'unico accesso mutativo, incluso Avvia. Per import/verific
 
 Main accetta solo webContents della finestra proprietaria, top frame vivo e origine esatta `maestro://app`; iframe, subframe, sender esterno, extra keys, versione ignota, handle obsoleto e schema non conforme sono respinti prima di file/spawn. Richieste≤32KiB,≤8 pending read. Nessun metodo per fs, SQL, exec, shell, token, fetch, openExternal, scegli-binario o generic invoke. Main stesso non carica codice dei repository né interpreta testo come HTML.
 
-Errori bridge chiusi: INVALID_INPUT, STALE_CONTEXT, CONFIRMATION_EXPIRED, CONFIRMATION_REQUIRED, LOCAL_BUSY, RUNTIME_UNAVAILABLE, BUILD_UNAVAILABLE, CLIENT_PROTOCOL_ERROR, CLIENT_OUTPUT_LIMIT, RECEIPT_STORAGE_UNAVAILABLE, RECEIPT_LIMIT, OPERATION_UNCERTAIN, STREAM_SATURATED, STREAM_GAP. I codici core rimangono invariati e distinguibili. Dopo possibile invio, errori client diventano PublicResult UNKNOWN_OUTCOME con UUID receipt, non un errore validazione che suggerisce retry sicuro.
+Errori bridge chiusi: INVALID_INPUT, STALE_CONTEXT, CONFIRMATION_EXPIRED, CONFIRMATION_REQUIRED, LOCAL_BUSY, RUNTIME_UNAVAILABLE, BUILD_UNAVAILABLE, CLIENT_PROTOCOL_ERROR, CLIENT_OUTPUT_LIMIT, RECEIPT_STORAGE_UNAVAILABLE, RECEIPT_LIMIT, OPERATION_UNCERTAIN, STREAM_SATURATED, STREAM_GAP, ARCHIVE_IS_REPOSITORY. I codici core rimangono invariati e distinguibili. Dopo possibile invio, errori client diventano PublicResult UNKNOWN_OUTCOME con UUID receipt, non un errore validazione che suggerisce retry sicuro.
 
 ## Eventi bridge
 

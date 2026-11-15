@@ -77,6 +77,7 @@ export function validateSender(sender: {webContentsId: number; frameId: number; 
 }
 export function safeError(code: string) {
   const messages: Record<string, string> = {
+    ARCHIVE_IS_REPOSITORY: 'Hai scelto un repository Git. Apri o configura un archivio Maestro, poi usa Progetti → Importa progetto.',
     CLIENT_READ_CANCELLED: 'Lettura della vista precedente interrotta.', INVALID_INPUT: 'Richiesta non valida.', STALE_CONTEXT: 'Archivio cambiato. Aggiorna la vista.', LOCAL_BUSY: 'Il client è occupato. Attendi e aggiorna.',
     RUNTIME_UNAVAILABLE: 'Runtime Node supportato non disponibile.', BUILD_UNAVAILABLE: 'Compila il core prima di aprire Maestro.',
     CLIENT_PROTOCOL_ERROR: 'Risposta del client non valida.', CLIENT_OUTPUT_LIMIT: 'La risposta supera il limite del client.',

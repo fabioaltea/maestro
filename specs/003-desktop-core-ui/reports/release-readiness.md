@@ -116,7 +116,21 @@ integrazioni22/22, Electron22/22 e performance UI1/1 separata:0failure/skip negl
 automatici finali. [Dettaglio](final-verification.json), [validation](validation.md),
 [misure](performance.md). Non equivalgono a review umana o gate esterni PASS.
 
-58/59task completati; T054 aperto per la sola parte umana. T059 è una review
+59/60task completati; T054 aperto per la sola parte umana. T059 è una review
 conclusa con REVIEW_PENDING locale e BLOCKED globale, senza autorizzare il merge.
 Commit locali per task. Il file apps/desktop/package-lock.json preesistente/non
 tracciato è stato preservato, escluso dai commit: il progetto usa il lockfile root.
+
+## T060 — distinzione archivio/progetto corretta da review
+
+Il problema segnalato dall’utente nel picker reale era chooseArchive seguito da
+UNAUTHORIZED, prima dell’importazione. Schermata iniziale e form distinguono ora
+archivio dati1:Nprogetti; setup→Servizio esplicito e Apri archivio separato da Importa
+progetto. Marker.git senza store presente respinto con istruzione utile, selezione
+precedente e repository invariati. L’autorità su permessi/validità store resta al core.
+
+[Verifica mirata](archive-project-ux-verification.json):28unit/contract,5integrazioni,
+7casi Electron qualificati fra il giro mirato e la ripetizione del file setup.
+Screenshot archive-intro/archive-setup ispezionati localmente. Core e gate esterni
+invariati; benchmark lunghi non riaperti. T054 resta aperto per completare la review
+umana, con feedback iniziale ricevuto e corretto.

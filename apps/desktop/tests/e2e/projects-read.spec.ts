@@ -15,7 +15,7 @@ test('one hundred real projects remain reachable live and offline without archiv
     const { app, page } = await launchDesktop(f);
     try {
       await chooseDirectory(app, f.archive);
-      const choose = page.getByRole('button', { name: 'Scegli archivio', exact: true });
+      const choose = page.getByRole('button', { name: 'Apri archivio', exact: true });
       await choose.focus(); await page.keyboard.press('Enter');
       await expect(page.getByText('Servizio attivo', { exact: true })).toBeVisible();
       const seen = new Set<string>();
@@ -47,7 +47,7 @@ test('choosing an absent archive does not initialize or start it', async () => {
   try {
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await expect(page.getByText('Servizio fermo', { exact: true })).toBeVisible();
       expect((await f.cli(['daemon', 'status'])).result.liveness).toBe('ABSENT_VERIFIED');
       const { access } = await import('node:fs/promises'); await expect(access(f.archive)).rejects.toThrow();

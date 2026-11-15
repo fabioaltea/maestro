@@ -15,7 +15,7 @@ test('SC001/002: thirty actual window openings and thirty live/offline detail se
    const {app,page,launchStarted}=await launchDesktop(f);try{
     // Conservative upper bound: timer precedes Electron process creation and window creation.
     // Native picker result is supplied immediately after bootstrap readiness.
-    await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Scegli archivio',exact:true}).click();await expect(page.locator('.project-row')).toHaveCount(25);
+    await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();await expect(page.locator('.project-row')).toHaveCount(25);
     const elapsed=performance.now()-launchStarted;openings.push(elapsed);
     if(i===29){
      for(let n=0;n<30;n++){

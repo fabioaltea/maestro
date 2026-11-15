@@ -21,6 +21,11 @@ export class ArchiveContext {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
       canonical = join(await realpath(dirname(path)), basename(path));
     }
+    // UI location hint only: no Git command, repair or permission change. Core validates archive storage.
+    const hasEntry = async (name: string) => lstat(join(canonical, name)).then(() => true, error => {
+      if (error.code === 'ENOENT') return false; throw error;
+    });
+    if (await hasEntry('.git') && !await hasEntry('state.sqlite')) throw new Error('ARCHIVE_IS_REPOSITORY');
     this.selection = { path: canonical, view: { selectionEpoch: ++this.epoch, archiveHandle: randomUUID(), storeId: null, displayPath: canonical } };
     this.changed(); return this.selection;
   }
