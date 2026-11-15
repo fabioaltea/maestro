@@ -1,3 +1,4 @@
+import { resultLogMetadata } from './safe-log.ts';
 import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
 import { CHANNEL } from '../shared/bridge-contract.ts';
@@ -21,7 +22,7 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
   handlers.set('context', () => ({ context, runtimeReady: services.core !== null, error: services.runtimeError ? safeError(services.runtimeError) : null }));
   ipcMain.handle(CHANNEL, async (event, method: unknown, input: unknown): Promise<BridgeResponse> => {
     const envelope = { bridgeVersion: 1 as const, callId: '', selectionEpoch: 0, archiveHandle: null as string | null, storeId: null as string | null, result: null as unknown, error: null as BridgeResponse['error'] };
-    let entered = false, authorized = false;
+    let entered = false, authorized = false;const startedAt=performance.now();
     try {
       if (window.isDestroyed() || !event.senderFrame || typeof method !== 'string') throw new Error('INVALID_INPUT');
       validateSender({ webContentsId: event.sender.id, frameId: event.senderFrame.routingId, mainFrame: event.senderFrame === window.webContents.mainFrame, url: event.senderFrame.url },
@@ -36,9 +37,10 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
       const handler = handlers.get(method as BridgeMethod);
       if (!handler) throw new Error('CONFIRMATION_REQUIRED');
       const result = await handler(request);
-      void services.log?.write({ code: 'OK', action: method, requestId: request.callId }).catch(() => undefined);
+      void services.log?.write({ ...resultLogMetadata(result), action: method, requestId: request.callId, durationMs:performance.now()-startedAt }).catch(() => undefined);
       return { ...envelope, selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null, result };
     } catch (error) {
+      if(authorized&&envelope.callId)void services.log?.write({code:safeError(error instanceof Error?error.message:'CLIENT_PROTOCOL_ERROR').code,requestId:envelope.callId,durationMs:performance.now()-startedAt}).catch(()=>undefined);
       return { ...envelope, ...(authorized ? { selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null } : {}), error: safeError(error instanceof Error ? error.message : 'CLIENT_PROTOCOL_ERROR') };
     } finally { if (entered) pending--; }
   });

@@ -57,7 +57,6 @@ const extras: Record<string, readonly string[]> = {
 export function validateRequest(method: string, input: unknown): BridgeRequest {
   if (!(METHODS as readonly string[]).includes(method)) throw new Error('INVALID_INPUT');
   const p = record(input);
-  if (new TextEncoder().encode(JSON.stringify(p)).byteLength > (method === 'ackEvents' ? 1024 : 32768)) throw new Error('INVALID_INPUT');
   keys(p, ['bridgeVersion', 'callId', 'selectionEpoch', ...(extras[method] ?? [])]);
   if (p.bridgeVersion !== 1 || !Number.isSafeInteger(p.selectionEpoch) || Number(p.selectionEpoch) < 0) throw new Error('INVALID_INPUT');
   uuid(p.callId);
@@ -68,6 +67,7 @@ export function validateRequest(method: string, input: unknown): BridgeRequest {
   if (method === 'ackEvents' && !/^(0|[1-9][0-9]*)$/.test(text(p.lastAppliedSeq, 20))) throw new Error('INVALID_INPUT');
   if (method === 'chooseArchive' && p.newArchiveName !== undefined && !/^[\p{L}\p{N}_-][\p{L}\p{N} ._-]{0,79}$/u.test(text(p.newArchiveName, 80))) throw new Error('INVALID_INPUT');
   if (method === 'prepareAction') validateAction(p.action, p.params);
+  if (new TextEncoder().encode(JSON.stringify(p)).byteLength > (method === 'ackEvents' ? 1024 : 32768)) throw new Error('INVALID_INPUT');
   return p as BridgeRequest;
 }
 export function validateSender(sender: {webContentsId: number; frameId: number; mainFrame: boolean; url: string}, owner: {webContentsId: number; frameId: number}) {

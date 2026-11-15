@@ -150,3 +150,14 @@ Screenshot e conteggi contrasto in reports/screenshots/, ispezione visiva locale
 **T054 resta aperto** per la review umana/picker nativo reale: NOT_RUN, istruzioni
 concrete in manual-review.md. Non è simulata dalla sostituzione dei dialog nei test.
 SC-006 non completamente qualificato finché manca questa evidenza.
+
+### T055 — privacy e confini PASS
+
+2 E2E PASS: input path/argv/ACK/conferma ostili negati; nessuna esposizione di dati
+privati/credenziali in diagnostica/log; mutazione offline negata senza scritture;
+cambio archivio invalida token ed epoch senza ridirigere l’intento approvato.
+Contratti log: cap reale2MiB×2 più rotazioni ripetute256byte, codici/UUID/esiti sicuri,
+no stderr/raw payload, file privati non hardlink, correlazione UUID dell’operazione;
+schema chiuso prima della serializzazione degli input. Suite unit/contract26 PASS.
+Le race ricevute/store e i permessi core restano coperti dalle integrazioni già
+registrate; test Electron foreign sender/frame/CSP separati in security.spec.ts.
