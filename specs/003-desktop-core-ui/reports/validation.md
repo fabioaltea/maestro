@@ -168,3 +168,19 @@ registrate; test Electron foreign sender/frame/CSP separati in security.spec.ts.
 freschezza/observation LAST_KNOWN corrette e snapshot offline invariato. Tempi raw,
 definizione conservativa e p95/max in view-performance-samples.json e performance.md.
 Campagna isolata dopo le verifiche funzionali, senza altre prove di performance.
+
+### T057 — regressione finale PASS
+
+2026-11-15: build e typecheck core/desktop, guard AST PASS. npm test core368 PASS,
+0FAIL/skip (137208,114416ms); unit/contract desktop26 PASS; integrazioni desktop22 PASS;
+E2E Electron22 PASS (5,3min), più la campagna performance1 PASS eseguita separatamente
+in T056 e non ripetuta senza motivo. Nessuna suite acceptance/idle600s o rete/UID
+esterna rilanciata. Comandi/contatori/ambiente in final-verification.json.
+
+Ripetuti lifecycle10cicli: daemon10/10superstite, stop massimo1014,12ms; registrazioni
+20sequenze con snapshot/parità. Campioni aggiornati nei relativi JSON. Nuova misura
+funzionale eventi in event-core-samples.json/performance.md. Screenshot automatici
+aggiornati; review umana ancora NOT_RUN. Campioni prodotti dai test core copiati
+sotto003/core-regression-samples; report002 ripristinati ai byte precedenti.
+Core senza UI qualificato da npm test e dal guard degli import; nessun Electron
+caricato dal runtime headless. I gate di release001/002 restano invariati.

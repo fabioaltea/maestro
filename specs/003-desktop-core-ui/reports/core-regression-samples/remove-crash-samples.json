@@ -1,12 +1,12 @@
 {
-  "measuredAt": "2026-11-15T12:22:43.339Z",
+  "measuredAt": "2026-11-15T17:51:53.520Z",
   "required": 10,
   "completed": 10,
   "samples": [
     {
       "point": "project.beforeAccept",
       "variant": "clean",
-      "requestId": "9cce94f8-66d8-4b61-90fa-0db316be5123",
+      "requestId": "351cd4af-a279-45b0-823c-5e2a0bb04459",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": false,
@@ -19,7 +19,7 @@
         "display_name": "crash-source",
         "base_branch": "fixture-base",
         "config_revision": 2,
-        "removed_at": "2026-11-15T12:21:38.687Z"
+        "removed_at": "2026-11-15T17:50:44.538Z"
       },
       "completedEvents": [],
       "confirmedProjects": 0,
@@ -29,20 +29,20 @@
     {
       "point": "project.accepted",
       "variant": "clean",
-      "requestId": "98d02df1-4903-4be4-a517-a54fede1eae6",
+      "requestId": "7a07d82d-4868-4afb-a895-4292051aa026",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REMOVE",
-        "requestId": "98d02df1-4903-4be4-a517-a54fede1eae6",
-        "projectId": "05e13402-a76e-42c7-85c5-92fbc5b15c3a",
+        "requestId": "7a07d82d-4868-4afb-a895-4292051aa026",
+        "projectId": "149fd8be-5dc5-416f-a8c8-0e772b441a3c",
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-15T12:21:45.342Z",
+        "completedAt": "2026-11-15T17:50:50.842Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -51,7 +51,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "98d02df1-4903-4be4-a517-a54fede1eae6"
+          "operationId": "7a07d82d-4868-4afb-a895-4292051aa026"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -71,20 +71,20 @@
     {
       "point": "project.remove.prepared",
       "variant": "clean",
-      "requestId": "98b1d3bc-3794-48e0-a359-b3024974a1e8",
+      "requestId": "e12d45f7-67fe-49e3-a624-2a62fc0c71f5",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REMOVE",
-        "requestId": "98b1d3bc-3794-48e0-a359-b3024974a1e8",
-        "projectId": "1639a4c1-a29f-44ea-b6d1-b31abc264578",
+        "requestId": "e12d45f7-67fe-49e3-a624-2a62fc0c71f5",
+        "projectId": "93109e24-4335-4349-9727-53cae93f6d7b",
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-15T12:21:52.678Z",
+        "completedAt": "2026-11-15T17:50:58.175Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -93,7 +93,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "98b1d3bc-3794-48e0-a359-b3024974a1e8"
+          "operationId": "e12d45f7-67fe-49e3-a624-2a62fc0c71f5"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -113,20 +113,20 @@
     {
       "point": "project.remove.beforeWrite",
       "variant": "dirty",
-      "requestId": "c9b9ef23-ae66-4d9c-9f9e-b2cb0520b6d3",
+      "requestId": "4e209bdc-3e83-40ce-bc7b-f041f7c29bdd",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REMOVE",
-        "requestId": "c9b9ef23-ae66-4d9c-9f9e-b2cb0520b6d3",
-        "projectId": "5db5019d-bd1a-4530-9d2b-14cc7c875564",
+        "requestId": "4e209bdc-3e83-40ce-bc7b-f041f7c29bdd",
+        "projectId": "9594027e-abf7-4311-8ef2-9fa920b1ec26",
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-15T12:21:59.525Z",
+        "completedAt": "2026-11-15T17:51:05.330Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -135,7 +135,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "c9b9ef23-ae66-4d9c-9f9e-b2cb0520b6d3"
+          "operationId": "4e209bdc-3e83-40ce-bc7b-f041f7c29bdd"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -155,20 +155,20 @@
     {
       "point": "project.remove.written",
       "variant": "dirty",
-      "requestId": "90a5cd78-b6b7-4fb2-9131-defc29fb6c14",
+      "requestId": "ef6254a5-83ab-440c-8de1-05c971303a36",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REMOVE",
-        "requestId": "90a5cd78-b6b7-4fb2-9131-defc29fb6c14",
-        "projectId": "0a25a0fc-cb5c-4d2a-97f8-cef6467c2a00",
+        "requestId": "ef6254a5-83ab-440c-8de1-05c971303a36",
+        "projectId": "00d4b990-d017-41c5-92ca-0c41f2810deb",
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-15T12:22:07.140Z",
+        "completedAt": "2026-11-15T17:51:14.640Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -177,7 +177,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "90a5cd78-b6b7-4fb2-9131-defc29fb6c14"
+          "operationId": "ef6254a5-83ab-440c-8de1-05c971303a36"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -197,20 +197,20 @@
     {
       "point": "project.remove.beforeFinalize",
       "variant": "clean",
-      "requestId": "707fb41e-1a77-43b0-a83e-5fe6b5d68fe2",
+      "requestId": "8e4b7881-26db-4c13-90af-fb20e851e9f5",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REMOVE",
-        "requestId": "707fb41e-1a77-43b0-a83e-5fe6b5d68fe2",
-        "projectId": "9b13699a-a1e2-41ec-9b82-6465ec3125e7",
+        "requestId": "8e4b7881-26db-4c13-90af-fb20e851e9f5",
+        "projectId": "8fb4f433-542b-4aff-972f-75036546d234",
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-15T12:22:14.529Z",
+        "completedAt": "2026-11-15T17:51:22.560Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -219,7 +219,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "707fb41e-1a77-43b0-a83e-5fe6b5d68fe2"
+          "operationId": "8e4b7881-26db-4c13-90af-fb20e851e9f5"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -239,20 +239,20 @@
     {
       "point": "project.beforeCommit",
       "variant": "conflicted",
-      "requestId": "8eb719da-1c75-43ad-9ce0-7c3561905530",
+      "requestId": "a568c8ae-6b0d-47fc-81e6-46058f598a87",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "INTERRUPTED",
       "originalResult": {
         "action": "REMOVE",
-        "requestId": "8eb719da-1c75-43ad-9ce0-7c3561905530",
-        "projectId": "7fac57e3-7f69-42f3-9817-17a806d8f4d0",
+        "requestId": "a568c8ae-6b0d-47fc-81e6-46058f598a87",
+        "projectId": "76ad9bd9-52fd-48ae-b5eb-58df1d1c7be4",
         "outcome": "INTERRUPTED",
         "effect": "NONE",
         "configRevision": null,
         "observationRevision": null,
-        "completedAt": "2026-11-15T12:22:22.937Z",
+        "completedAt": "2026-11-15T17:51:30.595Z",
         "error": {
           "code": "INTERRUPTED",
           "category": "RUNTIME",
@@ -261,7 +261,7 @@
           "retryable": false,
           "cause": null,
           "persisted": true,
-          "operationId": "8eb719da-1c75-43ad-9ce0-7c3561905530"
+          "operationId": "a568c8ae-6b0d-47fc-81e6-46058f598a87"
         }
       },
       "retryOutcome": "INTERRUPTED",
@@ -281,20 +281,20 @@
     {
       "point": "project.committed",
       "variant": "clean",
-      "requestId": "2a76a593-73a2-46cc-a579-f543ea5e4193",
+      "requestId": "d3c262a7-d1db-4e97-a177-737a82ac7b61",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "SUCCEEDED",
       "originalResult": {
-        "requestId": "2a76a593-73a2-46cc-a579-f543ea5e4193",
+        "requestId": "d3c262a7-d1db-4e97-a177-737a82ac7b61",
         "action": "REMOVE",
-        "projectId": "a8767d9d-a830-4c08-ac19-77495c03cd34",
+        "projectId": "1da0e48b-ff5d-42cd-a639-7b2207885243",
         "outcome": "SUCCEEDED",
         "effect": "REMOVED",
         "configRevision": "2",
         "observationRevision": "1",
-        "completedAt": "2026-11-15T12:22:29.083Z",
+        "completedAt": "2026-11-15T17:51:36.964Z",
         "error": null
       },
       "retryOutcome": "SUCCEEDED",
@@ -304,22 +304,22 @@
         "display_name": "crash-source",
         "base_branch": "fixture-base",
         "config_revision": 2,
-        "removed_at": "2026-11-15T12:22:29.083Z"
+        "removed_at": "2026-11-15T17:51:36.964Z"
       },
       "completedEvents": [
         {
           "protocolVersion": 1,
-          "storeId": "cf6ab8ac-a211-479e-9c2e-7ab429db163d",
-          "eventId": "4ae256a3-2c81-4298-a1b6-d34477c7d1e7",
+          "storeId": "9e1099cf-0a1a-401d-9574-976cab376e46",
+          "eventId": "6622b047-8b78-4f38-a325-7a6de907c0f2",
           "seq": "18",
-          "occurredAt": "2026-11-15T12:22:29.085Z",
+          "occurredAt": "2026-11-15T17:51:36.965Z",
           "type": "operation.completed",
-          "instanceId": "66adef42-b421-4f49-939f-884849fad299",
-          "operationId": "2a76a593-73a2-46cc-a579-f543ea5e4193",
+          "instanceId": "cda17623-7403-4bf4-b92e-1db83500c486",
+          "operationId": "d3c262a7-d1db-4e97-a177-737a82ac7b61",
           "payload": {
             "scope": "project",
             "action": "REMOVE",
-            "projectId": "a8767d9d-a830-4c08-ac19-77495c03cd34",
+            "projectId": "1da0e48b-ff5d-42cd-a639-7b2207885243",
             "outcome": "SUCCEEDED",
             "effect": "REMOVED",
             "configRevision": "2",
@@ -334,20 +334,20 @@
     {
       "point": "project.beforeAck",
       "variant": "client-deadline",
-      "requestId": "6910bb39-5608-43b5-8275-bac06385c7ff",
+      "requestId": "da220ed6-a826-4c6a-9beb-c7b06af48e1c",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "SUCCEEDED",
       "originalResult": {
-        "requestId": "6910bb39-5608-43b5-8275-bac06385c7ff",
+        "requestId": "da220ed6-a826-4c6a-9beb-c7b06af48e1c",
         "action": "REMOVE",
-        "projectId": "1875934d-9efd-4f39-a0af-6eac2ee6d628",
+        "projectId": "f54109e5-61d1-45f4-89bc-6d6b550c924b",
         "outcome": "SUCCEEDED",
         "effect": "REMOVED",
         "configRevision": "2",
         "observationRevision": "1",
-        "completedAt": "2026-11-15T12:22:35.891Z",
+        "completedAt": "2026-11-15T17:51:45.021Z",
         "error": null
       },
       "retryOutcome": "SUCCEEDED",
@@ -357,22 +357,22 @@
         "display_name": "crash-source",
         "base_branch": "fixture-base",
         "config_revision": 2,
-        "removed_at": "2026-11-15T12:22:35.891Z"
+        "removed_at": "2026-11-15T17:51:45.021Z"
       },
       "completedEvents": [
         {
           "protocolVersion": 1,
-          "storeId": "f114194b-77e1-40ce-a0f3-d3be2133621f",
-          "eventId": "29035299-034e-432d-9531-da54d65eb1cb",
+          "storeId": "adc00eb4-6902-4194-a8fc-41c422e1f189",
+          "eventId": "368c54d3-0b35-4b07-9222-fc0bc2755062",
           "seq": "18",
-          "occurredAt": "2026-11-15T12:22:35.893Z",
+          "occurredAt": "2026-11-15T17:51:45.023Z",
           "type": "operation.completed",
-          "instanceId": "2a469840-6138-4f03-8777-a63cb7316d2e",
-          "operationId": "6910bb39-5608-43b5-8275-bac06385c7ff",
+          "instanceId": "8379f3b2-0124-4797-86eb-99065a2e11c5",
+          "operationId": "da220ed6-a826-4c6a-9beb-c7b06af48e1c",
           "payload": {
             "scope": "project",
             "action": "REMOVE",
-            "projectId": "1875934d-9efd-4f39-a0af-6eac2ee6d628",
+            "projectId": "f54109e5-61d1-45f4-89bc-6d6b550c924b",
             "outcome": "SUCCEEDED",
             "effect": "REMOVED",
             "configRevision": "2",
@@ -387,20 +387,20 @@
     {
       "point": "project.beforeDrain",
       "variant": "clean",
-      "requestId": "cefcb6e2-2721-4a86-a570-2b660f4470be",
+      "requestId": "4badeac7-eba0-4a65-ab53-659542f1f8d3",
       "faultReported": true,
       "mainExitSignal": "SIGKILL",
       "accepted": true,
       "originalOutcome": "SUCCEEDED",
       "originalResult": {
-        "requestId": "cefcb6e2-2721-4a86-a570-2b660f4470be",
+        "requestId": "4badeac7-eba0-4a65-ab53-659542f1f8d3",
         "action": "REMOVE",
-        "projectId": "a19ab2a8-ba43-4067-b4f6-d9c569e86b61",
+        "projectId": "e69ae13d-faf4-4ac9-9965-c62ab4be6f96",
         "outcome": "SUCCEEDED",
         "effect": "REMOVED",
         "configRevision": "2",
         "observationRevision": "1",
-        "completedAt": "2026-11-15T12:22:41.371Z",
+        "completedAt": "2026-11-15T17:51:51.349Z",
         "error": null
       },
       "retryOutcome": "SUCCEEDED",
@@ -410,22 +410,22 @@
         "display_name": "crash-source",
         "base_branch": "fixture-base",
         "config_revision": 2,
-        "removed_at": "2026-11-15T12:22:41.371Z"
+        "removed_at": "2026-11-15T17:51:51.349Z"
       },
       "completedEvents": [
         {
           "protocolVersion": 1,
-          "storeId": "37ae2d4a-397a-4fd2-8d9e-c0000299602c",
-          "eventId": "f838e40c-fb93-423e-8171-729313499f2d",
+          "storeId": "fd43dcfe-10ad-407a-a500-bc2e6b88d981",
+          "eventId": "9d625339-17cb-4378-b3c0-3fc017c9f1f9",
           "seq": "18",
-          "occurredAt": "2026-11-15T12:22:41.372Z",
+          "occurredAt": "2026-11-15T17:51:51.351Z",
           "type": "operation.completed",
-          "instanceId": "41005eb0-c85e-4da6-874d-74f7400880a1",
-          "operationId": "cefcb6e2-2721-4a86-a570-2b660f4470be",
+          "instanceId": "4658713d-e35f-42e9-8834-a80d23528d2e",
+          "operationId": "4badeac7-eba0-4a65-ab53-659542f1f8d3",
           "payload": {
             "scope": "project",
             "action": "REMOVE",
-            "projectId": "a19ab2a8-ba43-4067-b4f6-d9c569e86b61",
+            "projectId": "e69ae13d-faf4-4ac9-9965-c62ab4be6f96",
             "outcome": "SUCCEEDED",
             "effect": "REMOVED",
             "configRevision": "2",

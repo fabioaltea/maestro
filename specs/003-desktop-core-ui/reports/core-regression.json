@@ -5,7 +5,7 @@
   "cancelled": 0,
   "skipped": 0,
   "command": "npm test",
-  "duration_ms": 132289.423416,
+  "duration_ms": 137208.114416,
   "date": "2026-11-15",
   "exitCode": 0
 }

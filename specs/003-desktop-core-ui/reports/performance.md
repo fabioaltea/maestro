@@ -8,8 +8,8 @@ I campioni sono misure locali, non garanzie generali. p95 nearest-rank.
 ## Eventi — SC-005 ridimensionato dall’utente
 
 [Campioni reali](event-core-samples.json):10 registrazioni CLI reali,20 eventi,
-11219ms di operazioni; p95 disponibilità sulla pipe di riferimento→commit DOM3ms,
-massimo3ms. La UI mantiene i controlli da tastiera utilizzabili durante le operazioni.
+10853ms di operazioni; p95 disponibilità sulla pipe di riferimento→commit DOM2ms,
+massimo4ms. La UI mantiene i controlli da tastiera utilizzabili durante le operazioni.
 Clock Date.now con risoluzione millisecondi; due client ricevono lo stesso evento
 con scheduling indipendente, perciò i delta firmati possono essere negativi.
 Il dato non misura tempo dal commit SQLite né throughput massimo del core.
