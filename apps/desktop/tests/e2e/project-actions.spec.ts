@@ -34,3 +34,34 @@ test('repository picker and explicit import display the actual registered projec
     } finally { await app.close(); }
   } finally { await f.cleanup(); }
 });
+test('stale configuration approval is rejected and a new explicit review can clear the base atomically', async () => {
+  const f = await createScratch();
+  try {
+    await f.cli(['daemon', 'start']); const repo = await f.repository();
+    const added = (await f.cli(['project', 'add', repo.path, '--name=Iniziale', '--base-branch=main'])).result;
+    const projectId = added.data.projectId as string, before = await f.snapshot(repo.path);
+    const { app, page } = await launchDesktop(f);
+    try {
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Modifica progetto', exact: true }).click();
+      await page.getByLabel('Nome progetto', { exact: true }).fill('Proposta');
+      await page.getByLabel('Configurazione branch base', { exact: true }).selectOption('clear');
+      await page.getByRole('button', { name: 'Rivedi modifica', exact: true }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
+      await f.cli(['project', 'update', projectId, '--expected-revision=1', '--name=Concorrenza']);
+      await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
+      await expect(page.getByText('Revisione configurazione non più corrente.', { exact: true })).toBeVisible();
+      expect((await f.cli(['project', 'show', projectId])).result.data.project.displayName).toBe('Concorrenza');
+      await expect(page.getByLabel('Nome progetto', { exact: true })).toHaveValue('Proposta');
+      await page.getByRole('button', { name: 'Ricarica configurazione', exact: true }).click();
+      await expect(page.getByLabel('Nome progetto', { exact: true })).toHaveValue('Concorrenza');
+      await page.getByLabel('Nome progetto', { exact: true }).fill('Proposta');
+      await page.getByLabel('Configurazione branch base', { exact: true }).selectOption('clear');
+      await page.getByRole('button', { name: 'Rivedi modifica', exact: true }).click();
+      await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'Proposta', exact: true })).toBeVisible();
+      const final = (await f.cli(['project', 'show', projectId])).result.data.project;
+      expect(final.configRevision).toBe('3'); expect(final.baseBranch).toBeNull(); expect(await f.snapshot(repo.path)).toEqual(before);
+    } finally { await app.close(); }
+  } finally { await f.cleanup(); }
+});

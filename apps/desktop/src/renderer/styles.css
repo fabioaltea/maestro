@@ -38,3 +38,6 @@ nav .nav-item.selected { background:#2b2e33; }
 .form-actions { margin-top:25px; }
 .field-error { color:#f3c49b; font-size:12px; margin:10px 0; }
 input[aria-invalid=true] { border-color:#d39a6c; }
+.detail-actions { margin:22px 0; }
+.edit-project { padding:20px 0; border-top:1px solid var(--line); }
+.edit-project h4 { font-weight:550; margin:0 0 10px; }
