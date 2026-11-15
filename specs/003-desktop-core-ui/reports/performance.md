@@ -34,5 +34,20 @@ non viene cancellato né promosso a PASS.
 
 ## Consultazione — SC-001/002
 
-Campagna30aperture/100progetti e30dettagli live+30offline: in corso.
-I target2s/1s/2s saranno confrontati ai campioni effettivi, senza riusare misure002.
+[Campioni UI003](view-performance-samples.json): archivio100progetti,30 processi
+Electron distinti con cache filesystem calda,30 selezioni live e30offline.
+Tempo apertura conservativo: da prima dello spawn Electron fino alla prima pagina
+utilizzabile, include startup e interazione automatizzata col picker (il risultato
+viene fornito appena il bootstrap è pronto). È un limite superiore al tempo dalla
+creazione finestra; il tempo umano nel picker non è misurato. Dettaglio: da click a
+article pronto, inclusi dispatch/attese Playwright. Nessuna misura002 riciclata.
+
+| Modalità | n | p95 ms | max ms | target p95 ms |
+|---|---:|---:|---:|---:|
+| Apertura | 30 | 1074.85 | 1756.33 | 2000 |
+| Dettaglio live | 30 | 236.27 | 244.38 | 1000 |
+| Dettaglio offline | 30 | 359.91 | 847.73 | 2000 |
+
+PASS sul campione.100progetti enumerati senza omissioni/duplicati. Freschezza
+corretta e osservazioni storiche in tutti i60dettagli; snapshot archivio offline
+invariato. Primo campo nullable trattato dal decoder/test null, non convertito in clean.

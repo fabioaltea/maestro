@@ -161,3 +161,10 @@ no stderr/raw payload, file privati non hardlink, correlazione UUID dell’opera
 schema chiuso prima della serializzazione degli input. Suite unit/contract26 PASS.
 Le race ricevute/store e i permessi core restano coperti dalle integrazioni già
 registrate; test Electron foreign sender/frame/CSP separati in security.spec.ts.
+
+### T056 — SC-001/002 PASS sul campione
+
+1 E2E dedicato PASS:30aperture reali,100progetti raggiungibili,30dettagli live e30offline,
+freschezza/observation LAST_KNOWN corrette e snapshot offline invariato. Tempi raw,
+definizione conservativa e p95/max in view-performance-samples.json e performance.md.
+Campagna isolata dopo le verifiche funzionali, senza altre prove di performance.

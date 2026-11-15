@@ -1,0 +1,433 @@
+{
+  "measuredAt": "2026-11-15T17:48:09.633Z",
+  "environment": {
+    "os": "26.3.1",
+    "arch": "arm64",
+    "node": "v26.13.0",
+    "platform": "darwin",
+    "versions": "Electron45.3.0/React19.3.1",
+    "filesystem": "APFS",
+    "cache": "warm filesystem; fresh Electron process each opening; first selected archive per process",
+    "baseline": "001+002 local main 72381375dcc31b54dcebf05666a0d7b4ab9c8ef3"
+  },
+  "definition": {
+    "opening": "before Electron process launch to first interactive 25-row page (upper bound on window creation to ready); native picker interaction replaced immediately after bootstrap readiness",
+    "detail": "before click to selected article ready; includes Playwright dispatch/expect overhead",
+    "percentile": "nearest rank"
+  },
+  "openings": [
+    1756.330458999997,
+    849.8706659999989,
+    838.0390000000043,
+    966.4622909999962,
+    1074.8505829999995,
+    877.6853750000009,
+    953.666750000004,
+    920.7179169999945,
+    849.0437499999971,
+    853.6712500000067,
+    831.6324170000007,
+    844.1595410000009,
+    855.3553749999992,
+    894.5994589999973,
+    831.7187919999997,
+    790.3284579999963,
+    806.0612089999995,
+    856.7522499999977,
+    820.4081250000017,
+    842.0102500000066,
+    833.239916999999,
+    1030.8369170000005,
+    808.2884170000034,
+    777.6081659999982,
+    788.4488750000019,
+    830.5663340000028,
+    918.9022919999989,
+    793.9355839999989,
+    762.7444169999944,
+    789.5774999999994
+  ],
+  "live": [
+    236.2743330000012,
+    215.687791999997,
+    227.19350000000122,
+    224.21695799999725,
+    201.0257500000007,
+    226.10066599999845,
+    244.38120799999888,
+    201.92775000000256,
+    211.28579100000206,
+    209.1279169999907,
+    210.81841700000223,
+    210.70229200000176,
+    212.16016699999454,
+    210.48395799999707,
+    213.2050420000014,
+    210.59912499999336,
+    210.9646250000078,
+    211.5662910000101,
+    210.0852079999895,
+    195.79191700000956,
+    214.04558299999917,
+    211.77512500000012,
+    206.93895899999188,
+    209.5431249999965,
+    213.672040999998,
+    209.67808300000615,
+    199.43154200000572,
+    207.95604099999764,
+    229.95479199998954,
+    211.76470800000243
+  ],
+  "offline": [
+    208.41379099999904,
+    210.06033300000126,
+    213.12904099999287,
+    212.4146250000049,
+    210.85250000000815,
+    213.60554100001173,
+    211.69470799999544,
+    210.33908400000655,
+    317.392875000005,
+    207.21074999999837,
+    316.2694169999886,
+    311.7485000000015,
+    204.60420899999735,
+    212.9492920000048,
+    847.7312079999974,
+    204.41233300000022,
+    314.95016600000963,
+    306.03458399999363,
+    209.26487499999348,
+    210.49837499999558,
+    209.23700000000827,
+    359.9111669999984,
+    195.56320899999992,
+    321.79637500000536,
+    308.92054199999257,
+    205.76291700000002,
+    210.31829099998868,
+    317.0028750000056,
+    223.7340419999964,
+    213.15458300001046
+  ],
+  "observed": [
+    {
+      "mode": "live",
+      "name": "Performance 088",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 064",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 029",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 021",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 099",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 076",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 092",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 033",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 047",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 090",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 093",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 059",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 030",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 010",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 089",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 072",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 004",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 008",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 082",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 009",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 046",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 032",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 055",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 062",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 015",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 088",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 064",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 029",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 021",
+      "historicalObservation": true
+    },
+    {
+      "mode": "live",
+      "name": "Performance 099",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 063",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 039",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 095",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 026",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 013",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 019",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 023",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 073",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 079",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 077",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 018",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 031",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 091",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 053",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 036",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 056",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 066",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 052",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 020",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 075",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 049",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 071",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 085",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 017",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 002",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 063",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 039",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 095",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 026",
+      "historicalObservation": true
+    },
+    {
+      "mode": "offline",
+      "name": "Performance 013",
+      "historicalObservation": true
+    }
+  ],
+  "summary": {
+    "opening": {
+      "n": 30,
+      "p95Ms": 1074.8505829999995,
+      "maxMs": 1756.330458999997
+    },
+    "live": {
+      "n": 30,
+      "p95Ms": 236.2743330000012,
+      "maxMs": 244.38120799999888
+    },
+    "offline": {
+      "n": 30,
+      "p95Ms": 359.9111669999984,
+      "maxMs": 847.7312079999974
+    }
+  }
+}
