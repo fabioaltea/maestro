@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, protocol, session } from 'electron';
 import { fileURLToPath } from 'node:url';
-import { isAbsolute } from 'node:path';
+import { SafeLog } from './safe-log.ts';
+import { join, isAbsolute } from 'node:path';
 import { validateRuntime } from './runtime.ts';
 import { CoreCli } from './core-cli.ts';
 import { secureSession, secureWindow } from './security.ts';
@@ -26,7 +27,7 @@ else {
     window = new BrowserWindow({ width: 1280, height: 800, minWidth: 1024, minHeight: 700, title: 'Maestro', backgroundColor: '#17191c',
       webPreferences: { preload: fileURLToPath(new URL('../preload/index.cjs', import.meta.url)), sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, webviewTag: false } });
     secureWindow(window);
-    installBridge(window, { core, runtimeError, dialogs: { async chooseDirectory(title) {
+    installBridge(window, { core, runtimeError, log: new SafeLog(join(app.getPath('userData'), 'logs')), dialogs: { async chooseDirectory(title) {
       const result = await dialog.showOpenDialog(window!, { title, properties: ['openDirectory', 'createDirectory'] });
       return result.canceled ? null : result.filePaths[0] ?? null;
     } } });

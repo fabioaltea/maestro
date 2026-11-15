@@ -3,8 +3,9 @@ import type { BrowserWindow } from 'electron';
 import { CHANNEL } from '../shared/bridge-contract.ts';
 import type { ArchiveView, BridgeMethod, BridgeRequest, BridgeResponse } from '../shared/bridge-contract.ts';
 import { safeError, validateRequest, validateSender } from '../shared/validation.ts';
+import type { SafeLog } from './safe-log.ts';
 import type { CorePort, DialogPort } from './ports.ts';
-export interface BridgeServices { core: CorePort | null; runtimeError: string | null; dialogs: DialogPort }
+export interface BridgeServices { core: CorePort | null; runtimeError: string | null; dialogs: DialogPort; log?: SafeLog }
 export type Handler = (request: BridgeRequest) => Promise<unknown> | unknown;
 export function installBridge(window: BrowserWindow, services: BridgeServices) {
   const handlers = new Map<BridgeMethod, Handler>();
@@ -32,6 +33,7 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
       const handler = handlers.get(method as BridgeMethod);
       if (!handler) throw new Error('CONFIRMATION_REQUIRED');
       const result = await handler(request);
+      void services.log?.write({ code: 'OK', action: method, requestId: request.callId }).catch(() => undefined);
       return { ...envelope, selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null, result };
     } catch (error) {
       return { ...envelope, error: safeError(error instanceof Error ? error.message : 'CLIENT_PROTOCOL_ERROR') };
