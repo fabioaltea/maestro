@@ -29,7 +29,7 @@ Verificare confini privilegiati e runtime prima di qualsiasi user story; scriver
 - [X] T010 Implementare singleton, window sandboxed, protocollo maestro://app con path allowlist e CSP, blocco permessi/navigazioni e handler con sender validation in apps/desktop/src/main/index.ts, apps/desktop/src/main/security.ts e apps/desktop/src/main/protocol.ts; aggiungere bootstrap React minimale in apps/desktop/src/renderer/index.html, apps/desktop/src/renderer/index.tsx e apps/desktop/src/renderer/App.tsx per rendere eseguibile lo smoke G0, senza dati/scritture; nessuna importazione bootstrap/storage core.
 - [X] T011 Implementare preload CJS con sole API nominate, subscribe/unsubscribe e validazione runtime in apps/desktop/src/preload/index.cts e apps/desktop/src/main/bridge.ts; niente invoke/fs/spawn/token generici o accesso mutativo prima di conferma US2.
 - [X] T012 Estendere guard AST esistente per separazione core/main/preload/renderer e secret-free bounded logging in scripts/check-architecture.mjs e apps/desktop/src/main/safe-log.ts; aggiungere casi guard in apps/desktop/tests/contract/architecture.test.ts prima della modifica del guard.
-- [ ] T013 Eseguire build/typecheck/lint e spike reale Electron/Playwright sul Mac target, senza allentare sandbox; registrare versioni, output e gate G0 PASS/BLOCKED in specs/003-desktop-core-ui/reports/validation.md, lasciando invariati i gate001/002.
+- [X] T013 Eseguire build/typecheck/lint e spike reale Electron/Playwright sul Mac target, senza allentare sandbox; registrare versioni, output e gate G0 PASS/BLOCKED in specs/003-desktop-core-ui/reports/validation.md, lasciando invariati i gate001/002.
 
 ## Phase 3: US1 — Consultare i progetti locali (P1, MVP)
 

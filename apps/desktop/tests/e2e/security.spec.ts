@@ -21,3 +21,19 @@ test('renderer has only named methods and cannot execute or navigate arbitrary c
     } finally { await app.close(); }
   } finally { await f.cleanup(); }
 });
+test('another real sandboxed window cannot invoke the owning window bridge', async () => {
+  const f = await createScratch();
+  try {
+    const { app } = await launchDesktop(f);
+    try {
+      const result = await app.evaluate(async ({ app, BrowserWindow }) => {
+        const foreign = new BrowserWindow({ show: false, webPreferences: { preload: `${app.getAppPath()}/preload/index.cjs`, contextIsolation: true, sandbox: true, nodeIntegration: false } });
+        try {
+          await foreign.loadURL('maestro://app/index.html');
+          return await foreign.webContents.executeJavaScript('window.maestro.context({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:0})');
+        } finally { foreign.destroy(); }
+      });
+      expect(result.error.code).toBe('INVALID_INPUT');
+    } finally { await app.close(); }
+  } finally { await f.cleanup(); }
+});
