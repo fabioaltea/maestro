@@ -116,3 +116,9 @@ il checkpoint main resta invariato fino all’ACK; chiusura del solo client lasc
 `activity-live.spec.ts`: Electron reale, eventi prodotti da project add visibili, unsubscribe e daemon superstite:1 PASS.
 Prima esecuzione dei due nuovi test: assertion liveness errata (`LIVE` anziché `LIVE_VERIFIED`); corrette le sole assertion, ripetizione PASS.
 E2 qualificato; replay e pressione richiedono ancora E3/E4.
+
+### E3 — replay e gap (T048–T050)
+
+4 integrazioni PASS: duplicate discard/conflict, seq/store, subprocess exit, callback fallita senza avanzamento ACK, CURSOR_EXPIRED con bounds validati.
+2 E2E Electron PASS: restart del daemon reale e replay senza duplicati; retention floor scaduto impostato soltanto nella fixture posseduta a daemon fermo, errore CURSOR_EXPIRED emesso dalla CLI/core reali, nuova lettura esplicita e ritorno live.
+La prima prova E2E falliva nel teardown per doppia chiusura Playwright; corretta ownership della chiusura, ripetizione2 PASS. Nessun cursore persistito, nessun retry mutativo.
