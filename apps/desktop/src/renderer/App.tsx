@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Projects } from './views/Projects.tsx';
 import { useDesktop } from './state/desktop.ts';
 export function App() {
   const desktop = useDesktop();
@@ -25,7 +26,7 @@ export function App() {
     <main className="workspace">
       <header className="workspace-header"><div><p className="eyebrow">Workspace</p><h2>Progetti</h2></div><span className="connection-label">{desktop.context ? 'Archivio selezionato' : 'Nessun archivio'}</span></header>
       {desktop.notice && <div className="notice" role="alert"><p>{desktop.notice}</p><button className="text-button" onClick={() => desktop.setNotice(null)}>Chiudi avviso</button></div>}
-      <section className="empty-state"><span className="empty-symbol" aria-hidden="true">↗</span><h3>{desktop.context ? 'Archivio pronto per la consultazione' : 'Uno spazio per i tuoi progetti'}</h3><p>{desktop.context ? 'Consulta il registro locale senza modificare i repository.' : 'Scegli un archivio Maestro. Puoi leggere gli ultimi dati salvati anche quando il servizio è fermo.'}</p>{!desktop.context && <button className="button primary" disabled={!desktop.runtimeReady || choosing} onClick={() => void choose()}>Scegli archivio locale</button>}</section>
+      {desktop.context ? <Projects desktop={desktop} /> : <section className="empty-state"><span className="empty-symbol" aria-hidden="true">↗</span><h3>{desktop.context ? 'Archivio pronto per la consultazione' : 'Uno spazio per i tuoi progetti'}</h3><p>{desktop.context ? 'Consulta il registro locale senza modificare i repository.' : 'Scegli un archivio Maestro. Puoi leggere gli ultimi dati salvati anche quando il servizio è fermo.'}</p>{!desktop.context && <button className="button primary" disabled={!desktop.runtimeReady || choosing} onClick={() => void choose()}>Scegli archivio locale</button>}</section>}
     </main>
   </div>;
 }
