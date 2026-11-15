@@ -7,6 +7,7 @@ import { CoreCli } from './core-cli.ts';
 import { secureSession, secureWindow } from './security.ts';
 import { installProtocol } from './protocol.ts';
 import { ClientLifecycle } from './client-lifecycle.ts';
+import { installActivityStream } from './activity-bridge.ts';
 import { installActivityHistory } from './activity-history.ts';
 import { installProjectActions } from './project-actions.ts';
 import { installLifecycle } from './lifecycle.ts';
@@ -46,6 +47,7 @@ else {
     installActivityHistory(router, archiveContext);
     clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
     archiveContext.onChange(() => clients?.archiveChanged());
+    installActivityStream(router, archiveContext, clients, core?.runtime ?? null);
     window.webContents.once('render-process-gone', () => window?.destroy());
     window.once('closed', () => clients?.dispose());
     window.on('closed', () => { window = null; });
