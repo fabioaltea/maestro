@@ -68,7 +68,7 @@ Esporre importazione/verifica/update/remove esistenti, con snapshot repository i
 - [X] T034 [US3] Implementare form import con riepilogo e azione intenzionale, duplicato che seleziona registrazione esistente e input correggibile in apps/desktop/src/renderer/views/ImportProject.tsx; nessun clone/init/install.
 - [X] T035 [US3] Implementare azione Verifica e presentazione datata di observation/null/errori probe distinti dal salvataggio in apps/desktop/src/renderer/components/ProjectObservation.tsx e apps/desktop/src/renderer/views/ProjectDetail.tsx.
 - [X] T036 [US3] Implementare form nome/base con distinzione invariata/impostata/cancellata e dialog revisione approvata in apps/desktop/src/renderer/views/EditProject.tsx; revision conflict invalida conferma e richiede revisione utente, mai force.
-- [ ] T037 [US3] Implementare Rimuovi dal registro con nome/UUID/revisione, tombstone e conservazione file esplicita in apps/desktop/src/renderer/components/RemoveProjectDialog.tsx; vecchia ricevuta non influenza UUID reimportato.
+- [X] T037 [US3] Implementare Rimuovi dal registro con nome/UUID/revisione, tombstone e conservazione file esplicita in apps/desktop/src/renderer/components/RemoveProjectDialog.tsx; vecchia ricevuta non influenza UUID reimportato.
 - [ ] T038 [US3] Collegare aggiornamenti lista/dettagli e errori sicuri per tutte le azioni senza ottimismo prima esito core in apps/desktop/src/renderer/state/project-actions.ts; invalidare viste/cursori dopo mutazioni e conservare input consentiti.
 - [ ] T039 [US3] Eseguire20sequenze e casi concorrenti/reply loss/doppio invio/permessi negati in apps/desktop/tests/e2e/project-actions.spec.ts; registrare G3/SC-004 con snapshot e parità CLI in specs/003-desktop-core-ui/reports/validation.md.
 
