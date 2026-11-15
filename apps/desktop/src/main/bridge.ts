@@ -27,7 +27,7 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
         { webContentsId: window.webContents.id, frameId: window.webContents.mainFrame.routingId });
       const request = validateRequest(method, input);
       envelope.callId = request.callId;
-      if (request.selectionEpoch !== (context?.selectionEpoch ?? 0)) throw new Error('STALE_CONTEXT');
+      if (method !== 'context' && request.selectionEpoch !== (context?.selectionEpoch ?? 0)) throw new Error('STALE_CONTEXT');
       if (pending >= 8) throw new Error('LOCAL_BUSY');
       pending++; entered = true;
       const handler = handlers.get(method as BridgeMethod);
