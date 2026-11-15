@@ -10,7 +10,16 @@ export function useDesktop() {
     const epoch = current.current?.selectionEpoch ?? 0;
     try {
       const response = await window.maestro[method]({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch, ...params });
-      if (method !== 'chooseArchive' && method !== 'context' && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) return null;
+      if (method !== 'chooseArchive' && method !== 'context' && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) {
+        if ((current.current?.selectionEpoch ?? 0) === epoch && response.selectionEpoch !== epoch) {
+          const latest = await window.maestro.context({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch });
+          if (!latest.error && (current.current?.selectionEpoch ?? 0) === epoch) {
+            const selected = record(latest.result).context as ArchiveView | null;
+            current.current = selected; setContext(selected); setNotice('L’identità dell’archivio è cambiata. Riesamina lo stato aggiornato.');
+          }
+        }
+        return null;
+      }
       if (response.error) { setNotice(response.error.message); return null; }
       if (method === 'context' || method === 'chooseArchive') {
         const data = record(response.result), selected = data.context as ArchiveView | null;

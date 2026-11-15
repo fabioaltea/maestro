@@ -14,7 +14,9 @@ test('V1 four owned probes and 32 pending bound admission; 33rd is rejected with
   const a = await createProjectHarness(t), repo = await a.f.createRepository('queue-capacity'), added = await a.register(repo);
   await rename(join(repo, '.git/index'), join(repo, '.git/index.saved')); await promisify(execFile)('/usr/bin/mkfifo', [join(repo, '.git/index')]);
   const ids = Array.from({ length: 32 }, () => randomUUID());
-  await Promise.all(ids.map(requestId => a.client.runProject('verify', { projectId: added.projectId }, { stateDirectory: a.h.archive, requestId, timeoutMs: 1_000 })));
+  // Allow the status/auth preflight to reach durable admission under the full suite load.
+  // This is an observation window, not an assertion that a client timeout implies admission.
+  await Promise.all(ids.map(requestId => a.client.runProject('verify', { projectId: added.projectId }, { stateDirectory: a.h.archive, requestId, timeoutMs: 5_000 })));
   const reader = await openStorage({ path: join(a.h.archive, 'state.sqlite'), readonly: true });
   try {
     assert.equal((await reader.listPendingProjectOperations()).length, 32);

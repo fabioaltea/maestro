@@ -5,7 +5,7 @@
 
 ## Summary
 
-Prima app Electron locale, React, un archivio e una finestra: consultazione anche offline, lifecycle esplicito, gestione registrazioni e attività. Il main usa esclusivamente la CLI JSON esistente con il Node supportato; il renderer non accede a filesystem, credenziali, SQLite o processi. Nessun codice core, schema, protocollo daemon o orchestratore aggiuntivo pianificato. L'app è eseguibile dal checkout; distribuzione pubblica esclusa.
+Prima app Electron locale, React, un archivio e una finestra: consultazione anche offline, lifecycle esplicito, gestione registrazioni e attività. Il main usa esclusivamente la CLI JSON esistente con il Node supportato; il renderer non accede a filesystem, credenziali, SQLite o processi. Nessun nuovo dominio, schema, protocollo daemon o orchestratore. Correzione circoscritta del reader core emersa in T020, descritta sotto. L'app è eseguibile dal checkout; distribuzione pubblica esclusa.
 
 001 e 002 sono stati integrati in `main` tramite due fast-forward fino a `72381375dcc31b54dcebf05666a0d7b4ab9c8ef3`, senza conflitti, prima della creazione del branch 003. L'integrazione locale è autorizzata dall'utente; non è una dichiarazione di release acceptance. Restano 001/T082, 001/T085 e 002/T093 aperti/BLOCKED.
 
@@ -121,3 +121,7 @@ Al riavvio main rilegge ricevute come indizi, interroga il core per namespace/UU
 ## Complexity Tracking
 
 Nessuna violazione costituzionale. Costi motivati: adapter subprocess per evitare una seconda ABI SQLite e duplicazione IPC; ricevute UI minime perché la query core richiede UUID e il crash del main non deve perderlo. Rifiutati secondo daemon, nuovo RPC, database UI e framework generici anticipati. La ricevuta non autorizza retry e non è stato autorevole del prodotto.
+
+## Adeguamento da verifica T020 — 2026-11-15
+
+Il test con100progetti ha riprodotto OUTPUT_LIMIT a daemon fermo: inspectArchive e diagnosticsData trasferivano tutti i record managed_resources prima del filtro/troncamento. Il reader confinato mantiene il limite64KiB. Si aggiunge una proiezione interna storage listResourceSummaries con soli4campi pubblici, query SQL limitata21 e risultato20+truncated; status richiede solo risorse non rilasciate. listResources completo rimane riservato ai percorsi ownership/recovery esistenti, invariati. Nessun cambio schema/API daemon, aumento buffer o bypass del confinamento. Test dedicato con275risorse e snapshot DB, più ripetizione E2E100progetti e regressione core.

@@ -784,6 +784,12 @@ export class SQLiteStore {
         resource.pid, resource.endpoint, resource.credentialRef, resource.observation, resource.releaseState);
     }, resource.releaseState === 'BLOCKED' ? [{type: 'resource.blocked', instanceId: resource.owningInstanceId, payload: {resourceId: resource.resourceId}}] : []);
   }
+  listResourceSummaries(instanceId: string, options: { readonly unreleasedOnly?: boolean } = {}) {
+    requireUuid(instanceId);
+    if (Object.keys(options).some(key => key !== 'unreleasedOnly') || (options.unreleasedOnly !== undefined && typeof options.unreleasedOnly !== 'boolean')) throw new Error('INVALID_REQUEST');
+    const rows = this.database?.prepare(`SELECT resource_id,kind,observation,release_state FROM managed_resources WHERE owning_instance_id=?${options.unreleasedOnly ? " AND release_state<>'RELEASED'" : ''} ORDER BY resource_id LIMIT 21`).all(instanceId) as Row[] | undefined;
+    return { resources: (rows ?? []).slice(0, 20).map(row => ({ resourceId: String(row.resource_id), kind: row.kind as ManagedResource['kind'], observation: row.observation as ManagedResource['observation'], releaseState: row.release_state as ManagedResource['releaseState'] })), truncated: (rows?.length ?? 0) > 20 };
+  }
   listResources(instanceId: string): readonly ManagedResource[] {
     requireUuid(instanceId);
     const rows = this.database?.prepare('SELECT * FROM managed_resources WHERE owning_instance_id=?').all(instanceId) as Row[] | undefined;

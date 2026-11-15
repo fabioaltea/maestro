@@ -111,6 +111,7 @@ export interface StoragePort extends EventStoragePort, RegistryOperationsPort, R
   transitionInstance(instanceId: string, next: Lifecycle): Promise<void>;
   saveResource(resource: ManagedResource): Promise<void>;
   listResources(instanceId: string): Promise<readonly ManagedResource[]>;
+  listResourceSummaries(instanceId: string, options?: { readonly unreleasedOnly?: boolean }): Promise<{ readonly resources: readonly Pick<ManagedResource, 'resourceId' | 'kind' | 'observation' | 'releaseState'>[]; readonly truncated: boolean }>;
   recordControllerAttempt(attempt: ControllerAttemptRecord): Promise<void>;
   getControllerAttempt(requestId: string): Promise<ControllerAttemptRecord | null>;
   finishControllerAttempt(attemptId: string, endedAt: string, result: string): Promise<void>;

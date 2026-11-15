@@ -6,7 +6,7 @@ import type { StoragePort } from '../ports/storage.js';
 export const methods = ['captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'getProject', 'listProjects', 'commitProjectRegistration', 'commitProjectObservation', 'commitProjectUpdate', 'commitProjectRemoval', 'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
-  'transitionInstance', 'saveResource', 'listResources', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
+  'transitionInstance', 'saveResource', 'listResources', 'listResourceSummaries', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
 export type Method = typeof methods[number];
 interface Request { id: number; method: Method; args: unknown[] }
 
@@ -32,7 +32,7 @@ if (!isMainThread) {
     store = new SQLiteStore(workerData as StorageOptions);
     port.postMessage({ ready: true });
     let queue = Promise.resolve();
-    const reads = new Set<Method>(['readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'getControllerAttempt']);
+    const reads = new Set<Method>(['readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'listResourceSummaries', 'getControllerAttempt']);
     port.on('message', (request: Request) => {
       const execute = async () => {
         if (!Number.isSafeInteger(request.id) || !methods.includes(request.method) || !Array.isArray(request.args)) {
@@ -123,7 +123,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
 
   function call<T>(method: Method, args: unknown[]): Promise<T> {
     if (closing || exited) return Promise.reject(new Error('PERSISTENCE_UNAVAILABLE'));
-    if (failure && !['readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
+    if (failure && !['readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'listResourceSummaries', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
     const id = ++nextId;
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -186,6 +186,7 @@ export function createStorageProxy(call: <T>(method: Method, args: unknown[]) =>
     transitionInstance: (id, state) => call('transitionInstance', [id, state]),
     saveResource: resource => call('saveResource', [resource]),
     listResources: id => call('listResources', [id]),
+    listResourceSummaries: (id, options) => call('listResourceSummaries', [id, options ?? {}]),
     recordControllerAttempt: attempt => call('recordControllerAttempt', [attempt]),
     getControllerAttempt: id => call('getControllerAttempt', [id]),
     finishControllerAttempt: (id, endedAt, result) => call('finishControllerAttempt', [id, endedAt, result]),

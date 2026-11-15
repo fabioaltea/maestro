@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { realpath, access } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import electron from 'electron';
 if (process.version !== 'v26.13.0') throw new Error('RUNTIME_UNAVAILABLE: use Node 26.13.0');
+const electron = await realpath(fileURLToPath(new URL('../node_modules/electron/dist/Electron.app/Contents/MacOS/Electron', import.meta.url))).catch(() => { throw new Error('BUILD_UNAVAILABLE: install the Electron development binary explicitly before launch'); });
 const app = fileURLToPath(new URL('../dist-desktop', import.meta.url));
 await access(`${app}/main/index.js`);
 const env = {};

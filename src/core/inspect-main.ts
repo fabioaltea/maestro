@@ -109,14 +109,16 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
   let snapshot;
   let observability;
   let control: Awaited<ReturnType<typeof observePendingControl>> = {pendingFinalization: false, controllerLiveness: null};
+  let resourceIssuesTruncated = false;
   let resourceIssues: readonly { resourceId: string; kind: string; observation: string; releaseState: string }[] = [];
   try {
     snapshot = await store.readSnapshot();
     observability = await store.getEventState();
     if (snapshot) control = await observePendingControl(snapshot, store, createProcessIdentity());
-    if (snapshot?.instance) resourceIssues = (await store.listResources(snapshot.instance.instanceId))
-      .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
-        kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState }));
+    if (snapshot?.instance) {
+      const page = await store.listResourceSummaries(snapshot.instance.instanceId, { unreleasedOnly: true });
+      resourceIssues = page.resources; resourceIssuesTruncated = page.truncated;
+    }
   }
   finally { await store.close(); }
   if (!snapshot) return absentResult();
@@ -127,7 +129,7 @@ export async function inspectArchive(directory: string): Promise<PublicResult> {
     result: 'OK', outcome: null, freshness: 'LAST_KNOWN',
     liveness: liveness === 'ABSENT' ? 'ABSENT_VERIFIED' : 'UNKNOWN', error: null,
     data: { status: 'PRESENT', lifecycle: instance?.lifecycle ?? null, ready: false, pid: instance?.pid ?? null,
-      observability, resourceIssues, revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation, lastError: instance?.lastError ?? null,
+      observability, resourceIssues, resourceIssuesTruncated, revision: snapshot.store.revision, currentOperation: snapshot.pendingOperation, lastError: instance?.lastError ?? null,
       ...control, pendingFinalization: control.pendingFinalization || (liveness === 'ABSENT' && snapshot.pendingOperation !== null),
       observationError: instance && instance.lifecycle !== 'STOPPED'
         ? foundationError(liveness === 'ABSENT' ? 'DAEMON_ABSENT' : 'RESOURCE_IDENTITY_UNKNOWN', { cause: liveness === 'ABSENT' ? 'PROCESS_EXIT' : 'IDENTITY_UNVERIFIED' }) : null,

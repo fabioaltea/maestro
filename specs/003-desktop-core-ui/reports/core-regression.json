@@ -1,0 +1,11 @@
+{
+  "tests": 368,
+  "pass": 368,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "command": "npm test",
+  "duration_ms": 132289.423416,
+  "date": "2026-11-15",
+  "exitCode": 0
+}
