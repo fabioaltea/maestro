@@ -49,3 +49,31 @@ questa verifica non qualifica runner UID/macchina o campagna IP-denied.
 
 SC-001/002: funzionalità qualificate, campagna30campioni ancora NOT_RUN (T056).
 US2–US4 non ancora implementate. Nessun gate esterno001/002 promosso.
+
+## G2 / US2 — 2026-11-15 — PASS locale
+
+- Conferme:2unitari PASS su TTL60s, owner/frame/epoch/store, immutabilità e
+  consumo monouso; blocchi delle operazioni equivalenti ancora incerte.
+- Pipeline:3integrazioni PASS su ricevuta durevole prima dell'effetto, doppio
+  invio, perdita della risposta, archivio sostituito e scrittura ricevuta fallita
+  senza alcuna chiamata mutativa.
+- Ricevute/recovery:4integrazioni PASS su100ricevute, mode0700/0600, fsync,
+  errori, symlink/corruzione, UUID originale, store diverso e query non trovata
+  mantenuta UNKNOWN. Temporanei da aggiornamento interrotto non nascondono
+  ricevute stabili; nuovi invii bloccati, rimozione solo con dismiss terminale
+  esplicita. Nessun comando viene ripetuto dal recupero.
+- Lifecycle CLI reale:1PASS con start/restart/stop, un ID per azione, chiusura
+  client e daemon superstite. Unit lifecycle1PASS, teardown solo handle posseduti.
+- Bridge Electron reale1PASS con prepare senza effetti, confirm e metadati
+  privati non esposti al renderer. UI visibile:4scenari E2E PASS (3nella campagna
+  lifecycle,1prova di risposta persa separata), compresi annullamento, ricevute,
+  10cicli start/close/reopen/stop, SIGKILL main e recupero originale.
+- SC-003:10/10daemon superstiti; stop massimo1055.2777079999796ms, tutti≤12s.
+  Campioni reali in lifecycle-samples.json; non è una garanzia su altre macchine.
+- Risposta persa reale: fermato soltanto il main Electron posseduto tramite
+  SIGSTOP dopo rilevamento del suo client CLI; daemon completa indipendentemente.
+  SIGKILL main, ricevuta PREPARED originale ancora leggibile, riapertura query-only
+  →TERMINAL/SUCCEEDED e una sola ricevuta. Nessun hook/bypass nel bundle normale.
+
+US3 e US4 ancora da implementare; SC-001/002/005/006/007 campagna finale NOT_RUN.
+Gate esterni001/002 invariati. Nessun push, release o integrazione remota.
