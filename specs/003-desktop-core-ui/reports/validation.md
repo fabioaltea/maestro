@@ -107,3 +107,12 @@ query di recovery e comandi mutativi restano indipendenti. Test ownership1PASS
 con processo reale; contesa locale read prima dello spawn limitata a5tentativi
 e500ms di attesa, test dedicato PASS. Cap2letture/1mutazione invariato.
 Streaming/replay/pressione non ancora qualificati (E2–E4).
+
+### E2 — storia → live (T044–T047)
+
+2026-11-15: unit/contract desktop23 PASS; typecheck/build desktop e guard architettura PASS.
+`activity-live.test.ts`: CLI/core reali, passaggio contiguo dalla pagina storia, nessun duplicato;
+il checkpoint main resta invariato fino all’ACK; chiusura del solo client lascia LIVE_VERIFIED.
+`activity-live.spec.ts`: Electron reale, eventi prodotti da project add visibili, unsubscribe e daemon superstite:1 PASS.
+Prima esecuzione dei due nuovi test: assertion liveness errata (`LIVE` anziché `LIVE_VERIFIED`); corrette le sole assertion, ripetizione PASS.
+E2 qualificato; replay e pressione richiedono ancora E3/E4.
