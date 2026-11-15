@@ -31,6 +31,7 @@ export class ReceiptStore {
   private checkpoint: (point: string) => void;
   private tail: Promise<unknown> = Promise.resolve();
   private pending = 0;
+  private artifacts: string[] = [];
   constructor(directory: string, checkpoint: (point: string) => void = () => {}) { this.directory = directory; this.checkpoint = checkpoint; }
   private async ready() {
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
@@ -50,8 +51,14 @@ export class ReceiptStore {
   }
   private async scan(): Promise<Receipt[]> {
     try {
-      await this.ready(); const records: Receipt[] = [];
+      await this.ready(); const records: Receipt[] = []; this.artifacts = []; let inspected = 0;
       for await (const file of await opendir(this.directory)) {
+        if (++inspected > 201) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+        if (/^\.[a-f0-9-]{36}\.[a-f0-9-]{36}\.tmp$/i.test(file.name)) {
+          const info = await lstat(join(this.directory, file.name));
+          if (!info.isFile() || info.isSymbolicLink() || info.uid !== process.getuid?.() || (info.mode & 0o077) !== 0 || info.size > 4096) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+          this.artifacts.push(file.name); continue;
+        }
         if (records.length >= 100) throw new Error('RECEIPT_LIMIT');
         records.push(await this.read(file.name));
       }
@@ -82,7 +89,7 @@ export class ReceiptStore {
   }
   create(meta: ReceiptMeta): Promise<Receipt> {
     return this.serialize(async () => {
-      const all = await this.scan(); if (all.length >= 100) throw new Error('RECEIPT_LIMIT');
+      const all = await this.scan(); if (this.artifacts.length) throw new Error('RECEIPT_STORAGE_UNAVAILABLE'); if (all.length >= 100) throw new Error('RECEIPT_LIMIT');
       if (all.some(r => r.requestId === meta.requestId)) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
       const now = new Date().toISOString();
       const receipt: Receipt = { ...meta, receiptVersion: 1, createdAt: now, updatedAt: now, phase: 'PREPARED', outcome: null, errorCode: null };
@@ -103,6 +110,7 @@ export class ReceiptStore {
       uuid(id); const receipt = (await this.scan()).find(r => r.requestId === id);
       if (!receipt || receipt.phase !== 'TERMINAL') throw new Error('OPERATION_UNCERTAIN');
       await unlink(join(this.directory, `${id}.json`));
+      for (const name of this.artifacts) if (name.startsWith(`.${id}.`)) await unlink(join(this.directory, name));
       const directory = await open(this.directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
       try { await directory.sync(); } finally { await directory.close(); }
     });
