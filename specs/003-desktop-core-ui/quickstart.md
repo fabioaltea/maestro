@@ -1,12 +1,12 @@
 # Quickstart e validation — Desktop Core UI
 
-Questa è una procedura prevista: la UI e i comandi desktop **non sono ancora implementati**. Non eseguire installazioni o prove lunghe durante la generazione degli artefatti. Core e relativi report restano lo stato di riferimento.
+La prima UI è implementata ed eseguibile dal checkout. I report distinguono test locali, review umana ancora pendente e gate esterni001/002 aperti. Nessuna release pubblica implicita.
 
 ## Prerequisiti
 
-macOS26.3/26.3.1 arm64/APFS, Node26.13.0 e npm11.20.0 già supportati dal checkout, Git Xcode qualificato per002, dipendenze root installate. Prima implementazione: risolvere i pin del research e i tipi React19 nel lockfile; non ricompilare better-sqlite3 per Electron. Nessun provider o account richiesto. Runtime desktop da verificare con G0; se non compatibile risolvere e documentare il blocco, non disabilitare isolamento.
+macOS26.3/26.3.1 arm64/APFS, Node26.13.0 e npm11.20.0 già supportati dal checkout, Git Xcode qualificato per002, dipendenze root installate. Pin root qualificati: Electron45.3.0, React19.3.1, esbuild0.28.2, Playwright1.65.0; tipi React19 nel lockfile unico. Non ricompilare better-sqlite3 per Electron. Nessun provider o account richiesto. G0 qualificato con sandbox attiva. Installare le dipendenze con npm ci; il launcher non installa né scarica. Se manca il binario Electron dopo un’installazione con script disabilitati: node node_modules/electron/install.js, esplicitamente durante setup.
 
-## Comandi pianificati
+## Comandi disponibili
 
 Dalla radice `/Users/fabioaltea/Repository/maestro`:
 
@@ -15,7 +15,7 @@ npm run build
 npm run typecheck
 npm run lint
 npm test
-# Questi verranno aggiunti dall'implementazione003:
+# Desktop separato:
 npm run build:desktop
 npm run typecheck:desktop
 npm run test:desktop:unit
@@ -24,7 +24,7 @@ npm run test:desktop:e2e
 npm run desktop
 ```
 
-`desktop` eseguirà build core/desktop e launcher con Node assoluto corrente; nessun autostart del daemon. Test unit/contract desktop: compilazione Node test separata e runner Node nativo; integrazione Node con CLI reale; e2e tramite Playwright, senza secondo framework orchestratore generico. I test core restano indipendenti da Electron.
+`desktop` esegue build core/desktop e launcher con Node assoluto corrente; nessun autostart del daemon. Test unit/contract desktop: Node test nativo con strip TypeScript; integrazione Node con CLI reale; e2e tramite Playwright, senza secondo framework orchestratore generico. I test core restano indipendenti da Electron.
 
 ## Dati di prova e sicurezza
 
@@ -56,6 +56,27 @@ La metrica eventi misura la porzione locale client/vista tramite una CLI di rife
 
 ## Evidenze e limiti
 
-Creare nell'implementazione `reports/validation.md`, `reports/performance.md`, `reports/release-readiness.md` e campioni JSON/screenshot essenziali, senza segreti. Mappare US/scenari/FR/NFR/SC ai test e agli esiti reali. Test desktop non ancora eseguiti: stato NOT_RUN, mai PASS per checklist documentale.
+Creare nell'implementazione `reports/validation.md`, `reports/performance.md`, `reports/release-readiness.md` e campioni JSON/screenshot essenziali, senza segreti. Mappare US/scenari/FR/NFR/SC ai test e agli esiti reali. Test eseguiti e misure nei report. Review umana/picker reale ancora NOT_RUN: seguire reports/manual-review.md. SC-006 non completamente qualificato.
 
 Regressione build/typecheck/lint/npm test core obbligatoria; contratti/integrazione separati se tocchi invarianti relativi. Non rilanciare benchmark600s o suite accettazione completa senza cambi o dubbi che li giustifichino. I blocchi001/T082,001/T085,002/T093 restano citati come gate di release a parte; test con mock, runner locale o rete normale non li chiudono. App da checkout non equivale a installer/distribuzione pubblica.
+
+## Uso quotidiano e recovery
+
+Avviare npm run desktop dalla radice. Scegliere un archivio; Nuovo archivio sceglie
+soltanto contenitore/nome senza crearlo. Avviare esplicitamente in Servizio con
+riepilogo/conferma. Alla riapertura selezionare di nuovo l’archivio. Progetti e storia
+sono leggibili offline; modifiche non accodate. Ogni osservazione è datata.
+
+Importare soltanto repository locali esistenti; modifiche nome/base e rimozione
+sono confermate sulla revisione corrente. Rimuovi dal registro conserva i file.
+Il core verifica precondizioni/CAS, senza forzature UI.
+
+Ricevute UI private sotto userData/operation-receipts,0700/0600, massimo100file da4KiB.
+Dopo crash/UNKNOWN interrogare UUID originale in Operazioni; non trovato non prova
+assenza di effetto. Nessun replay del payload. Dismiss soltanto terminali riconciliate;
+store differente blocca riconciliazione. Log privati limitati2MiB×2 con soli metadati.
+
+Attività: applicare tutte le pagine disponibili, poi Segui attività. Stream interrotto
+→ Riconnetti esplicito dal checkpoint ACK; gap → Rileggi stato e storia. FIFO500/4MiB
+esplicita eventi rimossi dalla vista. Nuova app non promette continuità del cursore.
+Chiudere finestra/stream non arresta il daemon.

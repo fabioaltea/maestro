@@ -184,3 +184,10 @@ aggiornati; review umana ancora NOT_RUN. Campioni prodotti dai test core copiati
 sotto003/core-regression-samples; report002 ripristinati ai byte precedenti.
 Core senza UI qualificato da npm test e dal guard degli import; nessun Electron
 caricato dal runtime headless. I gate di release001/002 restano invariati.
+
+### T058 — documentazione disponibile
+
+README/quickstart: avvio dalla radice, Node esterno, setup Electron esplicito,
+nessun autostart, offline/confirm/receipt/reconnect e limiti. AGENTS aggiornato solo
+nelle parti generate; manual block confrontato byte per byte con baselinea890860,
+invariato. Link locali verificati. Nessun installer o promessa di release aggiunta.

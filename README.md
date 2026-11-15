@@ -1,7 +1,7 @@
-# Maestro local core
+# Maestro
 
-Headless local daemon and CLI with durable lifecycle, a project registry and
-bounded replayable events. CLI clients can disconnect without stopping accepted
+Local headless daemon, CLI and first Electron desktop client, with durable lifecycle,
+a project registry and bounded replayable events. CLI clients can disconnect without stopping accepted
 work. The current implementation is qualified on macOS 26.3 arm64/APFS, Node
 26.13.0, TypeScript 6.0.3 and better-sqlite3 13.0.3. Other platforms are not qualified.
 
@@ -18,6 +18,47 @@ node dist/cli/main.js project --help
 
 Run commands from the repository root (or use an absolute path to the compiled
 entrypoint). A relative `dist/cli/main.js` from your home directory points elsewhere.
+
+## Desktop dal checkout
+
+Dalla radice del repository, con Node26.13.0 e dipendenze root installate:
+
+```sh
+cd /Users/fabioaltea/Repository/maestro
+npm ci
+npm run desktop
+```
+
+Il comando compila core e UI e avvia Electron con il Node esterno corrente verificato.
+Non avvia il daemon. Scegli un archivio locale; per inizializzarlo/avviarlo usa
+**Servizio → Avvia servizio → Conferma**. Chiudere l’app lascia attivo il daemon.
+Alla riapertura scegli nuovamente l’archivio; non si conserva una selezione implicita.
+
+La UI espone progetti live/offline, importazione di repository esistenti, verifica,
+nome/base, rimozione della sola registrazione, lifecycle, operazioni e attività.
+Non contiene provider, agenti, terminale, gestione worktree o workflow futuro.
+Le osservazioni Git restano datate anche quando il registro è live.
+
+Conferme monouso precedono ogni mutazione. Ricevute private conservano l’UUID originale
+prima dell’invio: dopo crash/timeout usa **Operazioni → Aggiorna esito**, senza reinvio.
+Un’operazione non trovata resta incerta. Sono rimovibili soltanto ricevute terminali;
+limite100. Le ricevute non sono comandi accodati. La rimozione dal registro conserva
+repository e file. Offline si legge; non si accodano scritture.
+
+**Attività** legge la storia disponibile. Segui attività apre un solo client;
+Riconnetti riprende esplicitamente dal cursore confermato. Un gap richiede Rileggi
+stato e storia; il cursore non è conservato fra aperture dell’app. Limiti e test
+funzionali proteggono il client; benchmark di volume/durata rinviati per questa UI.
+
+Electron è una dipendenza di sviluppo root. Se l’installazione ha saltato il suo
+script e manca il binario, installarlo esplicitamente in fase di setup con
+`node node_modules/electron/install.js`; il launcher non scarica nulla. Non ricompilare
+better-sqlite3 per Electron: SQLite è usato soltanto dalla CLI con Node26 esterno.
+Questa versione si esegue dal checkout; non è un installer firmato/notarizzato.
+
+Vedi [quickstart UI](specs/003-desktop-core-ui/quickstart.md),
+[evidenze e limiti](specs/003-desktop-core-ui/reports/validation.md) e
+[review manuale da completare](specs/003-desktop-core-ui/reports/manual-review.md).
 
 ## Local lifecycle
 
@@ -106,6 +147,13 @@ npm run test:contract
 npm run test:integration
 npm run test:acceptance
 npm run bench:foundation
+
+# Desktop: suite separate; il core si verifica senza Electron
+npm run typecheck:desktop
+npm run build:desktop
+npm run test:desktop:unit
+npm run test:desktop:integration
+npm run test:desktop:e2e
 ```
 
 Ordinary tests exclude acceptance. Acceptance includes a real ten-minute idle test;
@@ -117,8 +165,9 @@ errors are in [performance](specs/002-project-registry/reports/performance.md).
 All four user stories and E1/E2/E3 have separate evidence in
 [002 reports](specs/002-project-registry/reports/), with bounded-pressure and final
 acceptance status recorded separately. Provider integrations, Agent Runtime,
-Discovery approval, Git/worktree management, dependency execution and Electron
-are future scope. No registration declares a project ready or approves future work.
+Discovery approval, Git/worktree management and dependency execution
+are future scope. The first Electron client is feature003, with its own evidence
+and pending human review. No registration declares a project ready or approves future work.
 See [quickstart](specs/002-project-registry/quickstart.md),
 [contracts](specs/002-project-registry/contracts/) and
 [real local-access runner](tests/fixtures/multi-user-runner.md).

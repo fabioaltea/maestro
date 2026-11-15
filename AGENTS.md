@@ -1,21 +1,23 @@
 # maestro Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-11-11
+Auto-generated from all feature plans. Last updated: 2026-11-15
 
 ## Active Technologies
 
-- 003-desktop-core-ui (pianificato, non implementato): Electron 45.3.0, React/react-dom 19.3.1, esbuild 0.28.2 e Playwright 1.65.0; TypeScript 6.0.3. Main Electron Node24 ESM, preload CJS sandboxed e renderer browser; CLI core tramite Node26.13.0 esterno. Pin e compatibilità da qualificare nel gate G0.
+- 003-desktop-core-ui (implementato, review umana pendente): Electron 45.3.0, React/react-dom 19.3.1, esbuild 0.28.2 e Playwright 1.65.0; TypeScript 6.0.3. Main Electron Node24 ESM, preload CJS sandboxed e renderer browser; CLI core tramite Node26.13.0 esterno. Pin/compatibilità qualificati con sandbox in G0.
 - Ricevute UI private e bounded per query originali dopo crash; nessuna modifica schema3, replica registro o nuovo daemon. Consultare specs/003-desktop-core-ui/{spec,plan,research,data-model,quickstart}.md e contracts prima dell’implementazione desktop.
 
 - TypeScript 6.0.3 strict, Node.js 26.13.0 LTS, ESM/NodeNext; better-sqlite3 13.0.3; API native Node (001-core-background-daemon).
 - SQLite locale con WAL e synchronous FULL; lease separati; schema 3 con outbox e journal eventi bounded.
-- 002-project-registry (implementazione in corso): Git Xcode 2.50.1 (Apple Git-155) verificato tramite xcrun; adapter macOS di ispezione confinata qualificato G1. Schema 3 e upgrade esclusivo implementati nello stesso store. Letture SQLite native in processo transitorio confinato; writer nel worker esistente. Nessuna dipendenza runtime aggiunta.
+- 002-project-registry (implementato, readiness globale BLOCKED): Git Xcode 2.50.1 (Apple Git-155) verificato tramite xcrun; adapter macOS di ispezione confinata qualificato G1. Schema 3 e upgrade esclusivo implementati nello stesso store. Letture SQLite native in processo transitorio confinato; writer nel worker esistente. Nessuna dipendenza runtime aggiunta.
 
 ## Project Structure
 
 ```text
 src/
 tests/
+apps/desktop/src/{main,preload,shared,renderer}/
+apps/desktop/tests/{unit,contract,integration,e2e}/
 ```
 
 ## Commands
@@ -33,6 +35,12 @@ npm run test:contract
 npm run test:integration
 npm run test:acceptance
 npm run bench:foundation
+npm run desktop
+npm run typecheck:desktop
+npm run build:desktop
+npm run test:desktop:unit
+npm run test:desktop:integration
+npm run test:desktop:e2e
 ```
 
 ## Code Style
@@ -41,7 +49,7 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 003: prodotti specifica, piano e task della prima UI sul core integrato localmente in main; nessun codice desktop implementato. I gate aperti001/002 restano invariati.
+- 003: prima UI locale sul core001/002; CLI con Node26 esterno, conferme/ricevute, progetti live/offline e attività. G0–G4 qualificati localmente; T054 review umana/picker nativo ancora NOT_RUN. Benchmark eventi di volume/durata rinviati dall’utente2026-11-15; non ricrearli come gate MVP. Gate001/002 invariati. Consultare specs/003-desktop-core-ui/reports/.
 
 - Stato finale 002: 95/96 task completati, T093 aperto/BLOCKED; review T096 conclusa
   con readiness BLOCKED. Non promuovere failure/skip esterni a PASS.
