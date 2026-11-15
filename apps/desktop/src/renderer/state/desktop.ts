@@ -10,7 +10,7 @@ export function useDesktop() {
     const epoch = current.current?.selectionEpoch ?? 0;
     try {
       const response = await window.maestro[method]({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch, ...params });
-      if (method !== 'chooseArchive' && method !== 'context' && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) {
+      if (!['chooseArchive', 'selectReceiptArchive', 'context'].includes(method) && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) {
         if ((current.current?.selectionEpoch ?? 0) === epoch && response.selectionEpoch !== epoch) {
           const latest = await window.maestro.context({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch });
           if (!latest.error && (current.current?.selectionEpoch ?? 0) === epoch) {
@@ -21,7 +21,7 @@ export function useDesktop() {
         return null;
       }
       if (response.error) { setNotice(response.error.message); return null; }
-      if (method === 'context' || method === 'chooseArchive') {
+      if (method === 'context' || method === 'chooseArchive' || method === 'selectReceiptArchive') {
         const data = record(response.result), selected = data.context as ArchiveView | null;
         current.current = selected; setContext(selected);
         if (method === 'context') { setRuntimeReady(data.runtimeReady === true); if (data.error) setNotice(String(record(data.error).message)); }

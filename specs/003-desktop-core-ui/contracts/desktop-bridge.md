@@ -21,6 +21,7 @@ API esposta `window.maestro`:
 | cancelAction | confirmationId | invalidazione, nessun invio |
 | reconcileOperation | receiptId:UUID | query su archivio/namespace originali, mai re-execute |
 | listReceipts | nessuno | lista limitata per archivio e indicatori altri archivi; senza percorsi/intent secret |
+| selectReceiptArchive | receiptId:UUID | selezione del percorso privato originale dopo conferma nativa; nessun effetto core |
 | dismissReceipt | receiptId:UUID | solo terminale riconciliata; unresolved sempre respinta |
 | readEvents | after?:opaque, limit?:1..100 | storia core, proiezione limitata |
 | startEvents | afterApplied?:opaque | un stream scoped, nessun retry automatico |

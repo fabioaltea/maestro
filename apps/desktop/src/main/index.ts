@@ -6,6 +6,7 @@ import { validateRuntime } from './runtime.ts';
 import { CoreCli } from './core-cli.ts';
 import { secureSession, secureWindow } from './security.ts';
 import { installProtocol } from './protocol.ts';
+import { installLifecycle } from './lifecycle.ts';
 import { installReads } from './read-handlers.ts';
 import { installBridge } from './bridge.ts';
 app.setName('Maestro');
@@ -31,8 +32,12 @@ else {
     const router = installBridge(window, { core, runtimeError, log: new SafeLog(join(app.getPath('userData'), 'logs')), dialogs: { async chooseDirectory(title) {
       const result = await dialog.showOpenDialog(window!, { title, properties: ['openDirectory', 'createDirectory'] });
       return result.canceled ? null : result.filePaths[0] ?? null;
+    }, async confirmSelection(message, detail) {
+      const response = await dialog.showMessageBox(window!, { type: 'question', message, detail, buttons: ['Apri archivio', 'Annulla'], defaultId: 1, cancelId: 1 });
+      return response.response === 0;
     } } });
-    installReads(router);
+    const archiveContext = installReads(router);
+    installLifecycle(router, archiveContext, app.getPath('userData'));
     window.on('closed', () => { window = null; });
     await window.loadURL('maestro://app/index.html');
   }).catch(() => { console.error('Desktop startup unavailable.'); app.quit(); });

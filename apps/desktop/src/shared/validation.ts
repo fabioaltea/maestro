@@ -1,3 +1,4 @@
+import { CORE_ERRORS } from './core-errors.ts';
 import { METHODS } from './bridge-contract.ts';
 import type { BridgeRequest, Params } from './bridge-contract.ts';
 export function record(value: unknown): Params {
@@ -38,7 +39,7 @@ export function validateAction(action: unknown, input: unknown): Params {
 }
 const extras: Record<string, readonly string[]> = {
   chooseArchive: ['newArchiveName'], listProjects: ['cursor', 'limit'], getProject: ['projectId'], prepareAction: ['action', 'params'],
-  confirmAction: ['confirmationId'], cancelAction: ['confirmationId'], reconcileOperation: ['receiptId'], dismissReceipt: ['receiptId'],
+  confirmAction: ['confirmationId'], cancelAction: ['confirmationId'], reconcileOperation: ['receiptId'], dismissReceipt: ['receiptId'], selectReceiptArchive: ['receiptId'],
   readEvents: ['after', 'limit'], startEvents: ['afterApplied'], stopEvents: ['subscriptionId'], ackEvents: ['subscriptionId', 'batchId', 'lastAppliedSeq'],
 };
 export function validateRequest(method: string, input: unknown): BridgeRequest {
@@ -71,6 +72,7 @@ export function safeError(code: string) {
     RECEIPT_STORAGE_UNAVAILABLE: 'Impossibile conservare l’identità dell’operazione.', RECEIPT_LIMIT: 'Archivio ricevute pieno. Rivedi gli esiti terminali.',
     OPERATION_UNCERTAIN: 'Esito incerto. Interroga l’operazione originale.', STREAM_SATURATED: 'Vista attività satura. Riconnetti esplicitamente.', STREAM_GAP: 'Continuità degli eventi interrotta.',
   };
+  if (Object.hasOwn(CORE_ERRORS, code)) return CORE_ERRORS[code as keyof typeof CORE_ERRORS];
   const valid = Object.hasOwn(messages, code) ? code : 'CLIENT_PROTOCOL_ERROR';
   return { code: valid, message: messages[valid]!, nextAction: 'Aggiorna lo stato o consulta la diagnostica.' };
 }
