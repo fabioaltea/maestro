@@ -19,12 +19,14 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
   };
   handlers.set('context', () => ({ context, runtimeReady: services.core !== null, error: services.runtimeError ? safeError(services.runtimeError) : null }));
   ipcMain.handle(CHANNEL, async (event, method: unknown, input: unknown): Promise<BridgeResponse> => {
-    const envelope = { bridgeVersion: 1 as const, callId: '', selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null, result: null as unknown, error: null as BridgeResponse['error'] };
-    let entered = false;
+    const envelope = { bridgeVersion: 1 as const, callId: '', selectionEpoch: 0, archiveHandle: null as string | null, storeId: null as string | null, result: null as unknown, error: null as BridgeResponse['error'] };
+    let entered = false, authorized = false;
     try {
       if (window.isDestroyed() || !event.senderFrame || typeof method !== 'string') throw new Error('INVALID_INPUT');
       validateSender({ webContentsId: event.sender.id, frameId: event.senderFrame.routingId, mainFrame: event.senderFrame === window.webContents.mainFrame, url: event.senderFrame.url },
         { webContentsId: window.webContents.id, frameId: window.webContents.mainFrame.routingId });
+      authorized = true;
+      Object.assign(envelope, { selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null });
       const request = validateRequest(method, input);
       envelope.callId = request.callId;
       if (method !== 'context' && request.selectionEpoch !== (context?.selectionEpoch ?? 0)) throw new Error('STALE_CONTEXT');
@@ -36,7 +38,7 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
       void services.log?.write({ code: 'OK', action: method, requestId: request.callId }).catch(() => undefined);
       return { ...envelope, selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null, result };
     } catch (error) {
-      return { ...envelope, error: safeError(error instanceof Error ? error.message : 'CLIENT_PROTOCOL_ERROR') };
+      return { ...envelope, ...(authorized ? { selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null } : {}), error: safeError(error instanceof Error ? error.message : 'CLIENT_PROTOCOL_ERROR') };
     } finally { if (entered) pending--; }
   });
   window.once('closed', () => ipcMain.removeHandler(CHANNEL));

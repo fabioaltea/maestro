@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop } from '../fixtures/electron.ts';
+import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
 test('renderer has only named methods and cannot execute or navigate arbitrary content', async () => {
   const f = await createScratch();
   try {
@@ -24,8 +24,10 @@ test('renderer has only named methods and cannot execute or navigate arbitrary c
 test('another real sandboxed window cannot invoke the owning window bridge', async () => {
   const f = await createScratch();
   try {
-    const { app } = await launchDesktop(f);
+    const { app, page } = await launchDesktop(f);
     try {
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      await expect(page.getByText('Servizio fermo', { exact: true })).toBeVisible();
       const result = await app.evaluate(async ({ app, BrowserWindow }) => {
         const foreign = new BrowserWindow({ show: false, webPreferences: { preload: `${app.getAppPath()}/preload/index.cjs`, contextIsolation: true, sandbox: true, nodeIntegration: false } });
         try {
@@ -33,7 +35,7 @@ test('another real sandboxed window cannot invoke the owning window bridge', asy
           return await foreign.webContents.executeJavaScript('window.maestro.context({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:0})');
         } finally { foreign.destroy(); }
       });
-      expect(result.error.code).toBe('INVALID_INPUT');
+      expect(result.error.code).toBe('INVALID_INPUT'); expect(result.archiveHandle).toBeNull(); expect(result.storeId).toBeNull();
     } finally { await app.close(); }
   } finally { await f.cleanup(); }
 });

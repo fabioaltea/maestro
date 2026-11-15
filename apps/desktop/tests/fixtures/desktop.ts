@@ -45,7 +45,28 @@ export async function createScratch() {
   }
   async function cleanup() {
     if (await readFile(join(directory, '.owner'), 'utf8') !== owner) throw new Error('UNOWNED_FIXTURE');
-    try { await cli(['daemon', 'stop']); } catch { /* An archive absent or already stopped needs no stop. */ }
+    const initialized = await lstat(join(archive, 'state.sqlite')).then(info => info.isFile(), error => { if (error.code === 'ENOENT') return false; throw error; });
+    if (initialized) {
+      const stopped = await cli(['daemon', 'stop']);
+      if (stopped.result.outcome !== 'SUCCEEDED') throw new Error('Fixture stop not verified; preserving owned archive');
+      const { openStorage } = await import(join(repositoryRoot, 'dist/storage/worker.js'));
+      const { createProcessIdentity } = await import(join(repositoryRoot, 'dist/platform/macos/process-identity.js'));
+      const store = await openStorage({ path: join(archive, 'state.sqlite'), readonly: true });
+      const attempt = await store.getControllerAttempt(stopped.result.requestId); await store.close();
+      if (attempt) {
+        const identity = createProcessIdentity(), deadline = performance.now() + 2000;
+        while (await identity.probeAbsent(attempt.pid) !== 'ABSENT') {
+          if (performance.now() >= deadline) throw new Error('Fixture controller still present; preserving archive');
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      }
+    }
+    const runtime = `/private/tmp/m-${process.getuid!()}-${createHash('sha256').update(archive).digest('hex').slice(0, 16)}`;
+    try {
+      const info = await lstat(runtime), marker = JSON.parse(await readFile(join(runtime, 'archive.json'), 'utf8'));
+      if (!info.isDirectory() || info.isSymbolicLink() || info.uid !== process.getuid!() || marker.directory !== archive) throw new Error('Unowned runtime; preserve fixture');
+      await rm(runtime, { recursive: true });
+    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     await rm(directory, { recursive: true });
   }
   return { directory, archive, userData, cli, repository, snapshot, cleanup };

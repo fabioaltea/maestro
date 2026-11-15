@@ -95,5 +95,5 @@ export class CoreCli {
     } catch (error) { if (mutation) return unknownResult(command.requestId!); throw error; }
     finally { if (mutation) this.mutations--; else this.reads--; }
   }
-  close() { this.closed = true; for (const child of this.children) child.kill('SIGTERM'); }
+  close() { if (this.closed) return; this.closed = true; for (const child of this.children) if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM'); }
 }

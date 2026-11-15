@@ -27,6 +27,7 @@ export class Confirmations {
     if (!token || token.expiresAt <= this.now() || token.scope !== canonical(scope)) throw new Error('CONFIRMATION_EXPIRED');
     return { command: structuredClone(token.command), requestId: token.requestId, intentHash: token.intentHash };
   }
+  clear() { this.tokens.clear(); }
   cancel(id: string) { uuid(id); this.tokens.delete(id); }
 }
 interface ReceiptScope { archivePath: string; namespace: string; action: string; projectId: string | null; phase: string; outcome: string | null }

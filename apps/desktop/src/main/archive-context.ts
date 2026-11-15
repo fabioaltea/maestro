@@ -5,6 +5,9 @@ import type { ArchiveView, PublicResult } from '../shared/bridge-contract.ts';
 export interface ArchiveSelection { path: string; view: ArchiveView }
 export class ArchiveContext {
   private epoch = 0;
+  private listeners = new Set<() => void>();
+  onChange(listener: () => void) { if (this.listeners.size >= 16) throw new Error('LOCAL_BUSY'); this.listeners.add(listener); return () => this.listeners.delete(listener); }
+  private changed() { for (const listener of this.listeners) listener(); }
   private selection: ArchiveSelection | null = null;
   get current() { return this.selection; }
   async select(path: string): Promise<ArchiveSelection> {
@@ -19,7 +22,7 @@ export class ArchiveContext {
       canonical = join(await realpath(dirname(path)), basename(path));
     }
     this.selection = { path: canonical, view: { selectionEpoch: ++this.epoch, archiveHandle: randomUUID(), storeId: null, displayPath: canonical } };
-    return this.selection;
+    this.changed(); return this.selection;
   }
   capture(): ArchiveSelection {
     if (!this.selection) throw new Error('STALE_CONTEXT');
@@ -29,7 +32,7 @@ export class ArchiveContext {
     if (!this.selection || captured.view.selectionEpoch !== this.selection.view.selectionEpoch) throw new Error('STALE_CONTEXT');
     if (this.selection.view.storeId && result.storeId && this.selection.view.storeId !== result.storeId) {
       this.selection = { path: this.selection.path, view: { ...this.selection.view, selectionEpoch: ++this.epoch, archiveHandle: randomUUID(), storeId: result.storeId } };
-      throw new Error('STALE_CONTEXT');
+      this.changed(); throw new Error('STALE_CONTEXT');
     }
     if (result.storeId) this.selection.view.storeId = result.storeId;
   }

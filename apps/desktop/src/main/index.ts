@@ -6,6 +6,7 @@ import { validateRuntime } from './runtime.ts';
 import { CoreCli } from './core-cli.ts';
 import { secureSession, secureWindow } from './security.ts';
 import { installProtocol } from './protocol.ts';
+import { ClientLifecycle } from './client-lifecycle.ts';
 import { installLifecycle } from './lifecycle.ts';
 import { installReads } from './read-handlers.ts';
 import { installBridge } from './bridge.ts';
@@ -15,11 +16,12 @@ if (data && isAbsolute(data)) app.setPath('userData', data);
 protocol.registerSchemesAsPrivileged([{ scheme: 'maestro', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }]);
 let window: BrowserWindow | null = null;
 let core: CoreCli | null = null;
+let clients: ClientLifecycle | null = null;
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { window?.show(); window?.focus(); });
   app.on('window-all-closed', () => app.quit());
-  app.on('before-quit', () => core?.close());
+  app.on('before-quit', () => { clients?.dispose(); core?.close(); });
   void app.whenReady().then(async () => {
     let runtimeError: string | null = null;
     try { core = new CoreCli(await validateRuntime(process.env.MAESTRO_NODE_BINARY ?? '', fileURLToPath(new URL('../../dist/cli/main.js', import.meta.url)))); }
@@ -37,7 +39,11 @@ else {
       return response.response === 0;
     } } });
     const archiveContext = installReads(router);
-    installLifecycle(router, archiveContext, app.getPath('userData'));
+    const lifecycle = installLifecycle(router, archiveContext, app.getPath('userData'));
+    clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
+    archiveContext.onChange(() => clients?.archiveChanged());
+    window.webContents.once('render-process-gone', () => window?.destroy());
+    window.once('closed', () => clients?.dispose());
     window.on('closed', () => { window = null; });
     await window.loadURL('maestro://app/index.html');
   }).catch(() => { console.error('Desktop startup unavailable.'); app.quit(); });
