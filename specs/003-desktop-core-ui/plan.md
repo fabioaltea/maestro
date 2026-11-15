@@ -125,3 +125,7 @@ Nessuna violazione costituzionale. Costi motivati: adapter subprocess per evitar
 ## Adeguamento da verifica T020 — 2026-11-15
 
 Il test con100progetti ha riprodotto OUTPUT_LIMIT a daemon fermo: inspectArchive e diagnosticsData trasferivano tutti i record managed_resources prima del filtro/troncamento. Il reader confinato mantiene il limite64KiB. Si aggiunge una proiezione interna storage listResourceSummaries con soli4campi pubblici, query SQL limitata21 e risultato20+truncated; status richiede solo risorse non rilasciate. listResources completo rimane riservato ai percorsi ownership/recovery esistenti, invariati. Nessun cambio schema/API daemon, aumento buffer o bypass del confinamento. Test dedicato con275risorse e snapshot DB, più ripetizione E2E100progetti e regressione core.
+
+## Adeguamento qualifica eventi — 2026-11-15
+
+L’utente ha richiesto di ridurre la verifica al necessario per la prima UI. G4 conserva E1–E4, un campione di10operazioni CLI reali e prove bounded su ordine, duplicati, recovery, gap, ACK2s, backlog256KiB e FIFO500/4MiB. SC-005 aggiornato: nessuna campagna100eventi/s per10min o1000campioni obbligatoria. Non si aggiunge un produttore eventi alla distribuzione/test ordinari. Campagne prolungate rinviate; le prove interrotte/fallite restano dichiarate e non dimostrano stabilità di lungo periodo.

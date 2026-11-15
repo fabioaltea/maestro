@@ -1,0 +1,139 @@
+{
+  "measuredAt": "2026-11-15T17:46:10.099Z",
+  "source": "real core CLI, independent reference pipe; signed deltas include observer scheduling uncertainty",
+  "registrations": 10,
+  "durationMs": 11219,
+  "events": 20,
+  "p95Ms": 3,
+  "maxMs": 3,
+  "samples": [
+    {
+      "seq": "6",
+      "availableAt": 1794764759122,
+      "visibleAt": 1794764759124,
+      "signedLatencyMs": 2
+    },
+    {
+      "seq": "7",
+      "availableAt": 1794764759783,
+      "visibleAt": 1794764759785,
+      "signedLatencyMs": 2
+    },
+    {
+      "seq": "8",
+      "availableAt": 1794764760190,
+      "visibleAt": 1794764760191,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "9",
+      "availableAt": 1794764760849,
+      "visibleAt": 1794764760851,
+      "signedLatencyMs": 2
+    },
+    {
+      "seq": "10",
+      "availableAt": 1794764761307,
+      "visibleAt": 1794764761308,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "11",
+      "availableAt": 1794764761917,
+      "visibleAt": 1794764761918,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "12",
+      "availableAt": 1794764762374,
+      "visibleAt": 1794764762375,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "13",
+      "availableAt": 1794764763085,
+      "visibleAt": 1794764763086,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "14",
+      "availableAt": 1794764763540,
+      "visibleAt": 1794764763542,
+      "signedLatencyMs": 2
+    },
+    {
+      "seq": "15",
+      "availableAt": 1794764764456,
+      "visibleAt": 1794764764459,
+      "signedLatencyMs": 3
+    },
+    {
+      "seq": "16",
+      "availableAt": 1794764764659,
+      "visibleAt": 1794764764660,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "17",
+      "availableAt": 1794764765525,
+      "visibleAt": 1794764765527,
+      "signedLatencyMs": 2
+    },
+    {
+      "seq": "18",
+      "availableAt": 1794764765780,
+      "visibleAt": 1794764765781,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "19",
+      "availableAt": 1794764766493,
+      "visibleAt": 1794764766495,
+      "signedLatencyMs": 2
+    },
+    {
+      "seq": "20",
+      "availableAt": 1794764767005,
+      "visibleAt": 1794764767007,
+      "signedLatencyMs": 2
+    },
+    {
+      "seq": "21",
+      "availableAt": 1794764767822,
+      "visibleAt": 1794764767825,
+      "signedLatencyMs": 3
+    },
+    {
+      "seq": "22",
+      "availableAt": 1794764768124,
+      "visibleAt": 1794764768125,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "23",
+      "availableAt": 1794764768788,
+      "visibleAt": 1794764768789,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "24",
+      "availableAt": 1794764769201,
+      "visibleAt": 1794764769202,
+      "signedLatencyMs": 1
+    },
+    {
+      "seq": "25",
+      "availableAt": 1794764769858,
+      "visibleAt": 1794764769860,
+      "signedLatencyMs": 2
+    }
+  ],
+  "environment": {
+    "os": "macOS26.3.1",
+    "arch": "arm64",
+    "filesystem": "APFS",
+    "node": "26.13.0",
+    "electron": "45.3.0",
+    "react": "19.3.1"
+  }
+}

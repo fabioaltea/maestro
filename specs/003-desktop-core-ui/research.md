@@ -59,3 +59,7 @@ Fonti: [Electron security](https://www.electronjs.org/docs/latest/tutorial/secur
 **Rationale**: Nessun nuovo orchestratore di test. Dialoghi nativi tramite adapter sostituibile solo nell'harness test esterno alla build normale; picker reale anche in review manuale. Le prove IP-denied e UID/macchina reali restano separate: i blocchi attuali non sono risolti da Electron o da mock.
 
 Fonti: [Playwright Electron](https://playwright.dev/docs/api/class-electron), [Electron native modules](https://www.electronjs.org/docs/latest/tutorial/using-native-node-modules).
+
+### R5 — revisione autorizzata2026-11-15
+
+Il brief richiede osservabilità, senza volume minimo. Per la prima UI il carico100eventi/s per10min è sproporzionato: l’utente ne ha autorizzato il rinvio. Si conserva la gestione bounded e si qualifica il flusso reale con10operazioni, più fault mirati; nessun nuovo generatore/harness di distribuzione nella feature.

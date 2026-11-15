@@ -89,7 +89,7 @@ Consegnare quattro incrementi separati E1→E2→E3→E4. Independent test: oper
 - [X] T050 [US4] E3: eseguire replay reale e gap con storia scaduta in apps/desktop/tests/e2e/activity-replay.spec.ts; registrare checkpoint E3 in specs/003-desktop-core-ui/reports/validation.md.
 - [X] T051 [P] [US4] E4: scrivere pressione reale/simulata, backlog256KiB, ACK2s mancante/errato, FIFO500/4MiB e client shutdown in apps/desktop/tests/integration/activity-pressure.test.ts; nessuna crescita illimitata o terminazione daemon.
 - [X] T052 [US4] E4: completare pause stdout, watchdog ACK, gestione saturazione e chiusura del solo stream owned in apps/desktop/src/main/activity-pressure.ts e apps/desktop/src/main/activity-stream.ts; esporre DISCONNECTED/GAP/SATURATED e ultimo cursor applicato.
-- [ ] T053 [US4] E4: eseguire carico client100eventi/s per10min,1000campioni latenza e carico reale core separato in apps/desktop/tests/e2e/activity-pressure.spec.ts; registrare SC-005/G4 e raw campioni in specs/003-desktop-core-ui/reports/performance.md senza attribuire throughput fixture al core.
+- [X] T053 [US4] E4: qualificare almeno10operazioni CLI reali, eventi ordinati/visibili, navigabilità e limiti/ACK già coperti dai test bounded in apps/desktop/tests/e2e/activity-pressure.spec.ts; registrare SC-005/G4 e campioni in specs/003-desktop-core-ui/reports/performance.md. Su richiesta utente2026-11-15, benchmark1000eventi e100eventi/s per10min rinviati; non sono gate della prima UI e non sono PASS.
 
 ## Phase 7: Polish e review trasversale
 

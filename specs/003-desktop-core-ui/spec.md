@@ -131,7 +131,7 @@ Come sviluppatore consulto diagnostica ed eventi recenti, seguo le nuove attivit
 - **SC-002**: In 30 consultazioni per modalità, il dettaglio è utilizzabile entro 1 s al p95 con servizio attivo ed entro 2 s al p95 a servizio fermo; freschezza e dati sconosciuti sono corretti nel 100% dei casi campionati.
 - **SC-003**: In 10 cicli avvio/chiusura/riapertura/arresto, il daemon sopravvive sempre alla chiusura UI; arresto esplicito termina o mostra blocco/incertezza entro 12 s, senza dichiarare falsi successi.
 - **SC-004**: In 20 sequenze import/verifica/modifica/rimozione, registro e CLI concordano; snapshot repository invariati nel 100% dei casi, inclusi dirty/conflitti. Doppio invio, revisione obsoleta e risposta persa non causano effetti duplicati nei relativi test.
-- **SC-005**: Su 1000 eventi con UI pronta, il 95% è visibile entro 1 s dalla disponibilità locale; interruzione, gap e saturazione sono segnalati entro 3 s dal loro rilevamento. La vista resta navigabile durante la prova di 10 minuti al limite dichiarato nel piano.
+- **SC-005**: In una prova funzionale di almeno 10 operazioni CLI reali, gli eventi osservati nella UI mantengono ordine e identità, con p95 disponibilità locale→vista≤1s sul campione. Interruzione, gap e saturazione sono segnalati entro3s dal rilevamento; ACK mancanti/errati non avanzano il cursore e la vista mantiene i limiti dichiarati. La UI resta navigabile durante le operazioni. Benchmark su1000eventi e carichi prolungati rinviati oltre la prima UI.
 - **SC-006**: Il 100% dei flussi primari è completabile da tastiera a finestra 1280×800, senza controlli essenziali irraggiungibili; test automatici e review manuale verificano focus/etichette/contrasto.
 - **SC-007**: Test di confine non consentono accesso privilegiato arbitrario dalla vista, esposizione di segreti o scritture offline. Tutti i relativi tentativi vengono respinti e la chiusura UI non termina processi non posseduti.
 
@@ -142,3 +142,7 @@ Come sviluppatore consulto diagnostica ed eventi recenti, seguo le nuove attivit
 - È accettabile un'app avviabile dal checkout di sviluppo con runtime locale supportato; installer, firma/notarizzazione, auto-update, accesso remoto e piattaforme aggiuntive sono esclusi.
 - Fuori scope: provider AI, Agent Runtime, Discovery, feature workflow prodotto, profili/skill/tool di agenti, terminale agenti, gestione worktree, pnpm/dipendenze dei progetti, review/merge/release. Il registro esistente non implica che un progetto sia pronto per una sessione.
 - Il merge locale autorizzato di 001/002 non chiude 001/T082, 001/T085 e 002/T093; la readiness del core resta quella documentata nei report esistenti.
+
+## Adeguamento dello scope — 2026-11-15
+
+Su richiesta esplicita dell’utente: qualifica eventi limitata a stato/operazioni reali, ordine, recovery e limiti. Il brief richiede eventi osservabili, non100eventi/s per10min. Rinviate le campagne di volume/durata; nessuna promessa di throughput o di stabilità prolungata. E1–E4 restano incrementi verificabili con test funzionali bounded.

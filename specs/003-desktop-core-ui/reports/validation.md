@@ -122,3 +122,18 @@ E2 qualificato; replay e pressione richiedono ancora E3/E4.
 4 integrazioni PASS: duplicate discard/conflict, seq/store, subprocess exit, callback fallita senza avanzamento ACK, CURSOR_EXPIRED con bounds validati.
 2 E2E Electron PASS: restart del daemon reale e replay senza duplicati; retention floor scaduto impostato soltanto nella fixture posseduta a daemon fermo, errore CURSOR_EXPIRED emesso dalla CLI/core reali, nuova lettura esplicita e ritorno live.
 La prima prova E2E falliva nel teardown per doppia chiusura Playwright; corretta ownership della chiusura, ripetizione2 PASS. Nessun cursore persistito, nessun retry mutativo.
+
+### E4 / G4 — qualifica funzionale ridimensionata (T051–T053)
+
+L’utente ha autorizzato2026-11-15 di rinviare benchmark prolungati/grandi volumi e
+mantenere ordine, recovery e limiti per la prima UI. Spec/plan/research/tasks/quickstart
+aggiornati, senza rimuovere protezioni già verificate. Nessun generatore sintetico
+resta nella distribuzione o nella suite.
+
+4 integrazioni pressione PASS: backlog256KiB, FIFO500/4MiB, ACK mancante (~2s),
+ACK errato e ACK duplicato anche col batch successivo pendente. Cursore non avanza
+senza ACK valido. E2E CLI/core/Electron reali:10operazioni,20eventi tutti osservati,
+controlli da tastiera utilizzabili, p95/max3ms sul campione locale (incertezza di
+scheduling fra osservatori, non throughput). G4 PASS nello scope rivisto.
+Campagne lunghe fallite/interrotte e limite di stabilità non qualificata dichiarati
+in performance.md; nessuna falsa promozione delle prove precedenti.

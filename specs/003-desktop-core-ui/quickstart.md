@@ -48,11 +48,11 @@ Campagna su Mac sveglio, senza benchmark simultanei. Registrare OS/APFS/architet
 | SC-002 |30 selezioni live e30 offline, dettaglio pronto p95≤1s/2s; freschezza/flag corretti nel100% del campione |
 | SC-003 |10 cicli lifecycle, daemon sempre superstite alla chiusura; stop con esito o indicatore incertezza/blocco≤12s |
 | SC-004 |20 sequenze complete, parità CLI e snapshot Git/file100%; fault/concorrenza esiti attesi registrati separatamente |
-| SC-005 |1000 eventi correlati, p95 disponibilità locale→vista≤1s; segnale gap/saturazione≤3s dal rilevamento; carico10min100eventi/s tramite fixture client della CLI con stessi frame, ring/backlog invariati nei limiti e UI navigabile. Anche stream reale core con carico sostenibile misurato; fixture non dimostra throughput core. ACK ritardato oltre2s deve interrompere e recuperare esplicitamente |
+| SC-005 |almeno10operazioni CLI reali: ordine/identità, navigabilità e p95 disponibilità locale→vista≤1s sul campione; segnale gap/saturazione≤3s, ACK2s e limiti via fault mirati. Benchmark1000eventi e100eventi/s per10min rinviati su richiesta utente2026-11-15 |
 | SC-006 |tutti i flussi da tastiera a1280×800; label/focus/error/contrasto automatici dove possibile più review manuale e picker reale |
 | SC-007 |tentativi sender/iframe/origine/argv/schema/HTML/rete invalidi tutti negati; nessun segreto nei log, no scritture offline o processi estranei terminati |
 
-La metrica eventi misura la porzione locale client/vista: fixture registra t0 quando il frame diventa leggibile alla pipe, vista restituisce ACK dopo commit UI. Anche campagna CLI reale deve registrare t0 di disponibilità locale osservata, dichiarando precisione e overhead; timestamp occurredAt non è un cronometro end-to-end UI affidabile. Carico100eventi/s è prova pressione client, non nuova promessa al core.
+La metrica eventi misura la porzione locale client/vista tramite una CLI di riferimento indipendente e osservazione del commit DOM; riportare delta firmati e incertezza di scheduling. Timestamp occurredAt non è un cronometro end-to-end. Nessuna promessa di throughput o stabilità prolungata; campagne di volume/durata rinviate.
 
 ## Evidenze e limiti
 
