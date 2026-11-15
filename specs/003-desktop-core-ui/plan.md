@@ -86,7 +86,7 @@ Singleton dell'app per userData con `requestSingleInstanceLock`; seconda apertur
 | Risorsa | Limite / comportamento |
 |---------|------------------------|
 | Processi CLI | massimo2 letture +1 mutazione +1 stream per app; nessuna coda comandi, capacità esaurita → BUSY locale |
-| Letture | timeout core2s, watchdog subprocess3s; stato non sovrapposto, polling solo finestra visibile ogni5s |
+| Letture | timeout core2s, watchdog subprocess3s; sola contesa locale prima dello spawn: massimo5tentativi/500ms complessivi di attesa, nessun retry mutativo; stato non sovrapposto, polling solo finestra visibile ogni5s |
 | Controllo | start/restart core30s+watchdog2s; stop core10s+2s; progetto mutazione30s+2s; errore watchdog dopo invio → UNKNOWN |
 | stdout risposta | 256KiB UTF-8; stdout JSON valido valutato anche con exit nonzero; overflow = errore/UNKNOWN se mutazione |
 | stderr |16KiB catturati, mai inoltrati/loggati grezzi; oltre limite chiusura client e errore sicuro |

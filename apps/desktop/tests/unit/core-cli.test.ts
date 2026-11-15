@@ -53,3 +53,16 @@ test('owned clients bound stdout/stderr and a read watchdog without leaking raw 
     assert.equal(result.result, 'UNKNOWN_OUTCOME'); assert.equal(result.requestId, requestId); client.close();
   } finally { await f.cleanup(); }
 });
+test('view release terminates only view-owned read clients and preserves recovery/control reads',async()=>{
+ const{writeFile}=await import('node:fs/promises');const f=await createScratch();
+ try{
+  const path=join(f.directory,'slow-reader.mjs');await writeFile(path,'setInterval(()=>{},100)');
+  const client=new CoreCli({node:process.execPath,cli:path,env:sanitizedEnvironment()});
+  const view=client.call({namespace:'daemon',action:'status',archive:f.archive,scope:'view'});
+  const other=client.call({namespace:'daemon',action:'status',archive:f.archive});
+  const canceled=assert.rejects(()=>view,{message:'CLIENT_READ_CANCELLED'});
+  const otherClosed=assert.rejects(()=>other,{message:'CLIENT_PROTOCOL_ERROR'});
+  await client.cancelViewReads();await canceled;assert.equal(client.children.size,1);
+  client.close();await otherClosed;
+ }finally{await f.cleanup();}
+});

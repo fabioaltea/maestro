@@ -12,8 +12,15 @@ export class ArchiveReader {
     const project = ['listProjects', 'getProject'].includes(method);
     const action = method === 'listProjects' ? 'list' : method === 'getProject' ? 'get' : method === 'readEvents' ? 'events' : method;
     if (!['status', 'diagnostics', 'listProjects', 'getProject', 'readEvents'].includes(method)) throw new Error('INVALID_INPUT');
-    const result = await this.client.call({ namespace: project ? 'project' : 'daemon', action, archive: c.path, params });
-    this.context.apply(c, result); return result;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (attempt) await new Promise(resolve => setTimeout(resolve, attempt * 50));
+      if (this.context.capture().view.selectionEpoch !== c.view.selectionEpoch) throw new Error('STALE_CONTEXT');
+      try {
+        const result = await this.client.call({ namespace: project ? 'project' : 'daemon', action, archive: c.path, params, scope: 'view' });
+        this.context.apply(c, result); return result;
+      } catch (error) { if (!(error instanceof Error) || error.message !== 'LOCAL_BUSY' || attempt === 4) throw error; }
+    }
+    throw new Error('LOCAL_BUSY');
   }
 }
 export function installReads(router: BridgeRouter, context = new ArchiveContext()) {
@@ -24,6 +31,7 @@ export function installReads(router: BridgeRouter, context = new ArchiveContext(
     try {
       const path = await router.services.dialogs.chooseDirectory(request.newArchiveName ? 'Scegli la cartella che conterrà il nuovo archivio' : 'Scegli archivio Maestro');
       if (!path) return { context: router.context, canceled: true };
+      await router.services.core?.cancelViewReads?.();
       const selected = await context.select(request.newArchiveName ? join(path, String(request.newArchiveName)) : path);
       router.setContext(selected.view);
       return { context: selected.view, canceled: false };

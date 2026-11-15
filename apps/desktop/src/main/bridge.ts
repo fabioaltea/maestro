@@ -17,6 +17,7 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
     register(method: BridgeMethod, handler: Handler) { handlers.set(method, handler); },
     window,
   };
+  handlers.set('releaseViewReads', async () => { await services.core?.cancelViewReads?.(); return {released:true}; });
   handlers.set('context', () => ({ context, runtimeReady: services.core !== null, error: services.runtimeError ? safeError(services.runtimeError) : null }));
   ipcMain.handle(CHANNEL, async (event, method: unknown, input: unknown): Promise<BridgeResponse> => {
     const envelope = { bridgeVersion: 1 as const, callId: '', selectionEpoch: 0, archiveHandle: null as string | null, storeId: null as string | null, result: null as unknown, error: null as BridgeResponse['error'] };

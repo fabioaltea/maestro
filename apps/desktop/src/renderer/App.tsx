@@ -8,6 +8,7 @@ import { useDesktop } from './state/desktop.ts';
 export function App() {
   const desktop = useDesktop();
   const [section, setSection] = useState<'projects' | 'service' | 'operations' | 'activity' | 'diagnostics'>('projects');
+  function navigate(next: typeof section) { if(next===section)return; void desktop.invoke('releaseViewReads'); desktop.setNotice(null); setSection(next); }
   const [choosing, setChoosing] = useState(false);
   const [newName, setNewName] = useState('maestro-state');
   const [create, setCreate] = useState(false);
@@ -20,7 +21,7 @@ export function App() {
     <aside className="sidebar" aria-label="Navigazione principale">
       <div className="brand"><span className="brand-mark" aria-hidden="true">m</span><h1>Maestro</h1></div>
       <p className="sidebar-caption">Il tuo workspace locale</p>
-      <nav aria-label="Sezioni workspace">{([{ id: 'projects', label: 'Progetti' }, { id: 'service', label: 'Servizio' }, { id: 'operations', label: 'Operazioni' }, { id: 'activity', label: 'Attività' }, { id: 'diagnostics', label: 'Diagnostica' }] as const).map(item => <button key={item.id} className={`nav-item ${section === item.id ? 'selected' : ''}`} aria-current={section === item.id ? 'page' : undefined} onClick={() => setSection(item.id)}>{item.label}</button>)}</nav>
+      <nav aria-label="Sezioni workspace">{([{ id: 'projects', label: 'Progetti' }, { id: 'service', label: 'Servizio' }, { id: 'operations', label: 'Operazioni' }, { id: 'activity', label: 'Attività' }, { id: 'diagnostics', label: 'Diagnostica' }] as const).map(item => <button key={item.id} className={`nav-item ${section === item.id ? 'selected' : ''}`} aria-current={section === item.id ? 'page' : undefined} onClick={() => void navigate(item.id)}>{item.label}</button>)}</nav>
       <div className="archive-card"><span className="eyebrow">Archivio</span>
         <p className="archive-path" title={desktop.context?.displayPath}>{desktop.context?.displayPath ?? 'Nessun archivio selezionato'}</p>
         <button className="button subtle" disabled={choosing || !desktop.runtimeReady} onClick={() => void choose()}>Scegli archivio</button>

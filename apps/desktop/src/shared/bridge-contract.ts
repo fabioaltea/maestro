@@ -1,4 +1,4 @@
-export const METHODS = ['chooseArchive', 'context', 'status', 'diagnostics', 'listProjects', 'getProject', 'chooseRepository', 'prepareAction', 'confirmAction', 'cancelAction', 'reconcileOperation', 'listReceipts', 'dismissReceipt', 'selectReceiptArchive', 'readEvents', 'startEvents', 'stopEvents', 'ackEvents'] as const;
+export const METHODS = ['releaseViewReads', 'chooseArchive', 'context', 'status', 'diagnostics', 'listProjects', 'getProject', 'chooseRepository', 'prepareAction', 'confirmAction', 'cancelAction', 'reconcileOperation', 'listReceipts', 'dismissReceipt', 'selectReceiptArchive', 'readEvents', 'startEvents', 'stopEvents', 'ackEvents'] as const;
 export type BridgeMethod = typeof METHODS[number];
 export type Params = Record<string, unknown>;
 export interface BridgeRequest extends Params { bridgeVersion: 1; callId: string; selectionEpoch: number }

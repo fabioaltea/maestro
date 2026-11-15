@@ -96,3 +96,14 @@ Gate esterni001/002 invariati. Nessun push, release o integrazione remota.
   e dopo gli effetti. Campioni in project-action-samples.json. Ricevute bounded.
 
 US4 e qualificazione finale ancora da completare; gate esterni001/002 invariati.
+
+## US4 E1 — 2026-11-15 — PASS locale
+
+Contratto storia1PASS, FIFO1PASS, integrazione storia/diagnostica reale1PASS,
+Electron offline1PASS. Pagine store-bound e payload redatti, nessuna scrittura
+all'archivio fermo. Distinti errore di lettura e storia vuota verificata.
+La navigazione rapida rilascia solo i client read-only della vista precedente;
+query di recovery e comandi mutativi restano indipendenti. Test ownership1PASS
+con processo reale; contesa locale read prima dello spawn limitata a5tentativi
+e500ms di attesa, test dedicato PASS. Cap2letture/1mutazione invariato.
+Streaming/replay/pressione non ancora qualificati (E2–E4).

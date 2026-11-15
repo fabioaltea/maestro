@@ -20,6 +20,7 @@ export function useDesktop() {
         }
         return null;
       }
+      if (response.error?.code === 'CLIENT_READ_CANCELLED') return null;
       if (response.error) { setNotice(response.error.message); return null; }
       if (method === 'context' || method === 'chooseArchive' || method === 'selectReceiptArchive') {
         const data = record(response.result), selected = data.context as ArchiveView | null;

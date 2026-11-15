@@ -10,6 +10,7 @@ API esposta `window.maestro`:
 
 | Metodo | Input aggiuntivo | Esito / limite |
 |--------|------------------|----------------|
+| releaseViewReads | nessuno | chiude soltanto i client read-only della vista, mai comandi mutativi o query di recovery |
 | chooseArchive | newArchiveName?:nome singolo validato | dialog cartella; annullamento esplicito; nuovo contesto opaco, nessuna creazione |
 | context | nessuno | archivio attivo/stato bootstrap/runtime sicuro |
 | status / diagnostics | nessuno | lettura corrente o LAST_KNOWN core |

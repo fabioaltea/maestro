@@ -1,3 +1,4 @@
+import { once } from 'node:events';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { isAbsolute } from 'node:path';
@@ -72,6 +73,8 @@ export function unknownResult(requestId: string): PublicResult {
 export class CoreCli {
   readonly runtime: Runtime;
   readonly children = new Set<ChildProcess>();
+  private viewChildren = new Set<ChildProcess>();
+  private canceled = new WeakSet<ChildProcess>();
   private reads = 0; private mutations = 0; private closed = false;
   constructor(runtime: Runtime) { this.runtime = runtime; }
   async call(command: CliCommand): Promise<PublicResult> {
@@ -82,18 +85,28 @@ export class CoreCli {
     try {
       const stdout = await new Promise<string>((resolve, reject) => {
         const child = spawn(this.runtime.node, [this.runtime.cli, ...args], { env: this.runtime.env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
-        this.children.add(child);
+        this.children.add(child); if (!mutation && command.scope === 'view') this.viewChildren.add(child);
         const chunks: Buffer[] = []; let bytes = 0, stderr = 0, failed = false;
         const fail = (code: string) => { if (!failed) { failed = true; child.kill('SIGTERM'); reject(new Error(code)); } };
         const timer = setTimeout(() => fail('CLIENT_PROTOCOL_ERROR'), timeout);
         child.stdout.on('data', (b: Buffer) => { bytes += b.length; if (bytes > 262_144) fail('CLIENT_OUTPUT_LIMIT'); else chunks.push(b); });
         child.stderr.on('data', (b: Buffer) => { stderr += b.length; if (stderr > 16_384) fail('CLIENT_OUTPUT_LIMIT'); });
         child.on('error', () => fail('CLIENT_PROTOCOL_ERROR'));
-        child.on('close', (_code, signal) => { clearTimeout(timer); this.children.delete(child); if (!failed) { if (signal) reject(new Error('CLIENT_PROTOCOL_ERROR')); else { try { resolve(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); } catch { reject(new Error('CLIENT_PROTOCOL_ERROR')); } } } });
+        child.on('close', (_code, signal) => { clearTimeout(timer); this.children.delete(child); this.viewChildren.delete(child); if (!failed) { if (this.canceled.has(child)) reject(new Error('CLIENT_READ_CANCELLED')); else if (signal) reject(new Error('CLIENT_PROTOCOL_ERROR')); else { try { resolve(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); } catch { reject(new Error('CLIENT_PROTOCOL_ERROR')); } } } });
       });
       return decodeResult(stdout, command);
     } catch (error) { if (mutation) return unknownResult(command.requestId!); throw error; }
     finally { if (mutation) this.mutations--; else this.reads--; }
+  }
+  async cancelViewReads() {
+    await Promise.all([...this.viewChildren].map(async child => {
+      if (!this.viewChildren.has(child)) return;
+      this.canceled.add(child);
+      const exited = once(child, 'close', { signal: AbortSignal.timeout(2000) });
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+      const timer = setTimeout(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); }, 250);
+      try { await exited; } finally { clearTimeout(timer); }
+    }));
   }
   close() { if (this.closed) return; this.closed = true; for (const child of this.children) if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM'); }
 }

@@ -16,7 +16,8 @@ export function Activity({ desktop }: { desktop: Desktop }) {
     const after = reset ? undefined : applied.current.cursor;
     try {
       const result = await core('readEvents', { limit: 100, ...(after ? { after } : {}) });
-      if (!result || id !== generation.current) return;
+      if (id !== generation.current) return;
+      if (!result) { setError('Storia non disponibile. Rileggi senza assumere che sia vuota.'); return; }
       if (result.result !== 'OK') { setError(result.error?.message ?? 'Storia non disponibile.'); return; }
       if (!result.data.events || !result.storeId) { setError('Nessuna storia disponibile per questo archivio.'); return; }
       const nextPage = decodeHistoryPage(result.data.events, result.storeId);
@@ -34,7 +35,7 @@ export function Activity({ desktop }: { desktop: Desktop }) {
     {loading && <p role="status" className="hint">Lettura storia…</p>}{error && <p role="alert" className="field-error">{error}</p>}
     {page && <p className="hint">Storia disponibile dall’evento {page.firstAvailable}; letti fino a {state.appliedSeq ?? '0'} di {page.highWater}. {page.truncated ? 'Sono disponibili altri eventi.' : 'Storia disponibile caricata.'}</p>}
     {state.omitted > 0 && <p className="hint" role="status">{state.omitted} eventi precedenti non mantenuti nella vista. La finestra conserva al massimo 500 eventi.</p>}
-    {!loading && !error && !state.events.length && <p className="hint">Nessun evento conservato.</p>}
+    {page && !loading && !error && !state.events.length && <p className="hint">Nessun evento conservato.</p>}
     <div className="event-list" aria-label="Eventi del core">{[...state.events].reverse().map(event => <article key={event.eventId} className="event-row" data-event-seq={event.seq}><div className="section-heading"><strong>{event.type === 'lifecycle.changed' ? 'Stato del servizio cambiato' : event.type === 'operation.completed' ? 'Operazione completata' : event.type === 'operation.failed' ? 'Operazione non riuscita' : event.type === 'operation.accepted' ? 'Operazione accettata' : event.type === 'operation.blocked' ? 'Operazione bloccata' : event.type}</strong><time dateTime={event.occurredAt}>{dateLabel(event.occurredAt)}</time></div><p className="mono muted">#{event.seq} · {event.type}{event.operationId ? ` · ${event.operationId}` : ''}</p><details><summary>Dettagli evento</summary><pre>{JSON.stringify(event.payload, null, 2)}</pre></details></article>)}</div>
   </section>;
 }
