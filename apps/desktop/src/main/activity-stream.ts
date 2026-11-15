@@ -1,3 +1,4 @@
+import { STREAM_LIMITS, assertBacklog } from './activity-pressure.ts';
 import { ReplaySequence, gapBounds } from './activity-recovery.ts';
 import { spawn } from 'node:child_process';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
@@ -74,7 +75,7 @@ export class ActivityStream {
     const args=buildCliArgs({namespace:'daemon',action:'events',archive:this.options.archive,params:{follow:true,after:this.options.after}});
     this.child=spawn(this.options.runtime.node,[this.options.runtime.cli,...args],{env:this.options.runtime.env,shell:false,stdio:['pipe','pipe','pipe']});
     this.startup=setTimeout(()=>this.fail('SERVICE_UNREACHABLE'),3000);
-    this.child.stdout.on('data',(chunk:Buffer)=>{if(this.closed)return;try{this.lines.feed(chunk);if(this.backlogBytes>262144)this.fail('STREAM_SATURATED');}catch(error){this.fail(error instanceof Error?error.message:'CLIENT_PROTOCOL_ERROR');}});
+    this.child.stdout.on('data',(chunk:Buffer)=>{if(this.closed)return;try{this.lines.feed(chunk);assertBacklog(this.backlogBytes);}catch(error){this.fail(error instanceof Error?error.message:'CLIENT_PROTOCOL_ERROR');}});
     this.child.stderr.on('data',(chunk:Buffer)=>{this.stderr+=chunk.length;if(this.stderr>16384)this.fail('CLIENT_OUTPUT_LIMIT');});
     this.child.once('error',()=>this.fail('CLIENT_PROTOCOL_ERROR'));
     this.child.once('close',()=>{if(!this.closed){try{this.lines.end();this.fail('SERVICE_UNREACHABLE');}catch{this.fail('CLIENT_PROTOCOL_ERROR');}}});
@@ -91,21 +92,21 @@ export class ActivityStream {
     if(this.backlogBytes>262144){this.fail('STREAM_SATURATED');return;}this.pump();
   }
   private state(state:string,code:string|null,bounds?:{firstAvailable?:string;highWater?:string}){
-    this.options.onMessage({kind:'activity.state',subscriptionId:this.subscriptionId,selectionEpoch:this.options.epoch,storeId:this.options.storeId,state,code,lastAppliedCursor:this.cursor,...(bounds?.firstAvailable?{firstAvailable:bounds.firstAvailable}:{}),...(bounds?.highWater?{highWater:bounds.highWater}:{})});
+    try{this.options.onMessage({kind:'activity.state',subscriptionId:this.subscriptionId,selectionEpoch:this.options.epoch,storeId:this.options.storeId,state,code,lastAppliedCursor:this.cursor,...(bounds?.firstAvailable?{firstAvailable:bounds.firstAvailable}:{}),...(bounds?.highWater?{highWater:bounds.highWater}:{})});}catch{void this.close(false).catch(()=>undefined);}
   }
   private pump(){
     if(this.closed||this.batch||!this.pending.length||!this.started)return;
     const events:UiEvent[]=[];let bytes=1024;
-    while(this.pending.length&&events.length<32){const event=this.pending[0]!,size=Buffer.byteLength(JSON.stringify(event));if(bytes+size>65536)break;events.push(this.pending.shift()!);bytes+=size;this.pendingBytes-=size;}
+    while(this.pending.length&&events.length<STREAM_LIMITS.batchEvents){const event=this.pending[0]!,size=Buffer.byteLength(JSON.stringify(event));if(bytes+size>STREAM_LIMITS.batchBytes)break;events.push(this.pending.shift()!);bytes+=size;this.pendingBytes-=size;}
     if(!events.length){this.fail('STREAM_SATURATED');return;}
     const seq=events.at(-1)!.seq,cursor=encodeActivityCursor(this.options.storeId,seq),id=randomUUID();this.batch={id,seq,cursor,bytes};
-    this.child?.stdout.pause();this.ackTimer=setTimeout(()=>this.fail('STREAM_SATURATED'),2000);
+    this.child?.stdout.pause();this.ackTimer=setTimeout(()=>this.fail('STREAM_SATURATED'),STREAM_LIMITS.ackMs);
     this.options.onMessage({kind:'activity.batch',subscriptionId:this.started.subscriptionId,batchId:id,selectionEpoch:this.options.epoch,storeId:this.options.storeId,events,cursor});
   }
   ack(batchId:string,lastAppliedSeq:string){
     if(this.closed)throw new Error('STALE_CONTEXT');
-    if(!this.batch){if(batchId===this.lastAck&&decodeActivityCursor(this.cursor).seq===lastAppliedSeq)return{cursor:this.cursor};throw new Error('INVALID_INPUT');}
-    if(this.batch.id!==batchId||this.batch.seq!==lastAppliedSeq)throw new Error('INVALID_INPUT');
+    if(batchId===this.lastAck&&decodeActivityCursor(this.cursor).seq===lastAppliedSeq)return{cursor:this.cursor};
+    if(!this.batch||this.batch.id!==batchId||this.batch.seq!==lastAppliedSeq){this.fail('CLIENT_PROTOCOL_ERROR');throw new Error('INVALID_INPUT');}
     this.cursor=this.batch.cursor;this.lastAck=batchId;this.batch=null;clearTimeout(this.ackTimer);this.pump();if(!this.batch)this.child?.stdout.resume();return{cursor:this.cursor};
   }
   private fail(code:string,bounds?:{firstAvailable?:string;highWater?:string}){

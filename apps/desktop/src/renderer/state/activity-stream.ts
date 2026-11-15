@@ -22,7 +22,7 @@ export function useActivityStream(desktop:Desktop,state:ActivityState,setState:(
  },[state,epoch]);
  function receive(message:ActivityMessage){
   if(!alive.current||message.selectionEpoch!==epoch)return;
-  if(!subscription.current){if(starting.current&&early.current.length<4)early.current.push(message);return;}
+  if(!subscription.current){if(starting.current){if(early.current.length>=4){setConnection(c=>({...c,state:'SATURATED',code:'STREAM_SATURATED'}));}else early.current.push(message);}return;}
   if(message.subscriptionId!==subscription.current)return;
   try{
    if(message.kind==='activity.state'){
