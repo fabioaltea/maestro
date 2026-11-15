@@ -52,5 +52,6 @@ export function useActivityStream(desktop:Desktop,state:ActivityState,setState:(
   const buffered=early.current;early.current=[];for(const message of buffered)receive(message);
  }
  async function stop(){const id=subscription.current;if(!id)return;const value=await invoke('stopEvents',{subscriptionId:id});if(value&&typeof record(value).lastAppliedCursor==='string')checkpoint.current=String(record(value).lastAppliedCursor);subscription.current=null;pending.current=null;setConnection(c=>({...c,state:'DISCONNECTED',cursor:checkpoint.current}));}
- return{connection,start,stop,checkpoint:()=>checkpoint.current};
+ function reset(){checkpoint.current=null;setConnection({state:'IDLE',code:null,cursor:null});}
+ return{connection,start,stop,reset,checkpoint:()=>checkpoint.current};
 }

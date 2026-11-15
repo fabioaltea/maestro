@@ -1,3 +1,4 @@
+import { ReplaySequence, gapBounds } from './activity-recovery.ts';
 import { spawn } from 'node:child_process';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -24,9 +25,9 @@ export class JsonLines {
   end(){if(this.pending.length)throw new Error('CLIENT_PROTOCOL_ERROR');}
 }
 export interface Started {kind:'started';subscriptionId:string;storeId:string;instanceId:string;correlationId:string;highWater:string}
-type Frame=Started|{kind:'event';event:UiEvent;cursor:string}|{kind:'closed';code:string;firstAvailable?:string;highWater?:string};
+type Frame={kind:'duplicate'}|Started|{kind:'event';event:UiEvent;cursor:string}|{kind:'closed';code:string;firstAvailable?:string;highWater?:string};
 export class StreamFrames {
-  private expectedStore:string; private after:string|null; private started:Started|null=null;private received:string|null=null;private closed=false;
+  private expectedStore:string; private after:string|null; private started:Started|null=null;private received:string|null=null;private closed=false;private replay:ReplaySequence|null=null;
   constructor(storeId:string,after?:string){this.expectedStore=uuid(storeId);this.after=after??null;if(after){const c=decodeActivityCursor(after);if(c.storeId!==storeId)throw new Error('STREAM_GAP');this.received=c.seq;}}
   decode(value:unknown):Frame{
     const p=record(value);if(p.protocolVersion!==1||this.closed)throw new Error('CLIENT_PROTOCOL_ERROR');
@@ -35,20 +36,20 @@ export class StreamFrames {
       if(this.started||uuid(p.storeId)!==this.expectedStore)throw new Error('CLIENT_PROTOCOL_ERROR');
       this.started={kind:'started',subscriptionId:uuid(p.subscriptionId),storeId:uuid(p.storeId),instanceId:uuid(p.instanceId),correlationId:uuid(p.correlationId),highWater:sequence(p.highWater)};
       if(this.received!==null&&BigInt(this.received)>BigInt(this.started.highWater))throw new Error('STREAM_GAP');
-      this.received??=this.started.highWater;return this.started;
+      this.received??=this.started.highWater;this.replay=new ReplaySequence(this.received);return this.started;
     }
     if(p.kind==='event'){
       keys(p,['protocolVersion','kind','correlationId','subscriptionId','instanceId','event','cursor']);
       if(!this.started||p.subscriptionId!==this.started.subscriptionId||p.correlationId!==this.started.correlationId||p.instanceId!==this.started.instanceId)throw new Error('CLIENT_PROTOCOL_ERROR');
       const event=decodeUiEvent(p.event,this.expectedStore),cursor=text(p.cursor,256),decoded=decodeActivityCursor(cursor);
-      if(decoded.storeId!==this.expectedStore||decoded.seq!==event.seq||this.received===null||BigInt(event.seq)!==BigInt(this.received)+1n)throw new Error('STREAM_GAP');
-      this.received=event.seq;return{kind:'event',event,cursor};
+      if(decoded.storeId!==this.expectedStore||decoded.seq!==event.seq||this.received===null)throw new Error('STREAM_GAP');
+      if(!this.replay!.accept(event.seq,event.eventId))return{kind:'duplicate'};this.received=event.seq;return{kind:'event',event,cursor};
     }
     if(p.kind==='subscription.closed'||p.result!==undefined){
       if(p.kind==='subscription.closed'&&(!this.started||p.subscriptionId!==this.started.subscriptionId))throw new Error('CLIENT_PROTOCOL_ERROR');
       const code=String(record(p.error).code);if(!Object.hasOwn(CORE_ERRORS,code))throw new Error('CLIENT_PROTOCOL_ERROR');
       const gap=p.kind==='subscription.closed'?p:record(p.data??{});this.closed=true;
-      if(gap.firstAvailable!==undefined||gap.highWater!==undefined){if(gap.storeId!==this.expectedStore)throw new Error('STREAM_GAP');return{kind:'closed',code,firstAvailable:sequence(gap.firstAvailable),highWater:sequence(gap.highWater)};}
+      if(gap.firstAvailable!==undefined||gap.highWater!==undefined){return{kind:'closed',code,...gapBounds(gap,this.expectedStore)};}
       return{kind:'closed',code};
     }
     throw new Error('CLIENT_PROTOCOL_ERROR');
@@ -80,7 +81,7 @@ export class ActivityStream {
     return ready;
   }
   private frame(frame:Frame){
-    if(this.closed)return;
+    if(this.closed||frame.kind==='duplicate')return;
     if(frame.kind==='started'){
       this.started=frame;clearTimeout(this.startup);this.resolveStart?.(frame);this.resolveStart=null;this.rejectStart=null;
       this.state('LIVE',null);return;

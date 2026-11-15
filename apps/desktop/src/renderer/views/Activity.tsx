@@ -1,3 +1,4 @@
+import { ActivityContinuity } from '../components/ActivityContinuity.tsx';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Desktop } from '../state/desktop.ts';
 import { useActivityStream } from '../state/activity-stream.ts';
@@ -17,6 +18,7 @@ export function Activity({ desktop }: { desktop: Desktop }) {
     const id = ++generation.current; setLoading(true); setError(null);
     const after = reset ? undefined : applied.current.cursor;
     try {
+      if(reset){await stream.stop();stream.reset();await core('status');}
       const result = await core('readEvents', { limit: 100, ...(after ? { after } : {}) });
       if (id !== generation.current) return;
       if (!result) { setError('Storia non disponibile. Rileggi senza assumere che sia vuota.'); return; }
@@ -33,8 +35,9 @@ export function Activity({ desktop }: { desktop: Desktop }) {
   }
   useEffect(() => { setState(emptyActivity); setPage(null); if (context) void load(true); return () => { generation.current++; }; }, [context?.selectionEpoch, core]);
   if (!context) return <section className="empty-state"><h3>Scegli un archivio</h3><p>Gli eventi persistiti si consultano anche quando il servizio è fermo.</p></section>;
-  return <section className="activity-view" aria-label="Attività locale"><div className="section-heading"><div><h3>Attività</h3><p className="muted">Storia persistita del core · {freshness === 'LAST_KNOWN' ? 'Ultimo stato noto' : 'Archivio locale'}</p></div><div className="row-actions"><button className="button subtle" disabled={loading || stream.connection.state === 'LIVE' || stream.connection.state === 'CONNECTING'} onClick={() => void load(true)}>Rileggi storia</button>{stream.connection.state === 'LIVE' ? <button className="button" onClick={() => void stream.stop()}>Interrompi osservazione</button> : <button className="button primary" disabled={loading || !page || page.truncated || !state.cursor || stream.connection.state === 'CONNECTING'} onClick={() => { if(state.cursor)void stream.start(state.cursor); }}>Segui attività</button>}{page?.truncated && <button className="button" disabled={loading} onClick={() => void load()}>Carica altri eventi</button>}</div></div>
+  return <section className="activity-view" aria-label="Attività locale"><div className="section-heading"><div><h3>Attività</h3><p className="muted">Storia persistita del core · {freshness === 'LAST_KNOWN' ? 'Ultimo stato noto' : 'Archivio locale'}</p></div><div className="row-actions"><button className="button subtle" disabled={loading || stream.connection.state === 'LIVE' || stream.connection.state === 'CONNECTING'} onClick={() => void load(true)}>Rileggi storia</button>{stream.connection.state === 'LIVE' ? <button className="button" onClick={() => void stream.stop()}>Interrompi osservazione</button> : <button className="button primary" disabled={loading || !page || page.truncated || !state.cursor || stream.connection.state === 'CONNECTING' || stream.connection.state === 'GAP'} onClick={() => { if(state.cursor)void stream.start(state.cursor); }}>Segui attività</button>}{page?.truncated && <button className="button" disabled={loading} onClick={() => void load()}>Carica altri eventi</button>}</div></div>
     <p role="status" className="hint">{stream.connection.state === 'LIVE' ? 'Osservazione live' : stream.connection.state === 'CONNECTING' ? 'Connessione allo stream…' : stream.connection.state === 'IDLE' ? 'Storia persistita' : 'Osservazione interrotta'}{stream.connection.code ? ` · ${stream.connection.code}` : ''}</p>
+    <ActivityContinuity connection={stream.connection} reconnect={() => {const after=stream.checkpoint()??state.cursor;if(after)void stream.start(after);}} reread={()=>void load(true)} />
     {loading && <p role="status" className="hint">Lettura storia…</p>}{error && <p role="alert" className="field-error">{error}</p>}
     {page && <p className="hint">Storia disponibile dall’evento {page.firstAvailable}; letti fino a {state.appliedSeq ?? '0'} di {page.highWater}. {page.truncated ? 'Sono disponibili altri eventi.' : 'Storia disponibile caricata.'}</p>}
     {state.omitted > 0 && <p className="hint" role="status">{state.omitted} eventi precedenti non mantenuti nella vista. La finestra conserva al massimo 500 eventi.</p>}
