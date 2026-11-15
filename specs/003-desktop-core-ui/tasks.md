@@ -78,7 +78,7 @@ Consegnare quattro incrementi separati E1→E2→E3→E4. Independent test: oper
 
 - [X] T040 [P] [US4] E1: scrivere contratti storia/diagnostica PublicResult live/offline, cursor pagina e redazione in apps/desktop/tests/contract/activity-history.test.ts.
 - [X] T041 [US4] E1: implementare letture bounded storia persistita/diagnostica e mapping codici sicuri in apps/desktop/src/main/activity-history.ts, con CLI esistente e nessun accesso store diretto.
-- [ ] T042 [US4] E1: implementare pannelli storia/diagnostica, FIFO500/4MiB e applicazione pagine/cursor senza salto highWater in apps/desktop/src/renderer/views/Activity.tsx, apps/desktop/src/renderer/views/Diagnostics.tsx e apps/desktop/src/renderer/state/activity.ts.
+- [X] T042 [US4] E1: implementare pannelli storia/diagnostica, FIFO500/4MiB e applicazione pagine/cursor senza salto highWater in apps/desktop/src/renderer/views/Activity.tsx, apps/desktop/src/renderer/views/Diagnostics.tsx e apps/desktop/src/renderer/state/activity.ts.
 - [ ] T043 [US4] E1: qualificare storia reale persistita e offline prima del live in apps/desktop/tests/integration/activity-history.test.ts; registrare checkpoint E1 in specs/003-desktop-core-ui/reports/validation.md.
 - [ ] T044 [P] [US4] E2: scrivere test parser NDJSON split UTF-8, frame64KiB, versioni/store/ordine, started/event/closed e PublicResult errore pre-stream in apps/desktop/tests/unit/activity-stream.test.ts.
 - [ ] T045 [US4] E2: implementare singolo CLI follow con handle owned, parser bounded e batch scoped main→renderer in apps/desktop/src/main/activity-stream.ts; al massimo un batch32/64KiB pendente, nessuna raw stderr o seconda connessione.

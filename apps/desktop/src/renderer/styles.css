@@ -42,3 +42,11 @@ input[aria-invalid=true] { border-color:#d39a6c; }
 .edit-project { padding:20px 0; border-top:1px solid var(--line); }
 .edit-project h4 { font-weight:550; margin:0 0 10px; }
 .text-button.danger { color:#e8b8aa; padding:8px; }
+.activity-view { min-height:0; }
+.event-row { padding:18px 0; border-top:1px solid var(--line); }
+.event-row .section-heading { margin-bottom:8px; }
+.event-row strong { font-size:13px; font-weight:550; }
+.event-row time { font-size:11px; color:var(--muted); white-space:nowrap; }
+.event-row summary { cursor:pointer; color:#bdcfb5; font-size:12px; padding:12px 0 0; }
+pre { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.7 ui-monospace,monospace; color:#bec7d0; }
+.diagnostics-data { padding:22px; border:1px solid var(--line); border-radius:7px; margin-top:22px; }
