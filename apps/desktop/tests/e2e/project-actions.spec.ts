@@ -95,3 +95,47 @@ test('remove touches only registration and a UI reimport gets a new UUID', async
     } finally { await app.close(); }
   } finally { await f.cleanup(); }
 });
+test('twenty complete UI import verify update remove sequences agree with CLI and preserve every repository', async () => {
+  test.setTimeout(300_000);
+  const f = await createScratch();
+  try {
+    await f.cli(['daemon', 'start']);
+    const { app, page } = await launchDesktop(f);
+    const results: { sequence: number; configRevision: string; filesPreserved: boolean }[] = [];
+    try {
+      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Scegli archivio', exact: true }).click();
+      for (let i = 0; i < 20; i++) {
+        const name = `Sequenza ${i}`, repository = await f.repository(`repo-${i}`);
+        const { writeFile } = await import('node:fs/promises'); const { join } = await import('node:path');
+        await writeFile(join(repository.path, 'dirty.txt'), `local work ${i}`);
+        const before = await f.snapshot(repository.path);
+        await page.getByRole('button', { name: 'Importa progetto', exact: true }).click();
+        await chooseDirectory(app, repository.path); await page.getByRole('button', { name: 'Scegli repository', exact: true }).click();
+        await page.getByLabel('Nome progetto (facoltativo)', { exact: true }).fill(name);
+        await page.getByLabel('Branch base locale (facoltativo)', { exact: true }).fill('main');
+        await page.getByRole('button', { name: 'Rivedi importazione', exact: true }).click();
+        await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
+        await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+        await page.getByRole('button', { name: 'Verifica repository', exact: true }).click();
+        await expect(page.getByText('Osservazione salvata. Disponibilità ed eventuali errori sono riportati sopra.', { exact: true })).toBeVisible();
+        await page.getByRole('button', { name: 'Modifica progetto', exact: true }).click();
+        await page.getByLabel('Nome progetto', { exact: true }).fill(`${name} aggiornata`);
+        await page.getByLabel('Configurazione branch base', { exact: true }).selectOption('clear');
+        await page.getByRole('button', { name: 'Rivedi modifica', exact: true }).click();
+        await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
+        await expect(page.getByRole('heading', { name: `${name} aggiornata`, exact: true })).toBeVisible();
+        const list = (await f.cli(['project', 'list'])).result.data.projects;
+        expect(list).toHaveLength(1); expect(list[0].displayName).toBe(`${name} aggiornata`); expect(list[0].baseBranch).toBeNull();
+        expect(await f.snapshot(repository.path)).toEqual(before);
+        results.push({ sequence: i + 1, configRevision: list[0].configRevision, filesPreserved: true });
+        await page.getByRole('button', { name: 'Rimuovi dal registro', exact: true }).click();
+        await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
+        await expect(page.getByRole('heading', { name: 'Nessun progetto registrato', exact: true })).toBeVisible();
+        expect((await f.cli(['project', 'list'])).result.data.projects).toHaveLength(0);
+        expect(await f.snapshot(repository.path)).toEqual(before);
+      }
+      const { writeFile } = await import('node:fs/promises');
+      await writeFile('specs/003-desktop-core-ui/reports/project-action-samples.json', JSON.stringify({ sequences: 20, coreParity: true, results }, null, 2) + '\n');
+    } finally { await app.close(); }
+  } finally { await f.cleanup(); }
+});

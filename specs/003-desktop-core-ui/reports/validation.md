@@ -77,3 +77,22 @@ US2–US4 non ancora implementate. Nessun gate esterno001/002 promosso.
 
 US3 e US4 ancora da implementare; SC-001/002/005/006/007 campagna finale NOT_RUN.
 Gate esterni001/002 invariati. Nessun push, release o integrazione remota.
+
+## G3 / US3 — 2026-11-15 — PASS locale
+
+- Contratti picker/offline:2 PASS; percorso importabile solo tramite handle
+  corrente, omissione/null base distinti, mutazioni offline senza effetti/ricevute.
+- Integrazione reale:2 PASS; conflitti Git preservati, duplicati, CAS prima
+  dell'invio, patch atomica, remove/reimport con UUID nuovo, unborn e checkout
+  spostato osservati senza rebind.
+- Unit effetto UI:1 PASS; soltanto esiti confermati aggiornano la vista, UNKNOWN
+  non prende in prestito un effetto dichiarato nel payload. Elenco/dettaglio
+  riletti dal core e risposte obsolete scartate per generazione.
+- Electron mirato:3 PASS su importazione, untracked/unavailable, errori datati,
+  annullamento, revisione cambiata dopo conferma, rilettura e nuova approvazione,
+  rimozione della sola registrazione e reimportazione.
+- SC-004:20sequenze complete UI import/verify/update/remove PASS in2.3min,
+  confronto CLI dopo update/remove e snapshot di ogni repository identico prima
+  e dopo gli effetti. Campioni in project-action-samples.json. Ricevute bounded.
+
+US4 e qualificazione finale ancora da completare; gate esterni001/002 invariati.
