@@ -11,8 +11,9 @@ test('isolated React desktop starts without starting a daemon', async () => {
       expect(result.error).toBeNull();
       expect((result.result as { runtimeReady: boolean }).runtimeReady).toBe(true);
       expect((await f.cli(['daemon', 'status'])).result.liveness).toBe('ABSENT_VERIFIED');
-      const prefs = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.webContents.getLastWebPreferences());
-      expect(prefs.sandbox).toBe(true); expect(prefs.contextIsolation).toBe(true); expect(prefs.nodeIntegration).toBe(false);
+      const metrics = await app.evaluate(({ app }) => app.getAppMetrics().filter(m => m.type === 'Tab').map(m => m.sandboxed));
+      expect(metrics.length).toBeGreaterThan(0); expect(metrics.every(Boolean)).toBe(true);
+      expect(await page.evaluate(() => Object.isFrozen(window.maestro))).toBe(true);
     } finally { await app.close(); }
   } finally { await f.cleanup(); }
 });

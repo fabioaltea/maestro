@@ -14,7 +14,10 @@ test('renderer has only named methods and cannot execute or navigate arbitrary c
       const file = await app.evaluate(async ({ net }) => (await net.fetch('maestro://app/%2e%2e/package.json')).status);
       expect(file).toBe(404);
       await page.evaluate(() => { location.href = 'https://example.com/'; });
-      await expect(page).toHaveURL('maestro://app/index.html');
+      // Electron owns navigation; Playwright may retain a provisional blank frame URL after cancellation.
+      await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.webContents.getURL())).toBe('maestro://app/index.html');
+      const document = await app.evaluate(async ({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.webContents.executeJavaScript('({title:document.title,heading:document.querySelector("h1")?.textContent,href:location.href})'));
+      expect(document).toEqual({ title: 'Maestro', heading: 'Maestro', href: 'maestro://app/index.html' });
     } finally { await app.close(); }
   } finally { await f.cleanup(); }
 });

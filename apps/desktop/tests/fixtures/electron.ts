@@ -9,6 +9,8 @@ export async function launchDesktop(f: Awaited<ReturnType<typeof createScratch>>
     env: { HOME: process.env.HOME ?? '', PATH: '/usr/bin:/bin:/usr/sbin:/sbin', MAESTRO_NODE_BINARY: await realpath(process.execPath) }, timeout: 15_000 });
   const page = await app.firstWindow();
   await page.waitForURL('maestro://app/index.html');
+  await page.waitForLoadState('domcontentloaded');
+  await page.getByRole('heading', { name: 'Maestro', exact: true }).waitFor();
   return { app, page };
 }
 export async function chooseDirectory(app: Awaited<ReturnType<typeof launchDesktop>>['app'], path: string) {
