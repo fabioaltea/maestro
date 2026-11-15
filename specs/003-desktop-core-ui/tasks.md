@@ -36,7 +36,7 @@ Verificare confini privilegiati e runtime prima di qualsiasi user story; scriver
 Archivio selezionabile, lista e dettaglio coerenti live/offline; nessun autostart o scrittura. Independent test: archivio CLI100progetti, daemon attivo/fermo, tutti i progetti raggiungibili e dati storici etichettati.
 
 - [X] T014 [P] [US1] Scrivere unit test per epoch, risposte tardive, pagine invalidated, null/observation LAST_KNOWN e ring cache100 in apps/desktop/tests/unit/project-view.test.ts.
-- [ ] T015 [P] [US1] Scrivere integrazione CLI+archivio reale su letture live/offline/assente, snapshot non mutato e REGISTRY_CHANGED in apps/desktop/tests/integration/project-reads.test.ts, prima degli handler UI.
+- [X] T015 [P] [US1] Scrivere integrazione CLI+archivio reale su letture live/offline/assente, snapshot non mutato e REGISTRY_CHANGED in apps/desktop/tests/integration/project-reads.test.ts, prima degli handler UI.
 - [ ] T016 [US1] Implementare contesto archivio main con picker, handle opachi, epoch/store e invalidazione richieste/listener in apps/desktop/src/main/archive-context.ts e apps/desktop/src/main/read-handlers.ts; scelta assente tramite contenitore+nome validato, nessuna creazione implicita.
 - [ ] T017 [US1] Implementare reducer di lista/dettaglio e proiezione stretta dei DTO core in apps/desktop/src/renderer/state/project-view.ts; pagina25/cache100, stale response discard, restart elenco coerente e tombstone.
 - [ ] T018 [US1] Estendere il bootstrap G0 con shell React e stati accessibili loading/empty/offline/error a1280×800 in apps/desktop/src/renderer/App.tsx, apps/desktop/src/renderer/index.tsx, apps/desktop/src/renderer/index.html e apps/desktop/src/renderer/styles.css; asset locali e niente pannelli futuri.
