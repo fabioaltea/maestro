@@ -6,6 +6,6 @@ export function RemoveProjectDialog({ desktop, project, live, onRemoved }: { des
   const action = useProjectAction(desktop, async () => { await onRemoved(project.projectId); });
   return <><button className="text-button danger" disabled={!live || action.busy} onClick={() => void action.prepare('project.remove', { projectId: project.projectId, expectedRevision: project.configRevision })}>Rimuovi dal registro</button>
     {action.last && action.last.outcome !== 'SUCCEEDED' && <p role="status" className="hint">{action.last.result === 'UNKNOWN_OUTCOME' ? 'Esito da verificare: consulta l’operazione originale.' : action.last.error?.message ?? 'Rimozione non completata.'}</p>}
-    {action.prepared && <ConfirmationDialog prepared={action.prepared} busy={action.busy} onConfirm={() => void action.confirm()} onCancel={() => void action.cancel()} />}
+    {action.prepared && <ConfirmationDialog returnFocus={action.returnFocus} prepared={action.prepared} busy={action.busy} onConfirm={() => void action.confirm()} onCancel={() => void action.cancel()} />}
   </>;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Desktop } from '../state/desktop.ts';
 import type { PublicResult } from '../../shared/bridge-contract.ts';
 import { ConfirmationDialog } from '../components/ConfirmationDialog.tsx';
@@ -16,8 +16,9 @@ export function DaemonControls({ desktop, onOperations }: { desktop: Desktop; on
     const timer = setInterval(() => { if (reading || document.visibilityState !== 'visible') return; reading = true; void core('status').then(value => { if (value) setStatus(value); }).finally(() => { reading = false; }); }, 5000);
     return () => clearInterval(timer);
   }, [context?.selectionEpoch, core]);
+  const trigger=useRef<HTMLElement|null>(null);
   async function prepare(action: string) {
-    setBusy(true); desktop.setNotice(null);
+    trigger.current=document.activeElement as HTMLElement|null;setBusy(true); desktop.setNotice(null);
     try { const value = await invoke('prepareAction', { action: `daemon.${action}`, params: {} }); if (value) setPrepared(value as PreparedAction); }
     finally { setBusy(false); }
   }
@@ -40,6 +41,6 @@ export function DaemonControls({ desktop, onOperations }: { desktop: Desktop; on
     <div className="row-actions"><button className="button primary" disabled={busy || !absent} onClick={() => void prepare('start')}>Avvia servizio</button><button className="button" disabled={busy || !live} onClick={() => void prepare('restart')}>Riavvia servizio</button><button className="button" disabled={busy || !live} onClick={() => void prepare('stop')}>Arresta servizio</button></div>
     <p className="hint">Arresto e riavvio seguono i controlli di sicurezza del core. Chiudere questa finestra non equivale ad arrestare il servizio.</p>
     {result && <div className="operation-result" role="status"><h4>{result.result === 'UNKNOWN_OUTCOME' ? 'Esito da verificare' : result.outcome === 'SUCCEEDED' ? 'Operazione completata' : result.outcome === 'IN_PROGRESS' ? 'Operazione in corso' : result.outcome === 'BLOCKED' ? 'Operazione bloccata' : 'Operazione non riuscita'}</h4><p>{result.error?.message}</p><p className="mono">{result.requestId}</p><button className="text-button" onClick={onOperations}>Consulta operazioni ed esiti</button></div>}
-    {prepared && <ConfirmationDialog prepared={prepared} busy={busy} onConfirm={() => void confirm()} onCancel={() => void cancel()} />}
+    {prepared && <ConfirmationDialog returnFocus={()=>trigger.current} prepared={prepared} busy={busy} onConfirm={() => void confirm()} onCancel={() => void cancel()} />}
   </section>;
 }

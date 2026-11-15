@@ -137,3 +137,16 @@ controlli da tastiera utilizzabili, p95/max3ms sul campione locale (incertezza d
 scheduling fra osservatori, non throughput). G4 PASS nello scope rivisto.
 Campagne lunghe fallite/interrotte e limite di stabilità non qualificata dichiarati
 in performance.md; nessuna falsa promozione delle prove precedenti.
+
+### T054 — accessibilità automatica PASS, review manuale aperta
+
+Electron reale a finestra1280×800: flussi primari attivati da tastiera, Tab/Shift+Tab
+nel dialog, Escape e ritorno focus, errori associati/input conservato, testo HTML
+ostile inerte, cinque viste con contrasto≥4,5:1:1 E2E PASS. Corretto ritorno del
+focus catturando il trigger prima di disabilitarlo durante prepare. Una race del test
+(Escape prima dell’apertura del dialog) corretta attendendo il dialog visibile.
+Screenshot e conteggi contrasto in reports/screenshots/, ispezione visiva locale eseguita.
+
+**T054 resta aperto** per la review umana/picker nativo reale: NOT_RUN, istruzioni
+concrete in manual-review.md. Non è simulata dalla sostituzione dei dialog nei test.
+SC-006 non completamente qualificato finché manca questa evidenza.

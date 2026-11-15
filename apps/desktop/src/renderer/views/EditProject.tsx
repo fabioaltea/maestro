@@ -9,6 +9,7 @@ export function EditProject({ desktop, project, live, onUpdated, onClose }: { de
   const [name, setName] = useState(project.displayName), [mode, setMode] = useState('keep'), [base, setBase] = useState(project.baseBranch ?? ''), [error, setError] = useState<string | null>(null);
   const action = useProjectAction(desktop, async () => { await onUpdated(project.projectId); onClose(); });
   useEffect(() => { setName(project.displayName); setBase(project.baseBranch ?? ''); setMode('keep'); setError(null); }, [project.configRevision]);
+  useEffect(()=>{document.getElementById('edit-name')?.focus();},[]);
   async function submit() {
     setError(null);
     try { projectName(name); if (mode === 'set') localBranchInput(base); }
@@ -24,6 +25,6 @@ export function EditProject({ desktop, project, live, onUpdated, onClose }: { de
       {error && <p id="edit-error" className="field-error" role="alert">{error}</p>}
       {action.last?.error && <p role="status" className="field-error">{action.last.error.message}</p>}
       <div className="row-actions form-actions"><button className="button primary" disabled={!live || action.busy}>Rivedi modifica</button><button type="button" className="button subtle" disabled={action.busy} onClick={() => void onUpdated(project.projectId)}>Ricarica configurazione</button><button type="button" className="text-button" disabled={action.busy} onClick={onClose}>Annulla modifica</button></div>
-    </form>{action.prepared && <ConfirmationDialog prepared={action.prepared} busy={action.busy} onConfirm={() => void action.confirm()} onCancel={() => void action.cancel()} />}
+    </form>{action.prepared && <ConfirmationDialog returnFocus={action.returnFocus} prepared={action.prepared} busy={action.busy} onConfirm={() => void action.confirm()} onCancel={() => void action.cancel()} />}
   </section>;
 }

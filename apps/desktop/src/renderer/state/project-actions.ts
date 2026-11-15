@@ -21,7 +21,7 @@ export function projectMutationEffect(result: PublicResult): { type: 'created' |
 }
 export function useProjectAction(desktop: Desktop, onSuccess: (result: PublicResult) => void | Promise<void>) {
   const [prepared, setPrepared] = useState<PreparedAction | null>(null), [busy, setBusy] = useState(false), [last, setLast] = useState<PublicResult | null>(null);
-  const working = useRef(false);
+  const working = useRef(false),trigger=useRef<HTMLElement|null>(null);
   async function execute(approval: PreparedAction) {
     const value = await desktop.invoke('confirmAction', { confirmationId: approval.confirmationId });
     setPrepared(null);
@@ -31,7 +31,7 @@ export function useProjectAction(desktop: Desktop, onSuccess: (result: PublicRes
     if (effect.type !== 'unknown' && effect.type !== 'none') await onSuccess(result);
   }
   async function prepare(action: string, params: Params, immediate = false) {
-    if (working.current) return; working.current = true; setBusy(true); setLast(null); desktop.setNotice(null);
+    if (working.current) return;trigger.current=document.activeElement as HTMLElement|null; working.current = true; setBusy(true); setLast(null); desktop.setNotice(null);
     try {
       const value = await desktop.invoke('prepareAction', { action, params });
       if (value) { const approval = value as PreparedAction; if (immediate) await execute(approval); else setPrepared(approval); }
@@ -42,5 +42,5 @@ export function useProjectAction(desktop: Desktop, onSuccess: (result: PublicRes
     try { await execute(prepared); } finally { working.current = false; setBusy(false); }
   }
   async function cancel() { if (prepared) await desktop.invoke('cancelAction', { confirmationId: prepared.confirmationId }); setPrepared(null); }
-  return { prepared, busy, last, prepare, confirm, cancel };
+  return { prepared, busy, last, prepare, confirm, cancel, returnFocus:()=>trigger.current };
 }

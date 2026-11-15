@@ -17,13 +17,13 @@ export function ImportProject({ desktop, live, onImported, onClose }: { desktop:
     await action.prepare('project.register', { repositoryHandle: repository.repositoryHandle, ...(name.trim() ? { name } : {}), ...(base ? { baseBranch: base } : {}) });
   }
   return <section className="project-form" aria-labelledby="import-title"><div className="section-heading"><div><h3 id="import-title">Importa un progetto locale</h3><p className="muted">Registra un repository esistente. Nessun file viene copiato o modificato.</p></div><button className="text-button" disabled={action.busy} onClick={onClose}>Torna ai progetti</button></div>
-    <form onSubmit={e => { e.preventDefault(); void submit(); }}><label>Repository locale</label><button className="button subtle" type="button" disabled={choosing || action.busy} onClick={() => void choose()}>Scegli repository</button><p className="mono hint">{repository?.displayPath ?? 'Nessun repository selezionato'}</p>
+    <form onSubmit={e => { e.preventDefault(); void submit(); }}><p className="hint">Repository locale</p><button id="repository-picker" className="button subtle" type="button" disabled={choosing || action.busy} onClick={() => void choose()}>Scegli repository</button><p className="mono hint">{repository?.displayPath ?? 'Nessun repository selezionato'}</p>
       <label htmlFor="import-name">Nome progetto (facoltativo)</label><input id="import-name" value={name} maxLength={240} aria-invalid={fieldError !== null} aria-describedby="import-error" onChange={e => setName(e.target.value)} placeholder="Usa il nome del repository" />
       <label htmlFor="import-base">Branch base locale (facoltativo)</label><input id="import-base" value={base} maxLength={1024} aria-invalid={fieldError !== null} aria-describedby="import-error" onChange={e => setBase(e.target.value)} placeholder="es. main" /><p className="hint">Lascia vuoto per non configurare un branch base. Non viene creato né cambiato alcun branch.</p>
       {fieldError && <p id="import-error" className="field-error" role="alert">{fieldError}</p>}
       {!live && <p className="hint">Avvia il servizio per importare. Nessuna richiesta viene accodata offline.</p>}
       {action.last && <div className="operation-result" role="status"><p>{action.last.result === 'UNKNOWN_OUTCOME' ? 'Esito da verificare nelle operazioni.' : action.last.error?.message ?? 'Operazione non riuscita.'}</p><p className="mono">{action.last.requestId}</p></div>}
       <div className="row-actions form-actions"><button className="button primary" disabled={!repository || !live || choosing || action.busy}>Rivedi importazione</button><button className="button subtle" type="button" disabled={action.busy} onClick={onClose}>Annulla</button></div>
-    </form>{action.prepared && <ConfirmationDialog prepared={action.prepared} busy={action.busy} onConfirm={() => void action.confirm()} onCancel={() => void action.cancel()} />}
+    </form>{action.prepared && <ConfirmationDialog returnFocus={action.returnFocus} prepared={action.prepared} busy={action.busy} onConfirm={() => void action.confirm()} onCancel={() => void action.cancel()} />}
   </section>;
 }
