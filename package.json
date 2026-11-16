@@ -33,6 +33,7 @@
     "test": "npm run build && npm run build:test && node scripts/run-tests.mjs",
     "test:contract": "npm run build && npm run build:test && node scripts/run-tests.mjs contract",
     "test:integration": "npm run build && npm run build:test && node scripts/run-tests.mjs integration",
+    "test:discovery:boundary": "npm run build && npm run build:test && MAESTRO_DISCOVERY_G0=1 node --test dist-tests/tests/integration/discovery-provider-boundary.test.js",
     "test:acceptance": "npm run build && npm run build:test && node scripts/run-tests.mjs acceptance",
     "bench:foundation": "npm run build && npm run build:test && node dist-tests/tests/acceptance/benchmark-foundation.js",
     "lint": "node scripts/check-architecture.mjs",

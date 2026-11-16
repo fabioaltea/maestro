@@ -60,3 +60,31 @@ autenticazione fidata, non una capacità offerta al modello: se la superficie
 strumenti può interrogarla o i requisiti managed impongono accessi non confinabili,
 profilo UNSAFE. Non usare un account, un token o un endpoint diverso in produzione
 per far passare i test. I rapporti reali/sintetici dichiarano le differenze di backend.
+
+
+### Adeguamento osservato T003 — UUID tecnico Codex
+
+Il pin0.167.0 apre `$CODEX_HOME/installation_id` con permessi di scrittura anche
+quando esiste già. Senza questo singolo file l’inizializzazione app-server locale
+fallisce EPERM prima dell’inferenza; non si tratta di un secondo daemon.
+Il profilo ammette soltanto questo UUID non segreto oltre allo scratch per-run:
+preesistente, regolare, nlink1, owner corrente,0600,36byte/formato UUID verificati
+prima dello spawn. Preparazione soltanto nella configurazione esplicita (T020),
+nessuna lettura o copia di token. auth.json/config/Keychain-file restano negati.
+Questo adeguamento ai dettagli meccanici non estende accesso al checkout, agli
+archivi, ai comandi o ai tool del modello; i test negativi devono rimanere PASS.
+Il modello riceve solo il corpus, non questo file o la sua identità.
+
+`sqlite_home` viene diretto nello scratch; analytics/feedback/exporter OTEL e shell
+snapshot sono disabilitati con override riconosciuti dal pin, non dal solo env
+OTEL_SDK_DISABLED (risultato insufficiente nel probe). Il backend sintetico usa
+un profilo ulteriormente ristretto al proprio unico port loopback, senza egress
+Internet. Non offre un endpoint configurabile nell’applicazione.
+
+Lo schema wire Codex ha root object chiusa con kind e i due array questions/sections,
+il ramo inattivo è null; l’adapter normalizza a QUESTIONS oppure DOCUMENT e valida
+limiti byte/provenance. Un root oneOf non viene usato come garanzia di supporto
+Structured Outputs. Il catalogo osservato con questo profilo/modello sintetico
+espone request_user_input, senza shell/apply_patch/MCP/web: nel percorso exec non
+sostituisce QUESTIONS. Il final schema e l’assenza di tool inattesi restano necessari;
+un modello o profilo con superficie differente richiede riqualifica.

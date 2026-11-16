@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": [
+        "QUESTIONS",
+        "DOCUMENT"
+      ]
+    },
+    "questions": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "section": {
+            "type": "string",
+            "enum": [
+              "purpose-and-features",
+              "architecture-and-dependencies",
+              "conventions-and-operations"
+            ]
+          }
+        },
+        "required": [
+          "text",
+          "reason",
+          "section"
+        ]
+      }
+    },
+    "sections": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "minItems": 3,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "claims": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "CODE",
+                    "USER_CONFIRMED",
+                    "HYPOTHESIS",
+                    "UNKNOWN",
+                    "NOT_APPLICABLE"
+                  ]
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "sources": {
+                  "type": "array",
+                  "maxItems": 20,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "sourceId": {
+                        "type": "string"
+                      },
+                      "sha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      },
+                      "startLine": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "endLine": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "quote": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "sourceId",
+                      "sha256",
+                      "startLine",
+                      "endLine",
+                      "quote"
+                    ]
+                  }
+                },
+                "answers": {
+                  "type": "array",
+                  "maxItems": 20,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "answerId": {
+                        "type": "string"
+                      },
+                      "revision": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "answerId",
+                      "revision"
+                    ]
+                  }
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "kind",
+                "text",
+                "sources",
+                "answers",
+                "reason"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "claims"
+        ]
+      }
+    }
+  },
+  "required": [
+    "kind",
+    "questions",
+    "sections"
+  ]
+}

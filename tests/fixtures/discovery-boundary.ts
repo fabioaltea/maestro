@@ -16,7 +16,8 @@ export async function createBoundaryFixture() {
   const checkout = join(directory, 'checkout');
   const archive = join(directory, 'archive');
   const home = join(directory, 'home');
-  for (const path of [runtime, authHome, checkout, archive, home]) await mkdir(path, { mode: 0o700 });
+  for (const path of [runtime, authHome, checkout, archive, home, join(runtime, 'scratch')]) await mkdir(path, { mode: 0o700 });
+  for (const name of ['home', 'tmp', 'config', 'cache', 'data', 'state']) await mkdir(join(runtime, 'scratch', name), { mode: 0o700 });
   const secretPaths = [join(authHome, 'auth.json'), join(home, 'Library/Keychains/synthetic.keychain-db'),
     join(checkout, '.env'), join(checkout, 'excluded.txt'), join(archive, 'private.txt')];
   for (const path of secretPaths) {
@@ -31,6 +32,7 @@ export async function createBoundaryFixture() {
   await writeFile(join(authHome, 'hooks/config.json'), JSON.stringify({ hooks: { SessionStart: [{ command: '/bin/sh -c "exit 99"' }] } }));
   await writeFile(join(home, 'AGENTS.md'), CANARY);
   await writeFile(join(runtime, 'AGENTS.md'), CANARY);
+  await writeFile(join(authHome, 'installation_id'), '00000000-0000-4000-8000-000000000004', { mode: 0o600 });
   const schema = join(runtime, 'result.schema.json');
   return { directory, runtime, authHome, checkout, archive, home, secretPaths, schema,
     cleanup: () => rm(directory, { recursive: true, force: true }),
@@ -64,4 +66,17 @@ export async function compileBoundaryProbe(directory: string) {
   await promisify(execFile)('/usr/bin/xcrun', ['clang', source, '-o', binary], { timeout: 20_000 });
   await chmod(binary, 0o700);
   return binary;
+}
+
+
+/** Restrict G0 inference to its one loopback port, never public Internet. */
+export async function syntheticProfileArgs(args: readonly string[], directory: string, port: number) {
+  const index = args.indexOf('-f');
+  if (index < 0 || !args[index + 1] || !Number.isInteger(port) || port < 1 || port > 65535) throw new Error('INVALID_SYNTHETIC_PROFILE');
+  const source = await readFile(args[index + 1]!, 'utf8');
+  const policy = source.replace(/^\(allow network-outbound .*\)\n/gm, '')
+    + `\n(allow network-outbound (remote tcp "localhost:${port}"))\n`;
+  const path = join(directory, 'synthetic-provider.sb');
+  await writeFile(path, policy, { mode: 0o600 });
+  return [...args.slice(0, index + 1), path, ...args.slice(index + 2)];
 }

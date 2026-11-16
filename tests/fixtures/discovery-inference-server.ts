@@ -23,7 +23,7 @@ export async function createDiscoveryInferenceServer(outputs: readonly Synthetic
       requests.push({ path: request.url, body: body as Record<string, unknown> });
       const index = requests.length - 1;
       const items = outputs[index] ?? [{ id: `msg_fixture_${index}`, type: 'message', role: 'assistant', status: 'completed',
-        content: [{ type: 'output_text', text: JSON.stringify({ kind: 'QUESTIONS', questions: [
+        content: [{ type: 'output_text', text: JSON.stringify({ kind: 'QUESTIONS', sections: null, questions: [
           { text: 'Quale ambiente di deployment è previsto?', reason: 'Non presente nel corpus sintetico.', section: 'conventions-and-operations' },
         ] }), annotations: [] }] }];
       const base = { id: `resp_fixture_${index}`, object: 'response', created_at: 1, model: 'maestro-fixture', output: [],

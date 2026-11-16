@@ -4,11 +4,16 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createBoundaryFixture, compileBoundaryProbe, PINNED_CODEX, PINNED_HASH, CANARY } from '../fixtures/discovery-boundary.js';
+import { createBoundaryFixture, compileBoundaryProbe, PINNED_CODEX, PINNED_HASH, CANARY, syntheticProfileArgs } from '../fixtures/discovery-boundary.js';
+import type { TestContext } from 'node:test';
 import { createDiscoveryInferenceServer } from '../fixtures/discovery-inference-server.js';
 
 // Dynamic URLs let the RED task compile while the production modules do not yet exist.
-// There is no skip/fake success when the OS, pin or implementation is unavailable.
+// Explicit G0 has no skip/fake success if the OS, pin or implementation is unavailable.
+// Ordinary suites report the separate qualification as skipped, never G0 PASS.
+const g0 = (name: string, run: (context: TestContext) => Promise<void>) => test(name, {
+  skip: process.env.MAESTRO_DISCOVERY_G0 === '1' ? false : 'G0_EXPLICIT_QUALIFICATION_ONLY (npm run test:discovery:boundary)',
+}, run);
 interface Invocation { readonly args: readonly string[]; readonly env: NodeJS.ProcessEnv; readonly cwd: string }
 interface Profile { readonly args: readonly string[] }
 async function implementation() {
@@ -38,12 +43,12 @@ async function capture(executable: string, args: readonly string[], cwd: string,
   } finally { clearTimeout(timer); }
 }
 
-test('G0 uses the planned native pin, never an implicit update or a fake binary', async () => {
+g0('G0 uses the planned native pin, never an implicit update or a fake binary', async () => {
   assert.equal(process.platform, 'darwin', 'G0_REQUIRES_MACOS');
   assert.equal(createHash('sha256').update(await readFile(PINNED_CODEX)).digest('hex'), PINNED_HASH);
 });
 
-test('G0 argv is closed, keyring-only and does not inherit credentials or user environment', async (t) => {
+g0('G0 argv is closed, keyring-only and does not inherit credentials or user environment', async (t) => {
   const fixture = await createBoundaryFixture(); t.after(fixture.cleanup);
   const { createCodexInvocation } = await implementation();
   const input = { binary: PINNED_CODEX, model: 'maestro-fixture', runtime: fixture.runtime, authHome: fixture.authHome, schema: fixture.schema };
@@ -61,7 +66,7 @@ test('G0 argv is closed, keyring-only and does not inherit credentials or user e
   assert.throws(() => createCodexInvocation({ ...input, schema: join(fixture.checkout, 'schema.json') }));
 });
 
-test('G0 kernel denies protected reads, writes, symlink escape and execution before effects', async (t) => {
+g0('G0 kernel denies protected reads, writes, symlink escape and execution before effects', async (t) => {
   const fixture = await createBoundaryFixture(); t.after(fixture.cleanup);
   const { createProviderProfile } = await implementation();
   const probe = await compileBoundaryProbe(fixture.directory);
@@ -77,12 +82,12 @@ test('G0 kernel denies protected reads, writes, symlink escape and execution bef
   }
   const execute = await capture('/usr/bin/sandbox-exec', [...profile.args, probe, 'exec', '/bin/sh'], fixture.runtime, {});
   assert.equal(execute.code, 0, 'EXEC_NOT_DENIED');
-  const scratch = await capture('/usr/bin/sandbox-exec', [...profile.args, probe, 'write', join(fixture.runtime, 'scratch')], fixture.runtime, {});
+  const scratch = await capture('/usr/bin/sandbox-exec', [...profile.args, probe, 'write', join(fixture.runtime, 'scratch', 'probe-file')], fixture.runtime, {});
   assert.equal(scratch.code, 10, 'PRIVATE_SCRATCH_UNAVAILABLE');
   assert.deepEqual(await fixture.snapshot(), before);
 });
 
-test('G0 real Codex ignores hostile config and exposes no uncontrolled hosted/execution channels', async (t) => {
+g0('G0 real Codex ignores hostile config and exposes no uncontrolled hosted/execution channels', async (t) => {
   const fixture = await createBoundaryFixture(); t.after(fixture.cleanup);
   const backend = await createDiscoveryInferenceServer(); t.after(backend.close);
   const { createProviderProfile, createCodexInvocation } = await implementation();
@@ -96,12 +101,12 @@ test('G0 real Codex ignores hostile config and exposes no uncontrolled hosted/ex
     '-c', 'model_providers.maestro_fixture.requires_openai_auth=false', '-c', 'model_providers.maestro_fixture.env_key="MAESTRO_SYNTHETIC_KEY"'];
   const args = [...invocation.args.slice(0, -1), ...overrides, '-'];
   const before = await fixture.snapshot();
-  const result = await capture('/usr/bin/sandbox-exec', [...profile.args, PINNED_CODEX, ...args], invocation.cwd,
+  const result = await capture('/usr/bin/sandbox-exec', [...await syntheticProfileArgs(profile.args, fixture.directory, backend.port), PINNED_CODEX, ...args], invocation.cwd,
     { ...invocation.env, MAESTRO_SYNTHETIC_KEY: 'synthetic-only-not-a-credential' },
     JSON.stringify({ schemaVersion: 1, instructionsVersion: 'fixture', sources: [{ sourceId: 'synthetic', relativePath: 'README.md', sha256: '0'.repeat(64), text: 'A synthetic project. Ask about deployment.' }], answers: [], requestKind: 'INITIAL' }));
   assert.equal(result.overflow, false);
   assert.equal(result.signal, null, 'PROVIDER_DID_NOT_FINISH_WITHIN_G0_DEADLINE');
-  assert.equal(result.code, 0, `PROVIDER_PROFILE_REJECTED: ${result.stderr.slice(-1500)}`);
+  assert.equal(result.code, 0, 'PROVIDER_PROFILE_REJECTED');
   assert.ok(backend.requests.length > 0, 'SYNTHETIC_INFERENCE_NOT_REACHED');
   assert.deepEqual(backend.errors, []);
   const request = backend.requests[0]!.body;
@@ -111,15 +116,15 @@ test('G0 real Codex ignores hostile config and exposes no uncontrolled hosted/ex
   assert.ok(!serialized.includes(fixture.authHome) && !serialized.includes(fixture.checkout) && !serialized.includes(fixture.archive), 'PRIVATE_PATH_EXPOSED');
   const tools = request.tools as { type: string; name?: string }[];
   assert.ok(Array.isArray(tools), 'TOOL_CATALOG_NOT_OBSERVED');
-  // Residual apply_patch is permitted only because kernel denial is separately tested.
-  // New/hosted/file/network/execution tools must be reviewed rather than silently accepted.
-  for (const tool of tools) assert.ok(['apply_patch'].includes(tool.name ?? ''), `UNQUALIFIED_TOOL: ${tool.type}/${tool.name ?? ''}`);
+  // This pin/profile exposes only a UI question tool; exec cannot run an interview
+  // through it. QUESTIONS is the portable protocol. New tool surfaces require review.
+  for (const tool of tools) assert.ok(['request_user_input'].includes(tool.name ?? ''), `UNQUALIFIED_TOOL_CATALOG: ${JSON.stringify(tools.map(value => ({ type: value.type, name: value.name })))}`);
   assert.ok(result.stdout.includes('QUESTIONS'), 'NO_STRUCTURED_FINAL_RESULT');
   assert.deepEqual(await fixture.snapshot(), before);
 });
 
 
-test('G0 injected provider toolcalls cannot obtain excluded bytes or mutate protected paths', async (t) => {
+g0('G0 injected provider toolcalls cannot obtain excluded bytes or mutate protected paths', async (t) => {
   for (const attack of ['read-auth', 'write-checkout', 'shell-exec'] as const) {
     await t.test(attack, async (t) => {
       const fixture = await createBoundaryFixture(); t.after(fixture.cleanup);
@@ -137,7 +142,7 @@ test('G0 injected provider toolcalls cannot obtain excluded bytes or mutate prot
         '-c', `model_providers.maestro_fixture.base_url="${backend.baseUrl}"`, '-c', 'model_providers.maestro_fixture.wire_api="responses"',
         '-c', 'model_providers.maestro_fixture.requires_openai_auth=false', '-c', 'model_providers.maestro_fixture.env_key="MAESTRO_SYNTHETIC_KEY"'];
       const before = await fixture.snapshot();
-      const result = await capture('/usr/bin/sandbox-exec', [...profile.args, PINNED_CODEX, ...invocation.args.slice(0, -1), ...overrides, '-'], invocation.cwd,
+      const result = await capture('/usr/bin/sandbox-exec', [...await syntheticProfileArgs(profile.args, fixture.directory, backend.port), PINNED_CODEX, ...invocation.args.slice(0, -1), ...overrides, '-'], invocation.cwd,
         { ...invocation.env, MAESTRO_SYNTHETIC_KEY: 'synthetic-only-not-a-credential' }, 'Analyze only the synthetic stdin.');
       assert.equal(result.signal, null, 'TOOL_ATTEMPT_DID_NOT_TERMINATE');
       assert.ok(backend.requests.length > 0, 'ATTACK_NOT_DELIVERED');
