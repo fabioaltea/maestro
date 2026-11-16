@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { realpath } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -16,7 +17,7 @@ export async function createRegistryStore(t: TestContext, checkpoint?: (point: s
   const storeId = randomUUID(), instanceId = randomUUID(), bootstrap = randomUUID(), ticketId = randomUUID();
   let armed = false;
   const hooks = { checkpoint: (point: string) => { if (armed) checkpoint?.(point); }, ...(newProjectId ? { newProjectId } : {}) };
-  const store = new SQLiteStore({ path, identity: { storeId, schemaVersion: 3, ownerUid: process.getuid!(), canonicalPath: directory, revision: '0' } }, hooks);
+  const store = new SQLiteStore({ path, identity: { storeId, schemaVersion: SCHEMA_VERSION, ownerUid: process.getuid!(), canonicalPath: directory, revision: '0' } }, hooks);
   t.after(() => store.close());
   const acceptedAt = '2026-11-10T12:00:00.000Z';
   store.acceptOperation({ requestId: bootstrap, action: 'start', payloadHash: 'c'.repeat(64), ownerUid: process.getuid!(), targetInstanceId: null, acceptedAt });

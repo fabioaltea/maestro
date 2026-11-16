@@ -3,7 +3,7 @@ import { lstatSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ArchivePaths, LeaseHandle } from '../ports/platform.js';
 import type { Deadline } from '../ports/clock.js';
-import { REGISTRY_SCHEMA_SQL, SCHEMA_VERSION, STORE_SCHEMA_SQL } from './schema.js';
+import { REGISTRY_SCHEMA_V3_SQL, REGISTRY_SCHEMA_VERSION, SCHEMA_VERSION, STORE_SCHEMA_V3_SQL } from './schema.js';
 
 export interface RegistryUpgradeOptions {
   readonly paths: ArchivePaths;
@@ -22,7 +22,7 @@ function validateArchive(paths: ArchivePaths): void {
 }
 function version(database: Database.Database, paths: ArchivePaths): number {
   const version = database.pragma('user_version', { simple: true });
-  if (version !== 2 && version !== SCHEMA_VERSION) throw new Error('STATE_INCOMPATIBLE');
+  if (![2, REGISTRY_SCHEMA_VERSION, SCHEMA_VERSION].includes(Number(version))) throw new Error('STATE_INCOMPATIBLE');
   if (database.pragma('quick_check', { simple: true }) !== 'ok'
     || (database.pragma('foreign_key_check') as unknown[]).length) throw new Error('STATE_CORRUPT');
   const store = database.prepare('SELECT schema_version,owner_uid,canonical_path FROM store WHERE singleton=1').get() as {
@@ -52,7 +52,7 @@ export function upgradeRegistry(options: RegistryUpgradeOptions): void {
   try {
     database = new Database(paths.stateFile, { readonly: true, fileMustExist: true, timeout: 50 });
     const initialVersion = version(database, paths);
-    if (initialVersion === SCHEMA_VERSION) {
+    if (initialVersion >= REGISTRY_SCHEMA_VERSION) {
       for (const table of ['projects', 'project_observations', 'project_operations', 'request_catalog', 'registry_metadata']) {
         if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table)) throw new Error('STATE_CORRUPT');
       }
@@ -78,14 +78,14 @@ export function upgradeRegistry(options: RegistryUpgradeOptions): void {
         const links = database!.pragma(`foreign_key_list(${table})`) as { table: string }[];
         if (links.some(link => link.table === 'store')) throw new Error('STATE_INCOMPATIBLE');
       }
-      database!.exec(STORE_SCHEMA_SQL.replace('CREATE TABLE store (', 'CREATE TABLE store_v3 ('));
+      database!.exec(STORE_SCHEMA_V3_SQL.replace('CREATE TABLE store (', 'CREATE TABLE store_v3 ('));
       database!.exec(`INSERT INTO store_v3(singleton,store_id,schema_version,owner_uid,canonical_path,revision,next_event_seq,current_instance_id)
         SELECT singleton,store_id,3,owner_uid,canonical_path,revision,next_event_seq,current_instance_id FROM store`);
       database!.exec('DROP TABLE store');
       database!.exec('ALTER TABLE store_v3 RENAME TO store');
-      database!.exec(REGISTRY_SCHEMA_SQL);
+      database!.exec(REGISTRY_SCHEMA_V3_SQL);
       database!.exec("INSERT INTO request_catalog(request_id,scope,action,payload_hash) SELECT request_id,'LIFECYCLE',action,payload_hash FROM operations");
-      database!.pragma(`user_version=${SCHEMA_VERSION}`);
+      database!.pragma(`user_version=${REGISTRY_SCHEMA_VERSION}`);
       if (database!.pragma('integrity_check', { simple: true }) !== 'ok'
         || (database!.pragma('foreign_key_check') as unknown[]).length) throw new Error('STATE_CORRUPT');
       if (deadline.expired()) throw new Error('DEADLINE_EXCEEDED');

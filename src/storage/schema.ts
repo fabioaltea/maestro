@@ -1,9 +1,11 @@
 import type Database from 'better-sqlite3';
 import type { StoreIdentity } from '../ports/storage.js';
+import { DISCOVERY_SCHEMA_SQL } from './discovery-schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 
-export const SCHEMA_VERSION = 3;
-export const STORE_SCHEMA_SQL = `
+export const SCHEMA_VERSION = 4;
+export const REGISTRY_SCHEMA_VERSION = 3;
+export const STORE_SCHEMA_V3_SQL = `
 CREATE TABLE store (
   singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
   store_id TEXT NOT NULL UNIQUE,
@@ -15,7 +17,9 @@ CREATE TABLE store (
   current_instance_id TEXT REFERENCES instances(instance_id)
 ) STRICT;
 `;
-export const REGISTRY_SCHEMA_SQL = `
+export const STORE_SCHEMA_SQL = STORE_SCHEMA_V3_SQL.replace('CHECK(schema_version = 3)', 'CHECK(schema_version = 4)');
+// Frozen historical2→3 SQL. Add future migrations instead of editing this definition.
+export const REGISTRY_SCHEMA_V3_SQL = `
 CREATE TABLE request_catalog (
   request_id TEXT PRIMARY KEY CHECK(length(request_id)=36),
   scope TEXT NOT NULL CHECK(scope IN ('LIFECYCLE','PROJECT')),
@@ -94,6 +98,7 @@ BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER retained_projects BEFORE DELETE ON projects
 BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 `;
+export const REGISTRY_SCHEMA_SQL = REGISTRY_SCHEMA_V3_SQL;
 export const SCHEMA_SQL = `${STORE_SCHEMA_SQL}
 CREATE TABLE instances (
   instance_id TEXT PRIMARY KEY,
@@ -167,7 +172,8 @@ CREATE TABLE journal_metadata (
 ) STRICT;
 INSERT INTO journal_metadata(singleton) VALUES(1);
 CREATE INDEX resources_by_instance ON managed_resources(owning_instance_id, release_state);
-${REGISTRY_SCHEMA_SQL}`;
+${REGISTRY_SCHEMA_SQL}
+${DISCOVERY_SCHEMA_SQL}`;
 
 export function initializeSchema(database: Database.Database, identity: StoreIdentity): void {
   requireUuid(identity.storeId);

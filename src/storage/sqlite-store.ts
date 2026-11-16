@@ -9,7 +9,8 @@ import { openReadonlyDatabase } from './readonly-database.js';
 import { prepareOwnershipLeaseFiles } from '../platform/macos/lease.js';
 import { constants, closeSync, existsSync, lstatSync, openSync } from 'node:fs';
 import { dirname, isAbsolute, join } from 'node:path';
-import { initializeSchema, SCHEMA_VERSION } from './schema.js';
+import { DISCOVERY_TABLES } from './discovery-schema.js';
+import { initializeSchema, REGISTRY_SCHEMA_VERSION, SCHEMA_VERSION } from './schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { transition, type Lifecycle, type Outcome } from '../domain/states.js';
 import { canonicalProjectIntent, requireLocalBranch, normalizeProjectCommand } from '../domain/projects/intent.js';
@@ -64,8 +65,13 @@ export class SQLiteStore {
     this.database = database;
     try {
       if (!existed) initializeSchema(database, options.identity!);
-      const version = database.pragma('user_version', { simple: true });
-      if (version !== SCHEMA_VERSION && !(this.readOnly && version === 2)) throw new Error('STATE_INCOMPATIBLE');
+      const version = Number(database.pragma('user_version', { simple: true }));
+      if (version !== SCHEMA_VERSION && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(Number(version)))) throw new Error('STATE_INCOMPATIBLE');
+      if (version === 4) {
+        for (const name of DISCOVERY_TABLES) {
+          if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
+        }
+      }
       this.archiveVersion = version;
       if (database.pragma('quick_check', { simple: true }) !== 'ok' || (database.pragma('foreign_key_check') as unknown[]).length !== 0) throw new Error('STATE_CORRUPT');
       const store = database.prepare('SELECT * FROM store WHERE singleton=1').get() as Row | undefined;
@@ -93,7 +99,7 @@ export class SQLiteStore {
   }
   private registry(): Database.Database {
     if (!this.database) throw new Error('STATE_ABSENT');
-    if (this.archiveVersion !== SCHEMA_VERSION) throw new Error('REGISTRY_NOT_INITIALIZED');
+    if (this.archiveVersion < REGISTRY_SCHEMA_VERSION) throw new Error('REGISTRY_NOT_INITIALIZED');
     return this.database;
   }
   private catalog(requestId: string, scope: 'LIFECYCLE' | 'PROJECT', action: string, payloadHash: string): boolean {

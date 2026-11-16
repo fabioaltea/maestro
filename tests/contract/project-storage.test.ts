@@ -1,3 +1,4 @@
+import { SCHEMA_VERSION } from '../../src/storage/schema.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
@@ -51,7 +52,7 @@ async function fixture(t: Parameters<typeof createTestContext>[0]) {
   const directory = await realpath(context.directory);
   const path = join(directory, 'state.sqlite');
   const storeId = randomUUID();
-  const store = await openStorage({ path, identity: { storeId, schemaVersion: 3, ownerUid: process.getuid!(), canonicalPath: directory, revision: '0' } });
+  const store = await openStorage({ path, identity: { storeId, schemaVersion: SCHEMA_VERSION, ownerUid: process.getuid!(), canonicalPath: directory, revision: '0' } });
   t.after(() => store.close());
   const api = registry(store);
   const instanceId = randomUUID();

@@ -38,12 +38,12 @@ async function fixture(t: Parameters<typeof createTestContext>[0]) {
   return { context, paths, archive, options: { paths, controlLease: control.handle, daemonLease: daemon.handle, deadline: makeDeadline(systemClock, 2_000) } };
 }
 
-test('fresh schema is 3, with separate registry pending and active identity uniqueness', () => {
-  assert.equal(SCHEMA_VERSION, 3, 'required registry schema has not been introduced');
+test('fresh schema includes registry v3, with separate registry pending and active identity uniqueness', () => {
+  assert.ok(SCHEMA_VERSION >= 3, 'required registry schema has not been introduced');
   const database = new Database(':memory:');
   try {
-    initializeSchema(database, { storeId: randomUUID(), ownerUid: process.getuid!(), canonicalPath: '/owned-fixture', schemaVersion: 3, revision: '0' });
-    assert.equal(database.pragma('user_version', { simple: true }), 3);
+    initializeSchema(database, { storeId: randomUUID(), ownerUid: process.getuid!(), canonicalPath: '/owned-fixture', schemaVersion: SCHEMA_VERSION, revision: '0' });
+    assert.equal(database.pragma('user_version', { simple: true }), SCHEMA_VERSION);
     for (const table of ['projects', 'project_observations', 'project_operations', 'request_catalog', 'registry_metadata']) {
       assert.ok(database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table));
     }

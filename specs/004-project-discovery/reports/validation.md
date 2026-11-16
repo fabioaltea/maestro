@@ -115,3 +115,23 @@ commit e SIGKILL del solo figlio posseduto. Casi ledger su replay/conflitti UUID
 incrociati e admission atomica grant/session/run/slot con secondo start negato.
 PASS build:test;8test nuovi,8FAIL attesi (schema attuale3/moduli T008–T009 assenti),
 0skip. T008 porta a PASS l’upgrade, T009 i due casi ledger separati.
+
+## T008 — schema4 e upgrade esplicito
+
+Writer4, reader2/3/4, registry≥3; SQL storico STORE/REGISTRY V3 e migrazione2→3
+separati dal nuovo3→4. start esplicito acquisisce entrambi i lease e migra;
+status/read non migrano. Creazione15tabelle Discovery separate, slot/grant/ledger,
+FK differite per admission atomica, UUID guard incrociate e artefatti senza blob.
+Policy processi agent-runtime separata, managed_resources Foundation invariato.
+
+PASS build/build:test/typecheck/lint;41/41test mirati upgrade/registry/reader,0skip.
+Comprende7casi004, crash prima/dopo commit, rollback fault, chain2→3→4, righe
+Foundation/registry/journal preservate e reader3 senza nuove scritture. Nuovi
+negativi: tabella sconosciuta nello schema3 o tabella Discovery mancante nel4
+bloccano upgrade/apertura. SQL constraints delle versioni storiche restano3.
+
+I test di creazione archivio corrente usano SCHEMA_VERSION invece di3 hardcoded;
+le fixture/aspettative storiche2→3 e reader3 restano congelate. readonly-database
+e sqlite-driver erano già version-neutral e non hanno richiesto modifiche.
+Nessun archivio dell’utente aperto o migrato. I due casi ledger T007 restano RED
+fino a T009, non rientrano nei41PASS dichiarati.

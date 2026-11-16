@@ -65,7 +65,7 @@ test('explicit start refuses occupied daemon ownership before upgrade, then upgr
   const reader = await openStorage({ path: archive.path, readonly: true });
   try {
     const snapshot = (await reader.readSnapshot())!;
-    assert.equal(snapshot.store.schemaVersion, 3); assert.equal(snapshot.store.storeId, archive.storeId);
+    assert.equal(snapshot.store.schemaVersion, 4); assert.equal(snapshot.store.storeId, archive.storeId);
     assert.equal(snapshot.instance?.lifecycle, 'RUNNING');
     assert.equal((await reader.getOperation(archive.requestId))?.payloadHash, 'a'.repeat(64));
     assert.equal((await reader.getRequestReservation(archive.requestId))?.scope, 'LIFECYCLE');

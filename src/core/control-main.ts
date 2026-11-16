@@ -18,7 +18,7 @@ import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { isEntrypoint, readBootstrap, reportBootstrap } from './entrypoint.js';
 import { executeStop } from './lifecycle.js';
-import { needsRegistryUpgrade, upgradeRegistry } from '../storage/registry-upgrade.js';
+import { needsDiscoveryUpgrade, upgradeDiscovery } from '../storage/discovery-upgrade.js';
 
 export function classifyError(error: unknown): ErrorCode {
   if (error instanceof Error) {
@@ -108,12 +108,12 @@ export async function runControl(intent: BootstrapIntent, dependencies: CoreDepe
     if (lock.status !== 'HELD') { report(false, lock.status === 'BUSY' ? 'BUSY' : 'BLOCKED'); return lock.status === 'BUSY' ? 3 : 4; }
     lease = lock.handle;
     const fresh = !existsSync(paths.stateFile);
-    if (!fresh && intent.action === 'start' && needsRegistryUpgrade(paths)) {
+    if (!fresh && intent.action === 'start' && needsDiscoveryUpgrade(paths)) {
       const daemon = createOwnershipLease().tryAcquire(paths.daemonLeaseFile, 'daemon');
       if (daemon.status !== 'HELD') throw new Error('BLOCKED');
       try {
         await checkpoint('control.beforeRegistryUpgrade');
-        upgradeRegistry({ paths, controlLease: lease, daemonLease: daemon.handle, deadline });
+        upgradeDiscovery({ paths, controlLease: lease, daemonLease: daemon.handle, deadline });
         await checkpoint('control.registryUpgraded');
       } finally { daemon.handle.release(); }
     }

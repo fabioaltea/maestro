@@ -113,3 +113,15 @@ test('owned SIGKILL at pre/post commit leaves one valid complete schema', async 
     assert.deepEqual(snapshot(archive.path), before);
   }
 });
+
+test('upgrade rejects unknown schema3 tables and a schema4 missing any Discovery table', async t => {
+  const api = await upgrade(); const unknown = await fixture(t);
+  const extra = new Database(unknown.archive.path); extra.exec('CREATE TABLE unexpected_private_table(value TEXT)'); extra.close();
+  const before = await readFile(unknown.archive.path);
+  assert.throws(() => api.upgradeDiscovery(unknown.options), /STATE_INCOMPATIBLE/);
+  assert.deepEqual(await readFile(unknown.archive.path), before);
+  const broken = await fixture(t); api.upgradeDiscovery(broken.options);
+  const database = new Database(broken.archive.path); database.exec('DROP TABLE discovery_approvals'); database.close();
+  assert.throws(() => api.upgradeDiscovery(broken.options), /STATE_CORRUPT/);
+  await assert.rejects(openStorage({ path: broken.archive.path, readonly: true }), /STATE_CORRUPT/);
+});
