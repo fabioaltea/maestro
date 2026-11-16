@@ -67,3 +67,14 @@ I gate001/002 e la review umana003 restano invariati.
   in assenza del pin. La qualifica esplicita fallisce invece senza piattaforma/pin.
 - Backend sintetico con egress OS ristretto al singolo port loopback; account
   ufficiale/inferenza reale non usati. T004 consolida evidenza e limiti del gate.
+
+## T004 — consolidamento G0
+
+G0 PASS sintetico:8/8,0FAIL/0SKIP; pin/profilo/schema/digest e limiti in
+[provider-qualification.md](provider-qualification.md). Asset dist/dist-tests
+identici ai source. Nessuna eccezione sulle credenziali o sui dati di progetto.
+G1/SC-001 NOT_RUN e gate preesistenti invariati. Foundation ora può procedere
+con fixture locali; configurazione e modello reali richiederanno verifica dedicata.
+
+La regressione ordinaria `npm test` è stata avviata separatamente; il suo esito
+sarà registrato alla conclusione, senza confonderlo con la qualifica G0.

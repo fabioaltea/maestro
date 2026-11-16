@@ -36,7 +36,7 @@ Base003: aad9dde; branch004 creato da003, senza merge in main. T054003/manual re
 | VII Testability | PASS: porte sostituibili | PASS design: test invarianti prima del codice, G0 negativo, G1 reale separato, UI E2E essenziale |
 | VIII Observability | PASS: correlazione/output limitato | PASS design: journal metadata, output/documenti paginati, redazione/cap/troncamento e budget terminale |
 
-PASS documentale non è qualifica runtime. G0/G1 sono NOT_RUN: nessuna violazione accettata per convenienza. Se il confine provider non è dimostrabile si blocca l’implementazione delle storie dipendenti, senza rimuovere FR004/018. Le decisioni sono risolte in research; le prove vengono eseguite nei task di qualifica.
+PASS documentale non è qualifica runtime. Al consolidamento del piano G0/G1 erano NOT_RUN (avanzamento implementativo nei report): nessuna violazione accettata per convenienza. Se il confine provider non è dimostrabile si blocca l’implementazione delle storie dipendenti, senza rimuovere FR004/018. Le decisioni sono risolte in research; le prove vengono eseguite nei task di qualifica.
 
 ## Project Structure
 

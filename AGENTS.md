@@ -4,7 +4,7 @@ Auto-generated from all feature plans. Last updated: 2026-11-16
 
 ## Active Technologies
 
-- 004-project-discovery (pianificato, non implementato): Codex CLI standalone 0.167.0 con login ufficiale Keychain-only; corpus selezionato/sigillato e profilo OS dedicato. Nessun nuovo SDK o pacchetto runtime; G0/G1 ancora NOT_RUN.
+- 004-project-discovery (in implementazione, solo setup/provider boundary): Codex CLI standalone 0.167.0 con login ufficiale Keychain-only; corpus selezionato/sigillato e profilo OS dedicato. Nessun nuovo SDK o pacchetto runtime; G0 sintetico PASS; G1/login reale NOT_RUN. Consultare reports/provider-qualification.md della004.
 - Schema 4 pianificato sul writer SQLite esistente: ledger/slot/approvazioni Discovery e artefatti privati bounded. Upgrade solo start esplicito; Agent Runtime separato dalla policy Foundation. Consultare specs/004-project-discovery/ e contracts.
 
 - 003-desktop-core-ui (implementato, review umana pendente): Electron 45.3.0, React/react-dom 19.3.1, esbuild 0.28.2 e Playwright 1.65.0; TypeScript 6.0.3. Main Electron Node24 ESM, preload CJS sandboxed e renderer browser; CLI core tramite Node26.13.0 esterno. Pin/compatibilità qualificati con sandbox in G0.
@@ -52,7 +52,7 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 004: piano tecnico, ricerca e contratti per Discovery con un primo agente reale e approvazione del progetto; implementazione non avviata. Scelta utente: Codex CLI con login ufficiale, nessuna API key/fallback automatico. Verifiche mirate, niente nuove campagne di volume/durata.
+- 004: setup e confine Codex implementati (T001–T004); G0 sintetico8/8PASS, nessun flusso Discovery/CLI/UI o provider reale ancora qualificato. Scelta utente: Codex CLI con login ufficiale, nessuna API key/fallback automatico. Verifiche mirate, niente nuove campagne di volume/durata.
 
 - 003: prima UI locale sul core001/002; CLI con Node26 esterno, conferme/ricevute, progetti live/offline e attività. G0–G4 qualificati localmente; T054 review umana/picker nativo ancora NOT_RUN. Benchmark eventi di volume/durata rinviati dall’utente2026-11-15; non ricrearli come gate MVP. Gate001/002 invariati. Consultare specs/003-desktop-core-ui/reports/.
 

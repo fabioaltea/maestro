@@ -1,6 +1,6 @@
 # Quickstart e qualifica004 — procedura futura
 
-004 è pianificata, **non implementata**. Non eseguire comandi provider, installazioni, login, setup Keychain o campagne di prova durante questa fase. Gli esempi `maestro discovery` saranno introdotti dai task. Non vengono riproposti benchmark lunghi.
+004 è in implementazione: G0 sintetico qualificato, flussi Discovery non ancora disponibili. Non eseguire comandi provider, installazioni, login, setup Keychain o campagne di prova durante questa fase. Gli esempi `maestro discovery` saranno introdotti dai task. Non vengono riproposti benchmark lunghi.
 
 ## Prerequisiti
 
@@ -33,6 +33,10 @@ L’intervista su fixture deve lasciare un’informazione realmente non presente
 
 ## Verifiche pianificate
 
+G0 implementato: `npm run test:discovery:boundary`, solo binario pin/fixture sintetiche,
+nessun account o egress Internet; non è la prova reale G1. Le suite ordinarie
+segnalano questo gate separato come non eseguito (skip esplicito), senza dedurre PASS.
+
 ```sh
 npm run build
 npm run typecheck
@@ -54,7 +58,7 @@ Il comando preciso opt-in e la redazione delle evidenze si definiscono nel task 
 
 | Gate | Prova mirata | Stato ora |
 |---|---|---|
-| G0 |pin/argv/config, confinamento OS, letture auth/checkout/archivio e exec negati, tool residui, fixture inferenza locale con segreti sintetici |NOT_RUN |
+| G0 |pin/argv/config, confinamento OS, letture auth/checkout/archivio e exec negati, tool residui, fixture inferenza locale con segreti sintetici |PASS sintetico: [evidenze](reports/provider-qualification.md) |
 | Schema/context |2→3→4, crash upgrade, reader3 immutato, slot/ledger UUID, symlink/hardlink/growth, archive-inside-repo |NOT_RUN |
 | G1 |avvio UI/headless, login Keychain e provider reale opt-in, repository invariato, doppio invio/query |NOT_RUN |
 | G2 |intervista/risposta/reopen UI, cancel e crash daemon/host, owner incerto, output limitato |NOT_RUN |
