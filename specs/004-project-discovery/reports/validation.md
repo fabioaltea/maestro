@@ -92,3 +92,16 @@ PASS build:test;8/8 casi nuovi falliscono per moduli dominio non ancora presenti
 0skip. Slot WAITING_USER/RECONCILING, uscita provata, approvazione distinta,
 UPDATING, fasi spawn, grant scope/TTL/replay, byte Unicode e limiti numerici.
 La checkbox attesta i test RED richiesti; T006 deve portarli a PASS.
+
+## T006 — dominio e porte neutri
+
+Implementati tipi/limiti, transizioni distinte Discovery/run/operation, canonizzazione
+chiusa degli intenti, grant scope/scadenza/replay e porte provider/context/runtime/store.
+Documenti e approvazioni hanno tipi propri senza dipendenze Codex/OS/SQLite/UI.
+WAITING_USER/RECONCILING occupano lo slot; nessuna uscita incerta lo libera.
+Aggiunto caso RED per fallimento spawn precoce: EXIT_OBSERVED richiede prova anche
+prima di PROVIDER_RUNNING, poi può finalizzare senza fasi di avvio inventate.
+PASS build/build:test/typecheck/lint e15/15test mirati,0skip (dominio9,guard3,launcher3).
+Nessuna API operativa aggiunta e schema attivo ancora3: T008 introduce l’upgrade.
+La baseline ordinaria ha rigenerato cinque campioni storici002: ripristinati ai
+byte iniziali del checkout, senza cambiare i gate o committare nuovi esiti002.

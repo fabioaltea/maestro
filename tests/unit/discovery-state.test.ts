@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 async function stateModule() {
   return await import(new URL('../../src/domain/discovery/state.js', import.meta.url).href) as {
     transitionDiscovery(state: string, next: string, evidence?: { exitVerified?: boolean; approvalValidated?: boolean }): string;
-    transitionRunPhase(phase: string, next: string): string;
+    transitionRunPhase(phase: string, next: string, evidence?: { exitVerified?: boolean }): string;
     holdsDiscoverySlot(state: string): boolean;
   };
 }
@@ -48,4 +48,13 @@ test('run phases cannot skip durable authorization or confuse operation admissio
   assert.throws(() => domain.transitionRunPhase('HOST_READY', 'FINALIZED'));
   assert.equal(domain.transitionRunPhase('EXIT_OBSERVED', 'FINALIZED'), 'FINALIZED');
   assert.throws(() => domain.transitionRunPhase('FINALIZED', 'SPAWN_INTENT'));
+});
+
+
+test('early spawn failure can finalize only after absence or exit has been proved', async () => {
+  const domain = await stateModule();
+  for (const phase of ['SPAWN_INTENT', 'HOST_READY', 'SPAWN_AUTHORIZED', 'PROVIDER_RUNNING']) {
+    assert.throws(() => domain.transitionRunPhase(phase, 'EXIT_OBSERVED'));
+    assert.equal(domain.transitionRunPhase(phase, 'EXIT_OBSERVED', { exitVerified: true }), 'EXIT_OBSERVED');
+  }
 });
