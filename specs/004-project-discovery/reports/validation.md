@@ -78,3 +78,17 @@ con fixture locali; configurazione e modello reali richiederanno verifica dedica
 
 La regressione ordinaria `npm test` è stata avviata separatamente; il suo esito
 sarà registrato alla conclusione, senza confonderlo con la qualifica G0.
+
+## Baseline ordinaria dopo T004
+
+`npm test` concluso:377test,372PASS,0FAIL,5SKIP,151689,47ms osservati.
+I cinque skip sono i cinque casi G0 top-level, esclusi per default dalla suite
+ordinaria e qualificati separatamente8/8 nel comando esplicito. Nessun altro
+skip, provider reale o benchmark introdotto. Conteggi precedono i casi T005.
+
+## T005 — stato/intenti prima del dominio (RED atteso)
+
+PASS build:test;8/8 casi nuovi falliscono per moduli dominio non ancora presenti,
+0skip. Slot WAITING_USER/RECONCILING, uscita provata, approvazione distinta,
+UPDATING, fasi spawn, grant scope/TTL/replay, byte Unicode e limiti numerici.
+La checkbox attesta i test RED richiesti; T006 deve portarli a PASS.
