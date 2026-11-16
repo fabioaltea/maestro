@@ -34,3 +34,32 @@ test('actual production sources obey the architecture boundaries', () => {
   const result = run(resolve('src'));
   assert.equal(result.status, 0, result.stdout + result.stderr);
 });
+
+
+test('provider adapters reject SQLite, Electron and core/OS adapter dependencies', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'maestro-provider-architecture-'));
+  t.after(() => rm(root, { recursive: true }));
+  await mkdir(join(root, 'providers', 'codex'), { recursive: true });
+  const probe = join(root, 'providers', 'codex', 'probe.ts');
+  await writeFile(probe, "import type { Provider } from '../../ports/provider.js';\nimport { createHash } from 'node:crypto';\n");
+  assert.equal(run(root).status, 0);
+  for (const source of [
+    "import db from 'better-sqlite3';",
+    "export { DatabaseSync } from 'node:sqlite';",
+    "await import('electron');",
+    "const db = require('../../storage/sqlite-store.js');",
+    "import { platform } from '../../platform/macos/index.js';",
+    "import { runtime } from '../../core/runtime.js';",
+    "await import(process.env.MODULE);",
+  ]) {
+    await writeFile(probe, source);
+    const result = run(root);
+    assert.equal(result.status, 1, source + result.stdout + result.stderr);
+    assert.match(result.stderr, /providers\/codex\/probe.ts/);
+  }
+  // The domain boundary must continue to reject a direct provider import.
+  await writeFile(probe, 'export {};');
+  await mkdir(join(root, 'domain'));
+  await writeFile(join(root, 'domain', 'probe.ts'), "import '../providers/codex/probe.js';");
+  assert.equal(run(root).status, 1);
+});
