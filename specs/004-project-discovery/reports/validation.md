@@ -27,3 +27,18 @@ I gate001/002 e la review umana003 restano invariati.
   dipendenze vietate provider e regressione dominio/client.
 - Nessun package/lockfile/runner nuovo; lockfile desktop preesistente non tracciato
   lasciato fuori dalle modifiche. G0/G1 NOT_RUN; nessuna soglia runtime misurata.
+
+## T002 — casi G0 prima del codice (RED atteso)
+
+- Fixture temporanee con canary, config/rules/skill/hook/MCP ostili, backend HTTP
+  Responses locale limitato a12richieste/4MiB, nessun account/chiave reale.
+- Test sul pin, argv/env chiusi, policy OS tramite probe nativo, catalogo reale
+  e iniezioni sintetiche apply_patch/read-auth/write-checkout/shell-exec.
+- PASS compilazione `npm run build:test`. Test mirato:8test,1PASS (hash pin),
+  7FAIL attesi per ERR_MODULE_NOT_FOUND delle implementazioni T003,0skip.
+  I test restano eseguibili e falliscono esplicitamente, senza falsi PASS/skip.
+- La checkbox T002 attesta i casi RED, non G0. Il gate resta NOT_RUN e i task
+  dipendenti non sono autorizzati finché la qualifica T004 non è PASS.
+- Fixture SSE/config confrontate con la documentazione ufficiale consultata:
+  [Responses streaming](https://developers.openai.com/api/reference/resources/responses/streaming-events),
+  [config reference](https://learn.chatgpt.com/docs/config-file/config-reference).
