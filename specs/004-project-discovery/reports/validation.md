@@ -105,3 +105,13 @@ PASS build/build:test/typecheck/lint e15/15test mirati,0skip (dominio9,guard3,la
 Nessuna API operativa aggiunta e schema attivo ancora3: T008 introduce l’upgrade.
 La baseline ordinaria ha rigenerato cinque campioni storici002: ripristinati ai
 byte iniziali del checkout, senza cambiare i gate o committare nuovi esiti002.
+
+## T007 — upgrade/ledger prima del codice (RED atteso)
+
+Schema3 congelato in fixture indipendente dal codice corrente, con righe
+Foundation/registry/identità/sequenze conservabili. Casi nuovo schema4,3→4 e
+2→3→4, reader3 senza mutazioni, lease/deadline/writer concorrente, fault pre/post
+commit e SIGKILL del solo figlio posseduto. Casi ledger su replay/conflitti UUID
+incrociati e admission atomica grant/session/run/slot con secondo start negato.
+PASS build:test;8test nuovi,8FAIL attesi (schema attuale3/moduli T008–T009 assenti),
+0skip. T008 porta a PASS l’upgrade, T009 i due casi ledger separati.
