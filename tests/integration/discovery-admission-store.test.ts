@@ -11,17 +11,17 @@ import { createOwnershipLease } from '../../src/platform/macos/lease.js';
 import { makeDeadline, systemClock } from '../../src/ports/clock.js';
 import type { RegistryUpgradeOptions } from '../../src/storage/registry-upgrade.js';
 import { canonicalDiscoveryIntent } from '../../src/domain/discovery/intent.js';
-import type { DiscoveryAdmission } from '../../src/ports/discovery.js';
+import type { DiscoveryAdmission, DiscoveryAdmissionResult } from '../../src/ports/discovery.js';
 import type { DiscoveryGrant, DiscoveryOperation, DiscoveryResult } from '../../src/domain/discovery/model.js';
 
 interface Ledger {
-  admit(input: DiscoveryAdmission): Promise<DiscoveryResult<DiscoveryOperation>>;
-  saveGrant(grant: DiscoveryGrant): Promise<DiscoveryResult<void>>;
-  operation(requestId: string): Promise<DiscoveryOperation | null>;
+  admit(input: DiscoveryAdmission): DiscoveryResult<DiscoveryAdmissionResult>;
+  saveGrant(grant: DiscoveryGrant): DiscoveryResult<void>;
+  operation(requestId: string): DiscoveryOperation | null;
 }
 async function fixture(t: Parameters<typeof createTestContext>[0]) {
   const { upgradeDiscovery } = await loadContract<{ upgradeDiscovery(input: RegistryUpgradeOptions): void }>('storage/discovery-upgrade.js', ['upgradeDiscovery']);
-  const { createDiscoveryLedger } = await loadContract<{ createDiscoveryLedger(database: Database.Database): Ledger }>('storage/discovery-store.js', ['createDiscoveryLedger']);
+  const { createDiscoveryLedger } = await loadContract<{ createDiscoveryLedger(database: Database.Database, options?: { nowMs(): number }): Ledger }>('storage/discovery-store.js', ['createDiscoveryLedger']);
   const context = await createTestContext(t); const directory = await realpath(context.directory);
   const archive = createRegistryV3(directory); const paths = (await createPlatformPaths().resolveArchive(directory, 'write'))!;
   const control = createOwnershipLease().tryAcquire(paths.controlLeaseFile, 'control');
@@ -32,7 +32,7 @@ async function fixture(t: Parameters<typeof createTestContext>[0]) {
   const database = new Database(archive.path); database.pragma('foreign_keys=ON');
   database.prepare("UPDATE instances SET lifecycle='RUNNING' WHERE instance_id=?").run(archive.instanceId);
   t.after(() => database.close());
-  return { ...archive, database, ledger: createDiscoveryLedger(database) };
+  return { ...archive, database, ledger: createDiscoveryLedger(database, { nowMs: () => 1000 }) };
 }
 function localIntent(storeId: string, instanceId: string, requestId = randomUUID()): DiscoveryAdmission {
   const canonicalIntent = canonicalDiscoveryIntent({ ownerUid: process.getuid!(), storeId, targetId: 'provider', action: 'check', configRevision: null, stateRevision: null, snapshotId: null, contextDigest: null, providerRevision: null, providerProfileDigest: null, modelId: null, payload: {} });
@@ -43,7 +43,10 @@ function localIntent(storeId: string, instanceId: string, requestId = randomUUID
 test('Discovery UUID ledger replays an identical intent, rejects a different payload and cross-namespace collision', async t => {
   const f = await fixture(t); const input = localIntent(f.storeId, f.instanceId);
   const first = await f.ledger.admit(input); assert.equal(first.ok, true);
-  assert.deepEqual(await f.ledger.admit(input), first);
+  const replay = await f.ledger.admit(input); assert.equal(replay.ok, true);
+  if (!first.ok || !replay.ok) throw new Error('EXPECTED_ADMISSION');
+  assert.equal(first.value.inserted, true); assert.equal(replay.value.inserted, false);
+  assert.deepEqual(replay.value.operation, first.value.operation);
   assert.deepEqual(await f.ledger.admit({ ...input, payloadHash: 'd'.repeat(64) }), { ok: false, code: 'IDEMPOTENCY_CONFLICT' });
   assert.deepEqual(await f.ledger.admit(localIntent(f.storeId, f.instanceId, f.requestId)), { ok: false, code: 'IDEMPOTENCY_CONFLICT' });
   assert.throws(() => f.database.prepare("INSERT INTO request_catalog VALUES(?,'LIFECYCLE','stop',?)").run(input.requestId, 'e'.repeat(64)), /IDEMPOTENCY_CONFLICT/);
@@ -74,4 +77,17 @@ test('grant, session, run and logical slot are one transaction; a second active 
   assert.equal((f.database.prepare('SELECT discovery_id FROM discovery_slot WHERE singleton=1').get() as { discovery_id: string }).discovery_id, first.discovery!.discoveryId);
   assert.equal((f.database.prepare('SELECT count(*) AS n FROM discovery_runs').get() as { n: number }).n, 1);
   assert.deepEqual(f.database.pragma('foreign_key_check'), []);
+});
+
+test('grant capacity reserves cancellation and never recycles consumed permissions', async t => {
+  const f = await fixture(t);
+  const canonical = canonicalDiscoveryIntent({ ownerUid: process.getuid!(), storeId: f.storeId, action: 'configure', targetId: 'provider',
+    configRevision: null, stateRevision: null, snapshotId: null, contextDigest: null, providerRevision: null, providerProfileDigest: null, modelId: null, payload: {} });
+  for (let index = 0; index < 31; index++) assert.equal((await f.ledger.saveGrant({ grantId: randomUUID(), canonicalIntent: canonical, expiresAtMs: 10000, consumedByRequestId: null })).ok, true);
+  assert.deepEqual(await f.ledger.saveGrant({ grantId: randomUUID(), canonicalIntent: canonical, expiresAtMs: 10000, consumedByRequestId: null }), { ok: false, code: 'DISCOVERY_LIMIT' });
+  const cancel = canonicalDiscoveryIntent({ ...JSON.parse(canonical), action: 'cancel', targetId: randomUUID() });
+  const grant = { grantId: randomUUID(), canonicalIntent: cancel, expiresAtMs: 10000, consumedByRequestId: null };
+  assert.equal((await f.ledger.saveGrant(grant)).ok, true);
+  assert.equal(Number((f.database.prepare('SELECT count(*) AS n FROM discovery_grants').get() as { n: number }).n), 32);
+  assert.deepEqual(await f.ledger.saveGrant({ ...grant, consumedByRequestId: randomUUID() }), { ok: false, code: 'APPROVAL_REQUIRED' });
 });

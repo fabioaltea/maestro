@@ -135,3 +135,26 @@ le fixture/aspettative storiche2→3 e reader3 restano congelate. readonly-datab
 e sqlite-driver erano già version-neutral e non hanno richiesto modifiche.
 Nessun archivio dell’utente aperto o migrato. I due casi ledger T007 restano RED
 fino a T009, non rientrano nei41PASS dichiarati.
+
+## T009 — ledger, slot e grant nel writer esistente
+
+Admission atomica con UUID globale e trigger incrociati; grant consumato soltanto
+con sessione/run/slot durevoli. Risposta interna inserted=false su replay, nessun
+nuovo evento o run; payload differente e collisione con LIFECYCLE/PROJECT negati.
+Reservation query unificata e reader schema<4 con DISCOVERY_NOT_INITIALIZED.
+Grant attivi max32 con posto riservato cancel; query e cancellation non richiedono
+una nuova autorizzazione start. Riserva byte artefatti ancora T012.
+
+Stesso worker/SQLiteStore, nessun secondo writer; adattatore interno sincrono
+(mai Promise dentro una transazione SQLite). Il proxy worker resta asincrono.
+Operation query metadata omette intento/hash privati prima del reader64KiB;
+metadata operation.accepted scope=discovery è pubblicato nella stessa commit.
+Tipologie Discovery e UI allowlist complete restano T016/T025.
+
+PASS build/build:test/typecheck/lint;28/28test mirati. Coprono grant cap/cancel,
+replay con inserted=false, slot occupato senza consumo del secondo grant, fault
+prima della commit senza evento/operazione, proxy worker e reader confinato,
+mutazioni readonly negate e notifiche persistenti sul canale onFailure esistente.
+PASS `npm test`:400test,395PASS,0FAIL,5SKIP (G0 separato),136036,06ms osservati.
+Campioni JSON002 rigenerati dalla suite ripristinati ai byte iniziali, senza
+committare esiti storici nuovi. Nessun login o modello reale eseguito.

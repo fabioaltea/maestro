@@ -8,10 +8,11 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
   if (draft.instanceId != null) requireUuid(draft.instanceId);
   if (draft.operationId != null) requireUuid(draft.operationId);
   const project = draft.payload.scope === 'project';
-  if (project && draft.operationId == null) throw new Error('INVALID_REQUEST');
+  const discovery = draft.payload.scope === 'discovery';
+  if ((project || discovery) && draft.operationId == null) throw new Error('INVALID_REQUEST');
   const payload: Record<string, unknown> = {}; let redacted = 0;
   const enums: Record<string, readonly string[]> = {
-    action: project ? ['REGISTER', 'VERIFY', 'UPDATE', 'REMOVE'] : ['start', 'stop', 'restart'], outcome: ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
+    action: discovery ? ['configure', 'start', 'answer', 'correct', 'approve', 'cancel', 'preview', 'check', 'discard'] : project ? ['REGISTER', 'VERIFY', 'UPDATE', 'REMOVE'] : ['start', 'stop', 'restart'], outcome: ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
     from: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
     to: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
     phase: ['ACCEPTED', 'PRECHECK', 'SPAWN_INTENT', 'WAIT_READY', 'STOP_REQUESTED', 'DRAINING', 'WAIT_EXIT', 'FINALIZED'],
@@ -22,8 +23,9 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
       if (key === 'code' && typeof value === 'string') { foundationError(value as Parameters<typeof foundationError>[0]); allowed = true; }
       if (['resourceId', 'correlationId'].includes(key) && typeof value === 'string') { requireUuid(value); allowed = true; }
       if (key === 'generation' && typeof value === 'string') { requireDecimal(value); allowed = true; }
-      if (key === 'scope' && value === 'project') allowed = true;
-      if (project && key === 'projectId' && typeof value === 'string') { requireUuid(value); allowed = true; }
+      if (key === 'scope' && (value === 'project' || value === 'discovery')) allowed = true;
+      if ((project || discovery) && key === 'projectId' && typeof value === 'string') { requireUuid(value); allowed = true; }
+      if (discovery && ['discoveryId', 'sessionId', 'runId', 'revisionId'].includes(key) && typeof value === 'string') { requireUuid(value); allowed = true; }
       if (project && ['configRevision', 'observationRevision'].includes(key) && typeof value === 'string') {
         requireDecimal(value); allowed = value !== '0';
       }

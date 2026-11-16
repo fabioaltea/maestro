@@ -25,8 +25,15 @@ export interface DiscoveryAdmission {
   readonly run: DiscoveryRun | null; readonly expectedStateRevision: string | null; readonly acquireSlot: boolean;
 }
 /** All mutations are implemented by the existing SQLite writer, never Electron. */
+export interface DiscoveryAdmissionResult { readonly operation: DiscoveryOperation; readonly inserted: boolean }
+export type DiscoveryOperationView = Omit<DiscoveryOperation, 'canonicalIntent' | 'payloadHash'>;
+export interface DiscoveryLedgerStoragePort {
+  admitDiscoveryOperation?(input: DiscoveryAdmission): Promise<DiscoveryResult<DiscoveryAdmissionResult>>;
+  getDiscoveryOperation?(requestId: string): Promise<DiscoveryOperationView | null>;
+  saveDiscoveryGrant?(grant: DiscoveryGrant): Promise<DiscoveryResult<void>>;
+}
 export interface DiscoveryStorePort {
-  admit(input: DiscoveryAdmission): Promise<DiscoveryResult<DiscoveryOperation>>;
+  admit(input: DiscoveryAdmission): Promise<DiscoveryResult<DiscoveryAdmissionResult>>;
   operation(requestId: string): Promise<DiscoveryOperation | null>;
   reservation(requestId: string): Promise<'LIFECYCLE' | 'PROJECT' | 'DISCOVERY' | null>;
   get(discoveryId: string): Promise<DiscoveryRecord | null>;

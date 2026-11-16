@@ -1,3 +1,6 @@
+import { createDiscoveryLedger } from './discovery-store.js';
+import type { DiscoveryAdmission } from '../ports/discovery.js';
+import type { DiscoveryGrant } from '../domain/discovery/model.js';
 import { beforeDiagnosticMutation, diagnosticUsage, appendDiagnosticLog, allocated, MiB } from './diagnostic-budget.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { openJournal } from './event-journal.js';
@@ -102,6 +105,24 @@ export class SQLiteStore {
     if (this.archiveVersion < REGISTRY_SCHEMA_VERSION) throw new Error('REGISTRY_NOT_INITIALIZED');
     return this.database;
   }
+  private discoveryLedger() {
+    if (!this.database) throw new Error('STATE_ABSENT');
+    return createDiscoveryLedger(this.database, { mutate: (body, input) => this.mutate(body, input ? [{
+      type: 'operation.accepted', instanceId: input.instanceId, operationId: input.requestId,
+      payload: { scope: 'discovery', action: input.action, ...(input.discovery ? {
+        projectId: input.discovery.projectId, discoveryId: input.discovery.discoveryId, sessionId: input.discovery.sessionId,
+        ...(input.run ? { runId: input.run.runId } : {}),
+      } : {}) },
+    }] : []) });
+  }
+  admitDiscoveryOperation(input: DiscoveryAdmission) { this.writable(); return this.discoveryLedger().admit(input); }
+  getDiscoveryOperation(requestId: string) {
+    const operation = this.discoveryLedger().operation(requestId);
+    if (!operation) return null;
+    const { canonicalIntent: _canonical, payloadHash: _hash, ...view } = operation;
+    return view;
+  }
+  saveDiscoveryGrant(grant: DiscoveryGrant) { this.writable(); return this.discoveryLedger().saveGrant(grant); }
   private catalog(requestId: string, scope: 'LIFECYCLE' | 'PROJECT', action: string, payloadHash: string): boolean {
     const row = this.registry().prepare('SELECT scope,action,payload_hash FROM request_catalog WHERE request_id=?').get(requestId) as Row | undefined;
     if (!row) return false;
@@ -110,7 +131,12 @@ export class SQLiteStore {
   }
   getRequestReservation(requestId: string): RequestReservation | null {
     requestId = requireUuid(requestId);
-    const row = this.registry().prepare('SELECT scope,action,payload_hash FROM request_catalog WHERE request_id=?').get(requestId) as Row | undefined;
+    let row = this.registry().prepare('SELECT scope,action,payload_hash FROM request_catalog WHERE request_id=?').get(requestId) as Row | undefined;
+    if (this.archiveVersion >= 4) {
+      const discovery = this.registry().prepare("SELECT 'DISCOVERY' AS scope,action,payload_hash FROM discovery_operations WHERE request_id=?").get(requestId) as Row | undefined;
+      if (row && discovery) throw new Error('STATE_CORRUPT');
+      row ??= discovery;
+    }
     return row ? { scope: row.scope as RequestReservation['scope'], action: String(row.action), payloadHash: String(row.payload_hash) } : null;
   }
   private eventsJournal() {

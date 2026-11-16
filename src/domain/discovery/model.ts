@@ -1,3 +1,4 @@
+import { foundationError, type ErrorCode } from '../errors.js';
 export const DISCOVERY_LIMITS = Object.freeze({
   activeDiscoveries: 1, hosts: 1, providers: 1, selectors: 16, files: 200, fileBytes: 128 * 1024,
   corpusBytes: 1024 * 1024, inputBytes: 2 * 1024 * 1024, questions: 20, questionBytes: 4096,
@@ -19,13 +20,13 @@ export type DiscoveryGrantAction = 'configure' | 'start' | 'answer' | 'correct' 
 export type DiscoveryAction = DiscoveryGrantAction | 'preview' | 'check' | 'discard';
 export type DiscoveryOperationOutcome = 'IN_PROGRESS' | 'SUCCEEDED' | 'FAILED' | 'BLOCKED' | 'INTERRUPTED' | 'UNKNOWN';
 export type Freshness = 'CURRENT' | 'STALE' | 'UNKNOWN' | 'LAST_KNOWN';
-export type DiscoveryFailure = 'INVALID_REQUEST' | 'INVALID_TRANSITION' | 'IDEMPOTENCY_CONFLICT' | 'APPROVAL_REQUIRED'
-  | 'APPROVAL_STALE' | 'DISCOVERY_BUSY' | 'DISCOVERY_LIMIT' | 'DISCOVERY_NOT_INITIALIZED' | 'CONTEXT_CHANGED'
-  | 'CONTEXT_UNSTABLE' | 'CONTEXT_LIMIT' | 'SOURCE_EXCLUDED' | 'ARTIFACT_CORRUPT' | 'ANSWER_CONFLICT'
-  | 'CHECK_EXPIRED' | 'PROVIDER_NOT_CONFIGURED' | 'PROVIDER_AUTH_REQUIRED' | 'PROVIDER_UNSUPPORTED'
-  | 'PROVIDER_UNSAFE' | 'PROVIDER_UNAVAILABLE' | 'PROVIDER_QUOTA' | 'PROVIDER_PROTOCOL_ERROR'
-  | 'PROVIDER_OUTPUT_LIMIT' | 'PROVIDER_CONTEXT_LIMIT' | 'UNKNOWN_OUTCOME' | 'PERSISTENCE_UNAVAILABLE'
-  | 'DEADLINE_EXCEEDED' | 'PROJECT_NOT_FOUND' | 'PROJECT_REMOVED';
+export const DISCOVERY_FAILURE_CODES = Object.freeze(["INVALID_REQUEST", "INVALID_TRANSITION", "IDEMPOTENCY_CONFLICT", "APPROVAL_REQUIRED", "APPROVAL_STALE", "DISCOVERY_BUSY", "DISCOVERY_LIMIT", "DISCOVERY_NOT_INITIALIZED", "CONTEXT_CHANGED", "CONTEXT_UNSTABLE", "CONTEXT_LIMIT", "SOURCE_EXCLUDED", "ARTIFACT_CORRUPT", "ANSWER_CONFLICT", "CHECK_EXPIRED", "PROVIDER_NOT_CONFIGURED", "PROVIDER_AUTH_REQUIRED", "PROVIDER_UNSUPPORTED", "PROVIDER_UNSAFE", "PROVIDER_UNAVAILABLE", "PROVIDER_QUOTA", "PROVIDER_PROTOCOL_ERROR", "PROVIDER_OUTPUT_LIMIT", "PROVIDER_CONTEXT_LIMIT", "UNKNOWN_OUTCOME", "PERSISTENCE_UNAVAILABLE", "DEADLINE_EXCEEDED", "PROJECT_NOT_FOUND", "PROJECT_REMOVED"] as const);
+export type DiscoveryFailure = ErrorCode | typeof DISCOVERY_FAILURE_CODES[number];
+export function isDiscoveryFailure(value: unknown): value is DiscoveryFailure {
+  if (typeof value !== 'string') return false;
+  if ((DISCOVERY_FAILURE_CODES as readonly string[]).includes(value)) return true;
+  try { foundationError(value as ErrorCode); return true; } catch { return false; }
+}
 export type DiscoveryResult<T> = { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly code: DiscoveryFailure };
 export interface DiscoveryIdentity { readonly storeId: string; readonly projectId: string; readonly discoveryId: string; readonly sessionId: string }

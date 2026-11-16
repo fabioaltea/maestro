@@ -1,4 +1,5 @@
 const catalog = {
+  DISCOVERY_NOT_INITIALIZED: ['Discovery non inizializzata.', 'Eseguire daemon start esplicito per aggiornare lo schema.', false],
   INVALID_REQUEST: ['Richiesta non valida.', 'Controllare argomenti e aiuto locale.', false],
   INVALID_NAME: ['Nome progetto non valido.', 'Usare da 1 a 120 caratteri Unicode senza controlli.', false],
   INVALID_BASE_BRANCH: ['Branch base locale non valido.', 'Selezionare esplicitamente un branch locale con un commit.', false],
@@ -51,6 +52,7 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
+  DISCOVERY_NOT_INITIALIZED: 'RUNTIME',
   INVALID_REQUEST: 'VALIDATION', UNSUPPORTED_VERSION: 'VALIDATION', UNSUPPORTED_PLATFORM: 'VALIDATION',
   UNAUTHORIZED: 'AUTHORIZATION', STALE_TARGET: 'AUTHORIZATION', IDEMPOTENCY_CONFLICT: 'CONCURRENCY', INVALID_TRANSITION: 'CONCURRENCY',
   INVALID_NAME: 'VALIDATION', INVALID_BASE_BRANCH: 'VALIDATION', PATH_ACCESS_DENIED: 'AUTHORIZATION',

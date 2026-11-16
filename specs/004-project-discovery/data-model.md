@@ -80,3 +80,17 @@ e assenza riferimenti. Preparare grant non lancia provider. Grant preparati atti
 max32; nuovi grant/anteprime bloccati a capacità, query/cancel/reconcile sempre
 consentiti usando la riserva terminale. Quota Discovery include artefatti allocati
 e pagine dei metadati Discovery/indici, non soltanto i byte del testo.
+
+### Precisazioni di admission T009
+
+Il writer restituisce internamente `{operation,inserted}`: solo inserted=true
+può attivare il nuovo lavoro; un replay restituisce la stessa operazione con
+inserted=false. Il dettaglio interno non è il completamento del modello.
+Le query operation esposte dal proxy/reader omettono canonicalIntent/payloadHash,
+per preservare dati e limiti del frame. Il writer conserva l’intento privato.
+
+Il cap32grant attivi riserva l’ultimo posto alla cancellazione. Una nuova
+preparazione cancel intenzionale può revocare un precedente grant cancel non
+consumato; non elimina sessioni, risultati o approvazioni. La riserva byte viene
+applicata con il budget artefatti T012. Grant/session/run/slot/outbox condividono
+la transazione del writer esistente.
