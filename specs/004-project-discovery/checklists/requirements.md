@@ -37,8 +37,8 @@ né un’approvazione della feature o del piano. Nessun provider reale invocato.
 - Brief§4: Discovery/intervista/documentazione approvata prima della creazione delle
   feature, non bypassata da una prima sessione di coding. US1–US3/FR-009–013.
 - Brief§7: primo provider realmente utilizzabile, capacità esplicite, dominio neutro;
-  quale target integrare per primo e come provarne la sola lettura sono decisioni del
-  piano, non capacità inventate nella specifica. US1/FR-001–004/NFR-004.
+  il primo target è stato scelto dall’utente (Codex CLI con login ufficiale); il piano
+  definisce il profilo e i gate di sola lettura, non capacità inventate nella specifica. US1/FR-001–004/NFR-004.
 - Brief§8 e ConstitutionVI: profilo Project Architect iniziale; permessi e approvazioni
   applicati dal core. Nessun registry generale anticipato.
 - Versionamento documentale locale, scope1Discoveryattiva e assenza export Git
@@ -49,3 +49,7 @@ né un’approvazione della feature o del piano. Nessun provider reale invocato.
   prova reale provider è distinta dai test simulati e non è ancora eseguita.
 - Dipendenze e gate003/001/002 conservati; branch004 derivato da003, nessun merge o
   pubblicazione eseguito. Pianificazione e implementazione non avviate.
+
+Aggiornamento2026-11-16: piano/research/data-model/4contratti/quickstart prodotti;
+scelta provider registrata in Clarifications della specifica. Le verifiche runtime
+G0/G1 restano NOT_RUN, distinte dalla completezza documentale.

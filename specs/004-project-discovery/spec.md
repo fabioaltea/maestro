@@ -145,3 +145,9 @@ Come sviluppatore riconosco quando la documentazione non descrive più il contes
 - Le revisioni documentali vengono conservate nell’archivio locale Maestro e consultate dalla UI/client. Export nel repository e versionamento tramite commit Git sono rinviati; non si modifica il checkout per produrre la bozza.
 - Nessun editor di profili, registry generale skill/tool, terminale, worktree, gestione dipendenze, creazione di feature di codice, merge/release o failover automatico. Ripresa provider condizionale alle capacità reali; nessuna promessa di trasferire memoria proprietaria.
 - Base di lavoro003 al commitaad9dde, con dipendenze001/002 già integrate localmente. Il branch004 nasce da003 senza merge in main. La review manuale003 e i gate001/T082,001/T085,002/T093 restano distinti e aperti; la presente specifica non li promuove a PASS.
+
+## Clarifications
+
+### Session 2026-11-15
+
+- Q: Primo provider per la Discovery, considerando autenticazione e modalità di isolamento? → A: Codex CLI con login ufficiale. Il piano sceglie il profilo Keychain-only e non introduce API key Anthropic o fallback automatico.
