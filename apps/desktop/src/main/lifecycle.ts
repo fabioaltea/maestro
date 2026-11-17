@@ -24,10 +24,10 @@ export function installLifecycle(router: BridgeRouter, context: ArchiveContext, 
   });
   router.register('confirmAction', async request => {
     if (!actions) throw new Error(router.services.runtimeError ?? 'RUNTIME_UNAVAILABLE');
-    try { const result = await actions.confirm(text(request.confirmationId)); return { ...result, receipt: publicReceipt(result.receipt, context) }; }
+    try { const result = await actions.confirm(text(request.confirmationId), ['daemon', 'project']); return { ...result, receipt: publicReceipt(result.receipt, context) }; }
     finally { router.setContext(context.current?.view ?? null); }
   });
-  router.register('cancelAction', request => { actions?.confirmations.cancel(text(request.confirmationId)); return { canceled: true }; });
+  router.register('cancelAction', request => { actions?.confirmations.cancel(text(request.confirmationId), ['daemon', 'project']); return { canceled: true }; });
   router.register('reconcileOperation', async request => {
     if (!recovery) throw new Error('RUNTIME_UNAVAILABLE');
     const result = await recovery.reconcile(text(request.receiptId)); return { ...result, receipt: publicReceipt(result.receipt, context) };

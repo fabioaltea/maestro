@@ -71,3 +71,23 @@ test('Discovery BLOCKED is terminal, wrong action/store is unknown and receipts 
     await assert.rejects(() => receipts.create({ ...meta(randomUUID()), grantId: randomUUID(), providerPath: f.binary } as ReceiptMeta));
   } finally { await f.cleanup(); }
 });
+test('Discovery cannot settle a bound receipt without its store identity', async () => {
+  const f = await discoveryDesktopFixture();
+  try {
+    const receipts = new ReceiptStore(join(f.userData, 'receipts'));
+    const receipt = await receipts.create({ requestId: randomUUID(), namespace: 'discovery', action: 'start', archivePath: f.archive, storeId: f.storeId,
+      projectId: f.projectId, expectedRevision: '1', intentHash: 'a'.repeat(64) });
+    const result = await f.core.call({ namespace: 'discovery', action: 'operation', archive: f.archive, params: { requestId: receipt.requestId } });
+    assert.equal((await settleReceipt(receipts, receipt, { ...result, storeId: null })).phase, 'UNKNOWN');
+  } finally { await f.cleanup(); }
+});
+test('an owner change during confirmation preflight cannot send the prepared command', async () => {
+  const f = await discoveryDesktopFixture();
+  try {
+    const receipts = new ReceiptStore(join(f.userData, 'receipts')), actions = service(f, receipts);
+    const prepared = await actions.prepare('discovery.start', f.start()), call = f.core.call.bind(f.core);
+    f.core.call = async command => { const result = await call(command); if (command.namespace === 'daemon') f.owner.frame++; return result; };
+    await assert.rejects(() => actions.confirm(prepared.confirmationId));
+    assert.equal(f.calls.filter(c => c.action === 'start').length, 0); assert.equal((await receipts.list()).length, 0);
+  } finally { await f.cleanup(); }
+});

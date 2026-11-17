@@ -10,6 +10,7 @@ import { ClientLifecycle } from './client-lifecycle.ts';
 import { installActivityStream } from './activity-bridge.ts';
 import { installActivityHistory } from './activity-history.ts';
 import { installProjectActions } from './project-actions.ts';
+import { installDiscovery } from './discovery.ts';
 import { installLifecycle } from './lifecycle.ts';
 import { installReads } from './read-handlers.ts';
 import { installBridge } from './bridge.ts';
@@ -37,6 +38,8 @@ else {
     const router = installBridge(window, { core, runtimeError, log: new SafeLog(join(app.getPath('userData'), 'logs')), dialogs: { async chooseDirectory(title) {
       const result = await dialog.showOpenDialog(window!, { title, properties: ['openDirectory', 'createDirectory'] });
       return result.canceled ? null : result.filePaths[0] ?? null;
+    }, async chooseFile(title) {
+      const result = await dialog.showOpenDialog(window!, { title, properties: ['openFile'] }); return result.canceled ? null : result.filePaths[0] ?? null;
     }, async confirmSelection(message, detail) {
       const response = await dialog.showMessageBox(window!, { type: 'question', message, detail, buttons: ['Apri archivio', 'Annulla'], defaultId: 1, cancelId: 1 });
       return response.response === 0;
@@ -44,6 +47,7 @@ else {
     const archiveContext = installReads(router);
     const lifecycle = installLifecycle(router, archiveContext, app.getPath('userData'));
     installProjectActions(router, archiveContext, lifecycle.actions);
+    installDiscovery(router, archiveContext, lifecycle.actions);
     installActivityHistory(router, archiveContext);
     clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
     archiveContext.onChange(() => clients?.archiveChanged());

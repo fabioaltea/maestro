@@ -4,6 +4,7 @@ import type { BrowserWindow } from 'electron';
 import { CHANNEL } from '../shared/bridge-contract.ts';
 import type { ArchiveView, BridgeMethod, BridgeRequest, BridgeResponse } from '../shared/bridge-contract.ts';
 import { safeError, validateRequest, validateSender } from '../shared/validation.ts';
+import { DISCOVERY_BRIDGE_METHODS } from '../shared/discovery-contract.ts';
 import type { SafeLog } from './safe-log.ts';
 import type { CorePort, DialogPort } from './ports.ts';
 export interface BridgeServices { core: CorePort | null; runtimeError: string | null; dialogs: DialogPort; log?: SafeLog }
@@ -38,7 +39,9 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
       if (!handler) throw new Error('CONFIRMATION_REQUIRED');
       const result = await handler(request);
       void services.log?.write({ ...resultLogMetadata(result), action: method, requestId: request.callId, durationMs:performance.now()-startedAt }).catch(() => undefined);
-      return { ...envelope, selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null, result };
+      const response = { ...envelope, selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null, result };
+      if ((DISCOVERY_BRIDGE_METHODS as readonly string[]).includes(method) && Buffer.byteLength(JSON.stringify(response)) > 32768) throw new Error('CLIENT_OUTPUT_LIMIT');
+      return response;
     } catch (error) {
       if(authorized&&envelope.callId)void services.log?.write({code:safeError(error instanceof Error?error.message:'CLIENT_PROTOCOL_ERROR').code,requestId:envelope.callId,durationMs:performance.now()-startedAt}).catch(()=>undefined);
       return { ...envelope, ...(authorized ? { selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null } : {}), error: safeError(error instanceof Error ? error.message : 'CLIENT_PROTOCOL_ERROR') };

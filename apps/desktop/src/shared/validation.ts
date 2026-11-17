@@ -1,6 +1,7 @@
 import { CORE_ERRORS } from './core-errors.ts';
 import { METHODS } from './bridge-contract.ts';
 import type { BridgeRequest, Params } from './bridge-contract.ts';
+import { DISCOVERY_BRIDGE_METHODS, validateDiscoveryBridge } from './discovery-contract.ts';
 export function record(value: unknown): Params {
   if (!value || typeof value !== 'object' || Array.isArray(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value))) throw new Error('INVALID_INPUT');
   return value as Params;
@@ -57,7 +58,8 @@ const extras: Record<string, readonly string[]> = {
 export function validateRequest(method: string, input: unknown): BridgeRequest {
   if (!(METHODS as readonly string[]).includes(method)) throw new Error('INVALID_INPUT');
   const p = record(input);
-  keys(p, ['bridgeVersion', 'callId', 'selectionEpoch', ...(extras[method] ?? [])]);
+  if ((DISCOVERY_BRIDGE_METHODS as readonly string[]).includes(method)) validateDiscoveryBridge(method, p);
+  else keys(p, ['bridgeVersion', 'callId', 'selectionEpoch', ...(extras[method] ?? [])]);
   if (p.bridgeVersion !== 1 || !Number.isSafeInteger(p.selectionEpoch) || Number(p.selectionEpoch) < 0) throw new Error('INVALID_INPUT');
   uuid(p.callId);
   for (const name of ['projectId', 'confirmationId', 'receiptId', 'subscriptionId', 'batchId']) if ((extras[method] ?? []).includes(name)) uuid(p[name]);

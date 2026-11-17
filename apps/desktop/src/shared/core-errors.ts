@@ -308,7 +308,7 @@ export const CORE_ERRORS = {
   "PROVIDER_UNSAFE": {
     "code": "PROVIDER_UNSAFE",
     "message": "Confinamento o configurazione provider non qualificati.",
-    "nextAction": "Correggere il prerequisito senza allentare il profilo."
+    "nextAction": "Verificare binario, profilo, Keychain e policy gestite senza allentare i permessi."
   },
   "PROVIDER_UNAVAILABLE": {
     "code": "PROVIDER_UNAVAILABLE",

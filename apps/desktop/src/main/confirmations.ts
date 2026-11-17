@@ -22,19 +22,25 @@ export class Confirmations {
     this.tokens.set(confirmationId, { command: original, scope: canonical(scope), requestId, intentHash, expiresAt });
     return { confirmationId, requestId, expiresAt, action: `${command.namespace}.${command.action}`, summary: [...summary] };
   }
-  consume(id: string, scope: ConfirmationScope) {
+  consume(id: string, scope: ConfirmationScope, namespaces?: readonly string[]) {
     uuid(id); const token = this.tokens.get(id); this.tokens.delete(id);
-    if (!token || token.expiresAt <= this.now() || token.scope !== canonical(scope)) throw new Error('CONFIRMATION_EXPIRED');
+    if (!token || token.expiresAt <= this.now() || token.scope !== canonical(scope) || namespaces && !namespaces.includes(token.command.namespace)) throw new Error('CONFIRMATION_EXPIRED');
     return { command: structuredClone(token.command), requestId: token.requestId, intentHash: token.intentHash };
   }
   clear() { this.tokens.clear(); }
-  cancel(id: string) { uuid(id); this.tokens.delete(id); }
+  cancel(id: string, namespaces?: readonly string[]) { uuid(id); const token = this.tokens.get(id); if (token && namespaces && !namespaces.includes(token.command.namespace)) throw new Error('CONFIRMATION_EXPIRED'); this.tokens.delete(id); }
 }
 interface ReceiptScope { archivePath: string; namespace: string; action: string; projectId: string | null; phase: string; outcome: string | null }
 export function blocksMutation(receipts: readonly ReceiptScope[], path: string, namespace: string, action: string, projectId?: string) {
   return receipts.some(receipt => {
     if (receipt.archivePath !== path || receipt.phase === 'TERMINAL' || receipt.outcome === 'BLOCKED') return false;
     if (namespace === 'foundation') return receipt.namespace === 'foundation';
+    if (namespace === 'discovery') {
+      if (receipt.namespace !== 'discovery') return false;
+      if (action === 'cancel') return receipt.action === 'cancel' && receipt.projectId === projectId;
+      if (['start', 'answer', 'correct'].includes(action)) return ['start', 'answer', 'correct', 'cancel'].includes(receipt.action);
+      return receipt.action === action && (projectId === undefined || receipt.projectId === projectId);
+    }
     if (receipt.namespace !== 'project') return false;
     return action === 'register' ? receipt.action === 'register' : projectId !== undefined && receipt.projectId === projectId;
   });

@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { record, keys, text, uuid, revision } from '../shared/validation.ts';
 import { CORE_ERRORS } from '../shared/core-errors.ts';
 export interface ReceiptMeta {
-  requestId: string; namespace: 'foundation' | 'project'; action: string; archivePath: string; storeId: string | null;
+  requestId: string; namespace: 'foundation' | 'project' | 'discovery'; action: string; archivePath: string; storeId: string | null;
   projectId: string | null; expectedRevision: string | null; intentHash: string;
 }
 export interface Receipt extends ReceiptMeta {
@@ -17,13 +17,13 @@ export function validateReceipt(value: unknown): Receipt {
   keys(p, ['requestId', 'namespace', 'action', 'archivePath', 'storeId', 'projectId', 'expectedRevision', 'intentHash', 'receiptVersion', 'createdAt', 'updatedAt', 'phase', 'outcome', 'errorCode']);
   uuid(p.requestId); if (p.storeId !== null) uuid(p.storeId); if (p.projectId !== null) uuid(p.projectId); if (p.expectedRevision !== null) revision(p.expectedRevision);
   if (!isAbsolute(text(p.archivePath, 2048)) || !/^[a-f0-9]{64}$/.test(text(p.intentHash, 64)) || p.receiptVersion !== 1) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
-  if (p.namespace !== 'foundation' && p.namespace !== 'project') throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
-  const actions = p.namespace === 'foundation' ? ['start', 'stop', 'restart'] : ['register', 'verify', 'update', 'remove'];
+  if (!['foundation', 'project', 'discovery'].includes(String(p.namespace))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+  const actions = p.namespace === 'foundation' ? ['start', 'stop', 'restart'] : p.namespace === 'project' ? ['register', 'verify', 'update', 'remove'] : ['configure', 'check', 'preview', 'discard', 'start', 'answer', 'correct', 'approve', 'cancel'];
   if (!actions.includes(String(p.action)) || !['PREPARED', 'RECONCILING', 'TERMINAL', 'UNKNOWN'].includes(String(p.phase))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if (p.errorCode !== null && (typeof p.errorCode !== 'string' || !Object.hasOwn(CORE_ERRORS, p.errorCode))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   for (const key of ['createdAt', 'updatedAt']) if (typeof p[key] !== 'string' || !Number.isFinite(Date.parse(p[key]))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
-  if (p.phase === 'TERMINAL' && !['SUCCEEDED', 'FAILED', 'INTERRUPTED', ...(p.namespace === 'project' ? ['BLOCKED'] : [])].includes(String(p.outcome))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+  if (p.phase === 'TERMINAL' && !['SUCCEEDED', 'FAILED', 'INTERRUPTED', ...(p.namespace !== 'foundation' ? ['BLOCKED'] : [])].includes(String(p.outcome))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   return p as unknown as Receipt;
 }
 export class ReceiptStore {

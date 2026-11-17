@@ -21,7 +21,7 @@ export class OperationRecovery {
         return { receipt: unknown, result: unknownResult(id) };
       }
       if (state.result !== 'OK') throw new Error('OPERATION_UNCERTAIN');
-      const result = await this.core.call({ namespace: receipt.namespace === 'foundation' ? 'daemon' : 'project', action: 'operation', archive: receipt.archivePath, params: { requestId: id } });
+      const result = await this.core.call({ namespace: receipt.namespace === 'foundation' ? 'daemon' : receipt.namespace, action: 'operation', archive: receipt.archivePath, params: { requestId: id } });
       const final = await settleReceipt(this.receipts, receipt, result);
       return { receipt: final, result: final.phase === 'UNKNOWN' ? unknownResult(id) : result };
     } catch {

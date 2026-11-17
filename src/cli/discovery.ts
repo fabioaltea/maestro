@@ -27,6 +27,7 @@ maestro discovery operation REQUEST
 --state-dir ABS --json --timeout-ms MS
 Mutazioni: --request-id UUID; la risposta attesta admission, non fine del modello.
 scope-file: array JSON di selettori relativi; intent-file: intent canonico chiuso.
+Per pipe JSON: --scope-stdin oppure --intent-stdin, alternativi al file.
 Risposta incerta: interrogare operation con lo stesso UUID, senza un nuovo start.
 `;
 async function jsonFile(path: string | undefined): Promise<unknown> {
@@ -42,11 +43,26 @@ async function jsonFile(path: string | undefined): Promise<unknown> {
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, offset)));
   } finally { await file.close(); }
 }
+async function jsonStdin(): Promise<unknown> {
+  const bytes = await new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = []; let size = 0, done = false;
+    const timer = setTimeout(() => finish(new Error('DEADLINE_EXCEEDED')), 2000);
+    const data = (raw: Buffer) => { size += raw.length; if (size > 32768) finish(new Error('INVALID_REQUEST')); else chunks.push(raw); };
+    const end = () => finish(); const error = () => finish(new Error('INVALID_REQUEST'));
+    function finish(problem?: Error) {
+      if (done) return; done = true; clearTimeout(timer);
+      process.stdin.off('data', data); process.stdin.off('end', end); process.stdin.off('error', error);
+      if (problem) { process.stdin.destroy(); reject(problem); } else resolve(Buffer.concat(chunks));
+    }
+    process.stdin.on('data', data); process.stdin.once('end', end); process.stdin.once('error', error);
+  });
+  return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+}
 export async function runDiscoveryCli(args: readonly string[]): Promise<number> {
   let json = args.includes('--json'); let result: PublicResult; let requestId: string | null = null;
   try {
     const { values, positionals } = parseArgs({ args: [...args], strict: true, allowPositionals: true, options: { json: { type: 'boolean' }, help: { type: 'boolean', short: 'h' }, 'state-dir': { type: 'string' }, 'timeout-ms': { type: 'string' }, limit: { type: 'string' }, cursor: { type: 'string' }, after: { type: 'string' }, sources: { type: 'boolean' }, metadata: { type: 'boolean' }, 'check-id': { type: 'string' },
-      'request-id': { type: 'string' }, grant: { type: 'string' }, 'scope-file': { type: 'string' }, 'intent-file': { type: 'string' },
+      'request-id': { type: 'string' }, grant: { type: 'string' }, 'scope-file': { type: 'string' }, 'intent-file': { type: 'string' }, 'scope-stdin': { type: 'boolean' }, 'intent-stdin': { type: 'boolean' },
       'expected-revision': { type: 'string' }, 'expected-provider-revision': { type: 'string' }, binary: { type: 'string' }, model: { type: 'string' } } });
     json = values.json ?? false;
     if (values.help) { process.stdout.write(HELP); return 0; }
@@ -60,8 +76,8 @@ export async function runDiscoveryCli(args: readonly string[]): Promise<number> 
     else if (command === 'provider' && positionals[1] === 'check' && positionals.length === 2) { method = 'discovery.provider.check'; params = { expectedProviderRevision: values['expected-provider-revision'] }; allowed.add('expected-provider-revision'); allowed.add('request-id'); }
     else if (command === 'preview' && positionals[1] === 'show' && positionals.length === 3) { method = 'discovery.preview.get'; params = { snapshotId: positionals[2], ...(values.sources ? { sources: true } : {}) }; for (const key of ['sources', 'limit', 'cursor']) allowed.add(key); }
     else if (command === 'preview' && positionals[1] === 'discard' && positionals.length === 3) { method = 'discovery.preview.discard'; params = { snapshotId: positionals[2] }; allowed.add('request-id'); }
-    else if (command === 'preview' && positionals.length === 2) { method = 'discovery.preview'; params = { projectId: positionals[1], expectedConfigRevision: values['expected-revision'] }; for (const key of ['scope-file', 'expected-revision', 'request-id']) allowed.add(key); }
-    else if (command === 'prepare' && positionals.length === 1) { method = 'discovery.prepare'; params = {}; allowed.add('intent-file'); }
+    else if (command === 'preview' && positionals.length === 2) { method = 'discovery.preview'; params = { projectId: positionals[1], expectedConfigRevision: values['expected-revision'] }; for (const key of ['scope-file', 'scope-stdin', 'expected-revision', 'request-id']) allowed.add(key); }
+    else if (command === 'prepare' && positionals.length === 1) { method = 'discovery.prepare'; params = {}; allowed.add('intent-file'); allowed.add('intent-stdin'); }
     else if (command === 'start' && positionals.length === 2) { method = 'discovery.start'; params = { projectId: positionals[1], grantId: values.grant }; allowed.add('grant'); allowed.add('request-id'); }
     else {
       if (positionals.length !== 2) throw new Error('INVALID_REQUEST');
@@ -74,8 +90,8 @@ export async function runDiscoveryCli(args: readonly string[]): Promise<number> 
     }
     for (const [key, value] of Object.entries(values)) if (value !== undefined && !allowed.has(key)) throw new Error('INVALID_REQUEST');
     if (allowed.has('request-id')) requestId = requireUuid(values['request-id'] ?? randomUUID());
-    if (method === 'discovery.preview') params.selectors = await jsonFile(values['scope-file']);
-    if (method === 'discovery.prepare') params.intent = JSON.parse(canonicalDiscoveryIntent(await jsonFile(values['intent-file'])));
+    if (method === 'discovery.preview') { if (!!values['scope-file'] === !!values['scope-stdin']) throw new Error('INVALID_REQUEST'); params.selectors = values['scope-stdin'] ? await jsonStdin() : await jsonFile(values['scope-file']); }
+    if (method === 'discovery.prepare') { if (!!values['intent-file'] === !!values['intent-stdin']) throw new Error('INVALID_REQUEST'); params.intent = JSON.parse(canonicalDiscoveryIntent(values['intent-stdin'] ? await jsonStdin() : await jsonFile(values['intent-file']))); }
     if (values.limit !== undefined) params.limit = Number(values.limit);
     if (values.cursor !== undefined || values.after !== undefined) params.cursor = values.cursor ?? values.after;
     if (values['check-id'] !== undefined) params.checkId = values['check-id'];

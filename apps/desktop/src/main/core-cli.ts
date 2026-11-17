@@ -7,10 +7,13 @@ import { record, keys, text, uuid, revision } from '../shared/validation.ts';
 import type { PublicResult, Params } from '../shared/bridge-contract.ts';
 import type { CliCommand } from './ports.ts';
 import type { Runtime } from './runtime.ts';
+import { buildDiscoveryCliArgs, discoveryCliInput } from './discovery-cli.ts';
+import { DISCOVERY_MUTATIONS, validateDiscoveryData } from '../shared/discovery-contract.ts';
 export type { CliCommand } from './ports.ts';
-export function isMutation(c: CliCommand) { return c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
+export function isMutation(c: CliCommand) { return c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
 export function buildCliArgs(c: CliCommand): string[] {
   if (!isAbsolute(c.archive) || c.archive.includes('\0')) throw new Error('INVALID_INPUT');
+  if (c.namespace === 'discovery') return buildDiscoveryCliArgs(c);
   const allowed = c.namespace === 'daemon' ? ['start', 'stop', 'restart', 'status', 'diagnostics', 'events', 'operation'] : c.namespace === 'project' ? ['register', 'list', 'get', 'verify', 'update', 'remove', 'operation'] : [];
   if (!allowed.includes(c.action)) throw new Error('INVALID_INPUT');
   const p = c.params ?? {}, args = [c.namespace, c.action === 'register' ? 'add' : c.action === 'get' ? 'show' : c.action, `--state-dir=${c.archive}`, '--json'];
@@ -36,7 +39,7 @@ export function buildCliArgs(c: CliCommand): string[] {
   if (positional.length) args.push('--', ...positional);
   return args;
 }
-const safeFields = new Set(('protocolVersion scope from to generation correlationId redactedFields resourceIssues resourceIssuesTruncated referencePath checkoutAvailability repositoryIdentityStatus hasCommits headKind currentBranch headOid objectFormat baseOid fileStatusScope limitations freshness observedInstanceId startedAt identityState checkoutState referenceState status lifecycle ready observedAt requestedAt completedAt accepted effect action requestId storeId instanceId operationId projectId displayName referenceCheckout baseBranch baseState configRevision expectedRevision observedConfigRevision observationRevision registryRevision createdAt updatedAt removedAt observation availability identity trackedChanges untrackedChanges conflicts error code category cause message nextAction retryable persisted operation result outcome phase projects project tombstone count nextCursor cursor versions package node protocol schema platform os arch health observability resources resourcesTruncated resourceId kind releaseState projectRegistry activeProjects tombstones operations queue active pending capacity oldestWaitMs maxQueueWaitMs fenced total busy blocked failures limits highWater firstAvailable nextAfter records truncated events eventId seq occurredAt type payload pendingBytes degraded errorCode usage journalBytes logBytes walBytes shmBytes outboxMetadataBytes totalBytes temporaryBytes logLimitBytes journalLimitBytes').split(' '));
+const safeFields = new Set(('protocolVersion capabilities discoveryVersion discoveryMethods projectRegistryVersion scope from to generation correlationId redactedFields resourceIssues resourceIssuesTruncated referencePath checkoutAvailability repositoryIdentityStatus hasCommits headKind currentBranch headOid objectFormat baseOid fileStatusScope limitations freshness observedInstanceId startedAt identityState checkoutState referenceState status lifecycle ready observedAt requestedAt completedAt accepted effect action requestId storeId instanceId operationId projectId displayName referenceCheckout baseBranch baseState configRevision expectedRevision observedConfigRevision observationRevision registryRevision createdAt updatedAt removedAt observation availability identity trackedChanges untrackedChanges conflicts error code category cause message nextAction retryable persisted operation result outcome phase projects project tombstone count nextCursor cursor versions package node protocol schema platform os arch health observability resources resourcesTruncated resourceId kind releaseState projectRegistry activeProjects tombstones operations queue active pending capacity oldestWaitMs maxQueueWaitMs fenced total busy blocked failures limits highWater firstAvailable nextAfter records truncated events eventId seq occurredAt type payload pendingBytes degraded errorCode usage journalBytes logBytes walBytes shmBytes outboxMetadataBytes totalBytes temporaryBytes logLimitBytes journalLimitBytes').split(' '));
 export function projectSafe(value: unknown, depth = 0): unknown {
   if (depth > 12) throw new Error('CLIENT_PROTOCOL_ERROR');
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
@@ -58,7 +61,9 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
       || (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome)))) throw new Error();
     for (const k of ['requestId', 'storeId', 'instanceId']) if (p[k] !== null) uuid(p[k]);
     if (c.requestId && p.requestId !== c.requestId) throw new Error();
-    const data = projectSafe(record(p.data)) as Params;
+    const data = c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    if (c.namespace === 'discovery' && c.action === 'operation' && p.requestId !== c.params?.requestId) throw new Error();
+    if (c.namespace === 'discovery' && c.action === 'eligibility' && (p.freshness !== 'LIVE' || p.liveness !== 'LIVE_VERIFIED') && data.eligible === true) throw new Error();
     let error = null;
     if (p.error !== null) { const code = record(p.error).code; if (typeof code !== 'string' || !Object.hasOwn(CORE_ERRORS, code)) throw new Error(); error = CORE_ERRORS[code as keyof typeof CORE_ERRORS]; }
     if (c.namespace === 'project' && c.action === 'list' && p.result === 'OK' && !Array.isArray(data.projects)) throw new Error();
@@ -81,14 +86,16 @@ export class CoreCli {
     const args = buildCliArgs(command), mutation = isMutation(command);
     if (this.closed || (mutation ? this.mutations >= 1 : this.reads >= 2)) throw new Error('LOCAL_BUSY');
     if (mutation) this.mutations++; else this.reads++;
-    const timeout = mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
+    const timeout = command.namespace === 'discovery' ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
     try {
       const stdout = await new Promise<string>((resolve, reject) => {
-        const child = spawn(this.runtime.node, [this.runtime.cli, ...args], { env: this.runtime.env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+        const input = discoveryCliInput(command);
+        const child = spawn(this.runtime.node, [this.runtime.cli, ...args], { env: this.runtime.env, shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
         this.children.add(child); if (!mutation && command.scope === 'view') this.viewChildren.add(child);
         const chunks: Buffer[] = []; let bytes = 0, stderr = 0, failed = false;
         const fail = (code: string) => { if (!failed) { failed = true; child.kill('SIGTERM'); reject(new Error(code)); } };
         const timer = setTimeout(() => fail('CLIENT_PROTOCOL_ERROR'), timeout);
+        child.stdin.on('error', () => fail('CLIENT_PROTOCOL_ERROR')); child.stdin.end(input ?? undefined);
         child.stdout.on('data', (b: Buffer) => { bytes += b.length; if (bytes > 262_144) fail('CLIENT_OUTPUT_LIMIT'); else chunks.push(b); });
         child.stderr.on('data', (b: Buffer) => { stderr += b.length; if (stderr > 16_384) fail('CLIENT_OUTPUT_LIMIT'); });
         child.on('error', () => fail('CLIENT_PROTOCOL_ERROR'));

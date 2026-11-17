@@ -625,3 +625,27 @@ intenzionale/cancellabile con gate invio ancora chiuso, repo invariato. Questi
 casi locali non accedono a provider/auth reali; il percorso UI con modello reale
 rimane G1 opt-in T028. UI/T026 e bootstrap/T027 restano prerequisiti per queste
 prove end-to-end. Checkbox T024 attesta test definiti, non UI già funzionante.
+
+
+## T025 — bridge e ricevute Discovery, 2026-11-17
+
+API nominate condivise con preload, allowlist CLI separata, input scope/intent
+via stdin UTF-8 bounded32KiB: nessun file temporaneo replayabile. Picker nativo
+restituisce handle opaco owner/frame/epoch/TTL, percorso soltanto nel main.
+Conferma UI monouso60s distinta dal grant core5min, confronto intent canonico
+e preflight capability/configurazione; cambio owner durante preflight bloccato.
+Ricevute Discovery private nello store esistente, soli metadata4KiB/max100,
+prima dell'invio. Admission resta RECONCILING; esito modello separato. Recovery
+interroga soltanto UUID e namespace originali, senza replay/fallback registry.
+Store ID assente/diverso e azione diversa restano UNKNOWN; BLOCKED certo è
+terminale. Errori statici e decoder chiuso escludono stderr/token/path provider.
+
+Gli8casi T024 ora PASS, più isolamento namespace conferme e due casi di
+regressione osservati RED prima della correzione (store ID assente e owner
+cambiato durante preflight). Suite desktop unit/contract33PASS; integrazione
+desktop28PASS/0FAIL/0SKIP,21814,85ms. Ulteriore test subprocess pipe1PASS
+con CLI fixture e vera CLI offline (STATE_ABSENT e UUID originale, nessun
+avvio implicito). Prima aspettativa DAEMON_UNAVAILABLE corretta in STATE_ABSENT
+per archivio non inizializzato. Build core/desktop, typecheck desktop e lint
+PASS. Nessun provider/account reale o benchmark lungo; UI/T026 e composizione
+mutazioni/T027 restano da completare. G1 e gate preesistenti invariati.

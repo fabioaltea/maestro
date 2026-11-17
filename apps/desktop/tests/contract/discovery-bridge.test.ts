@@ -7,6 +7,7 @@ import { validateRequest, validateSender } from '../../src/shared/validation.ts'
 import { buildCliArgs, decodeResult } from '../../src/main/core-cli.ts';
 import type { CliCommand } from '../../src/main/ports.ts';
 import { discoveryDesktopFixture } from '../fixtures/discovery.ts';
+import { Confirmations } from '../../src/main/confirmations.ts';
 
 const envelope = () => ({ bridgeVersion: 1, callId: randomUUID(), selectionEpoch: 1 });
 test('Discovery uses named closed bridge methods and rejects raw paths, argv, credentials and confirmation flags', () => {
@@ -42,9 +43,19 @@ test('a provider picker returns an opaque owner/epoch-bound handle and keeps its
 test('Discovery CLI stays in its namespace and its decoder rejects private provider/process payloads', () => {
   const requestId = randomUUID(), c = { namespace: 'discovery', action: 'start', archive: '/owned/archive', requestId,
     params: { projectId: randomUUID(), grantId: randomUUID() } } as unknown as CliCommand;
-  const args = buildCliArgs(c); assert.equal(args[0], 'discovery'); assert.equal(args[1], 'start'); assert.ok(args.includes(requestId));
+  const args = buildCliArgs(c); assert.equal(args[0], 'discovery'); assert.equal(args[1], 'start'); assert.ok(args.some(arg => arg === requestId || arg === `--request-id=${requestId}`));
   const result = { protocolVersion: 1, storeId: randomUUID(), instanceId: randomUUID(), requestId, result: 'OK', outcome: null,
     freshness: 'LIVE', liveness: 'LIVE_VERIFIED', data: { accepted: true, requestId }, error: null };
   assert.equal(decodeResult(JSON.stringify(result), c).data.accepted, true);
   for (const extra of [{ canonicalIntent: 'PRIVATE' }, { credentialRef: '/private/key' }, { stderr: 'PRIVATE' }, { approved: true }]) assert.throws(() => decodeResult(JSON.stringify({ ...result, data: { ...result.data, ...extra } }), c));
+});
+test('Discovery confirmations cannot consume or cancel a project or Foundation token through another namespace', () => {
+  const confirmations = new Confirmations(), scope = { owner: 1, frame: 2, epoch: 1, archiveHandle: randomUUID(), storeId: randomUUID() };
+  const root = confirmations.prepare({ namespace: 'daemon', action: 'stop', archive: '/owned/archive' }, scope, []);
+  assert.throws(() => confirmations.consume(root.confirmationId, scope, ['discovery']));
+  const project = confirmations.prepare({ namespace: 'project', action: 'remove', archive: '/owned/archive', params: { projectId: randomUUID(), expectedRevision: '1' } }, scope, []);
+  assert.throws(() => confirmations.cancel(project.confirmationId, ['discovery']));
+  assert.equal(confirmations.consume(project.confirmationId, scope, ['project']).command.namespace, 'project');
+  const discovery = confirmations.prepare({ namespace: 'discovery', action: 'start', archive: '/owned/archive', params: { projectId: randomUUID(), grantId: randomUUID() } }, scope, []);
+  assert.throws(() => confirmations.consume(discovery.confirmationId, scope, ['daemon', 'project']));
 });
