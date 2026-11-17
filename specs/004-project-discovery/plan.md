@@ -64,7 +64,7 @@ src/platform/macos/discovery/{context-reader,context-main,agent-runtime,agent-ho
 src/platform/macos/discovery/{context,provider}.sb
 src/providers/codex/discovery-result.schema.json
 src/providers/codex/{capabilities,argv,parser,adapter}.ts
-src/storage/{discovery-schema,discovery-upgrade,discovery-store,discovery-artifacts}.ts
+src/storage/{discovery-schema,discovery-upgrade,discovery-store,discovery-metadata,discovery-artifacts}.ts
 src/cli/discovery.ts
 src/{bootstrap.ts,core/daemon-main.ts,core/runtime.ts}
 src/{client/local-client.ts,ports/platform.ts,ports/storage.ts,ports/registry.ts}

@@ -39,7 +39,7 @@ export interface PublicResult {
 export const MAX_EVENT_BYTES = 16 * 1024;
 export const MAX_OUTBOX_BYTES = 64 * 1024;
 export const MAX_EVENT_PAGE_BYTES = 60 * 1024;
-export const EVENT_TYPES = ['lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed',
+export const EVENT_TYPES = ['discovery.changed', 'lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed',
   'operation.blocked', 'recovery.started', 'recovery.completed', 'resource.blocked', 'authorization.denied', 'diagnostics.degraded'] as const;
 export type EventType = typeof EVENT_TYPES[number];
 export interface EventDraft {

@@ -43,11 +43,15 @@ export interface DiscoveryRun {
   readonly phase: RunPhase; readonly outcome: RunOutcome; readonly startedAt: string | null; readonly endedAt: string | null;
   readonly outputWatermark: string; readonly error: DiscoveryFailure | null;
 }
+export interface DiscoveryOperationResult {
+  readonly snapshotId?: string; readonly discoveryId?: string; readonly sessionId?: string; readonly runId?: string;
+  readonly revisionId?: string; readonly approvalId?: string; readonly providerRevision?: string; readonly stateRevision?: string;
+}
 export interface DiscoveryOperation {
   readonly requestId: string; readonly action: DiscoveryAction; readonly payloadHash: string; readonly canonicalIntent: string;
   readonly phase: 'ACCEPTED' | 'WORKING' | 'FINALIZED'; readonly outcome: DiscoveryOperationOutcome;
   readonly acceptedAt: string; readonly completedAt: string | null;
-  readonly discoveryId: string | null; readonly runId: string | null; readonly error: DiscoveryFailure | null;
+  readonly discoveryId: string | null; readonly runId: string | null; readonly result: DiscoveryOperationResult | null; readonly error: DiscoveryFailure | null;
 }
 export interface DiscoveryQuestion {
   readonly questionId: string; readonly discoveryId: string; readonly runId: string; readonly revision: string;

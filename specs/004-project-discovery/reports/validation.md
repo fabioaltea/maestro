@@ -158,3 +158,29 @@ mutazioni readonly negate e notifiche persistenti sul canale onFailure esistente
 PASS `npm test`:400test,395PASS,0FAIL,5SKIP (G0 separato),136036,06ms osservati.
 Campioni JSON002 rigenerati dalla suite ripristinati ai byte iniziali, senza
 committare esiti storici nuovi. Nessun login o modello reale eseguito.
+
+## T010 — metadata persistenti,2026-11-17
+
+API provider/snapshot/processi/run/domande/risposte/revisioni/approvazioni/output
+nel worker esistente, con modulo storage/discovery-metadata separato dal ledger.
+DTO chiusi, CAS, identità/generazioni, limiti e pagine bounded; manifest/corpus e
+documenti grandi restano riferimenti a file. Nessuna API SQL generica.
+
+PASS build/build:test/typecheck/lint. Dieci nuovi test metadata coprono provider
+CAS/campi segreti, query chiuse, domande solo dopo uscita provata, WAITING_USER e
+slot, risposta+run atomici/idempotenti, revisioni immutabili, consenso esatto per
+approvare, output/watermark, processi separati Foundation, paginazione20domande
+grandi, worker/readonly e risultati operation limitati a IDs. Sono fixture di
+metadati: non sostituiscono la qualifica filesystem T012 o native recovery T018.
+
+Prima campagna completa:410test,399PASS,6FAIL,5SKIP. Sei timeout in casi002 già
+esistenti; il registro macOS conferma Idle Sleep178s durante l’esecuzione. Nessun
+fallimento viene promosso a PASS da quella campagna. Ripetizione con assertion
+anti-idle limitata alla durata del comando (`caffeinate -i npm test`):410test,
+405PASS,0FAIL,5SKIP (G0 separato),138167,05ms osservati. Nessuna soglia allungata,
+nessuna campagna600s o chiamata provider reale. Assertion terminata col comando.
+Campioni002 rigenerati dalla suite ripristinati, gate storici invariati.
+
+La UI/CLI Discovery non è ancora esposta: questo checkpoint completa soltanto
+le API interne dei metadati. Output eventi ancora incrementale, nessun nuovo
+stream token o secondo servizio.

@@ -94,3 +94,23 @@ preparazione cancel intenzionale può revocare un precedente grant cancel non
 consumato; non elimina sessioni, risultati o approvazioni. La riserva byte viene
 applicata con il budget artefatti T012. Grant/session/run/slot/outbox condividono
 la transazione del writer esistente.
+
+### API metadata T010
+
+Metadati letti/scritti dallo stesso worker mediante DTO privati chiusi; nessun SQL
+o path arbitrario dai client. Le pagine interne usano offset/limite≤20 e budget
+28KiB per lasciare spazio all’envelope32KiB; cursori pubblici e binding revisioni
+restano responsabilità del contratto API T016. Snapshot SQL contiene soltanto
+selettori/copertura/conteggi e riferimenti: manifest completo e corpus rimangono
+negli artefatti, senza duplicare sorgenti nel DB.
+
+Domande vengono pubblicate solo dopo EXIT_OBSERVED/SUCCEEDED. Risposta, consumo
+grant e nuova intenzione/run sono atomici; un replay non aggiunge risposte.
+Revisioni/approvazioni restano append-only, UNKNOWN accettati esplicitamente.
+Output richiede generazione/fase corrette e avanza il watermark insieme al link
+artefatto/outbox. Processi con proprietà UNKNOWN non possono essere RELEASED.
+
+Primo incremento eventi: discovery.changed di soli IDs/stato, stessa commit. Le
+tipologie specifiche output/question/document/approval e le API pubbliche sono
+introdotte in T016. Risultati operation contengono soltanto IDs/revisioni, mai
+prompt o stderr; l’intento privato non attraversa il reader di stato.

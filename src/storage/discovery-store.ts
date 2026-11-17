@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 import { createHash } from 'node:crypto';
-import { requireUuid } from '../domain/identifiers.js';
+import { requireUuid, requireDecimal } from '../domain/identifiers.js';
 import { canonicalDiscoveryIntent, validateDiscoveryGrant } from '../domain/discovery/intent.js';
 import { DISCOVERY_LIMITS, isDiscoveryFailure, type DiscoveryFailure, type DiscoveryGrant, type DiscoveryOperation, type DiscoveryResult } from '../domain/discovery/model.js';
 import type { DiscoveryAdmission, DiscoveryAdmissionResult } from '../ports/discovery.js';
@@ -12,7 +12,7 @@ export interface DiscoveryMutation {
 }
 export interface DiscoveryLedgerOptions { readonly nowMs?: () => number; readonly mutate?: DiscoveryMutation }
 
-function failure(error: unknown): { readonly ok: false; readonly code: DiscoveryFailure } {
+export function discoveryStorageFailure(error: unknown): { readonly ok: false; readonly code: DiscoveryFailure } {
   if (error instanceof SyntaxError || (error instanceof Error && error.message === 'INVALID_IDENTIFIER')) return { ok: false, code: 'INVALID_REQUEST' };
   if (error instanceof Error && 'code' in error && typeof error.code === 'string') {
     if (/^SQLITE_(BUSY|LOCKED)/.test(error.code)) return { ok: false, code: 'BUSY' };
@@ -22,10 +22,20 @@ function failure(error: unknown): { readonly ok: false; readonly code: Discovery
   }
   return { ok: false, code: error instanceof Error && isDiscoveryFailure(error.message) ? error.message as DiscoveryFailure : 'PERSISTENCE_UNAVAILABLE' };
 }
+function operationResult(raw: Row[string] | undefined): DiscoveryOperation['result'] {
+  if (raw == null) return null;
+  const value: unknown = JSON.parse(String(raw));
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('STATE_CORRUPT');
+  for (const [key, field] of Object.entries(value)) {
+    if (typeof field !== 'string' || !['snapshotId', 'discoveryId', 'sessionId', 'runId', 'revisionId', 'approvalId', 'providerRevision', 'stateRevision'].includes(key)) throw new Error('STATE_CORRUPT');
+    if (key.endsWith('Revision')) { requireDecimal(field); if (field === '0') throw new Error('STATE_CORRUPT'); } else requireUuid(field);
+  }
+  return value as DiscoveryOperation['result'];
+}
 function operation(row: Row): DiscoveryOperation {
   return { requestId: String(row.request_id), action: row.action as DiscoveryOperation['action'], payloadHash: String(row.payload_hash), canonicalIntent: String(row.canonical_intent),
     phase: row.phase as DiscoveryOperation['phase'], outcome: row.outcome as DiscoveryOperation['outcome'], acceptedAt: String(row.accepted_at), completedAt: row.completed_at === null ? null : String(row.completed_at),
-    discoveryId: row.discovery_id === null ? null : String(row.discovery_id), runId: row.run_id === null ? null : String(row.run_id), error: row.error === null ? null : isDiscoveryFailure(row.error) ? row.error as DiscoveryFailure : 'PERSISTENCE_UNAVAILABLE' };
+    result: operationResult(row.result), discoveryId: row.discovery_id === null ? null : String(row.discovery_id), runId: row.run_id === null ? null : String(row.run_id), error: row.error === null ? null : isDiscoveryFailure(row.error) ? row.error as DiscoveryFailure : 'PERSISTENCE_UNAVAILABLE' };
 }
 /** Runs on the existing writer connection. Standalone transactions are for storage tests. */
 export function createDiscoveryLedger(database: Database.Database, options: DiscoveryLedgerOptions = {}) {
@@ -66,7 +76,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
           database.prepare('INSERT INTO discovery_grants(grant_id,canonical_intent,expires_at_ms,consumed_by_request_id) VALUES(?,?,?,NULL)').run(grant.grantId, grant.canonicalIntent, grant.expiresAtMs);
           return { ok: true, value: undefined } as const;
         });
-      } catch (error) { return failure(error); }
+      } catch (error) { return discoveryStorageFailure(error); }
     },
     admit(input: DiscoveryAdmission): DiscoveryResult<DiscoveryAdmissionResult> {
       try {
@@ -108,7 +118,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
             if (!project) throw new Error('PROJECT_NOT_FOUND'); if (project.removed_at !== null) throw new Error('PROJECT_REMOVED');
             const snapshot = database.prepare('SELECT * FROM discovery_snapshots WHERE snapshot_id=?').get(discovery.snapshotId) as Row | undefined;
             if (!snapshot || snapshot.state !== 'SEALED' || snapshot.project_id !== discovery.projectId || String(snapshot.config_revision) !== discovery.configRevision
-              || String(project.config_revision) !== discovery.configRevision || snapshot.context_digest !== run.contextDigest) throw new Error('CONTEXT_CHANGED');
+              || String(project.config_revision) !== discovery.configRevision || snapshot.context_digest !== run.contextDigest || (Number(snapshot.pinned) === 0 && (snapshot.expires_at_ms === null || Number(snapshot.expires_at_ms) <= nowMs()))) throw new Error('CONTEXT_CHANGED');
             if (discovery.storeId !== identity.store_id || (input.action === 'start' && intent.targetId !== discovery.projectId) || (input.action === 'correct' && intent.targetId !== discovery.discoveryId) || intent.snapshotId !== discovery.snapshotId
               || intent.configRevision !== discovery.configRevision || intent.providerRevision !== run.providerRevision || intent.providerProfileDigest !== run.profileDigest
               || intent.modelId !== run.modelId || intent.contextDigest !== run.contextDigest || discovery.providerRevision !== run.providerRevision
@@ -143,7 +153,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
           }
           return { ok: true, value: { operation: get(input.requestId)!, inserted: true } } as const;
         }, input);
-      } catch (error) { return failure(error); }
+      } catch (error) { return discoveryStorageFailure(error); }
     },
   };
 }

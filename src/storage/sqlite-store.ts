@@ -1,3 +1,5 @@
+import { createDiscoveryMetadata } from './discovery-metadata.js';
+import type { DiscoveryMetadataChange, DiscoveryMetadataQuery } from '../ports/discovery.js';
 import { createDiscoveryLedger } from './discovery-store.js';
 import type { DiscoveryAdmission } from '../ports/discovery.js';
 import type { DiscoveryGrant } from '../domain/discovery/model.js';
@@ -105,6 +107,34 @@ export class SQLiteStore {
     if (this.archiveVersion < REGISTRY_SCHEMA_VERSION) throw new Error('REGISTRY_NOT_INITIALIZED');
     return this.database;
   }
+  private discoveryMetadata() {
+    if (!this.database) throw new Error('STATE_ABSENT');
+    return createDiscoveryMetadata(this.database, { mutate: (body, change) => {
+      const drafts: EventDraft[] = [];
+      return this.mutate(() => {
+        const value = body();
+        if (!change || ['provider', 'snapshot', 'artifact'].includes(change.kind)) return value;
+        let discoveryId: string | null = null, runId: string | null = null, operationId: string | null = null;
+        if (change.kind === 'operation') operationId = change.requestId;
+        else if (change.kind === 'state' || change.kind === 'questions') discoveryId = change.discoveryId;
+        else if (change.kind === 'answer') { discoveryId = change.admission.discovery?.discoveryId ?? null; operationId = change.value.requestId; }
+        else if (change.kind === 'revision' || change.kind === 'approval' || change.kind === 'run') discoveryId = change.value.discoveryId;
+        else if (change.kind === 'process' || change.kind === 'output') runId = change.value.runId;
+        if (change.kind === 'approval') operationId = change.value.requestId;
+        if (runId) { const run = this.database!.prepare('SELECT discovery_id,request_id FROM discovery_runs WHERE run_id=?').get(runId) as Row | undefined; discoveryId = run ? String(run.discovery_id) : null; operationId ??= run ? String(run.request_id) : null; }
+        const d = discoveryId ? this.database!.prepare('SELECT project_id,session_id,current_run_id,state FROM discoveries WHERE discovery_id=?').get(discoveryId) as Row | undefined : undefined;
+        runId ??= d?.current_run_id ? String(d.current_run_id) : null;
+        if (!operationId && runId) { const run = this.database!.prepare('SELECT request_id FROM discovery_runs WHERE run_id=?').get(runId) as Row | undefined; operationId = run ? String(run.request_id) : null; }
+        if (operationId) drafts.push({ type: 'discovery.changed', operationId, payload: { scope: 'discovery',
+          ...(d ? { projectId: String(d.project_id), discoveryId, sessionId: String(d.session_id), state: String(d.state) } : {}),
+          ...(runId ? { runId } : {}),
+        } });
+        return value;
+      }, drafts);
+    } });
+  }
+  readDiscoveryMetadata<Q extends DiscoveryMetadataQuery>(query: Q) { return this.discoveryMetadata().read(query); }
+  commitDiscoveryMetadata(change: DiscoveryMetadataChange) { this.writable(); return this.discoveryMetadata().commit(change); }
   private discoveryLedger() {
     if (!this.database) throw new Error('STATE_ABSENT');
     return createDiscoveryLedger(this.database, { mutate: (body, input) => this.mutate(body, input ? [{

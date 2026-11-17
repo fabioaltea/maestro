@@ -9,6 +9,7 @@ const transitions: Readonly<Record<DiscoveryState, readonly DiscoveryState[]>> =
   APPROVED: ['UPDATING', 'STALE'], STALE: [], FAILED: [], CANCELLED: [], INTERRUPTED: [],
   CANCELLING: ['CANCELLED', 'INTERRUPTED', 'RECONCILING'], RECONCILING: ['INTERRUPTED', 'CANCELLING'],
 });
+export const DISCOVERY_STATES = Object.freeze(Object.keys(transitions) as DiscoveryState[]);
 const slotStates: ReadonlySet<DiscoveryState> = new Set(['RUNNING', 'WAITING_USER', 'UPDATING', 'CANCELLING', 'RECONCILING']);
 const processStates: ReadonlySet<DiscoveryState> = new Set(['RUNNING', 'UPDATING', 'CANCELLING', 'RECONCILING']);
 export function holdsDiscoverySlot(state: DiscoveryState): boolean { return slotStates.has(state); }

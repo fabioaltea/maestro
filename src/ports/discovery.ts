@@ -3,14 +3,14 @@ import type { DiscoveryDocumentRevision } from '../domain/discovery/documents.js
 import type { DiscoveryAction, DiscoveryAnswer, DiscoveryGrant, DiscoveryOperation, DiscoveryOutput, DiscoveryQuestion,
   DiscoveryRecord, DiscoveryResult, DiscoveryRun } from '../domain/discovery/model.js';
 import type { AgentProcessIdentity } from './agent-runtime.js';
-import type { DiscoveryManifest } from './discovery-context.js';
 import type { ProviderConfiguration } from './provider.js';
 
 export interface DiscoveryPage<T> { readonly items: readonly T[]; readonly nextCursor: string | null }
 export interface DiscoverySnapshot {
   readonly snapshotId: string; readonly projectId: string; readonly configRevision: string;
-  readonly state: 'PREPARING' | 'SEALED' | 'INVALID'; readonly manifest: DiscoveryManifest;
-  readonly manifestArtifactId: string; readonly corpusArtifactId: string; readonly createdAt: string;
+  readonly state: 'PREPARING' | 'SEALED' | 'INVALID'; readonly contextDigest: string | null;
+  readonly selectors: readonly string[]; readonly fileCount: number; readonly byteCount: number; readonly omissions: readonly string[];
+  readonly manifestArtifactId: string | null; readonly corpusArtifactId: string | null; readonly createdAt: string;
   readonly expiresAtMs: number | null; readonly pinned: boolean;
 }
 export interface DiscoveryArtifact {
@@ -53,4 +53,49 @@ export interface DiscoveryArtifactPort {
   publish(artifactId: string, bytes: Uint8Array): Promise<DiscoveryResult<DiscoveryArtifact>>;
   read(artifactId: string, offset: number, maximumBytes: number): Promise<DiscoveryResult<{ readonly bytes: Uint8Array; readonly sha256: string; readonly totalBytes: number }>>;
   reconcile(): Promise<DiscoveryResult<void>>;
+}
+
+
+export interface DiscoveryMetadataSingles {
+  provider: ProviderConfiguration;
+  snapshot: DiscoverySnapshot;
+  discovery: DiscoveryRecord;
+  run: DiscoveryRun;
+  process: AgentProcessIdentity;
+  revision: DiscoveryDocumentRevision;
+  approval: DiscoveryApproval;
+  artifact: DiscoveryArtifact;
+}
+export interface DiscoveryMetadataLists {
+  discoveries: DiscoveryRecord;
+  questions: DiscoveryQuestion;
+  answers: DiscoveryAnswer;
+  revisions: DiscoveryDocumentRevision;
+  processes: AgentProcessIdentity;
+  output: DiscoveryOutput;
+}
+/** Private paging only; public opaque cursors are validated by the core API. */
+export interface DiscoveryMetadataPage<T> { readonly items: readonly T[]; readonly nextOffset: number | null }
+export type DiscoveryMetadataQuery = { readonly kind: 'provider' }
+  | { readonly kind: Exclude<keyof DiscoveryMetadataSingles, 'provider'>; readonly id: string }
+  | { readonly kind: keyof DiscoveryMetadataLists; readonly id?: string; readonly offset?: number; readonly limit?: number };
+export type DiscoveryMetadataData<Q extends DiscoveryMetadataQuery> = Q['kind'] extends keyof DiscoveryMetadataSingles
+  ? DiscoveryMetadataSingles[Q['kind']] | null : Q['kind'] extends keyof DiscoveryMetadataLists ? DiscoveryMetadataPage<DiscoveryMetadataLists[Q['kind']]> : never;
+export interface DiscoveryMetadataReply<Q extends DiscoveryMetadataQuery = DiscoveryMetadataQuery> { readonly kind: Q['kind']; readonly data: DiscoveryMetadataData<Q> }
+export type DiscoveryMetadataChange =
+  | { readonly kind: 'provider'; readonly configuration: ProviderConfiguration; readonly expectedRevision: string | null }
+  | { readonly kind: 'artifact'; readonly value: DiscoveryArtifact }
+  | { readonly kind: 'snapshot'; readonly value: DiscoverySnapshot }
+  | { readonly kind: 'process'; readonly value: AgentProcessIdentity }
+  | { readonly kind: 'run'; readonly value: DiscoveryRun; readonly expectedPhase: DiscoveryRun['phase']; readonly exitVerified: boolean }
+  | { readonly kind: 'state'; readonly discoveryId: string; readonly expectedRevision: string; readonly next: DiscoveryRecord['state']; readonly exitVerified: boolean }
+  | { readonly kind: 'questions'; readonly discoveryId: string; readonly runId: string; readonly generation: string; readonly expectedRevision: string; readonly values: readonly DiscoveryQuestion[] }
+  | { readonly kind: 'answer'; readonly value: DiscoveryAnswer; readonly admission: DiscoveryAdmission }
+  | { readonly kind: 'revision'; readonly value: DiscoveryDocumentRevision; readonly runId: string; readonly generation: string; readonly expectedRevision: string }
+  | { readonly kind: 'approval'; readonly value: DiscoveryApproval; readonly expectedRevision: string; readonly requiredUnknownIds: readonly string[] }
+  | { readonly kind: 'output'; readonly value: DiscoveryOutput; readonly generation: string; readonly expectedWatermark: string }
+  | { readonly kind: 'operation'; readonly requestId: string; readonly outcome: Exclude<DiscoveryOperation['outcome'], 'IN_PROGRESS'>; readonly completedAt: string; readonly result: Readonly<Record<string, string>> | null; readonly error: DiscoveryOperation['error'] };
+export interface DiscoveryMetadataStoragePort {
+  readDiscoveryMetadata?<Q extends DiscoveryMetadataQuery>(query: Q): Promise<DiscoveryResult<DiscoveryMetadataReply<Q>>>;
+  commitDiscoveryMetadata?(change: DiscoveryMetadataChange): Promise<DiscoveryResult<void>>;
 }

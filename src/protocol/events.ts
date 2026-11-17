@@ -1,3 +1,4 @@
+import { DISCOVERY_STATES } from '../domain/discovery/state.js';
 import { requireUuid, requireDecimal } from '../domain/identifiers.js';
 import { foundationError } from '../domain/errors.js';
 import { EVENT_TYPES, type EventDraft } from './messages.js';
@@ -12,6 +13,7 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
   if ((project || discovery) && draft.operationId == null) throw new Error('INVALID_REQUEST');
   const payload: Record<string, unknown> = {}; let redacted = 0;
   const enums: Record<string, readonly string[]> = {
+    state: discovery ? DISCOVERY_STATES : [],
     action: discovery ? ['configure', 'start', 'answer', 'correct', 'approve', 'cancel', 'preview', 'check', 'discard'] : project ? ['REGISTER', 'VERIFY', 'UPDATE', 'REMOVE'] : ['start', 'stop', 'restart'], outcome: ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
     from: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
     to: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
