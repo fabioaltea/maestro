@@ -12,13 +12,16 @@ export function DiscoveryReview({ desktop, session: d, live, actions }: { deskto
   const identity = { epoch: desktop.context?.selectionEpoch ?? 0, storeId: desktop.context?.storeId ?? null, projectId: d.projectId, discoveryId: d.discoveryId, runId: d.currentRunId, revisionId: d.latestDocumentRevisionId };
   const currentIdentity = useRef(identity); currentIdentity.current = identity;
   const loaded = useRef<string | null>(null);
-  const { core } = desktop, revisionId = d.latestDocumentRevisionId;
+  const [selectedRevision, setSelectedRevision] = useState(d.latestDocumentRevisionId), [history, setHistory] = useState<Params[]>([]);
+  const { core } = desktop, revisionId = selectedRevision, historical = revisionId !== d.latestDocumentRevisionId;
   useEffect(() => {
     const fence = createDiscoveryReadFence(identity, () => currentIdentity.current);
     if (actions.busy || actions.prepared) return;
     if (loaded.current !== revisionId) { setRevision(null); setSections([]); setAccepted([]); setEligibility(null); } setError(null);
     async function load() {
       if (!revisionId || actions.busy || actions.prepared) return;
+      const revisions = await core('getDiscoveryRevisions', { discoveryId: d.discoveryId }); if (!fence.current()) return;
+      if (revisions?.result === 'OK') setHistory(revisions.data.items as Params[]);
       const metadata = await core('getDiscoveryDocument', { revisionId }); if (!fence.current()) return;
       if (!metadata || metadata.result !== 'OK') throw new Error('Revisione non disponibile.');
       const r = record(metadata.data.revision); if (r.revisionId !== revisionId || r.discoveryId !== d.discoveryId) throw new Error('Revisione non corrispondente.');
@@ -58,17 +61,21 @@ export function DiscoveryReview({ desktop, session: d, live, actions }: { deskto
     };
     timer = setTimeout(() => void poll(), 1000); return () => { disposed = true; clearTimeout(timer); };
   }, [core, d.projectId, eligibility?.checkId, eligibility?.reason, live, actions.busy, actions.prepared]);
+  useEffect(() => { if (eligibility?.eligible !== true || typeof eligibility.checkedAt !== 'string') return; const timer = setTimeout(() => setEligibility(old => old ? { ...old, eligible: false, reason: 'UNKNOWN', freshness: 'UNKNOWN' } : old), Math.max(0, Date.parse(eligibility.checkedAt) + 30000 - Date.now())); return () => clearTimeout(timer); }, [eligibility?.eligible, eligibility?.checkedAt]);
   async function check() { setChecking(true); try { const result = await core('getDiscoveryEligibility', { projectId: d.projectId }); if (result?.result === 'OK') setEligibility(result.data); } finally { setChecking(false); } }
   const base = revision ? { projectId: d.projectId, discoveryId: d.discoveryId, expectedStateRevision: d.stateRevision, revisionId: revision.revisionId, bundleDigest: revision.bundleDigest } : null;
   return <section className="discovery-review" aria-labelledby="review-title"><h4 id="review-title">Conoscenza del progetto</h4>
+    {history.length > 0 && <label>Revisione da consultare<select aria-label="Revisione da consultare" value={revisionId ?? ''} onChange={e => setSelectedRevision(e.target.value)}>{history.map(r => <option key={String(r.revisionId)} value={String(r.revisionId)}>Revisione {String(r.revisionNumber)} · {String(r.revisionId)}</option>)}</select></label>}
+    {historical && <p className="hint">Versione storica. Per approvare o correggere seleziona la revisione corrente.</p>}
+    {d.state === 'STALE' && <p className="hint">Da aggiornare: il contesto è cambiato. Avvia una nuova Discovery con nuova anteprima e conferma.</p>}
     <p className="hint">Le citazioni e le risposte sono verificate come riferimenti. La correttezza delle conclusioni richiede la tua revisione.</p>
     {error && <p role="alert" className="field-error">{error}</p>}
     {revision && <><p className="mono">Revisione {String(revision.revisionNumber)} · {revisionId}<br />Digest: {String(revision.bundleDigest)}<br />Contesto: {String(revision.contextDigest)}</p>
       {approval && <p className="hint">Approvazione storica: {dateLabel(String(approval.approvedAt))}. L’idoneità attuale richiede una nuova verifica.</p>}
       {sections.map(s => <section key={s.id}><h5>{s.title}</h5>{s.claims.map((c, i) => <article key={i}><p><strong>{c.kind}</strong> · {c.text}</p>{c.reason && <p className="hint">{c.reason}</p>}{c.sources.map((ref, j) => <p key={j} className="mono">{String(sources.find(p => p.sourceId === ref.sourceId)?.relativePath ?? ref.sourceId)}:{ref.startLine}–{ref.endLine}{ref.quote && <><br />{ref.quote}</>}</p>)}{c.answers.map((ref, j) => <p key={j} className="mono">Risposta confermata: {ref.answerId} · revisione {ref.revision}</p>)}</article>)}</section>)}
-      {d.state === 'READY_FOR_REVIEW' && <fieldset disabled={!live || actions.busy}><legend>Informazioni ancora sconosciute</legend>{required.map(item => <label key={item.id}><input type="checkbox" checked={accepted.includes(item.id)} onChange={e => setAccepted(old => e.target.checked ? [...old, item.id] : old.filter(id => id !== item.id))} />Accetto UNKNOWN: {item.text}</label>)}</fieldset>}
-      {['READY_FOR_REVIEW', 'APPROVED'].includes(d.state) && <form onSubmit={e => { e.preventDefault(); if (base && correction.trim() && new TextEncoder().encode(correction).length <= 4096) void actions.prepare('discovery.correct', { ...base, correction }); else setError('Scrivi una correzione entro 4 KiB.'); }}><label htmlFor="discovery-correction">Correzione alla revisione</label><textarea id="discovery-correction" rows={3} disabled={!live || actions.busy} value={correction} onChange={e => setCorrection(e.target.value)} /><button className="button subtle" disabled={!live || actions.busy}>Invia correzione</button></form>}
-      {d.state === 'READY_FOR_REVIEW' && <button className="button primary" disabled={!live || actions.busy || accepted.length !== required.length} onClick={() => base && void actions.prepare('discovery.approve', { ...base, acceptedUnknownIds: required.map(r => r.id) })}>Approva questa revisione</button>}
+      {!historical && d.state === 'READY_FOR_REVIEW' && <fieldset disabled={!live || actions.busy}><legend>Informazioni ancora sconosciute</legend>{required.map(item => <label key={item.id}><input type="checkbox" checked={accepted.includes(item.id)} onChange={e => setAccepted(old => e.target.checked ? [...old, item.id] : old.filter(id => id !== item.id))} />Accetto UNKNOWN: {item.text}</label>)}</fieldset>}
+      {!historical && ['READY_FOR_REVIEW', 'APPROVED'].includes(d.state) && <form onSubmit={e => { e.preventDefault(); if (base && correction.trim() && new TextEncoder().encode(correction).length <= 4096) void actions.prepare('discovery.correct', { ...base, correction }); else setError('Scrivi una correzione entro 4 KiB.'); }}><label htmlFor="discovery-correction">Correzione alla revisione</label><textarea id="discovery-correction" rows={3} disabled={!live || actions.busy} value={correction} onChange={e => setCorrection(e.target.value)} /><button className="button subtle" disabled={!live || actions.busy}>Invia correzione</button></form>}
+      {!historical && d.state === 'READY_FOR_REVIEW' && <button className="button primary" disabled={!live || actions.busy || accepted.length !== required.length} onClick={() => base && void actions.prepare('discovery.approve', { ...base, acceptedUnknownIds: required.map(r => r.id) })}>Approva questa revisione</button>}
       <button className="button subtle" disabled={!live || actions.busy || checking || eligibility?.reason === 'CHECKING'} onClick={() => void check()}>Verifica idoneità attuale</button>
       {eligibility && <p role="status">{eligibility.eligible ? 'Idonea nel contesto verificato' : eligibility.reason === 'CHECKING' ? 'Verifica in corso…' : 'Idoneità non confermata'} · {dateLabel(eligibility.checkedAt as string | null)}{eligibility.contextDigest ? ` · Contesto: ${eligibility.contextDigest}` : ''}</p>}
     </>}

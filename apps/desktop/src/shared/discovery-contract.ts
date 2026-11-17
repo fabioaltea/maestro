@@ -3,12 +3,13 @@ import type { Params } from './bridge-contract.ts';
 
 export const DISCOVERY_ACTIONS = ['discovery.configure', 'discovery.check', 'discovery.preview', 'discovery.discard', 'discovery.start', 'discovery.answer', 'discovery.cancel', 'discovery.correct', 'discovery.approve'] as const;
 export const DISCOVERY_BRIDGE_METHODS = ['chooseProviderBinary', 'getDiscoveryProvider', 'checkDiscoveryProvider', 'prepareDiscoveryAction', 'confirmDiscoveryAction', 'cancelDiscoveryAction',
-  'listDiscoveries', 'getDiscovery', 'getDiscoveryPreview', 'getDiscoveryOutput', 'getDiscoveryQuestions', 'getDiscoveryDocument', 'getDiscoveryEligibility', 'getDiscoveryOperation'] as const;
+  'listDiscoveries', 'getDiscovery', 'getDiscoveryPreview', 'getDiscoveryOutput', 'getDiscoveryQuestions', 'getDiscoveryDocument', 'getDiscoveryRevisions', 'getDiscoveryEligibility', 'getDiscoveryOperation'] as const;
 export const DISCOVERY_MUTATIONS = ['provider.configure', 'provider.check', 'preview', 'preview.discard', 'start', 'answer', 'cancel', 'correct', 'approve'] as const;
 export const DISCOVERY_QUERIES: Readonly<Record<string, { action: string; required: readonly string[]; optional?: readonly string[] }>> = {
   getDiscoveryProvider: { action: 'provider.get', required: [] }, listDiscoveries: { action: 'list', required: ['projectId'], optional: ['limit', 'cursor'] },
   getDiscovery: { action: 'get', required: ['discoveryId'] }, getDiscoveryPreview: { action: 'preview.get', required: ['snapshotId'], optional: ['sources', 'limit', 'cursor'] },
   getDiscoveryOutput: { action: 'output', required: ['runId'], optional: ['limit', 'cursor'] }, getDiscoveryQuestions: { action: 'questions', required: ['discoveryId'], optional: ['limit', 'cursor'] },
+  getDiscoveryRevisions: { action: 'revisions', required: ['discoveryId'], optional: ['cursor', 'limit'] },
   getDiscoveryDocument: { action: 'document', required: ['revisionId'], optional: ['content', 'cursor'] }, getDiscoveryEligibility: { action: 'eligibility', required: ['projectId'], optional: ['checkId'] },
   getDiscoveryOperation: { action: 'operation', required: ['requestId'] },
 };

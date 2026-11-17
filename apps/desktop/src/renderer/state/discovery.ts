@@ -30,8 +30,11 @@ export function useDiscovery(desktop: Desktop, projectId: string, configRevision
   const refresh = useCallback(async () => {
     const p = await core('getDiscoveryProvider'); if (!active.current) return;
     if (p?.result === 'OK') setProvider(p.data);
-    const list = await core('listDiscoveries', { projectId }); if (!active.current) return;
-    if (list?.result === 'OK') setItems(list.data.items as DiscoverySummary[]);
+    const history: DiscoverySummary[] = []; let cursor: string | null = null;
+    do { const list = await core('listDiscoveries', { projectId, ...(cursor ? { cursor } : {}) }); if (!active.current) return;
+      if (!list || list.result !== 'OK') return; history.push(...list.data.items as DiscoverySummary[]); if (history.length > 100) throw new Error('CLIENT_PROTOCOL_ERROR'); cursor = list.data.nextCursor as string | null;
+    } while (cursor);
+    setItems(history);
     setLoading(false);
   }, [core, projectId]);
   useEffect(() => { active.current = true; void refresh(); return () => { active.current = false; }; }, [refresh]);
@@ -89,7 +92,7 @@ export function useDiscovery(desktop: Desktop, projectId: string, configRevision
   }
   async function cancel() { if (!prepared || working.current) return; const id = prepared.confirmationId; setPrepared(null); await invoke('cancelDiscoveryAction', { confirmationId: id }); }
   return { provider, items, snapshot, sources, cursor, prepared, busy: busy || pending !== null, loading, message, error, requestId, setError, refresh,
-    prepare, confirm, cancel, returnFocus: () => trigger.current, moreSources: () => snapshot && cursor ? readSources(snapshot.snapshotId, cursor) : Promise.resolve(),
+    prepare, confirm, cancel, newDiscovery: () => { setSnapshot(null); setSources([]); setCursor(null); setMessage('Prepara una nuova anteprima, poi autorizza esplicitamente la nuova Discovery. Lo storico resta conservato.'); document.getElementById('discovery-scope')?.focus(); }, returnFocus: () => trigger.current, moreSources: () => snapshot && cursor ? readSources(snapshot.snapshotId, cursor) : Promise.resolve(),
     preview: (selectors: string[]) => prepare('discovery.preview', { projectId, expectedConfigRevision: configRevision, selectors }) };
 }
 

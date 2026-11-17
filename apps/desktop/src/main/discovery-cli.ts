@@ -34,9 +34,9 @@ export function buildDiscoveryCliArgs(c: CliCommand): string[] {
     args.push(c.action, `--grant=${p.grantId}`, '--review-stdin'); positional.push(uuid(p.discoveryId));
   } else if (c.action === 'cancel') { keys(p, ['discoveryId', 'grantId']); args.push('cancel', `--grant=${uuid(p.grantId)}`); positional.push(uuid(p.discoveryId)); }
   else {
-    const targets: Record<string, string> = { list: 'projectId', get: 'discoveryId', questions: 'discoveryId', output: 'runId', document: 'revisionId', eligibility: 'projectId', operation: 'requestId' };
+    const targets: Record<string, string> = { list: 'projectId', get: 'discoveryId', questions: 'discoveryId', revisions: 'discoveryId', output: 'runId', document: 'revisionId', eligibility: 'projectId', operation: 'requestId' };
     const key = targets[c.action]; if (!key) throw new Error('INVALID_INPUT');
-    keys(p, [key, ...(['list', 'questions', 'output'].includes(c.action) ? ['cursor', 'limit'] : c.action === 'document' ? ['content', 'cursor'] : c.action === 'eligibility' ? ['checkId'] : [])]);
+    keys(p, [key, ...(['list', 'questions', 'revisions', 'output'].includes(c.action) ? ['cursor', 'limit'] : c.action === 'document' ? ['content', 'cursor'] : c.action === 'eligibility' ? ['checkId'] : [])]);
     args.push(c.action === 'get' ? 'show' : c.action); positional.push(uuid(p[key]));
     if (c.action === 'document' && p.content !== true) { if (p.content !== undefined) throw new Error('INVALID_INPUT'); args.push('--metadata'); }
     if (p.checkId !== undefined) args.push(`--check-id=${uuid(p.checkId)}`);
