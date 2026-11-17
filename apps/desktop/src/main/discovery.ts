@@ -101,7 +101,7 @@ export class DiscoveryActions {
     }
     const summary = record(prepared.summary);
     return { command: command('start', { projectId: p.projectId, grantId: prepared.grantId }, p.projectId as string, p.expectedConfigRevision as string),
-      summary: ['Avvia Discovery in sola lettura', `Provider: ${summary.providerId}`, `Modello: ${summary.modelId}`, `File: ${summary.fileCount} · Byte: ${summary.byteCount}`,
+      summary: ['Avvia Discovery in sola lettura', `Progetto: ${p.projectId}`, `Anteprima: ${p.snapshotId}`, `Digest: ${p.contextDigest}`, `Provider: ${summary.providerId}`, `Modello: ${summary.modelId}`, `File: ${summary.fileCount} · Byte: ${summary.byteCount}`,
         ...((summary.selectors as string[] | undefined) ?? []).map(path => `Selettore: ${path}`), 'Questi contenuti saranno inviati al provider AI. Il repository non verrà modificato.'] };
   }
 }

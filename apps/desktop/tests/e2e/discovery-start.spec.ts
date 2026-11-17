@@ -28,10 +28,14 @@ test('local preview requires an explicit action, cancellation is inert and the d
     try {
       await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Discovery', exact: true }).click();
+      await page.getByLabel('Percorsi da analizzare', { exact: true }).fill('../fuori-progetto');
+      await page.getByRole('button', { name: 'Prepara anteprima', exact: true }).click();
+      await expect(page.locator('#discovery-error')).toContainText('percorsi relativi');
       await page.getByLabel('Percorsi da analizzare', { exact: true }).fill('file.txt');
       await page.getByRole('button', { name: 'Prepara anteprima', exact: true }).click();
       await expect(page.getByRole('dialog')).toBeVisible(); await page.keyboard.press('Escape');
       await expect(page.getByRole('dialog')).not.toBeVisible();
+      await expect(page.getByRole('button', { name: 'Prepara anteprima', exact: true })).toBeFocused();
       await page.getByRole('button', { name: 'Prepara anteprima', exact: true }).click();
       await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
       await expect(page.getByText('file.txt', { exact: true })).toBeVisible({ timeout: 15000 });

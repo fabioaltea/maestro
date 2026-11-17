@@ -649,3 +649,29 @@ avvio implicito). Prima aspettativa DAEMON_UNAVAILABLE corretta in STATE_ABSENT
 per archivio non inizializzato. Build core/desktop, typecheck desktop e lint
 PASS. Nessun provider/account reale o benchmark lungo; UI/T026 e composizione
 mutazioni/T027 restano da completare. G1 e gate preesistenti invariati.
+
+
+## T026 — pannello di avvio desktop, 2026-11-17
+
+Dettaglio progetto → Discovery, mantenendo il linguaggio visivo003. Provider e
+modello configurati intenzionalmente tramite picker opaco; check/login separato
+e istruzioni per il profilo ufficiale Keychain. Nessuna installazione, lettura
+credenziali o polling di login. Scope relativo≤16, preview locale, fonti a pagine,
+copertura/omissioni/byte/digest/scadenza. Consenso checkbox distinto dalla conferma
+monouso; riepilogo progetto/snapshot/digest/provider/modello prima dell'invio.
+Anteprima scaduta, configurazione cambiata, servizio offline o provider non
+verificato mantengono Avvia disabilitato. Richiesta accettata distinta da analisi
+completata, UUID mostrato; polling solo operation originale≤1/s, visibile e senza
+sovrapposizione. Esito incerto rinvia a Operazioni, senza reinvio automatico.
+Vista rimontata su epoch/progetto/config, callback dopo unmount scartate.
+
+Typecheck e build desktop PASS. Test unitario ambito/gate1PASS; suite desktop
+unit/contract34PASS prima dell'ulteriore controllo fase/outcome T027. Due E2E
+Electron con vero daemon/CLI2PASS,7,9s: provider assente senza sessione inventata;
+ambito traversal rifiutato, preview soltanto su azione esplicita, Esc annulla e
+restituisce il focus, fonti visibili dopo conferma, gate invio chiuso e snapshot
+repository identico. Prove eseguite insieme alla composizione T027 in working
+tree; nessun provider/account reale. Prima esecuzione anticipata senza bundle
+aggiornato fallita per pulsante Discovery assente; ricompilazione e prove finali
+PASS. Nessuna nuova libreria grafica/runtime. US2/output/intervista e US3/review
+restano incrementi successivi; i due E2E non qualificano G1.
