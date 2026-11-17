@@ -65,6 +65,7 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
   }
   function mapped(kind: string, row: Row): unknown {
     const storeId = String(identity().store_id);
+    if (kind === 'grant') return { grantId: row.grant_id, canonicalIntent: row.canonical_intent, expiresAtMs: Number(row.expires_at_ms), consumedByRequestId: row.consumed_by_request_id };
     if (kind === 'discovery' || kind === 'discoveries') return discovery(row, storeId);
     if (kind === 'run') return run(row);
     if (kind === 'snapshot') return { ...JSON.parse(String(row.metadata)), snapshotId: String(row.snapshot_id), projectId: String(row.project_id), configRevision: String(row.config_revision),
@@ -81,7 +82,7 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
   return {
     read<Q extends DiscoveryMetadataQuery>(query: Q): DiscoveryResult<DiscoveryMetadataReply<Q>> {
       try {
-        const singular: Record<string, [string, string]> = { snapshot: ['discovery_snapshots', 'snapshot_id'], discovery: ['discoveries', 'discovery_id'], run: ['discovery_runs', 'run_id'], process: ['discovery_processes', 'run_id'], revision: ['discovery_revisions', 'revision_id'], approval: ['discovery_approvals', 'revision_id'], artifact: ['discovery_artifacts', 'artifact_id'] };
+        const singular: Record<string, [string, string]> = { grant: ['discovery_grants', 'grant_id'], snapshot: ['discovery_snapshots', 'snapshot_id'], discovery: ['discoveries', 'discovery_id'], run: ['discovery_runs', 'run_id'], process: ['discovery_processes', 'run_id'], revision: ['discovery_revisions', 'revision_id'], approval: ['discovery_approvals', 'revision_id'], artifact: ['discovery_artifacts', 'artifact_id'] };
         const plural: Record<string, [string, string, string]> = { discoveries: ['discoveries', 'project_id', 'created_at,discovery_id'], questions: ['discovery_questions', 'discovery_id', 'question_id'], answers: ['discovery_answers a JOIN discovery_questions q ON q.question_id=a.question_id', 'q.discovery_id', 'a.question_id,a.answer_revision,a.answer_id'], revisions: ['discovery_revisions', 'discovery_id', 'revision_number'], processes: ['discovery_processes', '', 'run_id'], output: ['discovery_output', 'run_id', 'seq'] };
         let data: unknown;
         if (query.kind === 'provider') { exact(query, ['kind']); const row = database.prepare('SELECT configuration FROM discovery_provider WHERE singleton=1').get() as Row | undefined; data = row ? JSON.parse(String(row.configuration)) : null; }
@@ -106,7 +107,20 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
     commit(change: DiscoveryMetadataChange): DiscoveryResult<void> {
       try {
         mutate(() => {
-          if (change.kind === 'provider') {
+          if (change.kind === 'configure') {
+            exact(change, ['kind', 'admission', 'configuration', 'expectedRevision']);
+            if (change.admission.action !== 'configure') fail();
+            const intent = JSON.parse(change.admission.canonicalIntent) as { payload: Record<string, unknown> };
+            const c = change.configuration, p = intent.payload;
+            if (p.binaryRealpath !== c.binaryRealpath || p.binarySha256 !== c.binarySha256 || p.binaryVersion !== c.binaryVersion
+              || p.modelId !== c.modelId || p.providerProfileDigest !== c.qualificationDigest || p.expectedProviderRevision !== change.expectedRevision) fail('APPROVAL_REQUIRED');
+            const admitted = createDiscoveryLedger(database, { mutate: body => body(), ...(options.nowMs ? { nowMs: options.nowMs } : {}) }).admit(change.admission);
+            if (!admitted.ok) fail(admitted.code); if (!admitted.value.inserted) return;
+            const provider = this.commit({ kind: 'provider', configuration: c, expectedRevision: change.expectedRevision });
+            if (!provider.ok) fail(provider.code);
+            database.prepare("UPDATE discovery_operations SET phase='FINALIZED',outcome='SUCCEEDED',completed_at=?,result=? WHERE request_id=?")
+              .run(change.admission.acceptedAt, json({ providerRevision: c.revision }), change.admission.requestId);
+          } else if (change.kind === 'provider') {
             exact(change, ['kind', 'configuration', 'expectedRevision']); const c = change.configuration;
             exact(c, ['providerId', 'revision', 'binaryRealpath', 'binarySha256', 'binaryVersion', 'modelId', 'authProfileRef', 'policyVersion', 'qualificationDigest', 'configuredAt']);
             positive(c.revision); digest(c.binarySha256); digest(c.qualificationDigest); utc(c.configuredAt);

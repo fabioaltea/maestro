@@ -128,10 +128,11 @@ export class SQLiteStore {
       const drafts: EventDraft[] = [];
       return this.mutate(() => {
         const value = body();
-        enforceDiscoveryBudget(this.database!, !['provider', 'snapshot', 'questions', 'answer', 'revision', 'output'].includes(change?.kind ?? ''));
+        enforceDiscoveryBudget(this.database!, !['provider', 'configure', 'snapshot', 'questions', 'answer', 'revision', 'output'].includes(change?.kind ?? ''));
         if (!change || ['provider', 'snapshot', 'artifact'].includes(change.kind)) return value;
         let discoveryId: string | null = null, runId: string | null = null, operationId: string | null = null;
         if (change.kind === 'operation') operationId = change.requestId;
+        else if (change.kind === 'configure') operationId = change.admission.requestId;
         else if (change.kind === 'state' || change.kind === 'questions') discoveryId = change.discoveryId;
         else if (change.kind === 'answer') { discoveryId = change.admission.discovery?.discoveryId ?? null; operationId = change.value.requestId; }
         else if (change.kind === 'revision' || change.kind === 'approval' || change.kind === 'run') discoveryId = change.value.discoveryId;

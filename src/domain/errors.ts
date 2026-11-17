@@ -13,7 +13,7 @@ const catalog = {
   PROVIDER_NOT_CONFIGURED: ["Provider non configurato.", "Configurare esplicitamente il provider supportato.", false],
   PROVIDER_AUTH_REQUIRED: ["Login ufficiale del provider richiesto.", "Eseguire il login ufficiale nel profilo dedicato e verificarlo.", false],
   PROVIDER_UNSUPPORTED: ["Capacità o versione provider non supportata.", "Usare un binario e un profilo qualificati.", false],
-  PROVIDER_UNSAFE: ["Confinamento o configurazione provider non qualificati.", "Correggere il prerequisito senza allentare il profilo.", false],
+  PROVIDER_UNSAFE: ["Confinamento o configurazione provider non qualificati.", "Verificare binario, profilo, Keychain e policy gestite senza allentare i permessi.", false],
   PROVIDER_UNAVAILABLE: ["Provider non disponibile.", "Verificare il provider prima di un nuovo intento esplicito.", false],
   PROVIDER_QUOTA: ["Quota del provider non disponibile per questa esecuzione.", "Verificare lo stato del proprio account senza retry automatici.", false],
   PROVIDER_PROTOCOL_ERROR: ["Risposta provider non conforme.", "Consultare il codice safe e conservare l’output parziale.", false],

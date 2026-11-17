@@ -58,6 +58,7 @@ export interface DiscoveryArtifactPort {
 
 
 export interface DiscoveryMetadataSingles {
+  grant: DiscoveryGrant;
   provider: ProviderConfiguration;
   snapshot: DiscoverySnapshot;
   discovery: DiscoveryRecord;
@@ -85,6 +86,7 @@ export type DiscoveryMetadataData<Q extends DiscoveryMetadataQuery> = Q['kind'] 
 export interface DiscoveryMetadataReply<Q extends DiscoveryMetadataQuery = DiscoveryMetadataQuery> { readonly kind: Q['kind']; readonly data: DiscoveryMetadataData<Q> }
 export type DiscoveryMetadataChange =
   | { readonly kind: 'provider'; readonly configuration: ProviderConfiguration; readonly expectedRevision: string | null }
+  | { readonly kind: 'configure'; readonly admission: DiscoveryAdmission; readonly configuration: ProviderConfiguration; readonly expectedRevision: string | null }
   | { readonly kind: 'artifact'; readonly value: DiscoveryArtifact }
   | { readonly kind: 'snapshot'; readonly value: DiscoverySnapshot }
   | { readonly kind: 'process'; readonly value: AgentProcessIdentity }

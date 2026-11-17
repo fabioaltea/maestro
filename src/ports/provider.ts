@@ -14,6 +14,12 @@ export interface ProviderAvailability {
   readonly state: 'NOT_CONFIGURED' | 'AUTH_REQUIRED' | 'UNSUPPORTED' | 'UNSAFE' | 'AVAILABLE';
   readonly checkedAt: string; readonly capabilities: ProviderCapabilities; readonly code: DiscoveryFailure | null;
 }
+/** OS effects used by the Codex adapter; never supplied by an IPC caller. */
+export interface CodexInspectionPort {
+  inspectBinary(binary: string): Promise<DiscoveryResult<{ readonly version: string; readonly sha256: string }>>;
+  checkLogin(configuration: ProviderConfiguration): Promise<'CHATGPT' | 'AUTH_REQUIRED' | 'UNAVAILABLE' | 'UNSAFE'>;
+  prepareAuthHome(): Promise<DiscoveryResult<string>>;
+}
 export type ProviderEvent = { readonly kind: 'PROGRESS' | 'AGENT_TEXT'; readonly text: string }
   | { readonly kind: 'RESULT'; readonly result: ArchitectResult }
   | { readonly kind: 'FAILED'; readonly code: DiscoveryFailure };

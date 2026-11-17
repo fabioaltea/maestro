@@ -11,12 +11,12 @@ type LaunchCode = 'PROVIDER_UNSUPPORTED' | 'PROVIDER_UNSAFE' | 'PROVIDER_CONTEXT
 export type ProviderLaunchResult = { readonly ok: false; readonly code: LaunchCode }
   | { readonly ok: true; readonly exitCode: number | null; readonly signal: NodeJS.Signals | null; readonly stdout: Buffer };
 
-async function privateDirectory(path: string) {
+export async function privateDirectory(path: string) {
   const info = await lstat(path);
   if (!info.isDirectory() || info.isSymbolicLink() || info.uid !== process.getuid?.() || (info.mode & 0o077) !== 0
     || await realpath(path) !== path) throw new Error('PROVIDER_UNSAFE');
 }
-async function verifyInstallationMetadata(authHome: string) {
+export async function verifyInstallationMetadata(authHome: string) {
   const file = await open(join(authHome, 'installation_id'), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
     const info = await file.stat();
@@ -26,7 +26,7 @@ async function verifyInstallationMetadata(authHome: string) {
     if (bytesRead !== 36 || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bytes.subarray(0, bytesRead).toString('ascii'))) throw new Error('PROVIDER_UNSAFE');
   } finally { await file.close(); }
 }
-async function verifyBinary(path: string) {
+export async function verifyCodexBinary(path: string) {
   if (await realpath(path) !== path) throw new Error('PROVIDER_UNSUPPORTED');
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
@@ -57,7 +57,7 @@ export async function prepareProviderInvocation(invocation: ProviderInvocation):
   const expected = createCodexInvocation(input);
   const sortedEnvironment = (env: ProviderInvocation['env']) => JSON.stringify(Object.entries(env).sort(([a], [b]) => a.localeCompare(b)));
   if (JSON.stringify(invocation.args) !== JSON.stringify(expected.args) || sortedEnvironment(invocation.env) !== sortedEnvironment(expected.env)) throw new Error('PROVIDER_UNSAFE');
-  await verifyBinary(input.binary); await privateDirectory(input.runtime); await privateDirectory(input.authHome); await verifyInstallationMetadata(input.authHome);
+  await verifyCodexBinary(input.binary); await privateDirectory(input.runtime); await privateDirectory(input.authHome); await verifyInstallationMetadata(input.authHome);
   for (const name of ['scratch', 'scratch/home', 'scratch/tmp', 'scratch/config', 'scratch/cache', 'scratch/data', 'scratch/state']) {
     const directory = join(input.runtime, name); await mkdir(directory, { mode: 0o700, recursive: true }); await privateDirectory(directory);
   }

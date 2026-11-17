@@ -429,3 +429,47 @@ locali. Le fixture di US1 usano snapshot/file reali e provider simulato; nessuna
 credenziale o chiamata modello. La checkbox riguarda i test definiti, non l’avvio
 funzionale già completato. La suite completa rimane intenzionalmente RED finché
 T020–T022 non soddisfano i relativi contratti.
+
+
+## T020 — configurazione e check provider,2026-11-17
+
+Implementati capabilities Codex e operazioni configure/check, senza inferenza.
+Pin nativo/hash/versione/modello espliciti; asset profilo/schema confrontati con
+le evidenze G0. Il launcher conserva il controllo hash immediatamente prima del
+run. Lo stato login accetta soltanto la risposta ufficiale ChatGPT prevista:
+exit0 da solo, API key, output malformato, Keychain o managed policy incompatibili
+restano bloccanti. checkedAt è rilevato al termine del controllo; nessuna promessa
+su accesso modello, quota, account o cancellazione remota.
+
+Probe locale breve con helper Foundation transitorio e IPC owner-bound, non un
+nuovo servizio persistente o test runner. Env chiuso, stesso profilo G0 con rete
+ulteriormente negata, stdout/stderr aggregati8KiB e mai pubblicati. Il figlio
+possiede solo il proprio handle nativo, timeout3s, perdita owner→KILL dell’handle
+vivo e attesa close. Intento risorsa prima del fork; prova insufficiente mantiene
+UNKNOWN/BLOCKED e conserva scratch. Composizione daemon/drain resta T027/T033.
+
+Configurazione esplicita crea soltanto home0700/installation_id UUID0600 con
+fsync. auth.json è verificato soltanto via metadata e causa rifiuto; nessuna
+lettura/copia token, login o fallback. Grant verificato prima del provisioning,
+poi consumo/CAS configurazione/esito nella stessa transazione. Retry originale
+non ripete il provisioning; CAS concorrente preserva il grant perdente. Query
+privata grant aggiunta al reader metadata, senza esporre una nuova API pubblica.
+
+11/11 test dedicati PASS (636,01ms), inclusa prova nativa esplicita G0 del solo
+login status su CODEX_HOME temporanea senza credenziali. Nell’ambiente isolato
+osservato la CLI segnala default Keychain non disponibile: normalizzato UNSAFE,
+mai AVAILABLE. La prova accetta AUTH_REQUIRED oppure blocco UNSAFE secondo lo
+store OS, verifica risorsa Foundation RELEASED/ABSENT e assenza file token.
+Non qualifica il login reale G1, che resta NOT_RUN.
+
+Regressioni dominio/API/schema/ledger/metadata/artefatti/quota:49/49PASS,
+2933,04ms. Typecheck/lint/build/build:test PASS. Due primi test fixture hanno
+rilevato path temporanei non canonicalizzati, corretti con realpath; una prima
+aspettativa AUTH_REQUIRED è stata corretta perché il Keychain può risultare
+inaccessibile nel profilo confinato e deve bloccare, non simulare credenziali.
+I test T019 restano RED per prepare/start/preview ancora da implementare inT021;
+nessuna suite completa dichiarata PASS in questo incremento.
+
+Fonti: [autenticazione ufficiale](https://learn.chatgpt.com/docs/auth),
+[login status](https://learn.chatgpt.com/docs/developer-commands?surface=cli).
+Help locale del pin verificato con HOME/CODEX_HOME vuoti, senza status account.
