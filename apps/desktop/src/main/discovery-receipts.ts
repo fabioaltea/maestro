@@ -2,7 +2,7 @@ import type { PublicResult } from '../shared/bridge-contract.ts';
 import { validateDiscoveryData } from '../shared/discovery-contract.ts';
 import type { Receipt, ReceiptStore } from './receipt-store.ts';
 const certainRejections = new Set(['INVALID_REQUEST', 'IDEMPOTENCY_CONFLICT', 'APPROVAL_REQUIRED', 'APPROVAL_STALE', 'CONTEXT_CHANGED', 'CONTEXT_LIMIT', 'SOURCE_EXCLUDED',
-  'PROVIDER_NOT_CONFIGURED', 'PROVIDER_AUTH_REQUIRED', 'PROVIDER_UNSUPPORTED', 'PROVIDER_UNSAFE', 'PROVIDER_UNAVAILABLE', 'DISCOVERY_BUSY', 'DISCOVERY_LIMIT', 'PROJECT_NOT_FOUND', 'PROJECT_REMOVED', 'UNSUPPORTED_VERSION']);
+  'PROVIDER_NOT_CONFIGURED', 'PROVIDER_AUTH_REQUIRED', 'PROVIDER_UNSUPPORTED', 'PROVIDER_UNSAFE', 'PROVIDER_UNAVAILABLE', 'DISCOVERY_BUSY', 'DISCOVERY_LIMIT', 'PROJECT_NOT_FOUND', 'PROJECT_REMOVED', 'UNSUPPORTED_VERSION', 'ANSWER_CONFLICT']);
 /** Admission completes the submission only; the Discovery state remains in core. */
 export async function settleDiscoveryReceipt(store: ReceiptStore, receipt: Receipt, result: PublicResult): Promise<Receipt> {
   const unknown = (code = 'UNKNOWN_OUTCOME') => store.update(receipt.requestId, { phase: 'UNKNOWN', errorCode: code });

@@ -60,6 +60,11 @@ export class ActionService {
       const configuration = detail.data.configuration === null ? null : record(detail.data.configuration);
       if ((configuration?.revision ?? null) !== (command.expectedRevision ?? null)) throw new Error('REVISION_CONFLICT');
     }
+    if (command.namespace === 'discovery' && ['answer', 'cancel'].includes(command.action)) {
+      const detail = await this.options.core.call({ namespace: 'discovery', action: 'get', archive: c.path, params: { discoveryId: command.discoveryId } }); this.options.context.apply(c, detail);
+      if (detail.result !== 'OK') throw new Error(detail.error?.code ?? 'STALE_CONTEXT'); const d = record(detail.data.discovery);
+      if (d.projectId !== command.projectId || d.stateRevision !== command.expectedStateRevision) throw new Error('REVISION_CONFLICT');
+    }
     return { status, project };
   }
   async prepare(action: string, params: Params) {

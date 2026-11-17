@@ -6,10 +6,12 @@ import { useDiscovery } from '../state/discovery.ts';
 import { DiscoveryLaunch } from '../components/DiscoveryLaunch.tsx';
 import { ConfirmationDialog } from '../components/ConfirmationDialog.tsx';
 import { dateLabel } from '../format.ts';
+import { DiscoveryInterview } from '../components/DiscoveryInterview.tsx';
 export function Discovery({ desktop, project, live }: { desktop: Desktop; project: Project; live: boolean }) {
   const view = useDiscovery(desktop, project.projectId, project.configRevision), [binary, setBinary] = useState<{ providerBinaryHandle: string; displayName: string } | null>(null), [model, setModel] = useState(''), [choosing, setChoosing] = useState(false);
   const configuration = view.provider?.configuration ? record(view.provider.configuration) : null, check = view.provider?.check ? record(view.provider.check) : null;
   const labels: Record<string, string> = { RUNNING: 'In corso', WAITING_USER: 'Attende risposta', READY_FOR_REVIEW: 'Da approvare', APPROVED: 'Approvata', STALE: 'Da aggiornare', INTERRUPTED: 'Interrotta', RECONCILING: 'Esito incerto', FAILED: 'Non riuscita', CANCELLED: 'Annullata', CANCELLING: 'Annullamento in corso' };
+  const [selected, setSelected] = useState<string | null>(null), selectedId = selected ?? view.items.at(-1)?.discoveryId;
   async function choose() { setChoosing(true); try { const result = await desktop.invoke('chooseProviderBinary'); if (result) setBinary(record(result).provider as typeof binary); } finally { setChoosing(false); } }
   return <section className="discovery-view" aria-labelledby="discovery-title"><div className="section-heading"><h3 id="discovery-title">Discovery del progetto</h3><button className="text-button" disabled={view.busy || view.loading} onClick={() => void view.refresh()}>Aggiorna Discovery</button></div>
     <p className="hint">Analisi in sola lettura per conoscere scopo, architettura e convenzioni di {project.displayName}.</p>
@@ -32,8 +34,9 @@ export function Discovery({ desktop, project, live }: { desktop: Desktop; projec
     <DiscoveryLaunch view={view} live={live} projectId={project.projectId} configRevision={project.configRevision} />
     <div id="discovery-error" role={view.error ? 'alert' : undefined} className="field-error">{view.error}</div>{view.message && <p role="status" className="hint">{view.message}</p>}{view.requestId && <p className="mono">Richiesta: {view.requestId}</p>}
     <section className="discovery-history" aria-labelledby="discovery-history-title"><h4 id="discovery-history-title">Discovery salvate</h4>{!view.loading && !view.items.length && <p className="muted">Non avviata</p>}
-      {view.items.map(item => <article key={item.discoveryId}><p>{labels[item.state] ?? 'Stato non verificato'} · {dateLabel(item.updatedAt)}</p><p className="mono">Discovery: {item.discoveryId}<br />Sessione: {item.sessionId}{item.currentRunId && <><br />Esecuzione: {item.currentRunId}</>}</p>{item.error && <p className="field-error">{item.error}</p>}</article>)}
+      {view.items.map(item => <article key={item.discoveryId}><p>{labels[item.state] ?? 'Stato non verificato'} · {dateLabel(item.updatedAt)}</p><p className="mono">Discovery: {item.discoveryId}<br />Sessione: {item.sessionId}{item.currentRunId && <><br />Esecuzione: {item.currentRunId}</>}</p>{item.error && <p className="field-error">{item.error}</p>}<button className="text-button" onClick={() => setSelected(item.discoveryId)}>Apri sessione</button></article>)}
     </section>
+    {selectedId && <DiscoveryInterview key={`${desktop.context?.selectionEpoch}:${selectedId}`} desktop={desktop} projectId={project.projectId} discoveryId={selectedId} live={live} actions={view} />}
     {view.prepared && <ConfirmationDialog prepared={view.prepared} busy={view.busy} onConfirm={() => void view.confirm()} onCancel={() => void view.cancel()} returnFocus={view.returnFocus} />}
   </section>;
 }

@@ -50,13 +50,47 @@ export class DiscoveryActions {
     const query = DISCOVERY_QUERIES[method]; if (!query) throw new Error('INVALID_INPUT');
     const c = this.options.context.capture(), input = structuredClone(params); keys(input, [...query.required, ...(query.optional ?? [])]);
     validateDiscoveryBridge(method, { bridgeVersion: 1, callId: randomUUID(), selectionEpoch: c.view.selectionEpoch, ...input });
-    const result = await this.options.core.call({ namespace: 'discovery', action: query.action, archive: c.path, params: input, scope: 'view' });
-    this.options.context.apply(c, result); return { ...result, data: validateDiscoveryData(query.action, result.data) };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      if (attempt) await new Promise(resolve => setTimeout(resolve, attempt * 50));
+      if (this.options.context.capture().view.selectionEpoch !== c.view.selectionEpoch) throw new Error('STALE_CONTEXT');
+      try {
+        const result = await this.options.core.call({ namespace: 'discovery', action: query.action, archive: c.path, params: input, scope: 'view' });
+        this.options.context.apply(c, result); return { ...result, data: validateDiscoveryData(query.action, result.data) };
+      } catch (error) { if (!(error instanceof Error) || error.message !== 'LOCAL_BUSY' || attempt === 4) throw error; }
+    }
+    throw new Error('LOCAL_BUSY');
   }
   async resolve(action: string, raw: Params): Promise<{ command: CliCommand; summary: string[] }> {
     const p = structuredClone(validateDiscoveryAction(action, raw)), c = this.options.context.capture();
     const command = (name: string, params: Params, projectId?: string, expectedRevision?: string): CliCommand => ({ namespace: 'discovery', action: name, archive: c.path, params,
       ...(projectId ? { projectId } : {}), ...(expectedRevision ? { expectedRevision } : {}) });
+    if (action === 'discovery.answer' || action === 'discovery.cancel') {
+      const name = action.slice(10), status = await this.status(c, [`discovery.${name}`, 'discovery.prepare', 'discovery.get', 'discovery.preview.get']);
+      const d = record((await this.call(c, 'get', { discoveryId: p.discoveryId })).data.discovery);
+      if (d.projectId !== p.projectId || d.stateRevision !== p.expectedStateRevision) throw new Error('REVISION_CONFLICT');
+      const snapshot = record((await this.call(c, 'preview.get', { snapshotId: d.snapshotId })).data.snapshot);
+      const uid = process.getuid?.(); if (uid === undefined) throw new Error('RUNTIME_UNAVAILABLE');
+      let payload: Params = {}, modelId: unknown = null, profile: unknown = null;
+      if (name === 'answer') {
+        const provider = (await this.call(c, 'provider.get')).data, config = record(provider.configuration);
+        if (config.revision !== d.providerRevision) throw new Error('APPROVAL_STALE'); modelId = config.modelId; profile = config.qualificationDigest;
+        let cursor: unknown, question: Params | undefined;
+        for (let page = 0; page < 20; page++) {
+          const data = (await this.call(c, 'questions', { discoveryId: d.discoveryId, ...(cursor ? { cursor } : {}) })).data;
+          question = (data.items as Params[]).find(q => q.questionId === p.questionId); if (question || !data.nextCursor) break; cursor = data.nextCursor;
+        }
+        if (!question || question.revision !== p.expectedQuestionRevision || (question.answer ? record(question.answer).revision : '0') !== p.expectedAnswerRevision) throw new Error('ANSWER_CONFLICT');
+        payload = { questionId: p.questionId, questionRevision: p.expectedQuestionRevision, answerId: randomUUID(), answerRevision: String(BigInt(p.expectedAnswerRevision as string) + 1n), kind: p.kind, text: p.text };
+      }
+      const intent = { ownerUid: uid, storeId: status.storeId, action: name, targetId: name === 'answer' ? p.questionId : d.discoveryId,
+        configRevision: d.configRevision, stateRevision: d.stateRevision, snapshotId: d.snapshotId, contextDigest: snapshot.contextDigest,
+        providerRevision: d.providerRevision, providerProfileDigest: profile, modelId, payload };
+      const prepared = (await this.call(c, 'prepare', { intent })).data; uuid(prepared.grantId);
+      if (canonical(JSON.parse(text(prepared.canonicalIntent, 32768))) !== canonical(intent)) throw new Error('CLIENT_PROTOCOL_ERROR');
+      return { command: { ...command(name, name === 'answer' ? { questionId: p.questionId, grantId: prepared.grantId, kind: p.kind, text: p.text } : { discoveryId: d.discoveryId, grantId: prepared.grantId }, d.projectId as string, d.configRevision as string), discoveryId: d.discoveryId as string, expectedStateRevision: d.stateRevision as string },
+        summary: name === 'answer' ? ['Invia risposta e continua', `Progetto: ${d.projectId}`, `Discovery: ${d.discoveryId}`, `Risposta: ${p.kind === 'UNKNOWN' ? 'Non so (UNKNOWN)' : p.text}`, 'La risposta e le fonti originali verranno inviate in una nuova esecuzione in sola lettura.']
+          : ['Annulla questa Discovery', `Progetto: ${d.projectId}`, `Discovery: ${d.discoveryId}`, 'Termina soltanto l’esecuzione locale posseduta. La cancellazione remota non è verificata. Output e domande restano conservati.'] };
+    }
     if (action === 'discovery.preview') {
       await this.status(c, ['discovery.preview']);
       const project = await this.options.core.call({ namespace: 'project', action: 'get', archive: c.path, params: { projectId: p.projectId } }); this.options.context.apply(c, project);

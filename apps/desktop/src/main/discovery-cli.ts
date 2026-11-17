@@ -15,9 +15,9 @@ export function buildDiscoveryCliArgs(c: CliCommand): string[] {
   } else if (c.action === 'prepare') {
     keys(p, ['intent']); const intent = record(p.intent);
     keys(intent, ['ownerUid', 'storeId', 'action', 'targetId', 'configRevision', 'stateRevision', 'snapshotId', 'contextDigest', 'providerRevision', 'providerProfileDigest', 'modelId', 'payload']);
-    if (!['configure', 'start'].includes(String(intent.action)) || !Number.isSafeInteger(intent.ownerUid) || Number(intent.ownerUid) < 0) throw new Error('INVALID_INPUT');
+    if (!['configure', 'start', 'answer', 'cancel'].includes(String(intent.action)) || !Number.isSafeInteger(intent.ownerUid) || Number(intent.ownerUid) < 0) throw new Error('INVALID_INPUT');
     uuid(intent.storeId); uuid(intent.targetId);
-    keys(record(intent.payload), intent.action === 'start' ? ['snapshotId'] : ['binaryRealpath', 'binarySha256', 'binaryVersion', 'modelId', 'expectedProviderRevision', 'providerProfileDigest']);
+    keys(record(intent.payload), intent.action === 'cancel' ? [] : intent.action === 'answer' ? ['questionId', 'questionRevision', 'answerId', 'answerRevision', 'kind', 'text'] : intent.action === 'start' ? ['snapshotId'] : ['binaryRealpath', 'binarySha256', 'binaryVersion', 'modelId', 'expectedProviderRevision', 'providerProfileDigest']);
     args.push('prepare', '--intent-stdin');
   } else if (c.action === 'preview') {
     validateDiscoveryAction('discovery.preview', p); args.push('preview', `--expected-revision=${p.expectedConfigRevision}`, '--scope-stdin'); positional.push(uuid(p.projectId));
@@ -25,6 +25,10 @@ export function buildDiscoveryCliArgs(c: CliCommand): string[] {
     keys(p, ['snapshotId', 'sources', 'limit', 'cursor']); args.push('preview', 'show'); positional.push(uuid(p.snapshotId)); if (p.sources === true) args.push('--sources'); else if (p.sources !== undefined) throw new Error('INVALID_INPUT');
   } else if (c.action === 'preview.discard') { keys(p, ['snapshotId']); args.push('preview', 'discard'); positional.push(uuid(p.snapshotId)); }
   else if (c.action === 'start') { keys(p, ['projectId', 'grantId']); args.push('start', `--grant=${uuid(p.grantId)}`); positional.push(uuid(p.projectId)); }
+  else if (c.action === 'answer') { keys(p, ['questionId', 'grantId', 'kind', 'text']); uuid(p.questionId); uuid(p.grantId);
+    if (typeof p.text !== 'string' || !p.text.isWellFormed() || p.text.includes('\0') || Buffer.byteLength(p.text) > 4096 || p.kind === 'ANSWER' && !p.text.trim()) throw new Error('INVALID_INPUT');
+    if (!['ANSWER', 'UNKNOWN'].includes(String(p.kind))) throw new Error('INVALID_INPUT'); args.push('answer', `--grant=${p.grantId}`, '--answer-stdin'); positional.push(uuid(p.questionId)); }
+  else if (c.action === 'cancel') { keys(p, ['discoveryId', 'grantId']); args.push('cancel', `--grant=${uuid(p.grantId)}`); positional.push(uuid(p.discoveryId)); }
   else {
     const targets: Record<string, string> = { list: 'projectId', get: 'discoveryId', questions: 'discoveryId', output: 'runId', document: 'revisionId', eligibility: 'projectId', operation: 'requestId' };
     const key = targets[c.action]; if (!key) throw new Error('INVALID_INPUT');
@@ -39,7 +43,7 @@ export function buildDiscoveryCliArgs(c: CliCommand): string[] {
   if (positional.length) args.push('--', ...positional); return args;
 }
 export function discoveryCliInput(c: CliCommand): string | null {
-  if (c.namespace !== 'discovery' || !['prepare', 'preview'].includes(c.action)) return null;
-  const value = c.action === 'prepare' ? c.params?.intent : c.params?.selectors, json = JSON.stringify(value);
+  if (c.namespace !== 'discovery' || !['prepare', 'preview', 'answer'].includes(c.action)) return null;
+  const value = c.action === 'answer' ? { kind: c.params?.kind, text: c.params?.text } : c.action === 'prepare' ? c.params?.intent : c.params?.selectors, json = JSON.stringify(value);
   if (typeof json !== 'string' || Buffer.byteLength(json) > 32768) throw new Error('INVALID_INPUT'); return json;
 }

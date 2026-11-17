@@ -1,10 +1,10 @@
 import { CORE_ERRORS } from './core-errors.ts';
 import type { Params } from './bridge-contract.ts';
 
-export const DISCOVERY_ACTIONS = ['discovery.configure', 'discovery.check', 'discovery.preview', 'discovery.discard', 'discovery.start'] as const;
+export const DISCOVERY_ACTIONS = ['discovery.configure', 'discovery.check', 'discovery.preview', 'discovery.discard', 'discovery.start', 'discovery.answer', 'discovery.cancel'] as const;
 export const DISCOVERY_BRIDGE_METHODS = ['chooseProviderBinary', 'getDiscoveryProvider', 'checkDiscoveryProvider', 'prepareDiscoveryAction', 'confirmDiscoveryAction', 'cancelDiscoveryAction',
   'listDiscoveries', 'getDiscovery', 'getDiscoveryPreview', 'getDiscoveryOutput', 'getDiscoveryQuestions', 'getDiscoveryDocument', 'getDiscoveryEligibility', 'getDiscoveryOperation'] as const;
-export const DISCOVERY_MUTATIONS = ['provider.configure', 'provider.check', 'preview', 'preview.discard', 'start'] as const;
+export const DISCOVERY_MUTATIONS = ['provider.configure', 'provider.check', 'preview', 'preview.discard', 'start', 'answer', 'cancel'] as const;
 export const DISCOVERY_QUERIES: Readonly<Record<string, { action: string; required: readonly string[]; optional?: readonly string[] }>> = {
   getDiscoveryProvider: { action: 'provider.get', required: [] }, listDiscoveries: { action: 'list', required: ['projectId'], optional: ['limit', 'cursor'] },
   getDiscovery: { action: 'get', required: ['discoveryId'] }, getDiscoveryPreview: { action: 'preview.get', required: ['snapshotId'], optional: ['sources', 'limit', 'cursor'] },
@@ -28,7 +28,14 @@ function relative(value: unknown) {
 }
 export function validateDiscoveryAction(action: unknown, input: unknown): Params {
   if (!(DISCOVERY_ACTIONS as readonly unknown[]).includes(action)) return invalid(); const p = record(input);
-  if (action === 'discovery.configure') {
+  if (action === 'discovery.answer') {
+    fields(p, ['projectId', 'discoveryId', 'questionId', 'expectedStateRevision', 'expectedQuestionRevision', 'expectedAnswerRevision', 'kind', 'text']);
+    uuid(p.projectId); uuid(p.discoveryId); uuid(p.questionId); revision(p.expectedStateRevision); revision(p.expectedQuestionRevision);
+    const version = text(p.expectedAnswerRevision, 19); if (!/^(0|[1-9][0-9]*)$/.test(version) || BigInt(version) > 9223372036854775807n) return invalid();
+    if (!['ANSWER', 'UNKNOWN'].includes(String(p.kind))) return invalid(); text(p.text, 4096, p.kind === 'UNKNOWN'); if (p.kind === 'ANSWER' && !(p.text as string).trim()) return invalid();
+  } else if (action === 'discovery.cancel') {
+    fields(p, ['projectId', 'discoveryId', 'expectedStateRevision']); uuid(p.projectId); uuid(p.discoveryId); revision(p.expectedStateRevision);
+  } else if (action === 'discovery.configure') {
     fields(p, ['providerBinaryHandle', 'modelId', 'expectedProviderRevision']); uuid(p.providerBinaryHandle);
     if (!/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/.test(text(p.modelId, 128))) return invalid(); if (p.expectedProviderRevision !== null) revision(p.expectedProviderRevision);
   } else if (action === 'discovery.check') { fields(p, ['expectedProviderRevision']); revision(p.expectedProviderRevision); }

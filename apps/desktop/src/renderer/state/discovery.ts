@@ -47,6 +47,7 @@ export function useDiscovery(desktop: Desktop, projectId: string, configRevision
       if (!result?.data.operation) { setPending(null); setError('Esito incerto. Consulta la richiesta originale in Operazioni. Nessun nuovo invio automatico.'); return; }
       const operation = record(result.data.operation);
       if (operation.requestId !== request.id || operation.action !== request.action) { setPending(null); setError('L’esito non corrisponde alla richiesta originale. Consulta Operazioni.'); return; }
+      if (operation.outcome === 'UNKNOWN') { setPending(null); setError('Esito incerto. Consulta la richiesta originale in Operazioni.'); await refresh(); return; }
       if (operation.phase !== 'FINALIZED') return;
       setPending(null); await invoke('reconcileOperation', { receiptId: request.id }); if (!active.current) return;
       if (operation.outcome !== 'SUCCEEDED') { setError(result.error?.message ?? 'Operazione bloccata. Consulta Operazioni per l’esito originale.'); return; }
@@ -69,7 +70,7 @@ export function useDiscovery(desktop: Desktop, projectId: string, configRevision
   }, [pending, poll]);
   async function prepare(action: string, params: Params) {
     if (working.current || pending) return; working.current = true; setBusy(true); setError(null); setMessage(null); trigger.current = document.activeElement as HTMLElement | null;
-    try { const result = await invoke('prepareDiscoveryAction', { action, params }); if (active.current && result) setPrepared(result as PreparedAction); }
+    try { await invoke('releaseViewReads'); const result = await invoke('prepareDiscoveryAction', { action, params }); if (active.current && result) setPrepared(result as PreparedAction); }
     finally { working.current = false; if (active.current) setBusy(false); }
   }
   async function confirm() {
@@ -90,4 +91,65 @@ export function useDiscovery(desktop: Desktop, projectId: string, configRevision
   return { provider, items, snapshot, sources, cursor, prepared, busy: busy || pending !== null, loading, message, error, requestId, setError, refresh,
     prepare, confirm, cancel, returnFocus: () => trigger.current, moreSources: () => snapshot && cursor ? readSources(snapshot.snapshotId, cursor) : Promise.resolve(),
     preview: (selectors: string[]) => prepare('discovery.preview', { projectId, expectedConfigRevision: configRevision, selectors }) };
+}
+
+export interface DiscoveryRing { text: string; lastSeq: string; truncated: boolean }
+export function appendDiscoveryOutput(current: DiscoveryRing, chunks: Params[], runId: string): DiscoveryRing {
+  let { text, lastSeq, truncated } = current;
+  for (const chunk of chunks) {
+    if (chunk.runId !== runId || typeof chunk.seq !== 'string' || !/^[1-9][0-9]{0,18}$/.test(chunk.seq) || BigInt(chunk.seq) > 9223372036854775807n) throw new Error('CLIENT_PROTOCOL_ERROR');
+    truncated ||= chunk.truncated === true;
+    if (BigInt(chunk.seq) <= BigInt(lastSeq)) continue;
+    if (BigInt(chunk.seq) !== BigInt(lastSeq) + 1n) throw new Error('CLIENT_PROTOCOL_ERROR');
+    const bytes = Uint8Array.from(atob(String(chunk.data)), c => c.charCodeAt(0));
+    if (bytes.byteLength !== chunk.byteLength || bytes.byteLength > 8192) throw new Error('CLIENT_PROTOCOL_ERROR');
+    text += new TextDecoder('utf-8', { fatal: true }).decode(bytes); lastSeq = chunk.seq; truncated ||= chunk.truncated === true;
+  }
+  const lines = text.split('\n');
+  if (lines.length > 500) { text = lines.slice(-500).join('\n'); truncated = true; }
+  const encoded = new TextEncoder().encode(text);
+  if (encoded.byteLength > 1048576) { let start = encoded.byteLength - 1048576; while ((encoded[start]! & 0xc0) === 0x80) start++; text = new TextDecoder().decode(encoded.subarray(start)); truncated = true; }
+  return { text, lastSeq, truncated };
+}
+export interface DiscoverySession extends DiscoverySummary { projectId: string; stateRevision: string; configRevision: string; snapshotId: string }
+export interface InterviewQuestion { questionId: string; discoveryId: string; revision: string; text: string; reason: string; status: string; answer: { revision: string; kind: string; text: string } | null }
+export function useDiscoverySession(desktop: Desktop, projectId: string, discoveryId: string, paused: boolean, live: boolean) {
+  const [session, setSession] = useState<DiscoverySession | null>(null), [questions, setQuestions] = useState<InterviewQuestion[]>([]), [ring, setRing] = useState<DiscoveryRing>({ text: '', lastSeq: '0', truncated: false });
+  const [failure, setFailure] = useState<string | null>(null), [refresh, setRefresh] = useState(0);
+  const state = useRef<{ runId: string | null; cursor: string | null; ring: DiscoveryRing }>({ runId: null, cursor: null, ring: { text: '', lastSeq: '0', truncated: false } });
+  const { core, invoke } = desktop;
+  useEffect(() => () => { void invoke('releaseViewReads'); }, [invoke]);
+  useEffect(() => {
+    if (paused) return;
+    let disposed = false, timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      try {
+        if (document.visibilityState !== 'visible') return;
+        const result = await core('getDiscovery', { discoveryId }); if (disposed || !result) return;
+        if (result.result !== 'OK') { setFailure(result.error?.message ?? 'Stato non disponibile.'); return; }
+        const d = result.data.discovery as DiscoverySession;
+        if (d.discoveryId !== discoveryId || d.projectId !== projectId) throw new Error('STALE_CONTEXT'); setSession(d);
+        if (state.current.runId !== d.currentRunId) { state.current = { runId: d.currentRunId, cursor: null, ring: { text: '', lastSeq: '0', truncated: false } }; setRing(state.current.ring); }
+        if (d.currentRunId) {
+          const page = await core('getDiscoveryOutput', { runId: d.currentRunId, ...(state.current.cursor ? { cursor: state.current.cursor } : {}) }); if (disposed) return;
+          if (page?.result === 'OK') {
+            const next = appendDiscoveryOutput(state.current.ring, page.data.items as Params[], d.currentRunId); state.current.ring = next; setRing(next);
+            if (page.data.nextCursor) state.current.cursor = String(page.data.nextCursor);
+          } else setFailure(page?.error?.message ?? 'Output non disponibile.');
+        }
+        if (d.state === 'WAITING_USER' || d.state === 'CANCELLED' || d.state === 'INTERRUPTED') {
+          let cursor: string | null = null; const all: InterviewQuestion[] = [];
+          do {
+            const page = await core('getDiscoveryQuestions', { discoveryId, ...(cursor ? { cursor } : {}) }); if (disposed) return;
+            if (!page || page.result !== 'OK') break; all.push(...page.data.items as InterviewQuestion[]); cursor = page.data.nextCursor as string | null;
+            if (all.length > 20) throw new Error('CLIENT_PROTOCOL_ERROR');
+          } while (cursor);
+          setQuestions(all);
+        }
+      } catch { if (!disposed) setFailure('Dati non utilizzabili per questa sessione. Consulta lo stato originale.'); }
+      finally { if (!disposed && live) timer = setTimeout(() => void tick(), 1000); }
+    };
+    timer = setTimeout(() => void tick(), 1000); return () => { disposed = true; clearTimeout(timer); };
+  }, [core, projectId, discoveryId, paused, live, refresh]);
+  return { session, questions, ring, failure, refresh: () => setRefresh(v => v + 1) };
 }

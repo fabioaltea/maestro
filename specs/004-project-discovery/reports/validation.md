@@ -845,3 +845,47 @@ answer-file su cancel prima di contattare l'archivio. Selezione CLI/start/API
 18PASS prima del caso input aggiunto; selezione finale CLI/intervista/start
 10PASS/0FAIL/0SKIP. Build/test, typecheck desktop e lint PASS; nessuna chiamata
 provider/login reale, G1 NOT_RUN.
+
+
+## T035 — UI output/intervista/cancel, 2026-11-17
+
+Vista della sessione correlata a epoch/progetto/Discovery/run, callback dismesse
+al cambio vista; la chiusura cancella soltanto letture client. Polling output
+visibile≤1/s senza sovrapposizione, mai polling login/modello; FIFO500righe/1MiB
+con troncamento esplicito (anche flag arrivato su un chunk già letto). Output e
+domande come testo React inerte, niente HTML/link eseguibili. Risposta≤4KiB e
+Non so/UNKNOWN intenzionali, conferma UI/grant separati, CAS domanda/risposta/
+stato e corpo soltanto su pipe privata. Conferma congelata prima dell'effetto,
+ricevuta metadata, query originale e nessun Retry cieco. Cancel conserva output
+e domande e distingue cessazione locale dalla remota non verificata. Operazioni
+mostra etichette del namespace Discovery. Contesa di read-slot ritentata solo
+per letture non inviate, con cap esistente; nessun reinvio di mutazioni.
+
+E2E usa daemon/CLI/UI reali, metadata fixture preparati con writer mentre il
+daemon è fermo e binario sintetico assente. Dimostra riapertura della domanda,
+output ostile inerte, errore risposta vuota, tastiera/Enter/Esc/focus, UNKNOWN
+conservato, cancel annullato senza effetti e poi confermato, storico e repository
+immutati. La risposta resta salvata quando la continuazione è rifiutata dal
+provider non disponibile; il nuovo run con veri host/provider fixture è già
+qualificato headless T031/T034, non spacciato per UI/provider reale. Prima prova
+intervista PASS16,3s. Estendendo cancel, il test premeva Esc prima che il dialog
+asincrono fosse visibile: attesa corretta, nessuna policy rilassata.
+
+Verifiche finali macOS26.3.1 arm64, Node26.13.0, Electron45.3.0:
+- Build/typecheck core e desktop e lint PASS.
+- Desktop unit/contract37PASS/0FAIL/0SKIP,4674,24ms; include ring/seq/run estranei,
+  cap e testo risposta assente da argv.
+- Desktop integrazione29PASS/0FAIL/0SKIP,31266,10ms.
+- Electron Discovery start/interview3PASS/0FAIL,30,5s.
+- Core mirato Discovery unit/contract/integration, lifecycle daemon/controller e
+  readonly:210test,204PASS/0FAIL/6SKIP,38493,51ms nella ripetizione finale senza
+  suite desktop parallele. I6SKIP sono i gate G0 opt-in separati.
+
+La prima selezione core eseguita insieme alle suite desktop ha avuto203PASS/
+1FAIL/6SKIP,49127,00ms: test preesistente SIGINT/control lease, lettura SQLite
+transitoria PERSISTENCE_UNAVAILABLE. File isolato4/4PASS,12686,12ms e selezione
+core finale204/204PASS; causa del fallimento iniziale non determinata, non
+cancellata dal report e nessuna deroga/timeout aumentato. Nessuna campagna
+acceptance/benchmark o chiamata provider/account reale. T028/G1 NOT_RUN; T036/G2
+completo (inclusi SIGKILL daemon/host) ancora aperto. Documenti/review/idoneità
+sono US3/US4; gate001/002 e review umana003 restano invariati.
