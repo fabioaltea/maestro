@@ -730,3 +730,16 @@ Verifiche finali su macOS26.3.1 arm64, Node26.13.0, Electron45.3.0:
 Nessuna acceptance completa, benchmark, inferenza/account/provider reale o
 nuova campagna prolungata. G0 precedente invariato, G1/T028 NOT_RUN; gate
 001/T082,001/T085,002/T093 e review umana003/T054 conservati.
+
+
+## T029 — contratti intervista inizialmente RED, 2026-11-17
+
+Sei test core definiti con corpus reale scratch e provider/launch fixture: domande
+durevoli assegnate dal core, WAITING_USER senza processi e slot occupato; risposta
+prima del nuovo run, sessione/snapshot conservati, replay UUID senza duplicazione
+e payload diverso negato; UNKNOWN e correzioni append-only; risposta conservata
+anche se il contesto cambia prima della nuova esecuzione; grant/revisioni/cap4KiB
+e20turni; cap20domande senza troncamenti. Reader offline interroga la domanda
+originale. Nessun provider/account reale. Build:test PASS;6test RED come atteso
+(0PASS/6FAIL,9253,34ms): publishQuestions/answer non ancora implementati (T031).
+T028/G1 reale rimane NOT_RUN; dipendenze locali US2 ammesse dal piano.
