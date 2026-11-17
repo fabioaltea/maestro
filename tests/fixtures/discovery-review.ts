@@ -10,8 +10,8 @@ export async function reviewFixture(t: TestContext) {
   const f = await launchFixture(t), service = f.service as unknown as ReturnType<typeof createDiscoveryOperations>;
   value(await f.service.start(f.peer, f.startInput(await f.prepare()))); await f.service.idle();
   const discovery = () => value(f.store.readDiscoveryMetadata({ kind: 'discovery', id: f.launches[0]!.discoveryId })).data!;
-  async function exit() {
-    let run = value(f.store.readDiscoveryMetadata({ kind: 'run', id: discovery().currentRunId! })).data!;
+  async function exit(discoveryId = discovery().discoveryId) {
+    let run = value(f.store.readDiscoveryMetadata({ kind: 'run', id: value(f.store.readDiscoveryMetadata({ kind: 'discovery', id: discoveryId })).data!.currentRunId! })).data!;
     for (const phase of ['HOST_READY', 'SPAWN_AUTHORIZED', 'PROVIDER_RUNNING', 'EXIT_OBSERVED'] as const) {
       const next = { ...run, phase, outcome: phase === 'EXIT_OBSERVED' ? 'SUCCEEDED' as const : 'RUNNING' as const, endedAt: phase === 'EXIT_OBSERVED' ? new Date().toISOString() : null };
       value(f.store.commitDiscoveryMetadata({ kind: 'run', value: next, expectedPhase: run.phase, exitVerified: phase === 'EXIT_OBSERVED' })); run = next;
