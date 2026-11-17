@@ -352,3 +352,21 @@ dati offline dopo stop; repo importato invariato. Nessun modello o login avviato
 T017–T018 e le storie restano aperti; questo checkpoint non rende disponibile
 una Discovery completa. Campioni002 rigenerati ripristinati; gate precedenti eG1
 reale non promossi. Nessuna modifica al lockfile desktop preesistente non tracciato.
+
+## T017 — test host/run inizialmente RED,2026-11-17
+
+Quattordici casi compilano:13FAIL attesi per agent-runtime T018 assente;1PASS
+(978,92ms totali). La prova già verde usa lo stesso profilo OS provider con probe
+C nativo sintetico: lettura del run key e connessione AF_UNIX al controllo negati
+EPERM/EACCES, con controlli non confinati riusciti. Nessun provider o account reale.
+
+Test definiti per WAIT_GO e SPAWN_AUTHORIZED durevole, input/owner/gen/policy/cwd
+chiusi prima degli effetti, replay senza duplicazione, lifeline prima/dopo GO,
+SIGKILL host senza proof/slot mantenuto, proof falsificata e PID riutilizzato,
+processo estraneo preservato, TERM/KILL sul solo handle posseduto e deadline.
+Fixture Node come veri processi nello stesso runner, modulo launch sostituibile
+soltanto tramite constructor trusted dei test; nessuna opzione equivalente wire.
+Il provider fixture termina autonomamente nel caso host SIGKILL: il test richiede
+comunque UNKNOWN e non prova che un provider reale termini senza un host vivo.
+Teardown conserva il fixture se i processi non sono verificati assenti.
+Checkbox attesta i test definiti, non una qualifica runtime già ottenuta.

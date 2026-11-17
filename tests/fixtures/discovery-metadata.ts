@@ -7,7 +7,7 @@ import { canonicalDiscoveryIntent } from '../../src/domain/discovery/intent.js';
 import { createRegistryStore } from './registry-store.js';
 
 /** Metadata-only fixtures do not claim file durability, provenance or native exit proof. */
-export async function createDiscoveryMetadataFixture(t: TestContext) {
+export async function createDiscoveryMetadataFixture(t: TestContext, options: { inputDigest?: string } = {}) {
   const f = await createRegistryStore(t); const database = new Database(f.path); database.pragma('foreign_keys=ON');
   t.after(() => database.close());
   const projectId = randomUUID(), at = new Date().toISOString();
@@ -25,7 +25,7 @@ export async function createDiscoveryMetadataFixture(t: TestContext) {
   const discoveryId = randomUUID(), runId = randomUUID(), requestId = randomUUID(), grantId = randomUUID();
   const discovery: DiscoveryRecord = { storeId: f.storeId, projectId, discoveryId, sessionId: randomUUID(), state: 'RUNNING', stateRevision: '1', snapshotId: snapshot.snapshotId,
     configRevision: '1', providerRevision: '1', currentRunId: runId, latestDocumentRevisionId: null, createdAt: at, updatedAt: at, error: null };
-  const run: DiscoveryRun = { runId, discoveryId, generation: randomUUID(), turnIndex: 1, grantId, requestId, contextDigest: 'a'.repeat(64), inputDigest: 'b'.repeat(64), providerId: 'fixture', providerRevision: '1', profileDigest: 'c'.repeat(64), modelId: 'fixture', phase: 'SPAWN_INTENT', outcome: 'RUNNING', startedAt: null, endedAt: null, outputWatermark: '0', error: null };
+  const run: DiscoveryRun = { runId, discoveryId, generation: randomUUID(), turnIndex: 1, grantId, requestId, contextDigest: 'a'.repeat(64), inputDigest: options.inputDigest ?? 'b'.repeat(64), providerId: 'fixture', providerRevision: '1', profileDigest: 'c'.repeat(64), modelId: 'fixture', phase: 'SPAWN_INTENT', outcome: 'RUNNING', startedAt: null, endedAt: null, outputWatermark: '0', error: null };
   const prepare = (action: 'start' | 'answer' | 'approve', targetId: string, stateRevision: string, payload: Record<string, unknown>, nextRequestId: string, nextGrantId: string) => {
     const canonicalIntent = canonicalDiscoveryIntent({ ownerUid: process.getuid!(), storeId: f.storeId, action, targetId, configRevision: '1', stateRevision, snapshotId: snapshot.snapshotId, contextDigest: run.contextDigest, providerRevision: '1', providerProfileDigest: run.profileDigest, modelId: run.modelId, payload });
     const saved = f.store.saveDiscoveryGrant({ grantId: nextGrantId, canonicalIntent, expiresAtMs: Date.now() + 300_000, consumedByRequestId: null }); assertSuccess(saved.ok);

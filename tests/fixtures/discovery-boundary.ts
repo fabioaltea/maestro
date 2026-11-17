@@ -43,11 +43,22 @@ const probeSource = `
 #include <errno.h>
 #include <fcntl.h>
 #include <spawn.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <string.h>
 #include <unistd.h>
 extern char **environ;
 int main(int argc, char **argv) {
   if (argc != 3) return 11;
+  if (!strcmp(argv[1], "connect")) {
+    struct sockaddr_un address; memset(&address, 0, sizeof(address));
+    if (strlen(argv[2]) >= sizeof(address.sun_path)) return 11;
+    address.sun_family = AF_UNIX; address.sun_len = sizeof(address);
+    strcpy(address.sun_path, argv[2]);
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0); if (fd < 0) return errno == EPERM || errno == EACCES ? 0 : 11;
+    int result = connect(fd, (struct sockaddr *)&address, sizeof(address)); int saved = errno;
+    close(fd); return result == 0 ? 10 : saved == EPERM || saved == EACCES ? 0 : 11;
+  }
   if (!strcmp(argv[1], "exec")) {
     pid_t pid; char *args[] = {argv[2], "-c", "exit 0", 0};
     int err = posix_spawn(&pid, argv[2], 0, 0, args, environ);
