@@ -1,10 +1,10 @@
 import { CORE_ERRORS } from './core-errors.ts';
 import type { Params } from './bridge-contract.ts';
 
-export const DISCOVERY_ACTIONS = ['discovery.configure', 'discovery.check', 'discovery.preview', 'discovery.discard', 'discovery.start', 'discovery.answer', 'discovery.cancel'] as const;
+export const DISCOVERY_ACTIONS = ['discovery.configure', 'discovery.check', 'discovery.preview', 'discovery.discard', 'discovery.start', 'discovery.answer', 'discovery.cancel', 'discovery.correct', 'discovery.approve'] as const;
 export const DISCOVERY_BRIDGE_METHODS = ['chooseProviderBinary', 'getDiscoveryProvider', 'checkDiscoveryProvider', 'prepareDiscoveryAction', 'confirmDiscoveryAction', 'cancelDiscoveryAction',
   'listDiscoveries', 'getDiscovery', 'getDiscoveryPreview', 'getDiscoveryOutput', 'getDiscoveryQuestions', 'getDiscoveryDocument', 'getDiscoveryEligibility', 'getDiscoveryOperation'] as const;
-export const DISCOVERY_MUTATIONS = ['provider.configure', 'provider.check', 'preview', 'preview.discard', 'start', 'answer', 'cancel'] as const;
+export const DISCOVERY_MUTATIONS = ['provider.configure', 'provider.check', 'preview', 'preview.discard', 'start', 'answer', 'cancel', 'correct', 'approve'] as const;
 export const DISCOVERY_QUERIES: Readonly<Record<string, { action: string; required: readonly string[]; optional?: readonly string[] }>> = {
   getDiscoveryProvider: { action: 'provider.get', required: [] }, listDiscoveries: { action: 'list', required: ['projectId'], optional: ['limit', 'cursor'] },
   getDiscovery: { action: 'get', required: ['discoveryId'] }, getDiscoveryPreview: { action: 'preview.get', required: ['snapshotId'], optional: ['sources', 'limit', 'cursor'] },
@@ -28,7 +28,12 @@ function relative(value: unknown) {
 }
 export function validateDiscoveryAction(action: unknown, input: unknown): Params {
   if (!(DISCOVERY_ACTIONS as readonly unknown[]).includes(action)) return invalid(); const p = record(input);
-  if (action === 'discovery.answer') {
+  if (action === 'discovery.correct' || action === 'discovery.approve') {
+    fields(p, ['projectId', 'discoveryId', 'expectedStateRevision', 'revisionId', 'bundleDigest', ...(action === 'discovery.correct' ? ['correction'] : ['acceptedUnknownIds'])]);
+    uuid(p.projectId); uuid(p.discoveryId); revision(p.expectedStateRevision); uuid(p.revisionId); digest(p.bundleDigest);
+    if (action === 'discovery.correct') { if (!text(p.correction, 4096).trim()) return invalid(); }
+    else { if (!Array.isArray(p.acceptedUnknownIds) || p.acceptedUnknownIds.length > 220 || new Set(p.acceptedUnknownIds).size !== p.acceptedUnknownIds.length) return invalid(); p.acceptedUnknownIds.forEach(id => text(id, 256)); }
+  } else if (action === 'discovery.answer') {
     fields(p, ['projectId', 'discoveryId', 'questionId', 'expectedStateRevision', 'expectedQuestionRevision', 'expectedAnswerRevision', 'kind', 'text']);
     uuid(p.projectId); uuid(p.discoveryId); uuid(p.questionId); revision(p.expectedStateRevision); revision(p.expectedQuestionRevision);
     const version = text(p.expectedAnswerRevision, 19); if (!/^(0|[1-9][0-9]*)$/.test(version) || BigInt(version) > 9223372036854775807n) return invalid();
@@ -83,7 +88,7 @@ function safe(value: unknown, depth = 0, key = ''): unknown {
     else if (key === 'relativePath') relative(value); else if ((key === 'code') && !Object.hasOwn(CORE_ERRORS, value)) return invalid();
     return value;
   }
-  if (Array.isArray(value)) { if (value.length > (key === 'selectors' ? 16 : key === 'omissions' ? 32 : 20)) return invalid(); if (key === 'selectors') value.forEach(relative); return value.map(v => safe(v, depth + 1)); }
+  if (Array.isArray(value)) { if (value.length > (key === 'selectors' ? 16 : key === 'omissions' ? 32 : key === 'acceptedUnknownIds' ? 220 : 20)) return invalid(); if (key === 'selectors') value.forEach(relative); return value.map(v => safe(v, depth + 1)); }
   const p = record(value), result: Params = {};
   for (const [field, v] of Object.entries(p)) { if (!safeKeys.has(field)) return invalid(); result[field] = safe(v, depth + 1, field); }
   return result;
@@ -95,12 +100,12 @@ export function validateDiscoveryData(action: string, raw: unknown): Params {
     const expected = action === 'provider.get' ? ['configuration', 'check', 'requirements'] : action === 'prepare' ? ['grantId', 'canonicalIntent', 'expiresAtMs', 'summary']
       : (DISCOVERY_MUTATIONS as readonly string[]).includes(action) ? ['accepted', 'requestId', 'discoveryId', 'sessionId', 'runId', 'stateRevision', 'snapshotId']
       : action === 'preview.get' ? ['snapshot', 'items', 'nextCursor'] : action === 'get' ? ['discovery'] : action === 'operation' ? ['operation']
-      : action === 'document' ? ['revision', 'approval', 'revisionId', 'chunk', 'nextCursor'] : action === 'eligibility' ? ['projectId', 'eligible', 'freshness', 'checkId', 'checkedAt'] : ['items', 'nextCursor'];
+      : action === 'document' ? ['revision', 'approval', 'revisionId', 'chunk', 'nextCursor'] : action === 'eligibility' ? ['projectId', 'eligible', 'reason', 'revisionId', 'approvalId', 'contextDigest', 'freshness', 'checkId', 'checkedAt'] : ['items', 'nextCursor'];
     fields(p, [], [...common, ...expected]);
     if (new TextEncoder().encode(JSON.stringify(p)).byteLength > 32768) return invalid();
     if (action === 'prepare' && p.grantId !== undefined) {
       uuid(p.grantId); text(p.canonicalIntent, 32768); if (!Number.isSafeInteger(p.expiresAtMs) || Number(p.expiresAtMs) <= 0) return invalid();
-      const summary = record(p.summary); fields(summary, ['action', 'sendsProjectData'], ['projectId', 'snapshotId', 'contextDigest', 'selectors', 'fileCount', 'byteCount', 'omissions', 'providerId', 'providerRevision', 'modelId', 'data']);
+      const summary = record(p.summary); fields(summary, ['action', 'sendsProjectData'], ['projectId', 'snapshotId', 'contextDigest', 'selectors', 'fileCount', 'byteCount', 'omissions', 'providerId', 'providerRevision', 'modelId', 'data', 'revisionId', 'bundleDigest']);
       if (typeof summary.sendsProjectData !== 'boolean') return invalid();
       const { grantId, canonicalIntent, expiresAtMs, summary: _summary, ...rest } = p;
       return { ...safe(rest) as Params, grantId, canonicalIntent, expiresAtMs, summary: { ...safe(Object.fromEntries(Object.entries(summary).filter(([key]) => key !== 'sendsProjectData'))) as Params, sendsProjectData: summary.sendsProjectData } };

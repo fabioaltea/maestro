@@ -111,7 +111,7 @@ export function appendDiscoveryOutput(current: DiscoveryRing, chunks: Params[], 
   if (encoded.byteLength > 1048576) { let start = encoded.byteLength - 1048576; while ((encoded[start]! & 0xc0) === 0x80) start++; text = new TextDecoder().decode(encoded.subarray(start)); truncated = true; }
   return { text, lastSeq, truncated };
 }
-export interface DiscoverySession extends DiscoverySummary { projectId: string; stateRevision: string; configRevision: string; snapshotId: string }
+export interface DiscoverySession extends DiscoverySummary { projectId: string; stateRevision: string; configRevision: string; snapshotId: string; latestDocumentRevisionId: string | null }
 export interface InterviewQuestion { questionId: string; discoveryId: string; revision: string; text: string; reason: string; status: string; answer: { revision: string; kind: string; text: string } | null }
 export function useDiscoverySession(desktop: Desktop, projectId: string, discoveryId: string, paused: boolean, live: boolean) {
   const [session, setSession] = useState<DiscoverySession | null>(null), [questions, setQuestions] = useState<InterviewQuestion[]>([]), [ring, setRing] = useState<DiscoveryRing>({ text: '', lastSeq: '0', truncated: false });

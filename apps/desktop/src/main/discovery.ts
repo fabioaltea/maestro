@@ -64,6 +64,20 @@ export class DiscoveryActions {
     const p = structuredClone(validateDiscoveryAction(action, raw)), c = this.options.context.capture();
     const command = (name: string, params: Params, projectId?: string, expectedRevision?: string): CliCommand => ({ namespace: 'discovery', action: name, archive: c.path, params,
       ...(projectId ? { projectId } : {}), ...(expectedRevision ? { expectedRevision } : {}) });
+    if (action === 'discovery.correct' || action === 'discovery.approve') {
+      const name = action.slice(10), status = await this.status(c, [`discovery.${name}`, 'discovery.prepare', 'discovery.document.get']);
+      const d = record((await this.call(c, 'get', { discoveryId: p.discoveryId })).data.discovery);
+      if (d.projectId !== p.projectId || d.stateRevision !== p.expectedStateRevision || d.latestDocumentRevisionId !== p.revisionId) throw new Error('APPROVAL_STALE');
+      const revision = record((await this.call(c, 'document', { revisionId: p.revisionId })).data.revision);
+      if (revision.discoveryId !== d.discoveryId || revision.bundleDigest !== p.bundleDigest) throw new Error('APPROVAL_STALE');
+      const config = record((await this.call(c, 'provider.get')).data.configuration), uid = process.getuid?.(); if (uid === undefined) throw new Error('RUNTIME_UNAVAILABLE');
+      const payload = name === 'correct' ? { revisionId: p.revisionId, correctionId: randomUUID(), correction: p.correction } : { revisionId: p.revisionId, bundleDigest: p.bundleDigest, acceptedUnknownIds: p.acceptedUnknownIds };
+      const intent = { ownerUid: uid, storeId: status.storeId, action: name, targetId: d.discoveryId, configRevision: d.configRevision, stateRevision: d.stateRevision, snapshotId: d.snapshotId, contextDigest: revision.contextDigest, providerRevision: d.providerRevision, providerProfileDigest: config.qualificationDigest, modelId: config.modelId, payload };
+      const prepared = (await this.call(c, 'prepare', { intent })).data; uuid(prepared.grantId);
+      if (canonical(JSON.parse(text(prepared.canonicalIntent, 32768))) !== canonical(intent)) throw new Error('CLIENT_PROTOCOL_ERROR');
+      const params = name === 'correct' ? { discoveryId: d.discoveryId, grantId: prepared.grantId, correction: p.correction } : { discoveryId: d.discoveryId, grantId: prepared.grantId, revisionId: p.revisionId, bundleDigest: p.bundleDigest, acceptedUnknownIds: p.acceptedUnknownIds };
+      return { command: { ...command(name, params, d.projectId as string, d.configRevision as string), discoveryId: d.discoveryId as string, expectedStateRevision: d.stateRevision as string }, summary: [name === 'correct' ? 'Invia correzione e genera una nuova revisione' : 'Approva questa revisione', `Progetto: ${d.projectId}`, `Discovery: ${d.discoveryId}`, `Revisione: ${p.revisionId}`, `Digest: ${p.bundleDigest}`, `Contesto: ${revision.contextDigest}`, ...(name === 'correct' ? [String(p.correction), 'Correzione e fonti originali saranno inviate al provider.'] : (p.acceptedUnknownIds as string[]).map(id => `UNKNOWN accettato: ${id}`))] };
+    }
     if (action === 'discovery.answer' || action === 'discovery.cancel') {
       const name = action.slice(10), status = await this.status(c, [`discovery.${name}`, 'discovery.prepare', 'discovery.get', 'discovery.preview.get']);
       const d = record((await this.call(c, 'get', { discoveryId: p.discoveryId })).data.discovery);

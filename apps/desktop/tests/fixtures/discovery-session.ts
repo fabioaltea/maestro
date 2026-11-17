@@ -4,7 +4,7 @@ import { repositoryRoot } from './desktop.ts';
 import type { createScratch } from './desktop.ts';
 /** Privileged fixture seed while the production writer/daemon is stopped.
  * No provider process or real login ever runs; the configured binary is absent. */
-export async function seedWaitingDiscovery(f: Awaited<ReturnType<typeof createScratch>>) {
+export async function seedWaitingDiscovery(f: Awaited<ReturnType<typeof createScratch>>, document = false) {
   await f.cli(['daemon', 'start']); const repo = await f.repository();
   const projectId = (await f.cli(['project', 'add', repo.path, '--name=Intervista UI'])).result.data.projectId as string;
   await f.cli(['daemon', 'stop']);
@@ -37,7 +37,13 @@ export async function seedWaitingDiscovery(f: Awaited<ReturnType<typeof createSc
     const body = ok(await store.reserveDiscoveryArtifact('OUTPUT', text.length)), published = ok(await store.publishDiscoveryArtifact(body.artifactId, text));
     ok(await store.commitDiscoveryMetadata({ kind: 'output', generation, expectedWatermark: '0', value: { runId, seq: '1', artifactId: published.artifactId, sha256: published.sha256, bytes: text.length, kind: 'AGENT_TEXT', createdAt: at, truncated: false } }));
     ok(await store.commitDiscoveryMetadata({ kind: 'run', value: { ...run, phase: 'EXIT_OBSERVED', outcome: 'SUCCEEDED', endedAt: at }, expectedPhase: 'PROVIDER_RUNNING', exitVerified: true }));
+    if (document) {
+      const doc = { kind: 'DOCUMENT', sections: ['purpose-and-features', 'architecture-and-dependencies', 'conventions-and-operations'].map(id => ({ id, title: id, claims: [{ kind: 'UNKNOWN', text: '<script>Contenuto sintetico da verificare</script>', reason: 'Non documentato nelle fonti', sources: [], answers: [] }] })) };
+      const bytes = Buffer.from(JSON.stringify(doc)), reserved = ok(await store.reserveDiscoveryArtifact('DOCUMENT', bytes.length)), published = ok(await store.publishDiscoveryArtifact(reserved.artifactId, bytes));
+      ok(await store.commitDiscoveryMetadata({ kind: 'revision', runId, generation, expectedRevision: '1', value: { revisionId: randomUUID(), discoveryId, revisionNumber: '1', parentRevisionId: null, snapshotId: snapshot.snapshotId, contextDigest: snapshot.contextDigest, artifactId: published.artifactId, bundleDigest: published.sha256, bytes: bytes.length, provenanceValidated: true, status: 'READY_FOR_REVIEW' } }));
+    } else {
     ok(await store.commitDiscoveryMetadata({ kind: 'questions', discoveryId, runId, generation, expectedRevision: '1', values: [{ questionId, discoveryId, runId, revision: '1', text: 'Quale distribuzione è prevista?', reason: 'Informazione assente nelle fonti fixture.', section: 'conventions-and-operations', status: 'OPEN' }] }));
+    }
     ok(await store.commitDiscoveryMetadata({ kind: 'operation', requestId, outcome: 'SUCCEEDED', completedAt: at, result: { discoveryId, runId, sessionId: d.sessionId }, error: null }));
   } finally { await store.close(); }
   await f.cli(['daemon', 'start']); return { repo, projectId, discoveryId, runId, questionId };

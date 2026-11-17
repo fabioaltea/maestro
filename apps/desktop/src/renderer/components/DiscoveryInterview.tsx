@@ -1,3 +1,4 @@
+import { DiscoveryReview } from '../views/DiscoveryReview.tsx';
 import { useState } from 'react';
 import type { Desktop } from '../state/desktop.ts';
 import { useDiscoverySession } from '../state/discovery.ts';
@@ -28,6 +29,7 @@ export function DiscoveryInterview({ desktop, projectId, discoveryId, live, acti
     {view.ring.truncated && <p className="hint">Output parziale o troncato. La vista conserva al massimo 500 righe e 1 MiB.</p>}
     {view.questions.map(question => <Question key={`${question.questionId}:${question.answer?.revision ?? '0'}`} question={question} canAnswer={live && d?.state === 'WAITING_USER' && !actions.busy && !actions.prepared} onAnswer={(kind, text) => d && void actions.prepare('discovery.answer', { projectId, discoveryId, questionId: question.questionId, expectedStateRevision: d.stateRevision, expectedQuestionRevision: question.revision, expectedAnswerRevision: question.answer?.revision ?? '0', kind, text })} />)}
     {d && ['RUNNING', 'WAITING_USER', 'READY_FOR_REVIEW', 'CANCELLING', 'RECONCILING'].includes(d.state) && <button className="button subtle" disabled={!live || actions.busy} onClick={() => void actions.prepare('discovery.cancel', { projectId, discoveryId, expectedStateRevision: d.stateRevision })}>Annulla Discovery</button>}
+    {d?.latestDocumentRevisionId && <DiscoveryReview key={`${d.discoveryId}:${d.latestDocumentRevisionId}`} desktop={desktop} session={d} live={live} actions={actions} />}
     <p className="hint">La chiusura della vista termina soltanto le letture del client. Output e domande restano nell’archivio.</p>
   </section>;
 }

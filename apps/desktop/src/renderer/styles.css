@@ -84,3 +84,11 @@ pre { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.7 ui-monospace,m
 .discovery-question { margin:24px 0; padding-top:8px; border-top:1px solid var(--line); }
 .discovery-question textarea { display:block; width:100%; resize:vertical; border:1px solid #535b66; border-radius:5px; padding:10px 12px; font:inherit; color:#edf0f3; background:#17191c; }
 .discovery-question textarea[aria-invalid=true] { border-color:#d39a6c; }
+.discovery-review { margin-top:24px; border-top:1px solid var(--line); padding-top:22px; }
+.discovery-review section { margin:22px 0; }
+.discovery-review article { border-left:2px solid var(--line); padding-left:14px; margin:14px 0; overflow-wrap:anywhere; white-space:pre-wrap; }
+.discovery-review fieldset { border:1px solid var(--line); padding:14px; margin:20px 0; }
+.discovery-review fieldset label { display:flex; gap:10px; align-items:flex-start; margin:12px 0; }
+.discovery-review input[type=checkbox] { width:auto; flex:none; }
+.discovery-review textarea { width:100%; display:block; background:#17191c; color:#edf0f3; border:1px solid #535b66; border-radius:5px; padding:10px 12px; font:inherit; }
+.discovery-review .button { margin:12px 8px 0 0; }
