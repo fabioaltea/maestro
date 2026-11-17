@@ -743,3 +743,14 @@ e20turni; cap20domande senza troncamenti. Reader offline interroga la domanda
 originale. Nessun provider/account reale. Build:test PASS;6test RED come atteso
 (0PASS/6FAIL,9253,34ms): publishQuestions/answer non ancora implementati (T031).
 T028/G1 reale rimane NOT_RUN; dipendenze locali US2 ammesse dal piano.
+
+
+## T030 — contratti output/eventi inizialmente RED, 2026-11-17
+
+Quattro casi: UTF-8 e chunk raw8KiB/envelope32KiB, cursori scoped e watermark;
+generazione estranea/uscita impediscono pubblicazione; overflow4MiB con
+troncamento visibile senza nuovo file; fault tra artefatto e metadata/outbox
+lascia solo oggetto non autorevole, nessun watermark/evento falso e nessun
+contenuto nel journal. Il limite4MiB usa indice sintetico512righe sullo stesso
+oggetto privato, non una campagna di volume/processi/durata. Build:test PASS;
+4test RED attesi (0PASS/4FAIL,4909,24ms): publisher output da implementareT032.
