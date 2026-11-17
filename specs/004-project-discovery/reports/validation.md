@@ -603,3 +603,25 @@ mutazioni, confermati12/12casi CLI/offline,4179,58ms. Suite finale caffeinate -i
 npm test:536test,530PASS/0FAIL/6SKIP,102479,71ms. Typecheck/lint/build/build:test
 PASS; campioni002 ripristinati ai byte originali. Nessuna chiamata modello o
 account reale, G1 e gate precedenti invariati.
+
+
+## T024 — contratti desktop inizialmente RED,2026-11-17
+
+Definiti8casi bridge/ricevute: API nominate/DTO32KiB, niente path/argv/token dal
+renderer, controlli sender/main-frame/origine, picker opaco bindato a owner/
+epoch/TTL, namespace CLI e risposta Discovery dedicati; ricevuta privata prima
+dell’effetto, admission non terminale, cancel/expiry/owner/epoch invalidi senza
+mutazione, query originale dopo risposta persa senza fallback project, BLOCKED
+terminale e wrong-store/action UNKNOWN. Fixture CorePort e profilo/provider
+sintetici, senza lettura o esecuzione del binario né Keychain/account.
+
+Typecheck desktop PASS. Gli8test sono RED come atteso (0PASS/8FAIL,121,73ms):
+Main Discovery, named schemas e namespace ricevute da implementare inT025.
+Una prima compilazione aveva un cast su riga separata non valido, corretto.
+
+Due scenari Electron E2E definiti e riconosciuti da Playwright --list, non ancora
+eseguiti: ingresso senza provider (nessuna sessione inventata) e anteprima locale
+intenzionale/cancellabile con gate invio ancora chiuso, repo invariato. Questi
+casi locali non accedono a provider/auth reali; il percorso UI con modello reale
+rimane G1 opt-in T028. UI/T026 e bootstrap/T027 restano prerequisiti per queste
+prove end-to-end. Checkbox T024 attesta test definiti, non UI già funzionante.
