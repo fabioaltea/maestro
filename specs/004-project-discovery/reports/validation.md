@@ -184,3 +184,13 @@ Campioni002 rigenerati dalla suite ripristinati, gate storici invariati.
 La UI/CLI Discovery non è ancora esposta: questo checkpoint completa soltanto
 le API interne dei metadati. Output eventi ancora incrementale, nessun nuovo
 stream token o secondo servizio.
+
+## T011 — test artefatti inizialmente RED,2026-11-17
+
+Quindici casi locali compilano e falliscono come atteso perché le API artefatti
+T012 non esistono ancora (15FAIL/0PASS,607,78ms). Coprono ordine reservation/fsync/
+publish/DB e interruzioni nei sette checkpoint, letture bounded/hash, file mancanti
+o alterati, link/permessi/owner, orfani preservati e conteggiati, pagine SQLite
+Discovery e indici, riserva terminale e preview/discard/pinning. Fixture private
+nel runner Node esistente; nessun account, sorgente utente o modello reale.
+La checkbox attesta la definizione dei test, non la qualifica del filesystem.
