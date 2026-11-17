@@ -126,3 +126,12 @@ export interface ProbeSupervisor {
   start(request: ProbeRequest, ownership: ProbeOwnership,
     options: InspectionOptions): Promise<OwnedProbe>;
 }
+
+/** Closed read-only inventory for context capture. Never executes project tools. */
+export interface RepositoryInventory {
+  readonly identity: RepositoryIdentity; readonly reference: ReferenceCheckout;
+  readonly headKind: Exclude<HeadKind, 'UNKNOWN'>; readonly headOid: string | null; readonly currentBranch: string | null;
+  readonly files: readonly string[];
+}
+export type RepositoryInventoryResult = { readonly ok: true; readonly value: RepositoryInventory } | { readonly ok: false; readonly error: InspectionFailure };
+export interface RepositoryInventoryPort { inventory(path: string, options: InspectionOptions): Promise<RepositoryInventoryResult> }

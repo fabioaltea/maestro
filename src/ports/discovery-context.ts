@@ -23,3 +23,11 @@ export interface DiscoveryContextPort {
     readonly freshness: Freshness; readonly contextDigest: string | null; readonly checkedAt: string;
   }>>;
 }
+
+export interface DiscoverySourceCollection {
+  readonly sources: readonly DiscoverySource[]; readonly corpus: Uint8Array; readonly inventoryDigest: string; readonly stabilityDigest: string; readonly omissions: readonly string[];
+}
+export interface DiscoveryContextExtractor {
+  extract(request: ContextRequest, inventory: import('./repository.js').RepositoryInventory,
+    options: { readonly deadline: Deadline; readonly signal?: AbortSignal }): Promise<DiscoveryResult<DiscoverySourceCollection>>;
+}

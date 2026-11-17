@@ -245,3 +245,52 @@ gitlink, helper Git/script ostili senza esecuzione. Il percorso ordinario richie
 extractor confinato; le sole race deterministiche usano una porta sostituibile
 con callback trusted nel test, senza autorizzare bypass da CLI/UI.
 Checkbox riferita ai test definiti, non al PASS del confine T014.
+
+## T014 — contesto confinato e sigillo privato,2026-11-17
+
+Query inventory chiusa ls-files cached/others/exclude-standard nel runner Git
+Xcode già qualificato, con preflight/recheck di configurazione e identità. Core
+headless compone inventario/estrazione/rivalidazione; policy di esclusione pura
+condivisa. Selettori vietati respinti prima di qualunque probe. Sorgenti regolari
+UID coerente/nlink1/no-follow, root/ancestor/handle/fstat ricontrollati, UTF-8
+rigoroso, nomi NFC e conteggio byte effettivi. Digest privato delle identità fra
+i due passaggi impedisce sigilli misti anche con ancestor sostituito con byte
+identici; il manifest persistito mantiene soltanto gli anchor previsti e hash.
+
+Estrattore Node transitorio confinato, shell:false/env allowlist e lifeline FD
+privato: perdita owner → uscita, nessun PID persistito usato per segnali. Il profilo
+nega scritture persistenti/rete/fork e letture fuori scope o nei root privati.
+Eccezioni di caricamento: directory /, sistema, binario Node, codice app e solo
+package.json fidato; /dev/null non persistente. Nessun fallback non confinato.
+Le race deterministiche usano la porta diretta soltanto in fixture; la composizione
+ordinaria usa sempre il subprocess confinato. Frame JSON Foundation riusati, pagine
+private raw8KiB/envelope32KiB, transfer massimo4MiB e numero frame bounded.
+
+Limiti16selettori/200file/128KiBfile/1MiB corpus e30s rispettati nelle prove
+locali, senza promessa generale di latenza. Il JSON corpus conservato è esso
+stesso≤1MiB; escaping/metadata possono richiedere scope inferiore al totale raw.
+Manifest e corpus sono pubblicati tramite T012 prima di SEALED: fallimento del
+secondo publish lascia solo artefatti non autorevoli conteggiati. Nessun provider
+o run viene avviato dal servizio contesto; wiring preview/CLI/UI resta futuro.
+
+Le prove native hanno rilevato inizialmente un deny .env non efficace per escaping
+del regex SBPL: corretto usando classe [.] e verificato prima di qualificare.
+Primo gruppo39test:38PASS/1FAIL (nessuna promozione). Successivi gruppi comprendono
+canary veri per letture .env/root auth/outside, scrittura, exec del proprio Node e
+connessione a server loopback posseduto: tutti negati con controlli positivi.
+
+Prima suite generale:450test,444PASS/1FAIL/5SKIP,178205,04ms. Fallimento nel teardown
+di daemon-restart preesistente: stop con risposta client scaduta. Query successiva
+dello stesso UUID conferma SUCCEEDED/STOPPED, senza kill o ricreazione dell’archivio
+fixture preservato. Anticipando i deny espliciti si eliminano probe inutili, senza
+cambiare deadline/test Foundation o runner. Ripetizione generale:451test,446PASS/
+0FAIL/5SKIP G0 separati,141068,11ms. Nessun test pesante concorrente nella ripetizione.
+
+Verifica finale dopo digest transitorio identità e cap framing: typecheck/lint/
+build/build:test PASS,66/66test mirati PASS,22294,48ms. Comprendono20nuovi casi
+contesto/Git,23contratti Git storici e21casi artefatti/quota, più2casi aggiunti
+alla suite dopo la campagna generale (ancestor identico/framing). Corpus Unicode,
+clean/dirty/conflitto/unborn, invariabilità index/refs/config/checkout, ignored/link/
+FIFO/binary/credential, root Maestro interni, membership/crescita/TOCTOU, sigillo
+parziale e lifeline sono coperti. Nessun segreto reale/login/modello o benchmark
+lungo. Campioni002 rigenerati ripristinati; gate storici001/002/003 eG1 invariati.

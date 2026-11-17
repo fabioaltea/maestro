@@ -13,7 +13,7 @@ const MAX_STDOUT = 1024 * 1024;
 const MAX_STDERR = 16 * 1024;
 
 export type GitQuery = { readonly kind: 'top-level' | 'common-dir' | 'git-dir'
-  | 'object-format' | 'head-symbolic' | 'head-commit' | 'any-commit' | 'status' }
+  | 'object-format' | 'head-symbolic' | 'head-commit' | 'any-commit' | 'status' | 'inventory' }
   | { readonly kind: 'check-branch' | 'local-branch' | 'branch-exists'; readonly branch: string }
   | { readonly kind: 'config-file'; readonly path: string };
 
@@ -92,6 +92,7 @@ function argumentsFor(query: unknown): readonly string[] | InspectionFailure {
     case 'head-symbolic': return ['symbolic-ref', '--quiet', 'HEAD'];
     case 'head-commit': return ['rev-parse', '--verify', '--quiet', '--end-of-options', 'HEAD^{commit}'];
     case 'any-commit': return ['rev-list', '--max-count=1', '--all'];
+    case 'inventory': return ['ls-files', '-z', '--cached', '--others', '--exclude-standard'];
     case 'status': return ['status', '--porcelain=v2', '-z', '--untracked-files=normal', '--ignore-submodules=all'];
     default: return inspectionFailure('INVALID_REQUEST');
   }

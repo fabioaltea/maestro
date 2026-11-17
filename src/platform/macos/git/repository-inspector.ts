@@ -4,7 +4,7 @@ import { open, realpath, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { systemClock, type Clock } from '../../../ports/clock.js';
 import type { BaseState, FilesystemIdentity, HeadKind, InspectionCode, InspectionFailure, InspectionOptions,
-  InspectionResult, ObjectFormat, ReferenceCheckout, RepositoryIdentity, RepositoryInspector } from '../../../ports/repository.js';
+  InspectionResult, ObjectFormat, ReferenceCheckout, RepositoryIdentity, RepositoryInspector, RepositoryInventoryPort, RepositoryInventoryResult } from '../../../ports/repository.js';
 import { createFilesystemIdentity } from './filesystem-identity.js';
 import { createGitRunner, inspectionFailure, type GitQuery, type GitRunner, type GitRunResult } from './runner.js';
 
@@ -78,7 +78,7 @@ export interface DirectInspectorOptions {
 }
 
 /** Internal to the owned supervisor; composition uses ProbeSupervisor for lifecycle. */
-export function createDirectRepositoryInspector(dependencies: DirectInspectorOptions = {}): RepositoryInspector {
+export function createDirectRepositoryInspector(dependencies: DirectInspectorOptions = {}): RepositoryInspector & RepositoryInventoryPort {
   const runner = dependencies.runner ?? createGitRunner();
   const filesystem = dependencies.filesystem ?? createFilesystemIdentity();
   const clock = dependencies.clock ?? systemClock;
@@ -298,6 +298,24 @@ export function createDirectRepositoryInspector(dependencies: DirectInspectorOpt
   }
 
   return {
+    async inventory(path, options): Promise<RepositoryInventoryResult> {
+      const before = await inspect(path, null, options); if (!before.ok) return before;
+      const { identity, reference, observation } = before.value;
+      const run = await runner.run({ kind: 'inventory' }, { cwd: reference.root.canonicalPath, ...options,
+        readRoots: [reference.root.canonicalPath, reference.adminDirectory.canonicalPath, identity.commonDirectory.canonicalPath] });
+      if (!run.ok) return run;
+      if (run.exitCode !== 0 || run.stderrBytes > 0) return { ok: false, error: inspectionFailure('INSPECTION_UNSAFE') };
+      let files: string[];
+      try {
+        const raw = text(run.stdout); if (raw && !raw.endsWith('\0')) fail('REPOSITORY_UNSUPPORTED');
+        files = [...new Set(raw.split('\0').filter(Boolean))].sort();
+        if (files.some(file => file.startsWith('/') || file.includes('\\') || file.replace(/\/$/, '').split('/').some(part => !part || part === '.' || part === '..'))) fail('REPOSITORY_UNSUPPORTED');
+      } catch (error) { return { ok: false, error: classify(error) }; }
+      const after = await inspect(path, null, options); if (!after.ok) return after;
+      if (!sameTopology(before.value, after.value) || observation.headOid !== after.value.observation.headOid || observation.currentBranch !== after.value.observation.currentBranch || observation.headKind !== after.value.observation.headKind) return { ok: false, error: inspectionFailure('REPOSITORY_UNSTABLE') };
+      if (observation.headKind === 'UNKNOWN') return { ok: false, error: inspectionFailure('REPOSITORY_UNSUPPORTED') };
+      return { ok: true, value: { identity, reference, headKind: observation.headKind, headOid: observation.headOid, currentBranch: observation.currentBranch, files } };
+    },
     capabilities: () => runner.capabilities(),
     inspectCandidate: (path, base, options) => inspect(path, base, options),
     inspectRegistered: (identity, reference, base, options) => inspect(reference.root.canonicalPath,
