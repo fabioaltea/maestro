@@ -462,7 +462,7 @@ mai AVAILABLE. La prova accetta AUTH_REQUIRED oppure blocco UNSAFE secondo lo
 store OS, verifica risorsa Foundation RELEASED/ABSENT e assenza file token.
 Non qualifica il login reale G1, che resta NOT_RUN.
 
-Regressioni dominio/API/schema/ledger/metadata/artefatti/quota:49/49PASS,
+Regressioni dominio/API/metadata/artefatti/quota:49/49PASS,
 2933,04ms. Typecheck/lint/build/build:test PASS. Due primi test fixture hanno
 rilevato path temporanei non canonicalizzati, corretti con realpath; una prima
 aspettativa AUTH_REQUIRED è stata corretta perché il Keychain può risultare
@@ -473,3 +473,47 @@ nessuna suite completa dichiarata PASS in questo incremento.
 Fonti: [autenticazione ufficiale](https://learn.chatgpt.com/docs/auth),
 [login status](https://learn.chatgpt.com/docs/developer-commands?surface=cli).
 Help locale del pin verificato con HOME/CODEX_HOME vuoti, senza status account.
+
+
+## T021 — prepare, preview e admission asincrona,2026-11-17
+
+Grant monouso con summary di selettori, omissioni, byte, provider/modello e invio
+esterno, bindato all’intent canonico owner/store/revisioni/snapshot/digest.
+Summary e intent insieme rispettano envelope32KiB prima di salvare il grant.
+Manifest/corpus caricati soltanto da oggetti registrati/hash-validati, verificati
+anche reciprocamente e serializzati≤2MiB; nessuna nuova lettura sorgenti per
+costruire il payload dopo il consenso.
+
+Start riserva l’UUID e restituisce admission senza attendere contesto o modello.
+Durante la rivalidazione il grant rimane inutilizzato, senza run o processi.
+Il writer conserva una sola riserva pendente, senza coda. ACTIVATE ricontrolla
+owner/istanza/intent/grant, provider corrente, progetto e snapshot e committa
+consumo/Discovery/run/slot/pin/esito insieme, prima del callback launch. Nessuna
+colonna o migrazione schema4 nuova; pendingGrantId è JSON privato eliminato dal
+reader pubblico. Doppio UUID identico non avvia un altro job; altro UUID riceve
+BUSY. Errore prima dell’attivazione lascia grant inutilizzato; perdita risposta
+dopo admission restituisce UNKNOWN_OUTCOME e si risolve sull’UUID originale.
+
+Preparazione start bounded30s con abort della lettura confinata; input è il
+corpus sigillato. Un cambio provider durante la rivalidazione blocca via CAS
+SQLite; non si promette atomicità fra filesystem e database. Preview asincrone
+includono quelle pendenti nel cap4 prima di avviare lettori. Preview/check sono
+idempotenti anche dopo variazioni successive dei prerequisiti, senza inferenza.
+
+Suite generale caffeinate -i npm test:512test,506PASS/0FAIL/6SKIP G0 separati,
+104073,98ms. Include i veri file schema-upgrade/admission-store, dominio, API,
+writer e regressioni001/002. Corretto l’elenco T020: il precedente comando
+focalizzato ignorava nomi file inesistenti e non aveva eseguito schema/ledger;
+i49 casi effettivi riguardavano dominio/API/metadata/artefatti/quota.
+
+Ultimo affinamento UNKNOWN_OUTCOME dopo la suite generale: typecheck/lint/
+build:test e31/31test mirati PASS,17544,69ms (avvio/config/schema/admission).
+I17casi launch/start coprono ora anche CAS provider durante la verifica, corpus
+incoerente, riserva privata non pubblicata e limite anteprime pendenti. Una
+prima compilazione del controllo envelope aveva una graffa in eccesso, corretta
+prima di eseguire i test. Campioni002 ripristinati ai byte originali.
+
+Il launch è ancora una porta fixture che conta gli effetti: T022 collegherà
+l’adapter/parser al runtime. Queste prove non qualificano un account reale né
+il percorso UI/daemon completo T027/T033. Recovery delle riserve dopo crash
+resta T033, senza auto-resume; G1 e gate precedenti restano aperti.

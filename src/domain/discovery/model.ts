@@ -44,6 +44,8 @@ export interface DiscoveryRun {
   readonly outputWatermark: string; readonly error: DiscoveryFailure | null;
 }
 export interface DiscoveryOperationResult {
+  /** Private writer metadata, never serialized in a public operation DTO. */
+  readonly pendingGrantId?: string;
   readonly snapshotId?: string; readonly discoveryId?: string; readonly sessionId?: string; readonly runId?: string;
   readonly revisionId?: string; readonly approvalId?: string; readonly providerRevision?: string; readonly stateRevision?: string;
 }

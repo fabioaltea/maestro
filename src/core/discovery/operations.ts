@@ -4,28 +4,39 @@ import { DISCOVERY_LIMITS, isDiscoveryFailure, type DiscoveryFailure, type Disco
 import { requireUuid } from '../../domain/identifiers.js';
 import type { StoragePort } from '../../ports/storage.js';
 import type { ArchivePaths, AuthenticatedPeer } from '../../ports/platform.js';
-import type { DiscoveryAdmission, DiscoveryMetadataData, DiscoveryMetadataQuery } from '../../ports/discovery.js';
+import type { DiscoveryAdmission, DiscoveryArtifactPort, DiscoveryMetadataData, DiscoveryMetadataQuery } from '../../ports/discovery.js';
+import type { DiscoveryContextPort, ContextRequest } from '../../ports/discovery-context.js';
+import { makeDeadline, systemClock } from '../../ports/clock.js';
+import { prepareDiscoveryLaunch, readDiscoverySnapshot, type DiscoveryLaunch } from './launch.js';
+import { sealDiscoveryContext } from './context.js';
+import { requireDiscoveryEnvelope } from '../../protocol/discovery.js';
 import type { CodexInspectionPort, ProviderAvailability, ProviderConfiguration, ProviderPort } from '../../ports/provider.js';
 import { CODEX_DISCOVERY_PIN } from '../../providers/codex/argv.js';
 import { CODEX_DISCOVERY_QUALIFICATION, validCodexModel } from '../../providers/codex/capabilities.js';
 
 interface Options {
-  readonly storage: Pick<StoragePort, 'readSnapshot' | 'readDiscoveryMetadata' | 'commitDiscoveryMetadata' | 'admitDiscoveryOperation' | 'getDiscoveryOperation' | 'saveDiscoveryGrant'>;
+  readonly storage: Pick<StoragePort, 'readSnapshot' | 'readDiscoveryMetadata' | 'commitDiscoveryMetadata' | 'admitDiscoveryOperation' | 'getDiscoveryOperation' | 'saveDiscoveryGrant' | 'getProject'>;
   readonly paths: ArchivePaths; readonly instanceId: string; readonly ownerUid: number;
   readonly provider: ProviderPort; readonly inspection?: CodexInspectionPort;
+  readonly context?: DiscoveryContextPort; readonly artifacts?: DiscoveryArtifactPort;
+  readonly launch?: (input: DiscoveryLaunch) => Promise<void>;
   readonly checkpoint?: (point: string) => Promise<void>;
 }
 export interface DiscoveryCommand { readonly requestId: string; readonly grantId: string | null; readonly canonicalIntent: string }
 export interface DiscoveryAccepted { readonly accepted: true; readonly requestId: string; readonly discoveryId?: string; readonly sessionId?: string; readonly runId?: string }
 function fail(code: DiscoveryFailure): never { throw new Error(code); }
 function failure(error: unknown): { ok: false; code: DiscoveryFailure } {
-  return { ok: false, code: error instanceof Error && isDiscoveryFailure(error.message) ? error.message as DiscoveryFailure : 'INVALID_REQUEST' };
+  return { ok: false, code: error instanceof SyntaxError || error instanceof Error && error.message === 'INVALID_IDENTIFIER' ? 'INVALID_REQUEST'
+    : error instanceof Error && isDiscoveryFailure(error.message) ? error.message as DiscoveryFailure : 'PERSISTENCE_UNAVAILABLE' };
 }
 function exact(value: object, keys: readonly string[]) { if (!value || Object.keys(value).some(key => !keys.includes(key))) fail('INVALID_REQUEST'); }
 export function createDiscoveryOperations(options: Options) {
   const { storage } = options;
   let lastCheck: { revision: string; value: ProviderAvailability } | null = null;
   const jobs = new Set<Promise<void>>();
+  function job(work: () => Promise<void>) {
+    const running = work(); jobs.add(running); void running.finally(() => jobs.delete(running)).catch(() => {});
+  }
   async function guard(peer: AuthenticatedPeer) {
     if (peer.role !== 'client') fail('UNAUTHORIZED');
     const s = await storage.readSnapshot();
@@ -83,16 +94,117 @@ export function createDiscoveryOperations(options: Options) {
     if (inspected.value.sha256 !== p.binarySha256 || inspected.value.version !== p.binaryVersion) fail('PROVIDER_UNSUPPORTED');
     return c;
   }
+  async function projectRequest(projectId: string, configRevision: string, selectors: readonly string[], storeId: string): Promise<ContextRequest> {
+    const p = await storage.getProject(projectId); if (!p) fail('PROJECT_NOT_FOUND'); if (p.project.removedAt !== null) fail('PROJECT_REMOVED');
+    if (p.project.configRevision !== configRevision) fail('APPROVAL_STALE');
+    const provider = await meta({ kind: 'provider' });
+    return { storeId, projectId, configRevision, selectors, checkoutPath: p.project.referenceCheckout.root.canonicalPath,
+      excludedRoots: [options.paths.directory, options.paths.runtimeDirectory, ...(provider ? [provider.authProfileRef] : [])] };
+  }
+  async function startIntent(intent: DiscoveryIntent) {
+    const c = await meta({ kind: 'provider' }); if (!c) fail('PROVIDER_NOT_CONFIGURED');
+    if (intent.action !== 'start' || intent.stateRevision !== null || !intent.snapshotId || !intent.contextDigest || !intent.configRevision
+      || intent.payload.snapshotId !== intent.snapshotId || intent.providerRevision !== c.revision || intent.modelId !== c.modelId
+      || intent.providerProfileDigest !== c.qualificationDigest) fail('APPROVAL_STALE');
+    const snapshot = await meta({ kind: 'snapshot', id: intent.snapshotId });
+    if (!snapshot || snapshot.state !== 'SEALED' || snapshot.projectId !== intent.targetId || snapshot.configRevision !== intent.configRevision
+      || snapshot.contextDigest !== intent.contextDigest || !snapshot.pinned && (snapshot.expiresAtMs === null || snapshot.expiresAtMs <= Date.now())) fail('CONTEXT_CHANGED');
+    const request = await projectRequest(snapshot.projectId, snapshot.configRevision, snapshot.selectors, intent.storeId);
+    return { configuration: c, snapshot, request };
+  }
+  async function usable(c: ProviderConfiguration) {
+    const checked = await options.provider.checkAvailability(c);
+    if (checked.state !== 'AVAILABLE') fail(checked.code ?? 'PROVIDER_UNAVAILABLE');
+    if (!checked.capabilities.readOnlyAnalysis || !checked.capabilities.portableTurns || !checked.capabilities.localCancellation) fail('PROVIDER_UNSAFE');
+    return checked;
+  }
+  async function blocked(requestId: string, error: unknown) {
+    const operation = await storage.getDiscoveryOperation?.(requestId);
+    if (operation && operation.phase !== 'FINALIZED') await commit({ kind: 'operation', requestId, outcome: 'BLOCKED', completedAt: new Date().toISOString(), result: null, error: failure(error).code });
+  }
   return {
     async prepare(peer: AuthenticatedPeer, raw: DiscoveryIntent) {
       try {
         const { canonical, intent } = await intentFor(peer, raw);
-        await configureIntent(intent);
+        let summary: Record<string, unknown>;
+        if (intent.action === 'configure') {
+          await configureIntent(intent); summary = { action: intent.action, modelId: intent.modelId, sendsProjectData: false };
+        } else if (intent.action === 'start') {
+          const current = await startIntent(intent); await usable(current.configuration);
+          if (!options.artifacts) fail('DISCOVERY_NOT_INITIALIZED');
+          const sealed = await readDiscoverySnapshot(options.artifacts, current.snapshot, intent.storeId);
+          summary = { action: 'start', projectId: current.snapshot.projectId, snapshotId: current.snapshot.snapshotId, contextDigest: current.snapshot.contextDigest,
+            selectors: current.snapshot.selectors, fileCount: sealed.manifest.sources.length, byteCount: current.snapshot.byteCount, omissions: current.snapshot.omissions,
+            providerId: current.configuration.providerId, providerRevision: current.configuration.revision, modelId: current.configuration.modelId,
+            sendsProjectData: true, data: 'Selected sealed source text is sent to the configured AI provider for read-only project discovery.' };
+        } else fail('INVALID_REQUEST');
         const grant = { grantId: randomUUID(), canonicalIntent: canonical, expiresAtMs: Date.now() + DISCOVERY_LIMITS.grantMs, consumedByRequestId: null };
+        const prepared = { grantId: grant.grantId, canonicalIntent: canonical, expiresAtMs: grant.expiresAtMs, summary };
+        requireDiscoveryEnvelope(prepared);
         if (!storage.saveDiscoveryGrant) fail('DISCOVERY_NOT_INITIALIZED');
         const saved = await storage.saveDiscoveryGrant!(grant); if (!saved.ok) fail(saved.code);
-        return { ok: true, value: { grantId: grant.grantId, canonicalIntent: canonical, expiresAtMs: grant.expiresAtMs,
-          summary: { action: intent.action, modelId: intent.modelId, sendsProjectData: false } } } as const;
+        return { ok: true, value: prepared } as const;
+      } catch (error) { return failure(error); }
+    },
+    async start(peer: AuthenticatedPeer, input: DiscoveryCommand): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      let admissionUncertain = false;
+      try {
+        exact(input, ['requestId', 'grantId', 'canonicalIntent']);
+        const { intent } = await intentFor(peer, input.canonicalIntent);
+        if (intent.action !== 'start') fail('INVALID_REQUEST');
+        if (!options.context || !options.artifacts || !options.launch || !storage.admitDiscoveryOperation) fail('DISCOVERY_NOT_INITIALIZED');
+        // Resolve the original receipt before expiry or new preconditions. The
+        // ledger verifies the canonical payload without scheduling another job.
+        if (await original(input, 'start')) return { ok: true, value: { accepted: true, requestId: input.requestId } };
+        await startIntent(intent);
+        await options.checkpoint?.('discovery.start.beforeAdmission');
+        admissionUncertain = true;
+        const accepted = await storage.admitDiscoveryOperation({ ...admission(input.requestId, input.canonicalIntent, input.grantId), startStage: 'PREPARE' });
+        if (!accepted.ok) { admissionUncertain = false; fail(accepted.code); }
+        if (accepted.value.inserted) job(async () => {
+          try {
+            const current = await startIntent(intent);
+            const prepared = await prepareDiscoveryLaunch({ requestId: input.requestId, grantId: input.grantId!, intent,
+              snapshot: current.snapshot, configuration: current.configuration, contextRequest: current.request },
+              { context: options.context!, artifacts: options.artifacts!, provider: options.provider });
+            // Recheck daemon authority after asynchronous filesystem/provider
+            // work, then atomically check provider/project/snapshot in SQLite.
+            await guard(peer);
+            const activated = await storage.admitDiscoveryOperation!({ ...admission(input.requestId, input.canonicalIntent, input.grantId), startStage: 'ACTIVATE',
+              discovery: prepared.discovery, run: prepared.run, acquireSlot: true });
+            if (!activated.ok) fail(activated.code);
+            if (activated.value.inserted) await options.launch!({ ...prepared, operation: activated.value.operation, configuration: current.configuration });
+          } catch (error) { await blocked(input.requestId, error); }
+        });
+        await options.checkpoint?.('discovery.start.afterAcceptance');
+        return { ok: true, value: { accepted: true, requestId: input.requestId } };
+      } catch (error) { return admissionUncertain ? { ok: false, code: 'UNKNOWN_OUTCOME' } : failure(error); }
+    },
+    async preview(peer: AuthenticatedPeer, input: { requestId: string; projectId: string; expectedConfigRevision: string; selectors: readonly string[] }): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'projectId', 'expectedConfigRevision', 'selectors']);
+        const s = await guard(peer); requireUuid(input.projectId);
+        if (!options.context || !options.artifacts || !storage.admitDiscoveryOperation) fail('DISCOVERY_NOT_INITIALIZED');
+        const intent: DiscoveryIntent = { ownerUid: options.ownerUid, storeId: s.store.storeId, action: 'preview', targetId: input.projectId,
+          configRevision: input.expectedConfigRevision, stateRevision: null, snapshotId: null, contextDigest: null, providerRevision: null,
+          providerProfileDigest: null, modelId: null, payload: { selectors: input.selectors } };
+        const canonicalIntent = canonicalDiscoveryIntent(intent);
+        if (await original({ requestId: input.requestId, canonicalIntent, grantId: null }, 'preview')) return { ok: true, value: { accepted: true, requestId: input.requestId } };
+        const request = await projectRequest(input.projectId, input.expectedConfigRevision, input.selectors, s.store.storeId);
+        const accepted = await storage.admitDiscoveryOperation(admission(input.requestId, canonicalIntent, null));
+        if (!accepted.ok) fail(accepted.code);
+        if (accepted.value.inserted) job(async () => {
+          try {
+            const sealed = await sealDiscoveryContext(request, { context: options.context!, artifacts: options.artifacts!, saveSnapshot: async value => {
+              await guard(peer);
+              await projectRequest(request.projectId, request.configRevision, request.selectors, request.storeId);
+              await commit({ kind: 'snapshot', value }); return { ok: true, value: undefined };
+            } }, { deadline: makeDeadline(systemClock, DISCOVERY_LIMITS.contextMs) });
+            if (!sealed.ok) fail(sealed.code);
+            await commit({ kind: 'operation', requestId: input.requestId, outcome: 'SUCCEEDED', completedAt: new Date().toISOString(), result: { snapshotId: sealed.value.snapshotId }, error: null });
+          } catch (error) { await blocked(input.requestId, error); }
+        });
+        return { ok: true, value: { accepted: true, requestId: input.requestId } };
       } catch (error) { return failure(error); }
     },
     async configure(peer: AuthenticatedPeer, input: DiscoveryCommand): Promise<DiscoveryResult<DiscoveryAccepted>> {
@@ -121,14 +233,17 @@ export function createDiscoveryOperations(options: Options) {
     async check(peer: AuthenticatedPeer, input: { requestId: string; expectedProviderRevision: string }): Promise<DiscoveryResult<DiscoveryAccepted>> {
       try {
         exact(input, ['requestId', 'expectedProviderRevision']);
-        const s = await guard(peer), c = await meta({ kind: 'provider' });
-        if (!c) fail('PROVIDER_NOT_CONFIGURED');
-        if (c!.revision !== input.expectedProviderRevision) fail('APPROVAL_STALE');
+        const s = await guard(peer);
         const intent: DiscoveryIntent = { ownerUid: options.ownerUid, storeId: s.store.storeId, action: 'check', targetId: s.store.storeId,
-          configRevision: null, stateRevision: null, snapshotId: null, contextDigest: null, providerRevision: c!.revision,
-          providerProfileDigest: c!.qualificationDigest, modelId: c!.modelId, payload: {} };
+          configRevision: null, stateRevision: null, snapshotId: null, contextDigest: null, providerRevision: input.expectedProviderRevision,
+          providerProfileDigest: null, modelId: null, payload: {} };
+        const canonicalIntent = canonicalDiscoveryIntent(intent);
+        if (await original({ requestId: input.requestId, canonicalIntent, grantId: null }, 'check')) return { ok: true, value: { accepted: true, requestId: input.requestId } };
+        const c = await meta({ kind: 'provider' });
+        if (!c) fail('PROVIDER_NOT_CONFIGURED');
+        if (c.revision !== input.expectedProviderRevision) fail('APPROVAL_STALE');
         if (!storage.admitDiscoveryOperation) fail('DISCOVERY_NOT_INITIALIZED');
-        const admitted = await storage.admitDiscoveryOperation!(admission(input.requestId, canonicalDiscoveryIntent(intent), null));
+        const admitted = await storage.admitDiscoveryOperation!(admission(input.requestId, canonicalIntent, null));
         if (!admitted.ok) fail(admitted.code);
         if (admitted.value.inserted) {
           const job = (async () => {

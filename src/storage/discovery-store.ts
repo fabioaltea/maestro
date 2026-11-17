@@ -27,7 +27,7 @@ function operationResult(raw: Row[string] | undefined): DiscoveryOperation['resu
   const value: unknown = JSON.parse(String(raw));
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('STATE_CORRUPT');
   for (const [key, field] of Object.entries(value)) {
-    if (typeof field !== 'string' || !['snapshotId', 'discoveryId', 'sessionId', 'runId', 'revisionId', 'approvalId', 'providerRevision', 'stateRevision'].includes(key)) throw new Error('STATE_CORRUPT');
+    if (typeof field !== 'string' || !['pendingGrantId', 'snapshotId', 'discoveryId', 'sessionId', 'runId', 'revisionId', 'approvalId', 'providerRevision', 'stateRevision'].includes(key)) throw new Error('STATE_CORRUPT');
     if (key.endsWith('Revision')) { requireDecimal(field); if (field === '0') throw new Error('STATE_CORRUPT'); } else requireUuid(field);
   }
   return value as DiscoveryOperation['result'];
@@ -86,7 +86,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
         const previous = get(input.requestId);
         if (previous) {
           if (previous.action !== input.action || previous.payloadHash !== input.payloadHash || previous.canonicalIntent !== input.canonicalIntent) throw new Error('IDEMPOTENCY_CONFLICT');
-          return { ok: true, value: { operation: previous, inserted: false } };
+          if (input.startStage !== 'ACTIVATE' || previous.phase === 'FINALIZED') return { ok: true, value: { operation: previous, inserted: false } };
         }
         const intent = validateIntent(input.canonicalIntent), identity = store();
         if (input.payloadHash !== createHash('sha256').update(input.canonicalIntent).digest('hex') || input.action !== intent.action
@@ -96,9 +96,14 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
           const original = get(input.requestId);
           if (original) {
             if (original.action !== input.action || original.payloadHash !== input.payloadHash || original.canonicalIntent !== input.canonicalIntent) throw new Error('IDEMPOTENCY_CONFLICT');
-            return { ok: true, value: { operation: original, inserted: false } } as const;
+            if (input.startStage !== 'ACTIVATE' || original.phase === 'FINALIZED') return { ok: true, value: { operation: original, inserted: false } } as const;
+            const owner = database.prepare('SELECT owning_instance_id FROM discovery_operations WHERE request_id=?').get(input.requestId) as Row;
+            if (original.phase !== 'ACCEPTED' || original.outcome !== 'IN_PROGRESS' || original.result?.pendingGrantId !== input.grantId
+              || owner.owning_instance_id !== input.instanceId) throw new Error('APPROVAL_REQUIRED');
           }
-          if (database.prepare('SELECT 1 FROM request_catalog WHERE request_id=?').get(input.requestId)) throw new Error('IDEMPOTENCY_CONFLICT');
+          if (input.startStage !== undefined && (!['PREPARE', 'ACTIVATE'].includes(input.startStage) || input.action !== 'start')) throw new Error('INVALID_REQUEST');
+          if (input.startStage === 'ACTIVATE' && !original) throw new Error('APPROVAL_REQUIRED');
+          if (!original && database.prepare('SELECT 1 FROM request_catalog WHERE request_id=?').get(input.requestId)) throw new Error('IDEMPOTENCY_CONFLICT');
           const remote = !['preview', 'check', 'discard'].includes(input.action);
           if (remote) {
             if (!input.grantId) throw new Error('APPROVAL_REQUIRED'); requireUuid(input.grantId);
@@ -107,7 +112,29 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
             const consumption = validateDiscoveryGrant({ canonicalIntent: String(grant.canonical_intent), expiresAtMs: Number(grant.expires_at_ms), consumedByRequestId: grant.consumed_by_request_id === null ? null : String(grant.consumed_by_request_id) }, input.canonicalIntent, input.requestId, nowMs());
             if (consumption !== 'CONSUME') throw new Error('APPROVAL_REQUIRED');
           } else if (input.grantId !== null || input.acquireSlot || input.run !== null) throw new Error('INVALID_REQUEST');
+          if (input.action === 'preview') {
+            const snapshots = Number((database.prepare('SELECT count(*) AS n FROM discovery_snapshots WHERE pinned=0 AND expires_at_ms>?').get(nowMs()) as Row).n);
+            const pending = Number((database.prepare("SELECT count(*) AS n FROM discovery_operations WHERE action='preview' AND phase<>'FINALIZED'").get() as Row).n);
+            if (snapshots + pending >= DISCOVERY_LIMITS.previews) throw new Error('DISCOVERY_LIMIT');
+          }
           const discovery = input.discovery, run = input.run;
+          if (input.startStage === 'PREPARE' || input.acquireSlot) {
+            const pending = database.prepare("SELECT request_id FROM discovery_operations WHERE action='start' AND phase<>'FINALIZED' AND json_extract(result,'$.pendingGrantId') IS NOT NULL AND request_id<>? LIMIT 1").get(input.requestId);
+            if (pending) throw new Error('DISCOVERY_BUSY');
+          }
+          if (input.startStage === 'PREPARE') {
+            if (discovery !== null || run !== null || input.acquireSlot) throw new Error('INVALID_REQUEST');
+            const slot = database.prepare('SELECT discovery_id FROM discovery_slot WHERE singleton=1').get() as Row;
+            if (slot.discovery_id !== null) throw new Error('DISCOVERY_BUSY');
+            database.prepare("INSERT INTO discovery_operations(request_id,action,payload_hash,canonical_intent,owner_uid,owning_instance_id,phase,outcome,accepted_at,result) VALUES(?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?)")
+              .run(input.requestId, input.action, input.payloadHash, input.canonicalIntent, input.ownerUid, input.instanceId, input.acceptedAt, JSON.stringify({ pendingGrantId: input.grantId }));
+            return { ok: true, value: { operation: get(input.requestId)!, inserted: true } } as const;
+          }
+          if (input.startStage === 'ACTIVATE') {
+            const provider = database.prepare('SELECT configuration FROM discovery_provider WHERE singleton=1').get() as Row | undefined;
+            const c = provider ? JSON.parse(String(provider.configuration)) as Record<string, unknown> : null;
+            if (!c || c.revision !== intent.providerRevision || c.qualificationDigest !== intent.providerProfileDigest || c.modelId !== intent.modelId) throw new Error('APPROVAL_STALE');
+          }
           if (input.acquireSlot) {
             if (!discovery || !run || !input.grantId || !['start', 'answer', 'correct'].includes(input.action)) throw new Error('INVALID_REQUEST');
             requireUuid(discovery.discoveryId); requireUuid(discovery.sessionId); requireUuid(discovery.projectId); requireUuid(discovery.snapshotId);
@@ -126,7 +153,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
               || discovery.error !== null || run.error !== null || run.startedAt !== null || run.endedAt !== null || run.phase !== 'SPAWN_INTENT' || run.outcome !== 'RUNNING') throw new Error('INVALID_REQUEST');
             const current = database.prepare('SELECT state,state_revision,session_id,snapshot_id,project_id FROM discoveries WHERE discovery_id=?').get(discovery.discoveryId) as Row | undefined;
             if (input.action === 'start') {
-              if (current || input.expectedStateRevision !== null || discovery.state !== 'RUNNING' || discovery.stateRevision !== '1' || intent.stateRevision !== '1' || run.turnIndex !== 1) throw new Error('IDEMPOTENCY_CONFLICT');
+              if (current || input.expectedStateRevision !== null || discovery.state !== 'RUNNING' || discovery.stateRevision !== '1' || (intent.stateRevision !== null && intent.stateRevision !== '1') || run.turnIndex !== 1) throw new Error('IDEMPOTENCY_CONFLICT');
               const count = Number((database.prepare('SELECT count(*) AS n FROM discoveries').get() as Row).n);
               if (count >= DISCOVERY_LIMITS.archiveDiscoveries) throw new Error('DISCOVERY_LIMIT');
               database.prepare(`INSERT INTO discoveries(discovery_id,project_id,session_id,state,state_revision,snapshot_id,config_revision,provider_revision,current_run_id,latest_document_revision_id,created_at,updated_at,error)
@@ -142,14 +169,20 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
               database.prepare('UPDATE discoveries SET state=?,state_revision=?,current_run_id=?,updated_at=? WHERE discovery_id=?').run(discovery.state, discovery.stateRevision, run.runId, discovery.updatedAt, discovery.discoveryId);
             }
           } else if (run !== null) throw new Error('INVALID_REQUEST');
-          database.prepare(`INSERT INTO discovery_operations(request_id,action,payload_hash,canonical_intent,owner_uid,owning_instance_id,phase,outcome,accepted_at,discovery_id,run_id)
-            VALUES(?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?,?)`).run(input.requestId, input.action, input.payloadHash, input.canonicalIntent, input.ownerUid, input.instanceId, input.acceptedAt, discovery?.discoveryId ?? null, run?.runId ?? null);
+          if (input.startStage === 'ACTIVATE') {
+            database.prepare("UPDATE discovery_operations SET discovery_id=?,run_id=?,result=NULL WHERE request_id=?").run(discovery?.discoveryId ?? null, run?.runId ?? null, input.requestId);
+          } else {
+            database.prepare(`INSERT INTO discovery_operations(request_id,action,payload_hash,canonical_intent,owner_uid,owning_instance_id,phase,outcome,accepted_at,discovery_id,run_id)
+              VALUES(?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?,?)`).run(input.requestId, input.action, input.payloadHash, input.canonicalIntent, input.ownerUid, input.instanceId, input.acceptedAt, discovery?.discoveryId ?? null, run?.runId ?? null);
+          }
           if (remote) database.prepare('UPDATE discovery_grants SET consumed_by_request_id=? WHERE grant_id=? AND consumed_by_request_id IS NULL').run(input.requestId, input.grantId);
           if (run && discovery) {
             database.prepare(`INSERT INTO discovery_runs(run_id,discovery_id,generation,turn_index,grant_id,request_id,context_digest,input_digest,provider_id,provider_revision,profile_digest,model_id,phase,outcome,started_at,ended_at,output_watermark,error)
               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(run.runId, run.discoveryId, run.generation, run.turnIndex, run.grantId, run.requestId, run.contextDigest, run.inputDigest, run.providerId, run.providerRevision, run.profileDigest, run.modelId, run.phase, run.outcome, run.startedAt, run.endedAt, run.outputWatermark, run.error);
             database.prepare('UPDATE discovery_slot SET discovery_id=?,acquired_at=? WHERE singleton=1').run(discovery.discoveryId, input.acceptedAt);
             database.prepare('UPDATE discovery_snapshots SET pinned=1,expires_at_ms=NULL WHERE snapshot_id=?').run(discovery.snapshotId);
+            if (input.startStage === 'ACTIVATE') database.prepare("UPDATE discovery_operations SET phase='FINALIZED',outcome='SUCCEEDED',completed_at=?,result=? WHERE request_id=?")
+              .run(new Date(nowMs()).toISOString(), JSON.stringify({ discoveryId: discovery.discoveryId, sessionId: discovery.sessionId, runId: run.runId }), input.requestId);
           }
           return { ok: true, value: { operation: get(input.requestId)!, inserted: true } } as const;
         }, input);

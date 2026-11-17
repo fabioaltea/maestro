@@ -32,6 +32,30 @@ Corpi in `archive/discovery/objects/<artifactId>` e dir runtime per-run; oggetti
 
 Ogni mutazione DB bounded (no mega blob) rispetta checkpoint WAL/diagnostic budget attuale. Fonte/autorizzazione e output non entrano nel journal, soltanto IDs/stato/watermark.
 
+### Admission start in due passaggi (T021)
+
+Per rispettare la risposta di accettazione≤2s senza fingere un fingerprint già
+verificato, il writer registra prima l’operazione ACCEPTED/IN_PROGRESS. La riserva
+contiene soltanto `pendingGrantId` nel JSON privato result esistente; nessun nuovo
+schema o colonna. Il grant è ancora inutilizzato e non esistono Discovery/run/
+processi. Una sola riserva start pendente per archivio impedisce altre admission
+concorrenti; non è una coda e non consente ulteriori invii dopo un crash.
+
+Il lavoro asincrono legge manifest/corpus sigillati e hash-validati, rivalida il
+contesto e controlla il provider entro30s. ACTIVATE accetta soltanto la riserva
+originale, stesso owner/istanza/intent/grant, e applica nella stessa transazione
+CAS provider/progetto/snapshot, consumo del grant, creazione Discovery/run,
+acquisizione slot, pin dello snapshot ed esito SUCCEEDED dell’operazione. Solo
+dopo il commit si può invocare il launcher. SUCCEEDED attesta questa admission,
+non il completamento dell’agente né un’approvazione documentale.
+
+Un errore precedente all’attivazione finalizza l’operazione BLOCKED senza consumare
+il grant. Retry identico legge la stessa operazione, senza nuovo job. Il reader
+pubblico elimina sempre `pendingGrantId`; espone gli ID Discovery/run soltanto
+quando esistono. Recovery T033 deve interrompere le riserve dell’istanza precedente,
+senza attivarle automaticamente. Preview pendenti e snapshot non pinned/non scaduti
+concorrono al limite4, prima di avviare ulteriori lettori confinati.
+
 ## State machine
 
 Discovery:

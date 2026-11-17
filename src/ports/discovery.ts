@@ -19,6 +19,9 @@ export interface DiscoveryArtifact {
   readonly state: 'RESERVED' | 'PUBLISHED' | 'REFERENCED' | 'ORPHAN' | 'CORRUPT'; readonly referenceCount: number;
 }
 export interface DiscoveryAdmission {
+  /** A start is accepted before asynchronous validation, without consuming its
+   * grant. ACTIVATE must match that durable reservation on the same instance. */
+  readonly startStage?: 'PREPARE' | 'ACTIVATE';
   readonly requestId: string; readonly action: DiscoveryAction; readonly payloadHash: string; readonly canonicalIntent: string;
   readonly grantId: string | null; readonly ownerUid: number; readonly instanceId: string;
   readonly acceptedAt: string; readonly nowMs: number; readonly discovery: DiscoveryRecord | null;

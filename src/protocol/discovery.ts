@@ -39,7 +39,9 @@ export function validateDiscoveryAdmission(value: unknown) {
 }
 export function publicDiscoveryOperation(input: import('../ports/discovery.js').DiscoveryOperationView) {
   const { requestId, action, phase, outcome, acceptedAt, completedAt, result, error } = input;
-  return { requestId, action, phase, outcome, acceptedAt, completedAt, result, error: error === null ? null : foundationError(error as ErrorCode, { persisted: true, operationId: requestId }) };
+  const visible = result === null ? null : Object.fromEntries(Object.entries(result).filter(([key]) =>
+    ['snapshotId', 'discoveryId', 'sessionId', 'runId', 'revisionId', 'approvalId', 'providerRevision', 'stateRevision'].includes(key)));
+  return { requestId, action, phase, outcome, acceptedAt, completedAt, result: visible, error: error === null ? null : foundationError(error as ErrorCode, { persisted: true, operationId: requestId }) };
 }
 export function decodeDiscoveryOperationView(value: unknown) {
   const p = discoveryObject(value); discoveryFields(p, ['requestId', 'action', 'phase', 'outcome', 'acceptedAt', 'completedAt', 'result', 'error']); uuid(p.requestId);
