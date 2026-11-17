@@ -233,3 +233,15 @@ la liberazione della mappa reservation nella riconciliazione e rafforzata la
 fixture cancel; i21test mirati ricompilati sullo stato finale sono tutti PASS.
 Campioni002 rigenerati ripristinati ai byte originali. G1/account/modello reale
 NOT_RUN; readiness/gate001/002/003 invariati.
+
+## T013 — test contesto inizialmente RED,2026-11-17
+
+Quattordici casi compilano e falliscono come atteso per adapter T014 ancora
+assente (14FAIL,2339,19ms). Repo temporanei reali clean/dirty/unborn/conflitto,
+immutabilità checkout/index/refs/config, inventario tracked/untracked/ignored,
+root Maestro opachi interni al checkout, credenziali/build/link/FIFO/binari/UTF-8,
+membership e limiti, ancestor sostituito e crescita controllata, nested repo e
+gitlink, helper Git/script ostili senza esecuzione. Il percorso ordinario richiede
+extractor confinato; le sole race deterministiche usano una porta sostituibile
+con callback trusted nel test, senza autorizzare bypass da CLI/UI.
+Checkbox riferita ai test definiti, non al PASS del confine T014.
