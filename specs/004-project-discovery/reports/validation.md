@@ -889,3 +889,7 @@ cancellata dal report e nessuna deroga/timeout aumentato. Nessuna campagna
 acceptance/benchmark o chiamata provider/account reale. T028/G1 NOT_RUN; T036/G2
 completo (inclusi SIGKILL daemon/host) ancora aperto. Documenti/review/idoneità
 sono US3/US4; gate001/002 e review umana003 restano invariati.
+
+### T036 — G2 locale
+
+Host/provider reali di fixture: lifecycle + agent-host + recovery 20/20 PASS (13,62 s). SIGKILL prima/dopo GO conserva RECONCILING, ownership e slot; nessun riavvio automatico o segnale a PID estraneo. Le suite precedenti coprono errori/timeout, risposta persa e cancel. Electron recovery 1/1 PASS (9,1 s): SIGKILL del daemon scratch verificato, start esplicito, stessa Discovery WAITING_USER, domanda/output conservati e repository invariato. Fixture locali, nessuna inferenza reale; G1 resta NOT_RUN.
