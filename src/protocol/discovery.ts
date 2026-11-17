@@ -2,7 +2,7 @@ import { requireUuid, requireDecimal } from '../domain/identifiers.js';
 import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { DISCOVERY_LIMITS, isDiscoveryFailure } from '../domain/discovery/model.js';
 import { canonicalDiscoveryIntent, validateDiscoveryText } from '../domain/discovery/intent.js';
-export const DISCOVERY_READ_METHODS = ['discovery.provider.get', 'discovery.preview.get', 'discovery.list', 'discovery.get', 'discovery.questions.list', 'discovery.output.list', 'discovery.document.get', 'discovery.operation.get', 'discovery.eligibility.get'] as const;
+export const DISCOVERY_READ_METHODS = ['discovery.provider.get', 'discovery.preview.get', 'discovery.list', 'discovery.get', 'discovery.questions.list', 'discovery.output.list', 'discovery.document.get', 'discovery.operation.get', 'discovery.eligibility.get', 'discovery.revisions.list'] as const;
 export const DISCOVERY_ADMISSION_METHODS = ['discovery.provider.configure', 'discovery.provider.check', 'discovery.preview', 'discovery.preview.discard', 'discovery.start', 'discovery.answer', 'discovery.cancel', 'discovery.correct', 'discovery.approve'] as const;
 export function discoveryObject(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('INVALID_REQUEST'); return value as Record<string, unknown>; }
 export function discoveryFields(value: Record<string, unknown>, required: readonly string[], optional: readonly string[] = []) {
@@ -50,7 +50,7 @@ export function validateDiscoveryParams(method: string, input: unknown): void {
     if (Object.hasOwn(p, 'sources') && p.sources !== true) throw new Error('INVALID_REQUEST');
     if (p.cursor !== undefined && p.content !== true && p.sources !== true) throw new Error('INVALID_REQUEST');
   } else {
-    const lists: Record<string, string> = { 'discovery.list': 'projectId', 'discovery.questions.list': 'discoveryId', 'discovery.output.list': 'runId', 'discovery.eligibility.get': 'projectId' };
+    const lists: Record<string, string> = { 'discovery.list': 'projectId', 'discovery.questions.list': 'discoveryId', 'discovery.revisions.list': 'discoveryId', 'discovery.output.list': 'runId', 'discovery.eligibility.get': 'projectId' };
     if (!Object.hasOwn(lists, method)) throw new Error('UNSUPPORTED_VERSION');
     discoveryFields(p, [lists[method]!], method === 'discovery.eligibility.get' ? ['checkId'] : ['cursor', 'limit']); uuid(p[lists[method]!]); if (p.checkId !== undefined) uuid(p.checkId);
   }

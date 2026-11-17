@@ -20,6 +20,7 @@ maestro discovery prepare --intent-file FILE
 maestro discovery start PROJECT --grant UUID
 maestro discovery list PROJECT [--limit N --cursor C]
 maestro discovery show DISCOVERY
+maestro discovery revisions DISCOVERY [--limit N --cursor C]
 maestro discovery questions DISCOVERY [--limit N --cursor C]
 maestro discovery answer QUESTION --answer-file FILE --grant UUID
 maestro discovery cancel DISCOVERY --grant UUID
@@ -89,10 +90,10 @@ export async function runDiscoveryCli(args: readonly string[]): Promise<number> 
     else if (command === 'cancel' && positionals.length === 2) { method = 'discovery.cancel'; params = { discoveryId: positionals[1], grantId: values.grant }; allowed.add('grant'); allowed.add('request-id'); }
     else {
       if (positionals.length !== 2) throw new Error('INVALID_REQUEST');
-      const methods: Record<string, [string, string]> = { list: ['discovery.list', 'projectId'], show: ['discovery.get', 'discoveryId'], questions: ['discovery.questions.list', 'discoveryId'], output: ['discovery.output.list', 'runId'], document: ['discovery.document.get', 'revisionId'], operation: ['discovery.operation.get', 'requestId'], eligibility: ['discovery.eligibility.get', 'projectId'] };
+      const methods: Record<string, [string, string]> = { list: ['discovery.list', 'projectId'], show: ['discovery.get', 'discoveryId'], questions: ['discovery.questions.list', 'discoveryId'], revisions: ['discovery.revisions.list', 'discoveryId'], output: ['discovery.output.list', 'runId'], document: ['discovery.document.get', 'revisionId'], operation: ['discovery.operation.get', 'requestId'], eligibility: ['discovery.eligibility.get', 'projectId'] };
       if (!command || !Object.hasOwn(methods, command)) throw new Error('INVALID_REQUEST');
       const [name, key] = methods[command]!; method = name; params = { [key]: positionals[1] };
-      if (['list', 'questions', 'output', 'document'].includes(command)) for (const key of ['limit', 'cursor', 'after']) allowed.add(key);
+      if (['list', 'questions', 'revisions', 'output', 'document'].includes(command)) for (const key of ['limit', 'cursor', 'after']) allowed.add(key);
       if (command === 'document') allowed.add('metadata'); if (command === 'eligibility') allowed.add('check-id');
       if (command === 'document' && !values.metadata) params.content = true;
     }

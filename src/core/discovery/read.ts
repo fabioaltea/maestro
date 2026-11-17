@@ -76,11 +76,11 @@ export function createDiscoveryReader(options: { storage: Pick<StoragePort, 'rea
         result = { items: p.items, nextCursor: p.nextOffset === null ? null : encode({ version: 1, ...binding, offset: p.nextOffset }) };
       }
     } else {
-      let query: 'discoveries' | 'questions' | 'output', targetId: string, revision: string;
+      let query: 'discoveries' | 'questions' | 'revisions' | 'output', targetId: string, revision: string;
       if (method === 'discovery.list') {
         query = 'discoveries'; targetId = params.projectId as string; const project = await storage.getProject(targetId); if (!project) throw new Error('PROJECT_NOT_FOUND'); revision = project.project.configRevision;
-      } else if (method === 'discovery.questions.list') {
-        query = 'questions'; targetId = params.discoveryId as string; const discovery = await meta({ kind: 'discovery', id: targetId }); if (!discovery) throw new Error('INVALID_REQUEST'); revision = discovery.stateRevision;
+      } else if (method === 'discovery.questions.list' || method === 'discovery.revisions.list') {
+        query = method === 'discovery.revisions.list' ? 'revisions' : 'questions'; targetId = params.discoveryId as string; const discovery = await meta({ kind: 'discovery', id: targetId }); if (!discovery) throw new Error('INVALID_REQUEST'); revision = discovery.stateRevision;
       } else if (method === 'discovery.output.list') {
         query = 'output'; targetId = params.runId as string; const run = await meta({ kind: 'run', id: targetId }); if (!run) throw new Error('INVALID_REQUEST'); revision = run.generation;
       } else throw new Error('UNSUPPORTED_VERSION');
@@ -90,6 +90,7 @@ export function createDiscoveryReader(options: { storage: Pick<StoragePort, 'rea
       const page = await meta({ kind: query, id: targetId, offset: start, limit });
       const items: unknown[] = [];
       for (const entry of page.items) {
+        if (query === 'revisions') { const { artifactId: _private, ...view } = entry as import('../../domain/discovery/documents.js').DiscoveryDocumentRevision; items.push(view); continue; }
         let item: unknown = entry;
         if (query === 'questions') {
           const question = entry as import('../../domain/discovery/model.js').DiscoveryQuestion;

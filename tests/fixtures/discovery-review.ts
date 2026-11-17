@@ -20,5 +20,5 @@ export async function reviewFixture(t: TestContext) {
   }
   const intent = (action: 'approve' | 'correct', payload: Record<string, unknown>) => f.intent({ action, targetId: discovery().discoveryId, stateRevision: discovery().stateRevision, payload });
   const command = async (action: 'approve' | 'correct', payload: Record<string, unknown>) => { const g = value(await service.prepare(f.peer, intent(action, payload))); return { requestId: randomUUID(), grantId: g.grantId, canonicalIntent: g.canonicalIntent }; };
-  return { ...f, service, discovery, exit, intent, command };
+  return { ...f, startIntent: f.intent, service, discovery, exit, intent, command };
 }
