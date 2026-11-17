@@ -26,6 +26,8 @@ export function createDiscoveryDispatch(options: { storage: Pick<StoragePort, 'r
         if (!service || snapshot.instance?.lifecycle !== 'RUNNING' || (cancelling ? options.canCancel?.() === false : options.accepting?.() === false)) throw new Error('BLOCKED');
         const result = request.method === 'discovery.prepare' ? await service.prepare(peer, p.intent as DiscoveryIntent)
           : request.method === 'discovery.start' ? await service.startGranted(peer, p as unknown as Parameters<typeof service.startGranted>[1])
+          : request.method === 'discovery.answer' ? await service.answerGranted(peer, p as unknown as Parameters<typeof service.answerGranted>[1])
+          : request.method === 'discovery.cancel' ? await service.cancelGranted(peer, p as unknown as Parameters<typeof service.cancelGranted>[1])
           : request.method === 'discovery.provider.configure' ? await service.configureGranted(peer, p as unknown as Parameters<typeof service.configureGranted>[1])
           : request.method === 'discovery.provider.check' ? await service.check(peer, p as unknown as Parameters<typeof service.check>[1])
           : request.method === 'discovery.preview.discard' ? await service.discard(peer, p as unknown as Parameters<typeof service.discard>[1])

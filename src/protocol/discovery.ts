@@ -3,7 +3,7 @@ import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { DISCOVERY_LIMITS, isDiscoveryFailure } from '../domain/discovery/model.js';
 import { canonicalDiscoveryIntent, validateDiscoveryText } from '../domain/discovery/intent.js';
 export const DISCOVERY_READ_METHODS = ['discovery.provider.get', 'discovery.preview.get', 'discovery.list', 'discovery.get', 'discovery.questions.list', 'discovery.output.list', 'discovery.document.get', 'discovery.operation.get'] as const;
-export const DISCOVERY_ADMISSION_METHODS = ['discovery.provider.configure', 'discovery.provider.check', 'discovery.preview', 'discovery.preview.discard', 'discovery.start'] as const;
+export const DISCOVERY_ADMISSION_METHODS = ['discovery.provider.configure', 'discovery.provider.check', 'discovery.preview', 'discovery.preview.discard', 'discovery.start', 'discovery.answer', 'discovery.cancel'] as const;
 export function discoveryObject(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('INVALID_REQUEST'); return value as Record<string, unknown>; }
 export function discoveryFields(value: Record<string, unknown>, required: readonly string[], optional: readonly string[] = []) {
   if (required.some(key => !Object.hasOwn(value, key)) || Object.keys(value).some(key => !required.includes(key) && !optional.includes(key))) throw new Error('INVALID_REQUEST');
@@ -18,6 +18,10 @@ export function validateDiscoveryParams(method: string, input: unknown): void {
   if ((DISCOVERY_ADMISSION_METHODS as readonly string[]).includes(method)) {
     uuid(p.requestId);
     if (method === 'discovery.start') { discoveryFields(p, ['requestId', 'grantId', 'projectId']); uuid(p.grantId); uuid(p.projectId); }
+    else if (method === 'discovery.answer') {
+      discoveryFields(p, ['requestId', 'grantId', 'questionId', 'kind', 'text']); uuid(p.grantId); uuid(p.questionId);
+      if (!['ANSWER', 'UNKNOWN'].includes(String(p.kind)) || typeof p.text !== 'string' || p.kind === 'ANSWER' && !p.text.trim()) throw new Error('INVALID_REQUEST'); validateDiscoveryText(p.text, DISCOVERY_LIMITS.answerBytes);
+    } else if (method === 'discovery.cancel') { discoveryFields(p, ['requestId', 'grantId', 'discoveryId']); uuid(p.grantId); uuid(p.discoveryId); }
     else if (method === 'discovery.provider.configure') {
       discoveryFields(p, ['requestId', 'grantId', 'binaryRealpath', 'modelId']); uuid(p.grantId);
       if (typeof p.binaryRealpath !== 'string' || !p.binaryRealpath.startsWith('/') || /[\x00-\x1f\x7f]/.test(p.binaryRealpath)) throw new Error('INVALID_REQUEST');

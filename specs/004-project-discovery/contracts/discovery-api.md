@@ -111,3 +111,15 @@ Una nuova richiesta senza ID rivalida; nessun booleano cached diventa autorizzaz
 per la futura creazione feature, che dovrà verificare di nuovo. Offline niente
 creazione di check e nessun eligible=true. Il checkId è osservazione transitoria,
 non un’operazione mutativa/provider né un dato persistito che sopravvive al restart.
+
+
+### T034 — intervista/cancel headless
+
+answer QUESTION --answer-file FILE --grant UUID legge JSON chiuso {kind,text}
+UTF-8≤4KiB per testo; --answer-stdin è alternativa al file, entrambi bounded32KiB
+e nessuna risposta in argv. Target/testo/kind devono corrispondere al grant,
+revisioni e answerId sono risolti dall'intent core. cancel DISCOVERY --grant
+UUID usa il grant scoped a stato/snapshot. Entrambi restituiscono admission e
+UUID originale; operation interroga l'esito, senza un nuovo run automatico.
+Questions include l'ultima risposta confermata per ciascuna domanda (o null),
+con revisione/kind/testo; resta leggibile offline con output e stato storici.

@@ -826,3 +826,22 @@ estraneo/UNKNOWN preservato ancora PASS. Compilazione iniziale con inferenza
 stringa dell'outcome corretta annotando DiscoveryRun. Typecheck/lint PASS.
 La qualifica completa SIGKILL daemon/host e UI rimane T036/G2; nessun account
 o modello reale, G1 e gate preesistenti invariati.
+
+
+## T034 — CLI/IPC intervista e cancel, 2026-11-17
+
+Aggiunti metodi nominali answer/cancel a capability/DTO/dispatch/LocalClient.
+CLI risposta via file stabile/no-follow o stdin bounded; nessun testo in argv
+e nessun flag fuori dal comando. Grant target/kind/testo e revisioni applicati
+dal core; richiesta incerta osserva soltanto l'UUID/azione originali. Questions
+include ultima risposta append-only, paginata nel budget con output/stato
+leggibili offline. Decoder desktop aggiornato ai nuovi campi pubblici.
+
+Test iniziale CLI RED su comando ancora assente. Percorso vero CLI + trasporto
+autenticato + composizione core + host/provider fixture: domanda→grant→risposta
+→nuovo run→replay stessoUUID→cancel e letture offline PASS. Fixture locale
+non sostituisce G1. Negati schema aperto, testo4097byte/UTF-8 invalido e flag
+answer-file su cancel prima di contattare l'archivio. Selezione CLI/start/API
+18PASS prima del caso input aggiunto; selezione finale CLI/intervista/start
+10PASS/0FAIL/0SKIP. Build/test, typecheck desktop e lint PASS; nessuna chiamata
+provider/login reale, G1 NOT_RUN.

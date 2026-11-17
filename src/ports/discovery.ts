@@ -61,6 +61,7 @@ export interface DiscoveryArtifactPort {
 
 
 export interface DiscoveryMetadataSingles {
+  lastAnswer: DiscoveryAnswer;
   outputStatus: { readonly runId: string; readonly bytes: number; readonly watermark: string; readonly truncated: boolean };
   question: DiscoveryQuestion;
   grant: DiscoveryGrant;

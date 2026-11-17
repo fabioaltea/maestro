@@ -91,7 +91,10 @@ export function createDiscoveryReader(options: { storage: Pick<StoragePort, 'rea
       const items: unknown[] = [];
       for (const entry of page.items) {
         let item: unknown = entry;
-        if (query === 'output') {
+        if (query === 'questions') {
+          const question = entry as import('../../domain/discovery/model.js').DiscoveryQuestion;
+          item = { ...question, answer: await meta({ kind: 'lastAnswer', id: question.questionId }) };
+        } else if (query === 'output') {
           const output = entry as import('../../domain/discovery/model.js').DiscoveryOutput;
           const bytes = await artifact(output.artifactId, 0, output.sha256); if (bytes.totalBytes !== output.bytes || bytes.bytes.length !== output.bytes) throw new Error('ARTIFACT_CORRUPT');
           const { artifactId: _id, ...publicOutput } = output; item = { ...publicOutput, data: Buffer.from(bytes.bytes).toString('base64'), byteLength: bytes.bytes.length };

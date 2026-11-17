@@ -40,7 +40,7 @@ export class LocalClient {
       if (response.data.operation !== undefined) {
         const operation = decodeDiscoveryOperationView(response.data.operation);
         if (operation.requestId !== requestId || operation.outcome !== 'UNKNOWN' && operation.outcome !== response.outcome) throw new Error('INVALID_REQUEST');
-        const actions: Record<string, string> = { 'discovery.start': 'start', 'discovery.preview': 'preview', 'discovery.preview.discard': 'discard', 'discovery.provider.configure': 'configure', 'discovery.provider.check': 'check' };
+        const actions: Record<string, string> = { 'discovery.answer': 'answer', 'discovery.cancel': 'cancel', 'discovery.start': 'start', 'discovery.preview': 'preview', 'discovery.preview.discard': 'discard', 'discovery.provider.configure': 'configure', 'discovery.provider.check': 'check' };
         if (mutation && operation.action !== actions[method]) throw new Error('INVALID_REQUEST');
       }
       if (Object.hasOwn(response.data, 'accepted')) {
