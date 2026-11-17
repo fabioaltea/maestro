@@ -294,3 +294,15 @@ clean/dirty/conflitto/unborn, invariabilità index/refs/config/checkout, ignored
 FIFO/binary/credential, root Maestro interni, membership/crescita/TOCTOU, sigillo
 parziale e lifeline sono coperti. Nessun segreto reale/login/modello o benchmark
 lungo. Campioni002 rigenerati ripristinati; gate storici001/002/003 eG1 invariati.
+
+## T015 — contratti API e offline inizialmente RED,2026-11-17
+
+Dieci casi compilano:1PASS (grant core già applicato da T009 contro conferma UI
+fittizia),9FAIL attesi perché validator/reader/inspect Discovery T016 mancano
+ancora o il catalogo statico non include tutti i codici. Coprono DTO chiusi/cap
+envelope/pagine/capability, admission separata da conclusione/approvazione,
+operation pubblica senza intent/hash/path privati, cursori store/target/revisione,
+pagine documento8KiB/hash dopo tampering, errori statici, schema3 non migrato e
+letture offline LAST_KNOWN con eligibility sempre false/UNKNOWN anche con approval
+storica. Fixture documento/approval riguardano storage, non verità semantica o
+qualifica provider. Nessun client avvia sorgenti/modello per questi test.
