@@ -9,6 +9,10 @@ export interface CoreDependencies {
     readonly inspection?: import('../ports/provider.js').CodexInspectionPort;
     readonly context?: import('../ports/discovery-context.js').DiscoveryContextPort;
     readonly agent?: import('../ports/agent-runtime.js').AgentRuntimePort;
+    readonly createAgent?: (callbacks: {
+      onStdout(identity: import('../ports/agent-runtime.js').AgentProcessIdentity, bytes: Uint8Array): Promise<void>;
+      onExit(identity: import('../ports/agent-runtime.js').AgentProcessIdentity, proof: import('../ports/agent-runtime.js').AgentExitProof): Promise<void>;
+    }) => import('../ports/agent-runtime.js').AgentRuntimePort;
     readonly files?: import('../ports/provider.js').DiscoveryRunFilesPort;
     readonly onResult?: (identity: import('../ports/agent-runtime.js').AgentProcessIdentity, result: import('../domain/discovery/documents.js').ArchitectResult) => Promise<void>;
   };

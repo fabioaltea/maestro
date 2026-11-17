@@ -54,6 +54,7 @@ export interface DiscoveryLaunch {
   readonly configuration: ProviderConfiguration; readonly stdin: string;
 }
 interface LaunchPreparation {
+  readonly continuation?: { readonly discovery: DiscoveryRecord; readonly previousRun: DiscoveryRun; readonly answers: readonly import('../../domain/discovery/model.js').DiscoveryAnswer[]; readonly questions: readonly import('../../domain/discovery/model.js').DiscoveryQuestion[] };
   readonly requestId: string; readonly grantId: string; readonly intent: DiscoveryIntent; readonly snapshot: DiscoverySnapshot;
   readonly configuration: ProviderConfiguration; readonly contextRequest: ContextRequest;
 }
@@ -71,6 +72,7 @@ async function prepareWithin(input: LaunchPreparation, dependencies: LaunchDepen
   const sealed = await readDiscoverySnapshot(dependencies.artifacts, input.snapshot, input.intent.storeId);
   const current = await dependencies.context.revalidate(input.contextRequest, sealed.manifest, { deadline, signal });
   if (!current.ok) throw new Error(current.code);
+  if (current.value.freshness === 'UNKNOWN') throw new Error('CONTEXT_UNSTABLE');
   if (current.value.freshness !== 'CURRENT' || current.value.contextDigest !== input.intent.contextDigest) throw new Error('CONTEXT_CHANGED');
   if (deadline.expired()) throw new Error('DEADLINE_EXCEEDED');
   const inspected = await dependencies.provider.inspectConfiguredBinary(input.configuration); if (!inspected.ok) throw new Error(inspected.code);
@@ -79,15 +81,15 @@ async function prepareWithin(input: LaunchPreparation, dependencies: LaunchDepen
   if (availability.state !== 'AVAILABLE') throw new Error(availability.code ?? 'PROVIDER_UNAVAILABLE');
   if (!availability.capabilities.readOnlyAnalysis || !availability.capabilities.portableTurns || !availability.capabilities.localCancellation) throw new Error('PROVIDER_UNSAFE');
   if (deadline.expired()) throw new Error('DEADLINE_EXCEEDED');
-  const discoveryId = randomUUID(), runId = randomUUID(), generation = randomUUID(), at = new Date().toISOString();
-  const serialized = dependencies.provider.serializeInput({ runId, generation, schemaVersion: 1, instructionsVersion: 'project-architect-v1', requestKind: 'INITIAL',
-    sources: sealed.sources, answers: [], priorDraft: null, correction: null });
+  const discoveryId = input.continuation?.discovery.discoveryId ?? randomUUID(), runId = randomUUID(), generation = randomUUID(), at = new Date().toISOString();
+  const serialized = dependencies.provider.serializeInput({ runId, generation, schemaVersion: 1, instructionsVersion: 'project-architect-v1', requestKind: input.continuation ? 'ANSWER' : 'INITIAL',
+    sources: sealed.sources, answers: input.continuation?.answers ?? [], ...(input.continuation ? { questions: input.continuation.questions } : {}), priorDraft: null, correction: null });
   if (!serialized.ok) throw new Error(serialized.code);
   if (!serialized.value.isWellFormed() || Buffer.byteLength(serialized.value) > limits.inputBytes) throw new Error('PROVIDER_CONTEXT_LIMIT');
-  const discovery: DiscoveryRecord = { discoveryId, storeId: input.intent.storeId, projectId: input.snapshot.projectId, sessionId: randomUUID(), state: 'RUNNING', stateRevision: '1',
+  const discovery: DiscoveryRecord = { discoveryId, storeId: input.intent.storeId, projectId: input.snapshot.projectId, sessionId: input.continuation?.discovery.sessionId ?? randomUUID(), state: 'RUNNING', stateRevision: input.continuation ? String(BigInt(input.continuation.discovery.stateRevision) + 1n) : '1',
     snapshotId: input.snapshot.snapshotId, configRevision: input.snapshot.configRevision, providerRevision: input.configuration.revision, currentRunId: runId,
-    latestDocumentRevisionId: null, createdAt: at, updatedAt: at, error: null };
-  const run: DiscoveryRun = { runId, discoveryId, generation, turnIndex: 1, grantId: input.grantId, requestId: input.requestId, contextDigest: input.snapshot.contextDigest!, inputDigest: hash(serialized.value),
+    latestDocumentRevisionId: input.continuation?.discovery.latestDocumentRevisionId ?? null, createdAt: input.continuation?.discovery.createdAt ?? at, updatedAt: at, error: null };
+  const run: DiscoveryRun = { runId, discoveryId, generation, turnIndex: input.continuation ? input.continuation.previousRun.turnIndex + 1 : 1, grantId: input.grantId, requestId: input.requestId, contextDigest: input.snapshot.contextDigest!, inputDigest: hash(serialized.value),
     providerId: input.configuration.providerId, providerRevision: input.configuration.revision, profileDigest: input.configuration.qualificationDigest, modelId: input.configuration.modelId,
     phase: 'SPAWN_INTENT', outcome: 'RUNNING', startedAt: null, endedAt: null, outputWatermark: '0', error: null };
   return { discovery, run, stdin: serialized.value };

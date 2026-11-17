@@ -19,8 +19,8 @@ export interface DiscoveryArtifact {
   readonly state: 'RESERVED' | 'PUBLISHED' | 'REFERENCED' | 'ORPHAN' | 'CORRUPT'; readonly referenceCount: number;
 }
 export interface DiscoveryAdmission {
-  /** A start is accepted before asynchronous validation, without consuming its
-   * grant. ACTIVATE must match that durable reservation on the same instance. */
+  /** Start reserves its grant until validation. Answer consumes it while saving
+   * the response before validation. ACTIVATE matches the durable reservation. */
   readonly startStage?: 'PREPARE' | 'ACTIVATE';
   readonly requestId: string; readonly action: DiscoveryAction; readonly payloadHash: string; readonly canonicalIntent: string;
   readonly grantId: string | null; readonly ownerUid: number; readonly instanceId: string;
@@ -61,6 +61,7 @@ export interface DiscoveryArtifactPort {
 
 
 export interface DiscoveryMetadataSingles {
+  question: DiscoveryQuestion;
   grant: DiscoveryGrant;
   provider: ProviderConfiguration;
   snapshot: DiscoverySnapshot;

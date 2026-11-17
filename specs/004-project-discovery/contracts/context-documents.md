@@ -23,7 +23,7 @@ headKind/headOid/currentBranch; capturedAt;
 sources[{sourceId,relativePath,sha256,byteLength,lineCount}]; contextDigest
 ```
 
-Il provider riceve solo `{schemaVersion1, instructionsVersion, sources[{sourceId, relativePath,sha256,text}], answers[], priorDraft?, requestKind}`. Niente store path, UID, endpoint, credentialRef, repository root assoluta o Git directory. byteLength dell’envelope realmente serializzato≤2MiB e≤cap modello del profilo; controllo prima dell’effetto. Il materiale autorizzato può contenere testo sensibile o path scritti nel codice: non si promette classificazione infallibile di ogni segreto hardcoded; preview e scoping restano espliciti.
+Il provider riceve solo `{schemaVersion1, instructionsVersion, sources[{sourceId, relativePath,sha256,text}], answers[], questions?[], priorDraft?, requestKind}`. Niente store path, UID, endpoint, credentialRef, repository root assoluta o Git directory. byteLength dell’envelope realmente serializzato≤2MiB e≤cap modello del profilo; controllo prima dell’effetto. Il materiale autorizzato può contenere testo sensibile o path scritti nel codice: non si promette classificazione infallibile di ogni segreto hardcoded; preview e scoping restano espliciti.
 
 ## Output strutturato
 
@@ -56,3 +56,8 @@ Confrontare il manifest con nuovo inventario e byte hash degli input letti, HEAD
 Approval è un’operazione CAS persistente: revisionId/bundleDigest, stateRevision, configRevision, contextDigest, domande risolte o elenco UNKNOWN accettati, ownerUid. `SUCCEEDED` dell’agente non vale approvazione. Output tardivo resta legato a run/generation/projectId originali. Progetto rimosso/reimportato non riceve le approvazioni precedenti.
 
 Eligibility live avvia una rivalidazione readonly bounded (checkId, CHECKING/eligible=false finché pronta); query col checkId legge lo stesso check corrente, non rilancia. Max1check per progetto/4globali senza coda, risultato con checkedAt e TTL30s; una nuova richiesta senza checkId crea un controllo nuovo. Gli esiti sono fotografie, non permessi riutilizzabili: futura API feature dovrà rifare il confronto immediatamente prima dell’uso. Offline/errore/storico non equivalgono a eligible=true. Non si pretende atomicità fra working copy esterna e commit DB.
+
+T031: nei turni ANSWER, questions contiene le domande core bounded con
+questionId/revision/testo/stato per interpretare la storia answers. Le risposte
+vengono salvate con grant prima del lavoro asincrono; mismatch/errore non le
+cancella e non riavvia automaticamente il provider.

@@ -34,6 +34,7 @@ export interface DiscoveryRunFilesPort {
   prepare(runId: string): Promise<DiscoveryResult<{ readonly runtime: string; readonly schema: string }>>;
 }
 export interface ProviderInput {
+  readonly questions?: readonly import('../domain/discovery/model.js').DiscoveryQuestion[];
   readonly runId: string; readonly generation: string; readonly schemaVersion: 1; readonly instructionsVersion: string;
   readonly requestKind: 'INITIAL' | 'ANSWER' | 'CORRECTION';
   readonly sources: readonly { readonly sourceId: string; readonly relativePath: string; readonly sha256: string; readonly text: string }[];

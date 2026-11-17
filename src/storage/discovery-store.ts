@@ -101,7 +101,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
             if (original.phase !== 'ACCEPTED' || original.outcome !== 'IN_PROGRESS' || original.result?.pendingGrantId !== input.grantId
               || owner.owning_instance_id !== input.instanceId) throw new Error('APPROVAL_REQUIRED');
           }
-          if (input.startStage !== undefined && (!['PREPARE', 'ACTIVATE'].includes(input.startStage) || input.action !== 'start')) throw new Error('INVALID_REQUEST');
+          if (input.startStage !== undefined && (!['PREPARE', 'ACTIVATE'].includes(input.startStage) || !['start', 'answer'].includes(input.action))) throw new Error('INVALID_REQUEST');
           if (input.startStage === 'ACTIVATE' && !original) throw new Error('APPROVAL_REQUIRED');
           if (!original && database.prepare('SELECT 1 FROM request_catalog WHERE request_id=?').get(input.requestId)) throw new Error('IDEMPOTENCY_CONFLICT');
           const remote = !['preview', 'check', 'discard'].includes(input.action);
@@ -110,7 +110,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
             const grant = database.prepare('SELECT * FROM discovery_grants WHERE grant_id=?').get(input.grantId) as Row | undefined;
             if (!grant) throw new Error('APPROVAL_REQUIRED');
             const consumption = validateDiscoveryGrant({ canonicalIntent: String(grant.canonical_intent), expiresAtMs: Number(grant.expires_at_ms), consumedByRequestId: grant.consumed_by_request_id === null ? null : String(grant.consumed_by_request_id) }, input.canonicalIntent, input.requestId, nowMs());
-            if (consumption !== 'CONSUME') throw new Error('APPROVAL_REQUIRED');
+            if (consumption !== 'CONSUME' && !(input.action === 'answer' && input.startStage === 'ACTIVATE' && consumption === 'REPLAY')) throw new Error('APPROVAL_REQUIRED');
           } else if (input.grantId !== null || input.acquireSlot || input.run !== null) throw new Error('INVALID_REQUEST');
           if (input.action === 'preview') {
             const snapshots = Number((database.prepare('SELECT count(*) AS n FROM discovery_snapshots WHERE pinned=0 AND expires_at_ms>?').get(nowMs()) as Row).n);
@@ -125,9 +125,19 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
           if (input.startStage === 'PREPARE') {
             if (discovery !== null || run !== null || input.acquireSlot) throw new Error('INVALID_REQUEST');
             const slot = database.prepare('SELECT discovery_id FROM discovery_slot WHERE singleton=1').get() as Row;
-            if (slot.discovery_id !== null) throw new Error('DISCOVERY_BUSY');
-            database.prepare("INSERT INTO discovery_operations(request_id,action,payload_hash,canonical_intent,owner_uid,owning_instance_id,phase,outcome,accepted_at,result) VALUES(?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?)")
-              .run(input.requestId, input.action, input.payloadHash, input.canonicalIntent, input.ownerUid, input.instanceId, input.acceptedAt, JSON.stringify({ pendingGrantId: input.grantId }));
+            let discoveryId: string | null = null;
+            if (input.action === 'start') { if (slot.discovery_id !== null) throw new Error('DISCOVERY_BUSY'); }
+            else {
+              const payload = intent.payload as Record<string, unknown>, q = database.prepare('SELECT * FROM discovery_questions WHERE question_id=?').get(String(payload.questionId)) as Row | undefined;
+              const d = q ? database.prepare('SELECT * FROM discoveries WHERE discovery_id=?').get(q.discovery_id) as Row | undefined : undefined;
+              if (!q || !d || intent.targetId !== q.question_id || String(q.question_revision) !== payload.questionRevision || d.state !== 'WAITING_USER' || slot.discovery_id !== d.discovery_id
+                || String(d.state_revision) !== intent.stateRevision || input.expectedStateRevision !== intent.stateRevision || d.snapshot_id !== intent.snapshotId || String(d.config_revision) !== intent.configRevision || String(d.provider_revision) !== intent.providerRevision) throw new Error('APPROVAL_STALE');
+              if (database.prepare("SELECT 1 FROM discovery_operations WHERE discovery_id=? AND action='answer' AND phase<>'FINALIZED'").get(d.discovery_id)) throw new Error('DISCOVERY_BUSY');
+              discoveryId = String(d.discovery_id);
+            }
+            database.prepare("INSERT INTO discovery_operations(request_id,action,payload_hash,canonical_intent,owner_uid,owning_instance_id,phase,outcome,accepted_at,result,discovery_id) VALUES(?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?,?)")
+              .run(input.requestId, input.action, input.payloadHash, input.canonicalIntent, input.ownerUid, input.instanceId, input.acceptedAt, JSON.stringify({ pendingGrantId: input.grantId }), discoveryId);
+            if (input.action === 'answer') database.prepare('UPDATE discovery_grants SET consumed_by_request_id=? WHERE grant_id=? AND consumed_by_request_id IS NULL').run(input.requestId, input.grantId);
             return { ok: true, value: { operation: get(input.requestId)!, inserted: true } } as const;
           }
           if (input.startStage === 'ACTIVATE') {
@@ -163,9 +173,12 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
               if (input.action === 'answer') {
                 const payload = intent.payload as Record<string, unknown>;
                 const question = database.prepare('SELECT discovery_id,status FROM discovery_questions WHERE question_id=?').get(String(payload.questionId)) as Row | undefined;
-                if (intent.targetId !== payload.questionId || current.state !== 'WAITING_USER' || discovery.state !== 'RUNNING' || !question || question.discovery_id !== discovery.discoveryId || question.status !== 'OPEN') throw new Error('APPROVAL_STALE');
+                const saved = input.startStage === 'ACTIVATE' ? database.prepare('SELECT 1 FROM discovery_answers WHERE request_id=? AND question_id=? AND answer_id=? AND answer_revision=?').get(input.requestId, String(payload.questionId), String(payload.answerId), String(payload.answerRevision)) : null;
+                if (intent.targetId !== payload.questionId || current.state !== 'WAITING_USER' || discovery.state !== 'RUNNING' || !question || question.discovery_id !== discovery.discoveryId || (input.startStage === 'ACTIVATE' ? !saved : question.status !== 'OPEN')) throw new Error('APPROVAL_STALE');
               } else if (!['READY_FOR_REVIEW', 'APPROVED'].includes(String(current.state)) || discovery.state !== 'UPDATING') throw new Error('APPROVAL_STALE');
               if (BigInt(discovery.stateRevision) !== BigInt(input.expectedStateRevision!) + 1n) throw new Error('INVALID_REQUEST');
+              const previous = database.prepare('SELECT max(turn_index) AS turn FROM discovery_runs WHERE discovery_id=?').get(discovery.discoveryId) as Row;
+              if (run.turnIndex !== Number(previous.turn) + 1 || run.turnIndex > DISCOVERY_LIMITS.turns) throw new Error('DISCOVERY_LIMIT');
               database.prepare('UPDATE discoveries SET state=?,state_revision=?,current_run_id=?,updated_at=? WHERE discovery_id=?').run(discovery.state, discovery.stateRevision, run.runId, discovery.updatedAt, discovery.discoveryId);
             }
           } else if (run !== null) throw new Error('INVALID_REQUEST');

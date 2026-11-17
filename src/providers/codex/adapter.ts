@@ -32,7 +32,7 @@ export function createCodexAdapter(options: { inspection: CodexInspectionPort; m
     },
     serializeInput(input: ProviderInput): DiscoveryResult<string> {
       try {
-        object(input, ['runId', 'generation', 'schemaVersion', 'instructionsVersion', 'requestKind', 'sources', 'answers', 'priorDraft', 'correction']);
+        object(input, ['runId', 'generation', 'schemaVersion', 'instructionsVersion', 'requestKind', 'sources', 'answers', 'priorDraft', 'correction', ...(Object.hasOwn(input, 'questions') ? ['questions'] : [])]);
         requireUuid(input.runId); requireUuid(input.generation);
         if (input.schemaVersion !== 1 || input.instructionsVersion !== 'project-architect-v1' || !['INITIAL', 'ANSWER', 'CORRECTION'].includes(input.requestKind)
           || !Array.isArray(input.sources) || input.sources.length > limits.files || !Array.isArray(input.answers) || input.answers.length > limits.turns) throw new Error('INVALID_REQUEST');
@@ -46,6 +46,15 @@ export function createCodexAdapter(options: { inspection: CodexInspectionPort; m
         }
         if (Buffer.byteLength(JSON.stringify({ schemaVersion: 1, sources: input.sources })) > limits.corpusBytes) throw new Error('PROVIDER_CONTEXT_LIMIT');
         const answerIds = new Set<string>();
+        if (input.questions !== undefined) {
+          if (!Array.isArray(input.questions) || input.questions.length > limits.questions) throw new Error('INVALID_REQUEST');
+          const ids = new Set<string>();
+          for (const q of input.questions) {
+            object(q, ['questionId', 'discoveryId', 'runId', 'revision', 'text', 'reason', 'section', 'status']); requireUuid(q.questionId); requireUuid(q.discoveryId); requireUuid(q.runId); requireDecimal(q.revision);
+            text(q.text, limits.questionBytes); text(q.reason, limits.questionBytes); text(q.section, 256);
+            if (ids.has(q.questionId) || !['OPEN', 'ANSWERED', 'UNKNOWN_ACCEPTED'].includes(q.status)) throw new Error('INVALID_REQUEST'); ids.add(q.questionId);
+          }
+        }
         for (const answer of input.answers) {
           object(answer, ['answerId', 'questionId', 'questionRevision', 'revision', 'requestId', 'kind', 'text', 'confirmedAt']);
           requireUuid(answer.answerId); requireUuid(answer.questionId); requireUuid(answer.requestId); requireDecimal(answer.questionRevision); requireDecimal(answer.revision);

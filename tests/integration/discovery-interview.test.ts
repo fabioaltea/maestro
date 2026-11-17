@@ -13,6 +13,13 @@ import type { DiscoveryResult } from '../../src/domain/discovery/model.js';
 import type { AuthenticatedPeer } from '../../src/ports/platform.js';
 import type { TestContext } from 'node:test';
 import { inspectDiscovery } from '../../src/core/inspect-main.js';
+import type { DiscoveryLaunch } from '../../src/core/discovery/launch.js';
+import { createDiscoveryRuntime } from '../../src/core/discovery/runtime.js';
+import { createAgentRuntime } from '../../src/platform/macos/discovery/agent-runtime.js';
+import { createCodexOutputDecoder } from '../../src/providers/codex/parser.js';
+import { waitFor, agentDeadline } from '../fixtures/discovery-agent-runtime.js';
+import type { StoragePort } from '../../src/ports/storage.js';
+import { fileURLToPath } from 'node:url';
 
 interface InterviewOperations {
   publishQuestions(identity: AgentProcessIdentity, result: DiscoveryQuestions): Promise<void>;
@@ -20,7 +27,8 @@ interface InterviewOperations {
 }
 const result: DiscoveryQuestions = { kind: 'QUESTIONS', questions: [{ text: 'Chi usa il progetto?', reason: 'Destinatari assenti nelle fonti.', section: 'purpose-and-features' }] };
 async function fixture(t: TestContext, checkpoint?: (point: string) => Promise<void>) {
-  const f = await launchFixture(t, checkpoint ? { checkpoint } : {}), service = f.service as unknown as InterviewOperations;
+  const inputs: DiscoveryLaunch[] = [];
+  const f = await launchFixture(t, { onLaunch: async input => { inputs.push(input); }, ...(checkpoint ? { checkpoint } : {}) }), service = f.service as unknown as InterviewOperations;
   const grant = await f.prepare(); value(await f.service.start(f.peer, f.startInput(grant))); await f.service.idle();
   async function publish(runId = f.launches.at(-1)!.runId, data = result) {
     let run = value(f.store.readDiscoveryMetadata({ kind: 'run', id: runId })).data!;
@@ -44,7 +52,7 @@ async function fixture(t: TestContext, checkpoint?: (point: string) => Promise<v
     const command = { requestId, grantId: grant.grantId, canonicalIntent: grant.canonicalIntent };
     const accepted = await service.answer(f.peer, command); return { command, accepted };
   }
-  return { ...f, interview: service, publish, discovery, questions, answers, intent, answer };
+  return { ...f, inputs, interview: service, publish, discovery, questions, answers, intent, answer };
 }
 test('verified QUESTIONS become durable core IDs; WAITING_USER has no process and retains its unique slot', async t => {
   const f = await fixture(t); assert.equal(f.discovery().state, 'WAITING_USER'); assert.equal(f.questions().length, 1);
@@ -58,10 +66,28 @@ test('confirmed answer precedes continuation, preserves session/corpus and a dup
   const f = await fixture(t), first = f.discovery(), submitted = await f.answer(); value(submitted.accepted); await f.service.idle();
   assert.equal(f.answers().length, 1); assert.equal(f.answers()[0]!.requestId, submitted.command.requestId); assert.equal(f.questions()[0]!.status, 'ANSWERED');
   assert.equal(f.launches.length, 2); assert.equal(f.discovery().sessionId, first.sessionId); assert.equal(f.discovery().snapshotId, first.snapshotId);
+  const initial = JSON.parse(f.inputs[0]!.stdin), continued = JSON.parse(f.inputs[1]!.stdin);
+  assert.deepEqual(continued.sources, initial.sources); assert.equal(continued.requestKind, 'ANSWER'); assert.equal(continued.questions[0].text, result.questions[0]!.text); assert.equal(continued.answers[0].text, f.answers()[0]!.text);
   value(await f.interview.answer(f.peer, submitted.command)); await f.service.idle(); assert.equal(f.launches.length, 2);
   const changed = JSON.parse(submitted.command.canonicalIntent); changed.payload.text = 'Payload differente';
   assert.deepEqual(await f.interview.answer(f.peer, { ...submitted.command, canonicalIntent: canonicalDiscoveryIntent(changed) }), { ok: false, code: 'IDEMPOTENCY_CONFLICT' });
   assert.equal(f.answers().length, 1);
+});
+test('production composition publishes a verified fixture host result as durable QUESTIONS without a live waiting process', async t => {
+  let stopped = false;
+  const f = await launchFixture(t, { cleanupAllowed: () => stopped });
+  f.provider.createOutputDecoder = createCodexOutputDecoder;
+  f.provider.buildInvocation = async (_config, cwd) => ({ ok: true, value: { executable: process.execPath, args: [fileURLToPath(new URL('../fixtures/discovery-jsonl-provider.js', import.meta.url)), 'success'], cwd, env: { HOME: cwd, PATH: '/usr/bin:/bin' } } });
+  const runtime = createDiscoveryRuntime(f.store as unknown as StoragePort, f.paths, f.instanceId, { provider: f.provider, context: f.context,
+    createAgent: callbacks => createAgentRuntime({ storage: f.store as unknown as StoragePort, paths: f.paths, instanceId: f.instanceId, ...callbacks, providerModuleUrl: new URL('../fixtures/discovery-agent-launcher.js', import.meta.url).href }) });
+  try {
+    await runtime.recover(); const grant = value(await runtime.operations.prepare(f.peer, f.intent())), requestId = randomUUID();
+    value(await runtime.operations.startGranted(f.peer, { requestId, grantId: grant.grantId, projectId: f.projectId })); await runtime.operations.idle();
+    const op = f.store.getDiscoveryOperation(requestId)!;
+    await waitFor(() => value(f.store.readDiscoveryMetadata({ kind: 'discovery', id: op.discoveryId! })).data?.state === 'WAITING_USER', 5000);
+    assert.equal(value(f.store.readDiscoveryMetadata({ kind: 'questions', id: op.discoveryId! })).data.items.length, 1);
+    assert.equal(value(f.store.readDiscoveryMetadata({ kind: 'process', id: op.runId! })).data?.releaseState, 'RELEASED');
+  } finally { await runtime.stop(agentDeadline()); stopped = true; }
 });
 test('UNKNOWN and an intentional correction append answer revisions without rewriting the original', async t => {
   const f = await fixture(t); value((await f.answer(f.intent('UNKNOWN', ''))).accepted); await f.service.idle();

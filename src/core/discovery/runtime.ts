@@ -27,12 +27,13 @@ export function createDiscoveryRuntime(storage: StoragePort, paths: ArchivePaths
     runtimeRoot: paths.runtimeDirectory, instanceId, onResource: resource => storage.saveResource(resource) });
   const provider = dependencies.provider ?? createCodexAdapter({ inspection }), context = dependencies.context ?? createMacOSDiscoveryContext();
   let launcher: ReturnType<typeof createDiscoveryLauncher>;
-  const agent = dependencies.agent ?? createAgentRuntime({ storage, paths, instanceId,
-    onStdout: (identity, bytes) => launcher.output(identity, bytes), onExit: (identity, proof) => launcher.exited(identity, proof) });
+  const callbacks = { onStdout: (identity: AgentProcessIdentity, bytes: Uint8Array) => launcher.output(identity, bytes), onExit: (identity: AgentProcessIdentity, proof: AgentExitProof) => launcher.exited(identity, proof) };
+  const agent = dependencies.agent ?? dependencies.createAgent?.(callbacks) ?? createAgentRuntime({ storage, paths, instanceId, ...callbacks });
   launcher = createDiscoveryLauncher({ storage, paths, instanceId, provider, runtime: agent, files: dependencies.files ?? createDiscoveryRunFiles(paths),
-    // Publication is a separate durable gate introduced by the interview/review
-    // increments. Until installed, a parsed result cannot become a document.
-    onResult: dependencies.onResult ?? (async () => { throw new Error('PROVIDER_UNSUPPORTED'); }) });
+    onResult: dependencies.onResult ?? (async (identity, result) => {
+      if (result.kind !== 'QUESTIONS') throw new Error('PROVIDER_UNSUPPORTED');
+      await operations.publishQuestions(identity, result);
+    }) });
   const operations = createDiscoveryOperations({ storage, paths, instanceId, ownerUid: paths.ownerUid, provider, inspection, context, artifacts, launch: input => launcher.launch(input) });
   async function meta<Q extends DiscoveryMetadataQuery>(query: Q): Promise<DiscoveryMetadataData<Q>> {
     const r = await storage.readDiscoveryMetadata!(query); if (!r.ok) throw new Error(r.code); return r.value.data;

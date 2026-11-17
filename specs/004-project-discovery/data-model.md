@@ -146,3 +146,19 @@ include blocchi filesystem, nomi staging/orfani e tutte le pagine btree/indici
 Discovery; freelist/WAL condivisi restano nel budget Foundation esistente.
 Discard di preview senza riferimenti rimuove i soli metadata e conserva gli
 oggetti orfani. Due posti file e5MiB restano riservati alla finalizzazione.
+
+
+### Admission risposta in due passaggi (T031)
+
+PREPARE answer consuma grant e registra operation/risposta append-only nella
+stessa transazione, mentre WAITING_USER e slot restano conservati e non nasce
+un processo. Un solo answer pendente per Discovery. ACTIVATE dopo rivalidazione
+usa soltanto quell'UUID/grant già consumato, controlla config/provider/stato e
+crea il run successivo nella stessa sessione. Esito operation SUCCEEDED attesta
+questa admission. Crash/errore prima di ACTIVATE conserva la risposta; nessuna
+ripresa automatica. Cambiamento comprovato rende STALE, fingerprint incerto
+resta un errore esplicito senza dichiarare cambiamento provato.
+
+Il prossimo input portabile include anche domande core con ID/revisione/testo,
+per attribuire ogni risposta alla domanda originale. Stessi limiti20domande/
+20turni e2MiB input; nessun resume nativo o nuovo permesso/provider.

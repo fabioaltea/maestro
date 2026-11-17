@@ -754,3 +754,24 @@ lascia solo oggetto non autorevole, nessun watermark/evento falso e nessun
 contenuto nel journal. Il limite4MiB usa indice sintetico512righe sullo stesso
 oggetto privato, non una campagna di volume/processi/durata. Build:test PASS;
 4test RED attesi (0PASS/4FAIL,4909,24ms): publisher output da implementareT032.
+
+
+## T031 — intervista durevole e continuazione intenzionale, 2026-11-17
+
+Implementata pubblicazione QUESTIONS solo dopo EXIT_OBSERVED/SUCCEEDED e
+processo assente/rilasciato; ID assegnati dal core, max20domande/4KiB e slot
+conservato in WAITING_USER. Risposte ANSWER/UNKNOWN e correzioni append-only
+con grant/CAS e UUID; PREPARE salva risposta e consuma grant atomicamente prima
+della rivalidazione, ACTIVATE crea un solo run successivo dopo controllo
+contesto/config/provider. Stessa sessione/snapshot e storia portabile con
+domande+risposte; niente resume o permessi ulteriori. Risposta conservata su
+contesto cambiato, che diventa STALE senza un nuovo run. UNKNOWN fingerprint
+produce CONTEXT_UNSTABLE, non cambiamento dato per provato.
+
+Sette test intervista PASS, compresa composizione produzione con veri host e
+provider fixture locali, uscita provata e domanda durevole senza processo in
+attesa. Controllati corpus identico nel secondo input, correzioni, replay,
+grant/stato/cap4KiB/20turni/20domande e reader offline. Insieme a regressioni
+metadata/ledger/adapter:28PASS/0FAIL/0SKIP,12987,14ms. Prima compilazione ha
+segnalato nullability nella paginazione generica, corretta con check esplicito.
+Build:test/typecheck/lint PASS. DOCUMENT/review restano US3, G1 reale NOT_RUN.
