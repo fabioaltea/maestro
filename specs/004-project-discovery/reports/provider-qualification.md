@@ -69,3 +69,13 @@ Non eseguiti login, chiamate ufficiali o prova completa UI/intervista/review.
 Nessun modello reale dichiarato disponibile. Richiesti configurazione ufficiale,
 consenso opt-in e fixture scratch, secondo T028/T050 e quickstart.
 La prova sintetica G0 non chiude questa qualifica né i gate001/002/review003.
+
+## Riqualifica dopo T018,2026-11-17
+
+G0 esplicito8/8PASS,1884,19ms. Il preparer riusato dall’host verifica pin/argv/env
+e restituisce esattamente lo stesso sandbox-exec/profilo/invocation del gate;
+aggiunta verifica positiva della preparazione senza spawn/inferenza. Profilo e
+flag produzione conservati. Il probe C sintetico ora verifica anche connessioni
+AF_UNIX, senza cambiamenti ai controlli precedenti. G1/account/modello reale
+restano NOT_RUN. Una prima compilazione della nuova asserzione ha rilevato tipi
+fixture incompleti (executable mancante), corretti prima di eseguire questa prova.

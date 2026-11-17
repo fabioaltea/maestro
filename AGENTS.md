@@ -52,7 +52,7 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 004: setup e confine Codex implementati (T001–T016); metadata/ledger/upgrade/artefatti/contesto confinato qualificati,461test suite generale,28desktop unit e22desktop integrationPASS; G0 sintetico8/8PASS, letture Discovery CLI/IPC disponibili; avvio, intervista, review e pannello UI/provider reale ancora da qualificare. Scelta utente: Codex CLI con login ufficiale, nessuna API key/fallback automatico. Verifiche mirate, niente nuove campagne di volume/durata.
+- 004: setup e confine Codex implementati (T001–T018); Foundation Discovery con metadata/artefatti/contesto/letture e host Agent Runtime qualificati,479test suite generalePASS; G0 sintetico8/8PASS; ultime verifiche desktop28unit/22integrationPASS; G0 sintetico8/8PASS, letture Discovery CLI/IPC disponibili; avvio, intervista, review e pannello UI/provider reale ancora da qualificare. Scelta utente: Codex CLI con login ufficiale, nessuna API key/fallback automatico. Verifiche mirate, niente nuove campagne di volume/durata.
 
 - 003: prima UI locale sul core001/002; CLI con Node26 esterno, conferme/ricevute, progetti live/offline e attività. G0–G4 qualificati localmente; T054 review umana/picker nativo ancora NOT_RUN. Benchmark eventi di volume/durata rinviati dall’utente2026-11-15; non ricrearli come gate MVP. Gate001/002 invariati. Consultare specs/003-desktop-core-ui/reports/.
 

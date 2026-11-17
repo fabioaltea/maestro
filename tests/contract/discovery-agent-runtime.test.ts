@@ -23,3 +23,9 @@ test('HOST_READY never authorizes GO; the durable SPAWN_AUTHORIZED phase is mand
   assert.equal((await f.runtime.authorizeStart(ready)).ok, false);
   assert.equal(ready.providerPid, null); assert.equal(f.stdout.length, 0);
 });
+test('run ownership comes from the admitted operation and cannot be rebound to a different daemon instance', async t => {
+  const f = await agentFixture(t), { loadRuntime } = await import('../fixtures/discovery-agent-runtime.js'), { createAgentRuntime } = await loadRuntime();
+  assert.equal(f.store.getDiscoveryRunOwner(f.run.runId), f.instanceId);
+  const runtime = createAgentRuntime({ ...f.runtimeOptions, storage: new Proxy(f.store, { get(target, key, receiver) { if (key === 'getDiscoveryRunOwner') return () => randomUUID(); const value = Reflect.get(target, key, receiver) as unknown; return typeof value === 'function' ? value.bind(target) : value; } }) });
+  assert.equal((await runtime.launch({ identity: f.identity, invocation: f.invocation, stdin: f.stdin, deadline: agentDeadline() })).ok, false); assert.equal(f.hosts.length, 0);
+});

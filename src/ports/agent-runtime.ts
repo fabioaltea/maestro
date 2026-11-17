@@ -9,9 +9,11 @@ export interface AgentProcessIdentity {
   readonly credentialRef: string; readonly observation: 'VERIFIED' | 'ABSENT' | 'UNKNOWN';
   readonly releaseState: 'OWNED' | 'RELEASED' | 'BLOCKED'; readonly policy: string;
 }
+/** Authenticated local process exit only; a valid provider result is a separate core gate. */
 export interface AgentExitProof {
   readonly runId: string; readonly generation: string; readonly hostExited: boolean; readonly providerExited: boolean;
   readonly outcome: RunOutcome; readonly authentication: string;
+  readonly exitCode?: number | null; readonly signal?: string | null; readonly error?: import('../domain/discovery/model.js').DiscoveryFailure | null;
 }
 export interface AgentRuntimePort {
   launch(input: { readonly identity: AgentProcessIdentity; readonly invocation: ProviderInvocation;

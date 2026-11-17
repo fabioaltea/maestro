@@ -1,3 +1,4 @@
+import type { ProviderInvocation } from '../../../ports/provider.js';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
@@ -48,25 +49,33 @@ async function verifyBinary(path: string) {
       || before.mtimeNs !== after.mtimeNs || before.ctimeNs !== after.ctimeNs || before.size !== after.size) throw new Error('PROVIDER_UNSUPPORTED');
   } finally { await file.close(); }
 }
+/** Closed production launch boundary reused by the owned Agent host. */
+export async function prepareProviderInvocation(invocation: ProviderInvocation): Promise<ProviderInvocation> {
+  const modelIndex = invocation.args.indexOf('--model');
+  if (modelIndex < 0 || invocation.args.lastIndexOf('--model') !== modelIndex || typeof invocation.env.CODEX_HOME !== 'string') throw new Error('PROVIDER_UNSAFE');
+  const input: CodexInvocationInput = { binary: invocation.executable, model: invocation.args[modelIndex + 1]!, runtime: invocation.cwd, authHome: invocation.env.CODEX_HOME, schema: join(invocation.cwd, 'result.schema.json') };
+  const expected = createCodexInvocation(input);
+  const sortedEnvironment = (env: ProviderInvocation['env']) => JSON.stringify(Object.entries(env).sort(([a], [b]) => a.localeCompare(b)));
+  if (JSON.stringify(invocation.args) !== JSON.stringify(expected.args) || sortedEnvironment(invocation.env) !== sortedEnvironment(expected.env)) throw new Error('PROVIDER_UNSAFE');
+  await verifyBinary(input.binary); await privateDirectory(input.runtime); await privateDirectory(input.authHome); await verifyInstallationMetadata(input.authHome);
+  for (const name of ['scratch', 'scratch/home', 'scratch/tmp', 'scratch/config', 'scratch/cache', 'scratch/data', 'scratch/state']) {
+    const directory = join(input.runtime, name); await mkdir(directory, { mode: 0o700, recursive: true }); await privateDirectory(directory);
+  }
+  const schema = await open(input.schema, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+  try {
+    const info = await schema.stat();
+    if (!info.isFile() || info.nlink !== 1 || info.uid !== process.getuid?.() || (info.mode & 0o077) !== 0 || info.size > 64 * 1024) throw new Error('PROVIDER_UNSAFE');
+  } finally { await schema.close(); }
+  const profile = createProviderProfile({ executable: expected.executable, runtime: input.runtime, authHome: input.authHome });
+  return { executable: profile.executable, args: [...profile.args, expected.executable, ...expected.args], cwd: expected.cwd, env: expected.env };
+}
 /** Minimal bounded launcher for qualification; not exposed by CLI/daemon before G0. */
 export async function launchConfinedProvider(input: CodexInvocationInput, stdin: string): Promise<ProviderLaunchResult> {
   if (Buffer.byteLength(stdin) > 2 * 1024 * 1024) return { ok: false, code: 'PROVIDER_CONTEXT_LIMIT' };
   try {
-    const invocation = createCodexInvocation(input);
-    await verifyBinary(input.binary);
-    await privateDirectory(input.runtime); await privateDirectory(input.authHome);
-    await verifyInstallationMetadata(input.authHome);
-    for (const name of ['scratch', 'scratch/home', 'scratch/tmp', 'scratch/config', 'scratch/cache', 'scratch/data', 'scratch/state']) {
-      const directory = join(input.runtime, name); await mkdir(directory, { mode: 0o700, recursive: true }); await privateDirectory(directory);
-    }
-    const schema = await open(input.schema, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
-    try {
-      const info = await schema.stat();
-      if (!info.isFile() || info.nlink !== 1 || info.uid !== process.getuid?.() || (info.mode & 0o077) !== 0 || info.size > 64 * 1024) return { ok: false, code: 'PROVIDER_UNSAFE' };
-    } finally { await schema.close(); }
-    const profile = createProviderProfile({ executable: invocation.executable, runtime: input.runtime, authHome: input.authHome });
+    const invocation = await prepareProviderInvocation(createCodexInvocation(input));
     return await new Promise<ProviderLaunchResult>((resolve) => {
-      const child = spawn(profile.executable, [...profile.args, invocation.executable, ...invocation.args], {
+      const child = spawn(invocation.executable, [...invocation.args], {
         cwd: invocation.cwd, env: invocation.env, shell: false, stdio: ['pipe', 'pipe', 'pipe'],
       });
       const chunks: Buffer[] = []; let bytes = 0; let lineBytes = 0; let stderrBytes = 0; let failure: LaunchCode | undefined;

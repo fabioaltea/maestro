@@ -60,7 +60,7 @@ specs/004-project-discovery/
 src/domain/discovery/{model,intent,state,approval,documents,context-policy}.ts
 src/ports/{discovery,provider,discovery-context,agent-runtime}.ts
 src/core/discovery/{operations,dispatch,read,context,launch,interview,review,recovery,lifecycle}.ts
-src/platform/macos/discovery/{context-reader,context-sources,context-framing,context-main,agent-runtime,agent-host,provider-launcher,provider-profile}.ts
+src/platform/macos/discovery/{context-reader,context-sources,context-framing,context-main,agent-runtime,agent-host,agent-proof,provider-launcher,provider-profile}.ts
 src/platform/macos/discovery/{context,provider}.sb
 src/providers/codex/discovery-result.schema.json
 src/providers/codex/{capabilities,argv,parser,adapter}.ts

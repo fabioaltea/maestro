@@ -88,3 +88,28 @@ Structured Outputs. Il catalogo osservato con questo profilo/modello sintetico
 espone request_user_input, senza shell/apply_patch/MCP/web: nel percorso exec non
 sostituisce QUESTIONS. Il final schema e l’assenza di tool inattesi restano necessari;
 un modello o profilo con superficie differente richiede riqualifica.
+
+### Incremento T018 — host e proof locali
+
+Host Node per-run usa IPC ereditato come lifeline e il transport autenticato
+esistente su endpoint privato. HOST_READY non consente spawn: authorizeStart
+legge SPAWN_AUTHORIZED e proprietario dall’operazione ammessa. Runtime in drain
+nega nuovi launch/GO. Provider riceve soltanto invocation/env chiusi e stdin;
+key/proof/endpoint restano fuori dalla directory runtime leggibile dal provider.
+La produzione usa il preparer Codex pin/argv/env/profilo verificati, senza
+launcher fixture selezionabile da client.
+
+Proof privata v1≤4KiB,0600/nlink1, HMAC su run/generation/PID/esito/exitCode/signal/
+safe error, fsync file+directory prima dell’uscita host. hostExited è derivato
+dall’handle catturato o da assenza OS verificata; non è un’affermazione del file.
+PID riutilizzato senza handle, firma errata o proof assente non provano assenza.
+L’esito della proof riguarda il processo locale: exit0 non valida QUESTIONS/
+DOCUMENT e non approva una revisione; il parser core rimane un gate separato.
+
+Cancel usa il solo handle posseduto nell’host, TERM con grace≤2s e KILL se ancora
+vivo; il controller attende proof entro min(deadline residuo,4s). Perdita canale
+owner attiva cancel-on-owner-loss-v1. La cancellazione dei processi già posseduti
+non dipende dal writer ancora disponibile. I callback validati e le prove
+compatte liberano i riferimenti ai processi/input conclusi, con cap storico
+100Discovery×20turni. Controller proof/key restano privati per la successiva
+riconciliazione; integrazione del loro settlement nel daemon è T033.

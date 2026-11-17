@@ -169,6 +169,11 @@ export class SQLiteStore {
     }] : []) });
   }
   admitDiscoveryOperation(input: DiscoveryAdmission) { this.writable(); return this.discoveryLedger().admit(input); }
+  getDiscoveryRunOwner(runId: string): string | null {
+    requireUuid(runId); if (!this.database || this.archiveVersion !== 4) throw new Error('DISCOVERY_NOT_INITIALIZED');
+    const row = this.database.prepare('SELECT o.owning_instance_id FROM discovery_runs r JOIN discovery_operations o ON o.request_id=r.request_id WHERE r.run_id=?').get(runId) as Row | undefined;
+    return row ? String(row.owning_instance_id) : null;
+  }
   getDiscoveryOperation(requestId: string) {
     const operation = this.discoveryLedger().operation(requestId);
     if (!operation) return null;

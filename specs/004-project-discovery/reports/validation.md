@@ -370,3 +370,45 @@ Il provider fixture termina autonomamente nel caso host SIGKILL: il test richied
 comunque UNKNOWN e non prova che un provider reale termini senza un host vivo.
 Teardown conserva il fixture se i processi non sono verificati assenti.
 Checkbox attesta i test definiti, non una qualifica runtime già ottenuta.
+
+## T018 — host Agent Runtime,2026-11-17
+
+Implementati agent-host/runtime/proof dietro AgentRuntimePort e primitive
+ProcessIdentity/LocalTransport esistenti. Intento processi prima del fork, host
+WAIT_GO e HOST_READY persistito, autorizzazione SPAWN_AUTHORIZED riletta prima
+di GO, poi provider PID/PROVIDER_RUNNING. Proprietario letto dall’operazione
+ammessa con query UUID privata; non rebind a una nuova istanza. Nessun processo
+Agent Runtime in managed_resources Foundation, nessun nuovo daemon/runner/SDK.
+
+Host possiede l’handle provider; output raw8KiB/pagina,1MiBlinea/8MiBrun, stderr
+64KiB drenato mai pubblico. Env/argv produzione chiusi e Native Codex qualificato;
+fixture launcher soltanto seam di constructor trusted. Test senza seam rifiuta
+il provider Node sintetico prima dell’esecuzione. Nessun provider reale invocato
+dal runtime in questa qualifica. Le prove G0 separate usano solo backend locale.
+
+Proof HMAC v1≤4KiB privata, fsync file+directory; assenza host da handle catturato
+o ESRCH, mai dalla sola dichiarazione provider/PID persistito. Cancel TERM≤2s/
+KILL solo handle vivo e deadline≤4s, perdita owner prima/dopo GO, drain senza
+nuovi effetti. Cache compatta bounded libera ChildProcess/input conclusi; stop
+dei processi posseduti funziona anche col writer chiuso. Proof mancante/corrotta,
+gen errata, host morto con provider incerto e PID riutilizzato restano UNKNOWN
+senza rilascio slot. Nessuna cancellazione remota dichiarata verificata.
+
+Prima verifica18test dopo implementazione:18PASS. Un precedente gruppo15test
+aveva14PASS/1FAIL nella fixture ignore-TERM: cancel partiva prima che lo script
+installasse il proprio handler/marker. Fixture ora segnala readiness dopo il
+handler; il caso attende readiness e richiede espressamente SIGKILL nella proof,
+senza allungare i4s. Ultimo gruppo runtime/launcher21/21PASS,13199,10ms. Copre
+anche writer indisponibile, authority owner, fase GO, replay, proof e PID estranei.
+PASS typecheck/lint/build/build:test. G0 esplicito8/8PASS (1884,19ms), nessuna
+qualifica auth/modello reale.
+
+Suite generale `caffeinate -i npm test`:484test,479PASS/0FAIL/5SKIP G0 separati,
+89783,87ms osservati. Nessuna modifica alle soglie Foundation o campagne di
+volume/durata. Campioni002 rigenerati ripristinati ai byte originali.
+
+Checkpoint Foundation004 completato per primitive interne: le storie US1–US4,
+composizione funzionale avvio/intervista/review e recovery daemon T033/G2 restano
+da realizzare. I test di owner loss qui usano veri host/provider fixture e perdita
+dell’IPC; non sostituiscono il futuro SIGKILL del daemon completo. Proof outcome
+locale non equivale a documento valido o approvato. Gate001/002/003 eG1 invariati.

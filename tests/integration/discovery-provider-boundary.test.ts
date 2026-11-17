@@ -14,8 +14,8 @@ import { createDiscoveryInferenceServer } from '../fixtures/discovery-inference-
 const g0 = (name: string, run: (context: TestContext) => Promise<void>) => test(name, {
   skip: process.env.MAESTRO_DISCOVERY_G0 === '1' ? false : 'G0_EXPLICIT_QUALIFICATION_ONLY (npm run test:discovery:boundary)',
 }, run);
-interface Invocation { readonly args: readonly string[]; readonly env: NodeJS.ProcessEnv; readonly cwd: string }
-interface Profile { readonly args: readonly string[] }
+interface Invocation { readonly executable: string; readonly args: readonly string[]; readonly env: NodeJS.ProcessEnv; readonly cwd: string }
+interface Profile { readonly executable: string; readonly args: readonly string[] }
 async function implementation() {
   const argv = await import(new URL('../../src/providers/codex/argv.js', import.meta.url).href) as {
     createCodexInvocation(input: { binary: string; model: string; runtime: string; authHome: string; schema: string }): Invocation;
@@ -95,6 +95,11 @@ g0('G0 real Codex ignores hostile config and exposes no uncontrolled hosted/exec
   await writeFile(fixture.schema, JSON.stringify(schema), { mode: 0o600 });
   const invocation = createCodexInvocation({ binary: PINNED_CODEX, model: 'maestro-fixture', runtime: fixture.runtime, authHome: fixture.authHome, schema: fixture.schema });
   const profile = createProviderProfile({ executable: PINNED_CODEX, runtime: fixture.runtime, authHome: fixture.authHome });
+  const { prepareProviderInvocation } = await import('../../src/platform/macos/discovery/provider-launcher.js');
+  const prepared = await prepareProviderInvocation(invocation);
+  assert.equal(prepared.executable, profile.executable);
+  assert.deepEqual(prepared.args, [...profile.args, PINNED_CODEX, ...invocation.args]);
+  assert.deepEqual(prepared.env, invocation.env);
   // Fixture-only override: fake key/local endpoint, never official account/network.
   const overrides = ['-c', 'model_provider="maestro_fixture"', '-c', 'model_providers.maestro_fixture.name="Maestro Synthetic"',
     '-c', `model_providers.maestro_fixture.base_url="${backend.baseUrl}"`, '-c', 'model_providers.maestro_fixture.wire_api="responses"',

@@ -29,6 +29,7 @@ export interface DiscoveryAdmissionResult { readonly operation: DiscoveryOperati
 export type DiscoveryOperationView = Omit<DiscoveryOperation, 'canonicalIntent' | 'payloadHash'>;
 export interface DiscoveryLedgerStoragePort {
   admitDiscoveryOperation?(input: DiscoveryAdmission): Promise<DiscoveryResult<DiscoveryAdmissionResult>>;
+  getDiscoveryRunOwner?(runId: string): Promise<string | null>;
   getDiscoveryOperation?(requestId: string): Promise<DiscoveryOperationView | null>;
   saveDiscoveryGrant?(grant: DiscoveryGrant): Promise<DiscoveryResult<void>>;
 }

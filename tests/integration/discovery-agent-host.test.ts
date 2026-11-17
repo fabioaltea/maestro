@@ -40,9 +40,10 @@ for (const go of [false, true]) {
 }
 test('cancellation escalates only on the owned provider handle within the existing four-second budget', async t => {
   const f = await agentFixture(t, { mode: 'ignore-term' }), ready = value(await f.launch()); await f.authorize(ready);
+  await waitFor(() => f.stdout.length > 0);
   const started = performance.now(), proof = value(await f.runtime.cancel(ready, agentDeadline()));
   assert.ok(performance.now() - started <= 4000); assert.equal(proof.providerExited, true); assert.equal(proof.hostExited, true);
-  assert.match(await readFile(f.marker, 'utf8'), /provider-term/);
+  assert.match(await readFile(f.marker, 'utf8'), /provider-term/); assert.equal(proof.signal, 'SIGKILL');
 });
 test('tampered proof, wrong generation and an occupied reused PID cannot establish absence', async t => {
   const f = await agentFixture(t, { allowUnknown: true }), ready = value(await f.launch()); await f.authorize(ready); value(await f.runtime.cancel(ready, agentDeadline()));
@@ -80,4 +81,23 @@ test('the real provider OS profile denies the private host key and Unix control 
     assert.equal(await run(probe, [mode!, path!]), 10, 'positive unsandboxed control');
     assert.equal(await run(profile.executable, [...profile.args, probe, mode!, path!]), 0, 'kernel refusal, not absence or malformed endpoint');
   }
+});
+test('owned cancellation and authenticated absence still work after the writer becomes unavailable', async t => {
+  const f = await agentFixture(t), ready = value(await f.launch()); await f.authorize(ready); f.store.close();
+  const proof = value(await f.runtime.cancel(ready, agentDeadline())); assert.equal(proof.hostExited, true); assert.equal(proof.providerExited, true);
+  assert.equal((await f.runtime.stopWithin(agentDeadline())).ok, true);
+  assert.equal(value(await f.runtime.observe(ready)).observation, 'ABSENT');
+});
+test('runtime drain rejects new launches and GO while preserving observation of the completed host', async t => {
+  const f = await agentFixture(t), ready = value(await f.launch()); value(await f.runtime.stopWithin(agentDeadline()));
+  assert.equal((await f.launch()).ok, false); assert.equal((await f.runtime.authorizeStart(ready)).ok, false);
+  assert.equal(value(await f.runtime.observe(ready)).observation, 'ABSENT'); assert.equal(f.hosts.length, 1);
+});
+test('production host cannot use the unconstrained fixture launcher without the trusted constructor seam', async t => {
+  const f = await agentFixture(t), { createAgentRuntime } = await loadRuntime(); const { providerModuleUrl: _fixture, ...options } = f.runtimeOptions;
+  const runtime = createAgentRuntime(options), ready = value(await runtime.launch({ identity: f.identity, invocation: f.invocation, stdin: f.stdin, deadline: agentDeadline() }));
+  value(f.store.commitDiscoveryMetadata({ kind: 'run', value: { ...value(f.store.readDiscoveryMetadata({ kind: 'run', id: f.run.runId })).data!, phase: 'SPAWN_AUTHORIZED' }, expectedPhase: 'HOST_READY', exitVerified: false }));
+  value(await runtime.authorizeStart(ready));
+  await waitFor(() => f.hosts[0]!.exitCode !== null || f.hosts[0]!.signalCode !== null);
+  const proof = value(await runtime.reconcile(ready)); assert.ok(proof); assert.equal(proof.outcome, 'FAILED'); assert.equal(proof.error, 'PROVIDER_UNSAFE'); await assert.rejects(access(f.marker));
 });
