@@ -26,6 +26,8 @@ export function createDiscoveryDispatch(options: { storage: Pick<StoragePort, 'r
         if (!service || snapshot.instance?.lifecycle !== 'RUNNING' || (cancelling ? options.canCancel?.() === false : options.accepting?.() === false)) throw new Error('BLOCKED');
         const result = request.method === 'discovery.prepare' ? await service.prepare(peer, p.intent as DiscoveryIntent)
           : request.method === 'discovery.start' ? await service.startGranted(peer, p as unknown as Parameters<typeof service.startGranted>[1])
+          : request.method === 'discovery.correct' ? await service.correctGranted(peer, p as unknown as Parameters<typeof service.correctGranted>[1])
+          : request.method === 'discovery.approve' ? await service.approveGranted(peer, p as unknown as Parameters<typeof service.approveGranted>[1])
           : request.method === 'discovery.answer' ? await service.answerGranted(peer, p as unknown as Parameters<typeof service.answerGranted>[1])
           : request.method === 'discovery.cancel' ? await service.cancelGranted(peer, p as unknown as Parameters<typeof service.cancelGranted>[1])
           : request.method === 'discovery.provider.configure' ? await service.configureGranted(peer, p as unknown as Parameters<typeof service.configureGranted>[1])
@@ -34,7 +36,7 @@ export function createDiscoveryDispatch(options: { storage: Pick<StoragePort, 'r
           : await service.preview(peer, p as unknown as Parameters<typeof service.preview>[1]);
         if (!result.ok) throw new Error(result.code); data = { ...result.value };
       } else {
-        data = await createDiscoveryReader({ storage: options.storage, storeId: snapshot.store.storeId, offline: false })(request.method, p);
+        data = request.method === 'discovery.eligibility.get' && service ? { ...await service.eligibility(peer, p.projectId as string, p.checkId as string | undefined) } : await createDiscoveryReader({ storage: options.storage, storeId: snapshot.store.storeId, offline: false })(request.method, p);
         if (request.method === 'discovery.provider.get' && service) {
           data = { ...data, check: await service.availability(peer).catch(() => null), requirements: { providerId: 'codex', binaryVersion: CODEX_DISCOVERY_PIN.version,
             binarySha256: CODEX_DISCOVERY_PIN.sha256, policyVersion: CODEX_DISCOVERY_PIN.policyVersion, qualificationDigest: CODEX_DISCOVERY_QUALIFICATION.digest } };

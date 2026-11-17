@@ -23,6 +23,9 @@ maestro discovery show DISCOVERY
 maestro discovery questions DISCOVERY [--limit N --cursor C]
 maestro discovery answer QUESTION --answer-file FILE --grant UUID
 maestro discovery cancel DISCOVERY --grant UUID
+maestro discovery correct DISCOVERY --review-file FILE --grant UUID
+maestro discovery approve DISCOVERY --review-file FILE --grant UUID
+maestro discovery eligibility PROJECT [--check-id UUID]
 maestro discovery output RUN [--limit N --after C]
 maestro discovery document REVISION [--metadata | --after C]
 maestro discovery operation REQUEST
@@ -64,7 +67,7 @@ export async function runDiscoveryCli(args: readonly string[]): Promise<number> 
   let json = args.includes('--json'); let result: PublicResult; let requestId: string | null = null;
   try {
     const { values, positionals } = parseArgs({ args: [...args], strict: true, allowPositionals: true, options: { json: { type: 'boolean' }, help: { type: 'boolean', short: 'h' }, 'state-dir': { type: 'string' }, 'timeout-ms': { type: 'string' }, limit: { type: 'string' }, cursor: { type: 'string' }, after: { type: 'string' }, sources: { type: 'boolean' }, metadata: { type: 'boolean' }, 'check-id': { type: 'string' },
-      'request-id': { type: 'string' }, grant: { type: 'string' }, 'scope-file': { type: 'string' }, 'intent-file': { type: 'string' }, 'answer-file': { type: 'string' }, 'scope-stdin': { type: 'boolean' }, 'intent-stdin': { type: 'boolean' }, 'answer-stdin': { type: 'boolean' },
+      'request-id': { type: 'string' }, grant: { type: 'string' }, 'scope-file': { type: 'string' }, 'intent-file': { type: 'string' }, 'answer-file': { type: 'string' }, 'review-file': { type: 'string' }, 'review-stdin': { type: 'boolean' }, 'scope-stdin': { type: 'boolean' }, 'intent-stdin': { type: 'boolean' }, 'answer-stdin': { type: 'boolean' },
       'expected-revision': { type: 'string' }, 'expected-provider-revision': { type: 'string' }, binary: { type: 'string' }, model: { type: 'string' } } });
     json = values.json ?? false;
     if (values.help) { process.stdout.write(HELP); return 0; }
@@ -82,6 +85,7 @@ export async function runDiscoveryCli(args: readonly string[]): Promise<number> 
     else if (command === 'prepare' && positionals.length === 1) { method = 'discovery.prepare'; params = {}; allowed.add('intent-file'); allowed.add('intent-stdin'); }
     else if (command === 'start' && positionals.length === 2) { method = 'discovery.start'; params = { projectId: positionals[1], grantId: values.grant }; allowed.add('grant'); allowed.add('request-id'); }
     else if (command === 'answer' && positionals.length === 2) { method = 'discovery.answer'; params = { questionId: positionals[1], grantId: values.grant }; for (const key of ['grant', 'request-id', 'answer-file', 'answer-stdin']) allowed.add(key); }
+    else if ((command === 'correct' || command === 'approve') && positionals.length === 2) { method = `discovery.${command}`; params = { discoveryId: positionals[1], grantId: values.grant }; for (const key of ['grant', 'request-id', 'review-file', 'review-stdin']) allowed.add(key); }
     else if (command === 'cancel' && positionals.length === 2) { method = 'discovery.cancel'; params = { discoveryId: positionals[1], grantId: values.grant }; allowed.add('grant'); allowed.add('request-id'); }
     else {
       if (positionals.length !== 2) throw new Error('INVALID_REQUEST');
@@ -96,6 +100,12 @@ export async function runDiscoveryCli(args: readonly string[]): Promise<number> 
     if (allowed.has('request-id')) requestId = requireUuid(values['request-id'] ?? randomUUID());
     if (method === 'discovery.preview') { if (!!values['scope-file'] === !!values['scope-stdin']) throw new Error('INVALID_REQUEST'); params.selectors = values['scope-stdin'] ? await jsonStdin() : await jsonFile(values['scope-file']); }
     if (method === 'discovery.prepare') { if (!!values['intent-file'] === !!values['intent-stdin']) throw new Error('INVALID_REQUEST'); params.intent = JSON.parse(canonicalDiscoveryIntent(values['intent-stdin'] ? await jsonStdin() : await jsonFile(values['intent-file']))); }
+    if (method === 'discovery.correct' || method === 'discovery.approve') {
+      if (!!values['review-file'] === !!values['review-stdin']) throw new Error('INVALID_REQUEST');
+      const body = values['review-stdin'] ? await jsonStdin() : await jsonFile(values['review-file']);
+      const expected = method === 'discovery.correct' ? 'correction' : 'acceptedUnknownIds,bundleDigest,revisionId';
+      if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).sort().join(',') !== expected) throw new Error('INVALID_REQUEST'); Object.assign(params, body);
+    }
     if (method === 'discovery.answer') {
       if (!!values['answer-file'] === !!values['answer-stdin']) throw new Error('INVALID_REQUEST');
       const body = values['answer-stdin'] ? await jsonStdin() : await jsonFile(values['answer-file']);

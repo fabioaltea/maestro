@@ -261,6 +261,24 @@ export function createDiscoveryOperations(options: Options) {
         return { ok: true, value: { accepted: true, requestId: input.requestId } };
       } catch (error) { return uncertain && ['PERSISTENCE_UNAVAILABLE', 'UNKNOWN_OUTCOME', 'DEADLINE_EXCEEDED'].includes(failure(error).code) ? { ok: false, code: 'UNKNOWN_OUTCOME' } : failure(error); }
     },
+    async correctGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; discoveryId: string; correction: string }): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'grantId', 'discoveryId', 'correction']); requireUuid(input.requestId); requireUuid(input.discoveryId); await guard(peer);
+        const grant = await meta({ kind: 'grant', id: input.grantId }); if (!grant) fail('APPROVAL_REQUIRED');
+        const { intent } = await intentFor(peer, grant.canonicalIntent);
+        if (intent.action !== 'correct' || intent.targetId !== input.discoveryId || intent.payload.correction !== input.correction) fail('APPROVAL_REQUIRED');
+        return await this.correct(peer, { requestId: input.requestId, grantId: input.grantId, canonicalIntent: grant.canonicalIntent });
+      } catch (error) { return failure(error); }
+    },
+    async approveGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; discoveryId: string; revisionId: string; bundleDigest: string; acceptedUnknownIds: readonly string[] }): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'grantId', 'discoveryId', 'revisionId', 'bundleDigest', 'acceptedUnknownIds']); requireUuid(input.requestId); requireUuid(input.discoveryId); await guard(peer);
+        const grant = await meta({ kind: 'grant', id: input.grantId }); if (!grant) fail('APPROVAL_REQUIRED');
+        const { intent } = await intentFor(peer, grant.canonicalIntent);
+        if (intent.action !== 'approve' || intent.targetId !== input.discoveryId || intent.payload.revisionId !== input.revisionId || intent.payload.bundleDigest !== input.bundleDigest || JSON.stringify(intent.payload.acceptedUnknownIds) !== JSON.stringify(input.acceptedUnknownIds)) fail('APPROVAL_REQUIRED');
+        return await this.approve(peer, { requestId: input.requestId, grantId: input.grantId, canonicalIntent: grant.canonicalIntent });
+      } catch (error) { return failure(error); }
+    },
     async answerGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; questionId: string; kind: 'ANSWER' | 'UNKNOWN'; text: string }): Promise<DiscoveryResult<DiscoveryAccepted>> {
       try {
         exact(input, ['requestId', 'grantId', 'questionId', 'kind', 'text']); requireUuid(input.requestId); requireUuid(input.questionId); await guard(peer);
