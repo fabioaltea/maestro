@@ -13,6 +13,7 @@ import { requireDiscoveryEnvelope } from '../../protocol/discovery.js';
 import type { CodexInspectionPort, ProviderAvailability, ProviderConfiguration, ProviderPort } from '../../ports/provider.js';
 import { CODEX_DISCOVERY_PIN } from '../../providers/codex/argv.js';
 import { CODEX_DISCOVERY_QUALIFICATION, validCodexModel } from '../../providers/codex/capabilities.js';
+import { createEligibilityChecks } from './eligibility.js';
 import { createDiscoveryReview } from './review.js';
 import { createDiscoveryInterview } from './interview.js';
 import type { AgentProcessIdentity } from '../../ports/agent-runtime.js';
@@ -45,6 +46,7 @@ export function createDiscoveryOperations(options: Options) {
   function job(work: () => Promise<void>) {
     const running = work(); jobs.add(running); void running.finally(() => jobs.delete(running)).catch(() => {});
   }
+  const eligibility = createEligibilityChecks({ job, check: async projectId => { if (!review) fail('DISCOVERY_NOT_INITIALIZED'); return review!.eligibility(projectId); } });
   async function guard(peer: AuthenticatedPeer) {
     if (peer.role !== 'client') fail('UNAUTHORIZED');
     const s = await storage.readSnapshot();
@@ -171,6 +173,18 @@ export function createDiscoveryOperations(options: Options) {
         if (!storage.saveDiscoveryGrant) fail('DISCOVERY_NOT_INITIALIZED');
         const saved = await storage.saveDiscoveryGrant!(grant); if (!saved.ok) fail(saved.code);
         return { ok: true, value: prepared } as const;
+      } catch (error) { return failure(error); }
+    },
+    async eligibility(peer: AuthenticatedPeer, projectId: string, checkId?: string) { await guard(peer); return eligibility(projectId, checkId); },
+    async approve(peer: AuthenticatedPeer, input: DiscoveryCommand): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'grantId', 'canonicalIntent']); const { intent } = await intentFor(peer, input.canonicalIntent);
+        if (intent.action !== 'approve' || !review) fail('INVALID_REQUEST');
+        if (await original(input, 'approve')) return { ok: true, value: { accepted: true, requestId: input.requestId } };
+        const c = await review!.inspect(intent);
+        const admitted = await storage.admitDiscoveryOperation!({ ...admission(input.requestId, input.canonicalIntent, input.grantId), discovery: c.discovery, expectedStateRevision: intent.stateRevision }); if (!admitted.ok) fail(admitted.code);
+        if (admitted.value.inserted) job(async () => { try { await guard(peer); await review!.approve(intent, input.requestId); } catch (error) { await blocked(input.requestId, error); } });
+        return { ok: true, value: { accepted: true, requestId: input.requestId } };
       } catch (error) { return failure(error); }
     },
     async publishDocument(identity: AgentProcessIdentity, result: import('../../domain/discovery/documents.js').DiscoveryDocument) {

@@ -80,9 +80,38 @@ export function createDiscoveryReview(options: Options) {
     const previousRun = d.currentRunId ? await meta({ kind: 'run', id: d.currentRunId }) : null, process = d.currentRunId ? await meta({ kind: 'process', id: d.currentRunId }) : null;
     if (!previousRun || previousRun.phase !== 'FINALIZED' || previousRun.outcome !== 'SUCCEEDED' || process && (process.observation !== 'ABSENT' || process.releaseState !== 'RELEASED')) throw new Error('RESOURCE_IDENTITY_UNKNOWN');
     if (intent.action === 'correct') { requireUuid(intent.payload.correctionId); validateDiscoveryText(intent.payload.correction as string, limits.answerBytes); if (!(intent.payload.correction as string).trim() || previousRun.turnIndex >= limits.turns) throw new Error('DISCOVERY_LIMIT'); }
+    if (intent.action === 'approve') {
+      if (Object.keys(intent.payload).length !== 3 || intent.payload.bundleDigest !== b.revision.bundleDigest || !Array.isArray(intent.payload.acceptedUnknownIds)) throw new Error('APPROVAL_REQUIRED');
+      const required = [...b.unknownIds, ...(await history('questions', d.discoveryId)).filter(q => q.status === 'OPEN').map(q => q.questionId)];
+      const accepted = intent.payload.acceptedUnknownIds;
+      if (new Set(accepted).size !== accepted.length || accepted.some(id => typeof id !== 'string' || !required.includes(id)) || required.some(id => !accepted.includes(id))) throw new Error('APPROVAL_REQUIRED');
+    }
     return { ...b, discovery: d, previousRun };
   }
   return { inspect, fresh, bundle, history, meta, commit,
+    async approve(intent: DiscoveryIntent, requestId: string) {
+      const c = await inspect(intent), current = await fresh(c.discovery);
+      await inspect(intent);
+      const required = [...c.unknownIds, ...(await history('questions', c.discovery.discoveryId)).filter(q => q.status === 'OPEN').map(q => q.questionId)];
+      await commit({ kind: 'approval', expectedRevision: c.discovery.stateRevision, requiredUnknownIds: required,
+        value: { approvalId: randomUUID(), requestId, storeId: c.discovery.storeId, projectId: c.discovery.projectId, discoveryId: c.discovery.discoveryId, revisionId: c.revision.revisionId, bundleDigest: c.revision.bundleDigest,
+          configRevision: c.discovery.configRevision, contextDigest: c.revision.contextDigest, acceptedUnknownIds: intent.payload.acceptedUnknownIds as string[], ownerUid: intent.ownerUid, approvedAt: new Date().toISOString(), checkedAt: current.checkedAt } });
+    },
+    async eligibility(projectId: string): Promise<Omit<import('../../domain/discovery/approval.js').DiscoveryEligibility, 'checkId'>> {
+      const base = { projectId, eligible: false, reason: 'APPROVAL_REQUIRED' as const, revisionId: null, approvalId: null, contextDigest: null, checkedAt: new Date().toISOString(), freshness: 'UNKNOWN' as const };
+      const project = await options.storage.getProject(projectId); if (!project || project.project.removedAt !== null) return { ...base, reason: 'PROJECT_REMOVED' };
+      const records: DiscoveryRecord[] = []; let offset = 0;
+      for (;;) { const p = await meta({ kind: 'discoveries', id: projectId, offset, limit: 20 }); records.push(...p.items); if (records.length > limits.archiveDiscoveries) throw new Error('DISCOVERY_LIMIT'); if (p.nextOffset === null) break; offset = p.nextOffset; }
+      const d = records.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.discoveryId.localeCompare(a.discoveryId))[0];
+      if (!d || d.state !== 'APPROVED' || !d.latestDocumentRevisionId) return { ...base, reason: d?.state === 'STALE' ? 'APPROVAL_STALE' : 'APPROVAL_REQUIRED', revisionId: d?.latestDocumentRevisionId ?? null };
+      const approval = await meta({ kind: 'approval', id: d.latestDocumentRevisionId });
+      if (!approval || approval.projectId !== projectId || approval.storeId !== d.storeId || approval.configRevision !== d.configRevision) return base;
+      try {
+        const current = await fresh(d), b = await bundle(d, d.latestDocumentRevisionId);
+        if (approval.bundleDigest !== b.revision.bundleDigest || approval.contextDigest !== b.revision.contextDigest || approval.revisionId !== d.latestDocumentRevisionId) throw new Error('APPROVAL_STALE');
+        return { ...base, eligible: true, reason: 'CURRENT_APPROVAL', revisionId: b.revision.revisionId, approvalId: approval.approvalId, contextDigest: b.revision.contextDigest, freshness: 'CURRENT', checkedAt: current.checkedAt };
+      } catch (error) { return { ...base, reason: error instanceof Error && ['CONTEXT_CHANGED', 'APPROVAL_STALE', 'PROJECT_REMOVED'].includes(error.message) ? 'APPROVAL_STALE' : 'UNKNOWN', revisionId: d.latestDocumentRevisionId, approvalId: approval.approvalId }; }
+    },
     async continuation(intent: DiscoveryIntent, requestId: string, grantId: string) {
       const c = await inspect(intent);
       const prepared = await prepareDiscoveryLaunch({ requestId, grantId, intent, snapshot: c.snapshot, configuration: c.configuration, contextRequest: c.request,

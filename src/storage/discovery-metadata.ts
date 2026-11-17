@@ -225,8 +225,11 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
           } else if (change.kind === 'approval') {
             exact(change, ['kind', 'value', 'expectedRevision', 'requiredUnknownIds']); const a = change.value, d = current(a.discoveryId, change.expectedRevision); const op = one('discovery_operations', 'request_id', a.requestId);
             if (a.storeId !== identity().store_id || a.ownerUid !== Number(identity().owner_uid) || !op || op.action !== 'approve' || op.phase === 'FINALIZED' || op.outcome !== 'IN_PROGRESS') fail('APPROVAL_REQUIRED');
-            const intent = JSON.parse(String(op.canonical_intent)) as { targetId: string; stateRevision: string; payload: { revisionId?: string; bundleDigest?: string; acceptedUnknownIds?: string[] } };
+            const intent = JSON.parse(String(op.canonical_intent)) as { targetId: string; stateRevision: string; configRevision: string; snapshotId: string; contextDigest: string; providerRevision: string; payload: { revisionId?: string; bundleDigest?: string; acceptedUnknownIds?: string[] } };
             if (intent.targetId !== a.discoveryId || intent.stateRevision !== change.expectedRevision || intent.payload.revisionId !== a.revisionId || intent.payload.bundleDigest !== a.bundleDigest || json(intent.payload.acceptedUnknownIds ?? []) !== json(a.acceptedUnknownIds)) fail('APPROVAL_REQUIRED');
+            const revision = one('discovery_revisions', 'revision_id', a.revisionId), provider = database.prepare('SELECT config_revision FROM discovery_provider WHERE singleton=1').get() as Row | undefined;
+            if (d.state !== 'READY_FOR_REVIEW' || d.latest_document_revision_id !== a.revisionId || d.project_id !== a.projectId || String(d.config_revision) !== a.configRevision || !revision || revision.discovery_id !== a.discoveryId || revision.bundle_digest !== a.bundleDigest || revision.context_digest !== a.contextDigest || revision.snapshot_id !== d.snapshot_id || Number(revision.provenance_validated) !== 1 || revision.status !== 'READY_FOR_REVIEW'
+              || intent.snapshotId !== d.snapshot_id || intent.configRevision !== a.configRevision || intent.contextDigest !== a.contextDigest || intent.providerRevision !== String(d.provider_revision) || String(provider?.config_revision) !== intent.providerRevision) fail('APPROVAL_STALE');
             for (const id of change.requiredUnknownIds) if (!a.acceptedUnknownIds.includes(id)) fail('APPROVAL_REQUIRED');
             const open = database.prepare("SELECT question_id FROM discovery_questions WHERE discovery_id=? AND status='OPEN'").all(a.discoveryId) as Row[];
             if (open.some(q => !a.acceptedUnknownIds.includes(String(q.question_id)))) fail('APPROVAL_REQUIRED');
@@ -235,6 +238,7 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
             database.prepare('INSERT INTO discovery_approvals(approval_id,request_id,revision_id,discovery_id,project_id,config_revision,bundle_digest,context_digest,accepted_unknown_ids,owner_uid,approved_at,checked_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(a.approvalId, a.requestId, a.revisionId, a.discoveryId, a.projectId, a.configRevision, a.bundleDigest, a.contextDigest, json(a.acceptedUnknownIds), a.ownerUid, a.approvedAt, a.checkedAt);
             for (const q of open) database.prepare("UPDATE discovery_questions SET status='UNKNOWN_ACCEPTED' WHERE question_id=?").run(q.question_id);
             changeState(d, 'APPROVED', true, true);
+            database.prepare("UPDATE discovery_operations SET phase='FINALIZED',outcome='SUCCEEDED',completed_at=?,result=? WHERE request_id=?").run(a.approvedAt, json({ revisionId: a.revisionId, approvalId: a.approvalId, discoveryId: a.discoveryId }), a.requestId);
           } else if (change.kind === 'output-truncated') {
             exact(change, ['kind', 'runId', 'generation', 'expectedWatermark']); const r = one('discovery_runs', 'run_id', change.runId);
             if (!r || r.generation !== change.generation || r.phase !== 'PROVIDER_RUNNING' || r.outcome !== 'RUNNING' || String(r.output_watermark) !== change.expectedWatermark) fail('STALE_TARGET');

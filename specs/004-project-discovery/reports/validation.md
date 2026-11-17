@@ -893,3 +893,7 @@ sono US3/US4; gate001/002 e review umana003 restano invariati.
 ### T036 — G2 locale
 
 Host/provider reali di fixture: lifecycle + agent-host + recovery 20/20 PASS (13,62 s). SIGKILL prima/dopo GO conserva RECONCILING, ownership e slot; nessun riavvio automatico o segnale a PID estraneo. Le suite precedenti coprono errori/timeout, risposta persa e cancel. Electron recovery 1/1 PASS (9,1 s): SIGKILL del daemon scratch verificato, start esplicito, stessa Discovery WAITING_USER, domanda/output conservati e repository invariato. Fixture locali, nessuna inferenza reale; G1 resta NOT_RUN.
+
+### T037–T040 — revisioni e approvazione
+
+Test inizialmente RED per API mancanti. Build:test e 7/7 test documenti/revisioni/approval/eligibility PASS (6,38 s). Tre sezioni, cap, riferimenti source/hash/range/citazione/risposte, parent append-only, grant esatto, UNKNOWN espliciti e fingerprint prima di approval. Approval e ricevuta terminale nello stesso commit SQLite; eligibility è una fotografia volatile TTL30s, max4 check globali e1/progetto, senza coda. Nessuna inferenza reale.
