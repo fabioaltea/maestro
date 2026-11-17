@@ -91,3 +91,9 @@ metadata come qualifica di un modello. G0 resta una prova di confinamento, non
 un primo flusso funzionale reale. Il parser positivo è verificato con fixture
 JSONL e con veri host/provider Node locali, senza presentarli come Codex reale.
 G1/account/modello/refresh restano NOT_RUN. Nessuna chiamata ufficiale o token.
+
+## T028/T050 — runner opt-in predisposto,2026-11-17
+
+Disponibili `tests/acceptance/discovery-real-provider.test.ts` e `apps/desktop/tests/e2e/discovery-real-provider.spec.ts`: profilo ufficiale, repository esclusivamente sintetico, UI configure/check/preview/start/interview/correct/approve e riscontro headless. Nessun fallback o login automatico. Guard obbligatori: MAESTRO_DISCOVERY_REAL=1, MAESTRO_DISCOVERY_REAL_CONSENT=synthetic-scratch-readonly, percorso nativo e model ID esatto. Trace/video/screenshot reali disabilitati. Login non disponibile produce NOT_RUN prima dello start.
+
+Utente: “sol 6.1 va bene”; nome scelto, ID esatto/account/login non ancora qualificati. Consenso alla prova reale richiesto separatamente secondo tasks.md; nessuna risposta autorizzativa osservata a questo checkpoint. Esecuzione senza opt-in:0PASS/0FAIL/1SKIP NOT_RUN (48,4 ms). T028 e T050 restano aperti; questa preparazione non costituisce G1 o SC-001 PASS.
