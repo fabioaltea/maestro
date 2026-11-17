@@ -31,7 +31,7 @@ function sorted(value: unknown, depth = 0): unknown {
   if (typeof value === 'string') { validateDiscoveryText(value, DISCOVERY_LIMITS.envelopeBytes); return value; }
   if (typeof value === 'number') return Number.isSafeInteger(value) ? value : invalid();
   if (Array.isArray(value)) {
-    if (value.length > DISCOVERY_LIMITS.files) return invalid();
+    if (value.length > DISCOVERY_LIMITS.claims + DISCOVERY_LIMITS.questions) return invalid();
     return value.map(item => sorted(item, depth + 1));
   }
   if (!object(value) || Object.keys(value).length > 32) return invalid();

@@ -216,6 +216,8 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
           } else if (change.kind === 'revision') {
             exact(change, ['kind', 'value', 'runId', 'generation', 'expectedRevision']); const v = change.value, d = current(v.discoveryId, change.expectedRevision), r = correlate(v.discoveryId, change.runId, change.generation);
             requireUuid(v.revisionId); digest(v.bundleDigest); if (r.phase !== 'EXIT_OBSERVED' || r.outcome !== 'SUCCEEDED' || d.current_run_id !== change.runId || d.snapshot_id !== v.snapshotId || r.context_digest !== v.contextDigest || !v.provenanceValidated || v.status !== 'READY_FOR_REVIEW') fail('APPROVAL_STALE');
+            const project = one('projects', 'project_id', String(d.project_id)), provider = database.prepare('SELECT config_revision FROM discovery_provider WHERE singleton=1').get() as Row | undefined;
+            if (!['RUNNING', 'UPDATING'].includes(String(d.state)) || !project || project.removed_at !== null || String(project.config_revision) !== String(d.config_revision) || String(provider?.config_revision) !== String(d.provider_revision)) fail('APPROVAL_STALE');
             const previous = database.prepare('SELECT revision_id,revision_number FROM discovery_revisions WHERE discovery_id=? ORDER BY revision_number DESC LIMIT 1').get(v.discoveryId) as Row | undefined;
             if (BigInt(v.revisionNumber) !== BigInt(previous?.revision_number ?? 0) + 1n || (previous?.revision_id ?? null) !== v.parentRevisionId) fail('APPROVAL_STALE');
             const artifact = reference(v.artifactId, 'DOCUMENT', v.bundleDigest); if (Number(artifact.allocated_bytes) < v.bytes) fail('ARTIFACT_CORRUPT');

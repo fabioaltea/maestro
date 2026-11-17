@@ -14,7 +14,7 @@ import { createDiscoveryMetadataFixture } from './discovery-metadata.js';
 import { loadContract } from './load-contract.js';
 import { value } from './discovery-artifacts.js';
 export interface AgentRuntimeOptions {
-  readonly paths: ArchivePaths; readonly instanceId: string; readonly storage: object; readonly providerModuleUrl?: string;
+  readonly paths: ArchivePaths; readonly instanceId: string; readonly storage: object; readonly providerModuleUrl?: string; readonly runTimeoutMs?: number;
   readonly observeHost?: (child: ChildProcess) => void; readonly processIdentity?: Pick<ProcessIdentity, 'probeAbsent'>;
   readonly onStdout?: (identity: AgentProcessIdentity, bytes: Uint8Array) => Promise<void>;
 }
@@ -23,7 +23,7 @@ export const agentDeadline = (ms = 4000) => makeDeadline(systemClock, ms);
 export async function waitFor(check: () => Promise<boolean> | boolean, ms = 2000) {
   const until = performance.now() + ms; while (!await check()) { if (performance.now() >= until) assert.fail('OWNED_FIXTURE_WAIT_EXPIRED'); await new Promise(resolve => setTimeout(resolve, 10)); }
 }
-export async function agentFixture(t: TestContext, options: { mode?: string; lifetime?: number; allowUnknown?: boolean } = {}) {
+export async function agentFixture(t: TestContext, options: { mode?: string; lifetime?: number; runTimeoutMs?: number; allowUnknown?: boolean } = {}) {
   const { createAgentRuntime } = await loadRuntime();
   let runtime: AgentRuntimePort | undefined, paths: ArchivePaths | undefined, safeToClean = false;
   const hosts: ChildProcess[] = [], providers = new Set<number>();
@@ -50,6 +50,7 @@ export async function agentFixture(t: TestContext, options: { mode?: string; lif
   const stdout: string[] = [];
   const runtimeOptions: AgentRuntimeOptions = { paths, instanceId: f.instanceId, storage: f.store, providerModuleUrl: new URL('./discovery-agent-launcher.js', import.meta.url).href,
     observeHost: child => { hosts.push(child); child.on('message', (message: unknown) => { if (message && typeof message === 'object' && 'kind' in message && message.kind === 'agent.provider.started' && 'providerPid' in message && typeof message.providerPid === 'number') providers.add(message.providerPid); }); },
+    ...(options.runTimeoutMs ? { runTimeoutMs: options.runTimeoutMs } : {}),
     onStdout: async (_identity, bytes) => { stdout.push(Buffer.from(bytes).toString()); } };
   runtime = createAgentRuntime(runtimeOptions);
   const launch = () => runtime!.launch({ identity, invocation, stdin, deadline: agentDeadline() });

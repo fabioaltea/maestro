@@ -22,6 +22,8 @@ export interface AgentRuntimeOptions {
   readonly storage: Pick<StoragePort, 'readDiscoveryMetadata' | 'commitDiscoveryMetadata' | 'readSnapshot' | 'getDiscoveryRunOwner'>;
   /** Trusted composition seam, absent from production and from every public DTO. */
   readonly providerModuleUrl?: string;
+  /** Trusted test seam may shorten, never enlarge, the run budget. */
+  readonly runTimeoutMs?: number;
   readonly observeHost?: (child: ChildProcess) => void;
   readonly processIdentity?: Pick<ProcessIdentity, 'probeAbsent'>;
   readonly onStdout?: (identity: AgentProcessIdentity, bytes: Uint8Array) => Promise<void>;
@@ -34,6 +36,8 @@ function fail(code: string): never { throw new Error(code); }
 const inside = (root: string, path: string) => { const suffix = relative(root, path); return suffix === '' || !isAbsolute(suffix) && suffix !== '..' && !suffix.startsWith('../'); };
 function error(error: unknown): { readonly ok: false; readonly code: import('../../../domain/discovery/model.js').DiscoveryFailure } { return { ok: false, code: error instanceof Error && isDiscoveryFailure(error.message) ? error.message : 'RESOURCE_IDENTITY_UNKNOWN' }; }
 export function createAgentRuntime(options: AgentRuntimeOptions): AgentRuntimePort {
+  const runTimeoutMs = options.runTimeoutMs ?? limits.runMs;
+  if (!Number.isSafeInteger(runTimeoutMs) || runTimeoutMs < 1 || runTimeoutMs > limits.runMs) throw new Error('INVALID_REQUEST');
   let draining = false;
   const settled = new Map<string, { identity: AgentProcessIdentity; proof: AgentExitProof; fingerprint: string }>();
   const owned = new Map<string, OwnedHost>(), paths = options.paths, storage = options.storage;
@@ -148,7 +152,7 @@ export function createAgentRuntime(options: AgentRuntimeOptions): AgentRuntimePo
         // the captured host plus authenticated provider proof is still required.
         child.once('exit', finalize); child.once('close', finalize);
         await commit({ kind: 'process', value: own.identity });
-        const bootstrap: AgentBootstrap = { kind: 'agent.bootstrap', identity: own.identity, invocation, stdin: input.stdin, timeoutMs: limits.runMs, ...(options.providerModuleUrl ? { providerModuleUrl: options.providerModuleUrl } : {}) };
+        const bootstrap: AgentBootstrap = { kind: 'agent.bootstrap', identity: own.identity, invocation, stdin: input.stdin, timeoutMs: runTimeoutMs, ...(options.providerModuleUrl ? { providerModuleUrl: options.providerModuleUrl } : {}) };
         child.send(bootstrap, error => { if (error) readyReject(new Error('PROVIDER_UNAVAILABLE')); });
         let timer: ReturnType<typeof setTimeout> | undefined;
         try { await Promise.race([ready, new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new Error('DEADLINE_EXCEEDED')), Math.min(1500, input.deadline.remainingMs())); })]); }

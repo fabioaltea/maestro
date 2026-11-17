@@ -27,3 +27,11 @@ test('answer/cancel schemas are scoped and reply text travels only on a private 
   assert.ok(!JSON.stringify(buildCliArgs(command)).includes(params.text)); assert.deepEqual(JSON.parse(discoveryCliInput(command)!), { kind: 'ANSWER', text: params.text });
   assert.ok(buildCliArgs({ namespace: 'discovery', action: 'cancel', archive: '/owned/archive', requestId, params: { discoveryId, grantId } }).includes('cancel'));
 });
+test('correction and approval bodies stay off argv and require exact review fields', () => {
+  const correction = 'SYNTHETIC_PRIVATE_CORRECTION_7c1277', requestId = randomUUID(), discoveryId = randomUUID(), grantId = randomUUID();
+  const command = { namespace: 'discovery' as const, action: 'correct', archive: '/owned/archive', requestId, params: { discoveryId, grantId, correction } };
+  assert.ok(!JSON.stringify(buildCliArgs(command)).includes(correction)); assert.deepEqual(JSON.parse(discoveryCliInput(command)!), { correction });
+  const approve = { ...command, action: 'approve', params: { discoveryId, grantId, revisionId: randomUUID(), bundleDigest: 'b'.repeat(64), acceptedUnknownIds: ['purpose-and-features:0'] } };
+  assert.ok(!JSON.stringify(buildCliArgs(approve)).includes('purpose-and-features:0')); assert.deepEqual(JSON.parse(discoveryCliInput(approve)!).acceptedUnknownIds, ['purpose-and-features:0']);
+  assert.throws(() => validateRequest('prepareDiscoveryAction', { bridgeVersion: 1, callId: randomUUID(), selectionEpoch: 1, action: 'discovery.approve', params: { ...approve.params, approved: true } }));
+});
