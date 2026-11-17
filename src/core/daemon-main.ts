@@ -1,3 +1,4 @@
+import { createDiscoveryDispatch, DISCOVERY_METHODS } from './discovery/dispatch.js';
 import { EventStreamError } from '../protocol/event-cursor.js';
 import { createLiveEvents } from './live-events.js';
 import { diagnosticsData, readEventPage } from './diagnostics.js';
@@ -79,7 +80,8 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
         });
       } });
     const inspection = await createGitRunner().capabilities();
-    const capabilities = { projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
+    const capabilities = { discoveryVersion: 1, discoveryMethods: DISCOVERY_METHODS, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
+    const discoveryDispatch = createDiscoveryDispatch({ storage });
     const projectDispatch = createProjectDispatch({ operations: projects, storage });
     let draining = false;
     let deniedCount = 0, lastDeniedAudit = -Infinity;
@@ -107,6 +109,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     }, async (request, peer) => {
       if (volatileError) {
         const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
+        if (request.method === 'discovery.operation.get' && lastSnapshot) return discoveryDispatch(request, peer, lastSnapshot);
         if (request.method === 'projects.operation.get' && lastSnapshot) return projectDispatch(request, peer, lastSnapshot);
         if (request.method !== 'status.get') return { ...base, result: 'BLOCKED', data: { code: 'PERSISTENCE_UNAVAILABLE' } };
         return { ...base, result: 'OK', data: { storeId: lastSnapshot?.store.storeId, instanceId: intent.instanceId,
@@ -130,6 +133,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
           .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
             kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState })) : [],
       } };
+      if (request.method.startsWith('discovery.')) return discoveryDispatch(request, peer, snapshot);
       if (request.method.startsWith('projects.')) return projectDispatch(request, peer, snapshot);
       if (request.method === 'diagnostics.get' || request.method === 'events.list') {
         try {

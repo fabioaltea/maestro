@@ -81,7 +81,7 @@ test('writer worker publishes and pages bytes; readonly worker never creates or 
   } finally { await writer.close(); }
   const reader = await openStorage({ path: f.path, readonly: true });
   try {
-    assert.deepEqual(Buffer.from(value(await reader.readDiscoveryArtifact!(id, 0, 8192)).bytes), body);
+    const page = value(await reader.readDiscoveryArtifact!(id, 0, 8192)); assert.ok(page.bytes instanceof Uint8Array); assert.equal(page.bytes.byteLength, body.length); assert.deepEqual(Buffer.from(page.bytes), body);
     await assert.rejects(reader.reserveDiscoveryArtifact!('OUTPUT', 12), /UNAUTHORIZED/);
     await assert.rejects(reader.reconcileDiscoveryArtifacts!(), /UNAUTHORIZED/);
   } finally { await reader.close(); }

@@ -1,3 +1,4 @@
+import { DISCOVERY_READ_METHODS, validateDiscoveryParams, decodeDiscoveryOperationView, requireDiscoveryEnvelope } from '../protocol/discovery.js';
 import { randomUUID } from 'node:crypto';
 import type { ClientBackend } from '../ports/platform.js';
 import type { PublicResult } from '../protocol/messages.js';
@@ -16,6 +17,22 @@ export interface CommandOptions {
 
 export class LocalClient {
   constructor(private readonly backend: ClientBackend) {}
+  async runDiscovery(method: string, params: Readonly<Record<string, unknown>>, options: CommandOptions = {}): Promise<PublicResult> {
+    const directory = options.stateDirectory ?? this.backend.defaultDirectory;
+    validateDiscoveryParams(method, params);
+    if (!DISCOVERY_READ_METHODS.includes(method as typeof DISCOVERY_READ_METHODS[number]) && method !== 'discovery.eligibility.get') throw new Error('UNSUPPORTED_VERSION');
+    if (!this.backend.discovery) throw new Error('UNSUPPORTED_VERSION');
+    const timeout = options.timeoutMs ?? 2000;
+    if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 30000) throw new Error('INVALID_REQUEST');
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const expired = new Promise<PublicResult>(resolve => { timer = setTimeout(() => resolve({ protocolVersion: 1, requestId: method === 'discovery.operation.get' ? params.requestId as string : null,
+      storeId: null, instanceId: null, result: 'ERROR', outcome: null, freshness: 'LAST_KNOWN', liveness: 'UNKNOWN', data: {}, error: foundationError('DEADLINE_EXCEEDED') }), timeout); });
+    try {
+      const result = await Promise.race([this.backend.discovery(directory, method, params, timeout), expired]); requireDiscoveryEnvelope(result);
+      if (result.data.operation !== undefined) decodeDiscoveryOperationView(result.data.operation);
+      return result;
+    } finally { clearTimeout(timer); }
+  }
   async runProject(command: 'register' | 'list' | 'get' | 'verify' | 'update' | 'remove' | 'operation',
     params: Readonly<Record<string, unknown>>, options: CommandOptions = {}): Promise<PublicResult> {
     const method = command === 'operation' ? 'projects.operation.get' : `projects.${command}`;

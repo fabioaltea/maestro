@@ -234,5 +234,110 @@ export const CORE_ERRORS = {
     "code": "INTERNAL_ERROR",
     "message": "Errore interno non classificato.",
     "nextAction": "Consultare la diagnostica redatta e preservare lo stato."
+  },
+  "APPROVAL_REQUIRED": {
+    "code": "APPROVAL_REQUIRED",
+    "message": "Approvazione esplicita richiesta.",
+    "nextAction": "Preparare e confermare lo scope corrente prima di inviare."
+  },
+  "APPROVAL_STALE": {
+    "code": "APPROVAL_STALE",
+    "message": "Approvazione non più valida per questo intento.",
+    "nextAction": "Rileggere revisioni e contesto, poi confermare un nuovo intento."
+  },
+  "ANSWER_CONFLICT": {
+    "code": "ANSWER_CONFLICT",
+    "message": "Risposta o revisione domanda non più corrente.",
+    "nextAction": "Rileggere la domanda e conservare la risposta già registrata."
+  },
+  "CHECK_EXPIRED": {
+    "code": "CHECK_EXPIRED",
+    "message": "Controllo di idoneità scaduto o non disponibile.",
+    "nextAction": "Richiedere intenzionalmente un nuovo controllo locale."
+  },
+  "ARTIFACT_CORRUPT": {
+    "code": "ARTIFACT_CORRUPT",
+    "message": "Integrità dell’artefatto non verificabile.",
+    "nextAction": "Preservare i file e verificare lo stato senza riparazioni automatiche."
+  },
+  "CONTEXT_CHANGED": {
+    "code": "CONTEXT_CHANGED",
+    "message": "Il contesto autorizzato è cambiato.",
+    "nextAction": "Creare una nuova anteprima e confermare il nuovo scope."
+  },
+  "CONTEXT_UNSTABLE": {
+    "code": "CONTEXT_UNSTABLE",
+    "message": "Il contesto è cambiato durante la raccolta.",
+    "nextAction": "Ripetere la preparazione quando i file sono stabili."
+  },
+  "CONTEXT_LIMIT": {
+    "code": "CONTEXT_LIMIT",
+    "message": "Il contesto supera i limiti di raccolta o trasporto.",
+    "nextAction": "Ridurre lo scope senza assumere una raccolta completa."
+  },
+  "SOURCE_EXCLUDED": {
+    "code": "SOURCE_EXCLUDED",
+    "message": "La selezione contiene una fonte esclusa.",
+    "nextAction": "Selezionare file consentiti senza ampliare i permessi."
+  },
+  "DISCOVERY_BUSY": {
+    "code": "DISCOVERY_BUSY",
+    "message": "Una Discovery occupa già lo slot locale.",
+    "nextAction": "Interrogare la Discovery corrente prima di un nuovo avvio."
+  },
+  "DISCOVERY_LIMIT": {
+    "code": "DISCOVERY_LIMIT",
+    "message": "Limite locale Discovery raggiunto.",
+    "nextAction": "Consultare quota e stato; nessun risultato viene eliminato automaticamente."
+  },
+  "PROVIDER_NOT_CONFIGURED": {
+    "code": "PROVIDER_NOT_CONFIGURED",
+    "message": "Provider non configurato.",
+    "nextAction": "Configurare esplicitamente il provider supportato."
+  },
+  "PROVIDER_AUTH_REQUIRED": {
+    "code": "PROVIDER_AUTH_REQUIRED",
+    "message": "Login ufficiale del provider richiesto.",
+    "nextAction": "Eseguire il login ufficiale nel profilo dedicato e verificarlo."
+  },
+  "PROVIDER_UNSUPPORTED": {
+    "code": "PROVIDER_UNSUPPORTED",
+    "message": "Capacità o versione provider non supportata.",
+    "nextAction": "Usare un binario e un profilo qualificati."
+  },
+  "PROVIDER_UNSAFE": {
+    "code": "PROVIDER_UNSAFE",
+    "message": "Confinamento o configurazione provider non qualificati.",
+    "nextAction": "Correggere il prerequisito senza allentare il profilo."
+  },
+  "PROVIDER_UNAVAILABLE": {
+    "code": "PROVIDER_UNAVAILABLE",
+    "message": "Provider non disponibile.",
+    "nextAction": "Verificare il provider prima di un nuovo intento esplicito."
+  },
+  "PROVIDER_QUOTA": {
+    "code": "PROVIDER_QUOTA",
+    "message": "Quota del provider non disponibile per questa esecuzione.",
+    "nextAction": "Verificare lo stato del proprio account senza retry automatici."
+  },
+  "PROVIDER_PROTOCOL_ERROR": {
+    "code": "PROVIDER_PROTOCOL_ERROR",
+    "message": "Risposta provider non conforme.",
+    "nextAction": "Consultare il codice safe e conservare l’output parziale."
+  },
+  "PROVIDER_OUTPUT_LIMIT": {
+    "code": "PROVIDER_OUTPUT_LIMIT",
+    "message": "Output provider oltre il limite.",
+    "nextAction": "Conservare l’output parziale e rivedere lo scope prima di un nuovo intento."
+  },
+  "PROVIDER_CONTEXT_LIMIT": {
+    "code": "PROVIDER_CONTEXT_LIMIT",
+    "message": "Input oltre la capacità del profilo provider.",
+    "nextAction": "Ridurre lo scope o configurare un modello qualificato con capacità adeguata."
+  },
+  "DISCOVERY_NOT_INITIALIZED": {
+    "code": "DISCOVERY_NOT_INITIALIZED",
+    "message": "Discovery non inizializzata.",
+    "nextAction": "Eseguire daemon start esplicito per aggiornare lo schema."
   }
 } as const;

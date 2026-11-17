@@ -2,6 +2,21 @@
 
 Estende lo stesso trasporto autenticato del daemon e PublicResult protocolVersion1. Nessun nuovo endpoint HTTP o servizio. Campo capability `discoveryVersion:1` e metodi disponibili in daemon status; vecchio core/UI o schema<4 → funzionalità non disponibile, niente fallback fittizio.
 
+## Disponibilità incrementale T016
+
+Implementate e pubblicate nelle capability soltanto le letture provider.get,
+preview.get, list, get, questions.list, output.list, document.get e operation.get.
+La tabella seguente descrive il contratto completo, che verrà completato dai task
+successivi. Provider.get restituisce configurazione pubblica e check=null finché
+manca il servizio di verifica; non deduce login o capacità dal record persistito.
+Eligibility offline restituisce false/UNKNOWN senza creare check.
+
+Preview.get con `{snapshotId,sources:true,limit?,cursor?}` legge una pagina fonti
+senza trasferire corpus o path privati. Document.get con `{revisionId}` legge
+metadata/approval storica; `{revisionId,content:true,cursor?}` legge un chunk raw8KiB
+in base64. La CLI document usa contenuti per default, `--metadata` per i soli
+metadata. Preview show usa `--sources` per la pagina fonti.
+
 ## CLI e metodi
 
 Ogni comando usa `--state-dir ABS --json`. Mutazioni con `--request-id UUID`; query operation usa UUID originale. Gli esempi sono comandi futuri, non eseguiti nel planning.

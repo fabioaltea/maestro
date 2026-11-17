@@ -91,6 +91,7 @@ export interface LocalTransport {
 import type { PublicResult } from '../protocol/messages.js';
 
 export interface ClientBackend {
+  discovery?(directory: string, method: string, params: Readonly<Record<string, unknown>>, timeoutMs: number): Promise<PublicResult>;
   project?(directory: string, method: string, params: Readonly<Record<string, unknown>>, timeoutMs: number): Promise<PublicResult>;
   readonly defaultDirectory: string;
   follow(directory: string, consume: (frame: import('../protocol/messages.js').StreamEventFrame) => Promise<void>, signal?: AbortSignal, timeoutMs?: number, after?: import('../protocol/event-cursor.js').EventCursor): Promise<EventSubscription>;

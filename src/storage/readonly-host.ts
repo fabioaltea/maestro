@@ -65,12 +65,17 @@ export async function openReadonlyStorage(options: StorageOptions): Promise<Stor
   catch (error) { clearTimeout(readyTimer); if (!exited) child.kill('SIGKILL'); await exit; initial.release(); throw error; }
   let serialized = Promise.resolve();
   function perform<T>(method: Method, args: unknown[]): Promise<T> {
+    if (method.includes('Discovery') && !['readDiscoveryMetadata', 'getDiscoveryOperation', 'readDiscoveryArtifact', 'readDiscoveryManifestPage', 'getDiscoveryBudget'].includes(method)) return Promise.reject(new Error('UNAUTHORIZED'));
     if (exited || closing || failed) return Promise.reject(new Error(failed?.code ?? 'PERSISTENCE_UNAVAILABLE'));
     const id = ++nextId;
     const reservation = method === 'close' ? { quiescent: false, release() {} } : reserveReadonlyObservation(options.path);
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => { reject(new Error('DEADLINE_EXCEEDED')); child.kill('SIGKILL'); }, 2_100);
-      requests.set(id, { resolve: value => resolve(value as T), reject, timer, release: reservation.release });
+      requests.set(id, { resolve: value => {
+        const encoded = JSON.stringify(value);
+        if (method.includes('Discovery') && (!encoded || Buffer.byteLength(encoded) > 32 * 1024)) { reject(new Error('CONTEXT_LIMIT')); return; }
+        resolve(value as T);
+      }, reject, timer, release: reservation.release });
       child.stdin.write(JSON.stringify({ id, method, args, quiescent: reservation.quiescent }) + '\n');
     });
   }

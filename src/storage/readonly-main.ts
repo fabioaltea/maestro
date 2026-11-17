@@ -31,11 +31,16 @@ process.stdin.on('data', (chunk: Buffer) => {
       id = request.id;
       if (!Number.isSafeInteger(id) || !methods.includes(request.method!) || !Array.isArray(request.args)) throw new Error('INVALID_REQUEST');
       if (request.method === 'close') { send({ id }); process.stdin.destroy(); return; }
+      if (request.method!.includes('Discovery') && !['readDiscoveryMetadata', 'getDiscoveryOperation', 'readDiscoveryArtifact', 'readDiscoveryManifestPage', 'getDiscoveryBudget'].includes(request.method!)) throw new Error('UNAUTHORIZED');
       let value: unknown;
       try {
         store = new SQLiteStore({ ...options, readonlyQuiescent: request.quiescent === true });
         value = Reflect.apply(store[request.method!], store, request.args);
       } finally { store?.close(); store = undefined; }
+      if (request.method === 'readDiscoveryArtifact' && value && typeof value === 'object' && 'ok' in value && value.ok === true && 'value' in value) {
+        const artifact = value.value as { bytes: Uint8Array; sha256: string; totalBytes: number };
+        value = { ok: true, value: { ...artifact, bytes: { encoding: 'base64', data: Buffer.from(artifact.bytes).toString('base64') } } };
+      }
       send({ id, value });
     } catch (error) {
       const failure = classifyStorageFailure(error);

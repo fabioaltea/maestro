@@ -56,7 +56,7 @@ test('question pages fit the encoded envelope and cursors bind store, target and
   await assert.rejects(read('discovery.questions.list', { discoveryId: randomUUID(), cursor: page.nextCursor }), /INVALID_REQUEST/);
   const next = await read('discovery.questions.list', { discoveryId: f.discovery.discoveryId, cursor: page.nextCursor });
   assert.notDeepEqual(next.items, page.items);
-  value(f.store.commitDiscoveryMetadata({ kind: 'state', discoveryId: f.discovery.discoveryId, expectedRevision: '2', next: 'CANCELLING', exitVerified: false }));
+  value(f.store.commitDiscoveryMetadata({ kind: 'state', discoveryId: f.discovery.discoveryId, expectedRevision: '2', next: 'CANCELLED', exitVerified: false }));
   await assert.rejects(read('discovery.questions.list', { discoveryId: f.discovery.discoveryId, cursor: page.nextCursor }), /CURSOR_EXPIRED|REVISION_CONFLICT/);
 });
 test('all Discovery failures have static public messages and next actions', async () => {
@@ -76,6 +76,29 @@ test('document bytes use hash-validated 8KiB pages and an encoded envelope below
   const read = createDiscoveryReader({ storage: f.store, storeId: f.storeId, offline: false }), page = await read('discovery.document.get', { revisionId, content: true });
   const chunk = page.chunk as { data: string; byteLength: number; sha256: string };
   assert.equal(chunk.byteLength, 8192); assert.equal(chunk.sha256, published.sha256); assert.deepEqual(Buffer.from(chunk.data, 'base64'), body.subarray(0, 8192)); assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 32768);
+  const { inspectDiscovery } = await import('../../src/core/inspect-main.js');
+  const offline = await inspectDiscovery(f.directory, 'discovery.document.get', { revisionId, content: true });
+  assert.equal(offline.result, 'OK'); assert.equal((offline.data.chunk as { byteLength: number }).byteLength, 8192); assert.equal(typeof offline.data.nextCursor, 'string');
   await writeFile(join(root, 'objects', published.artifactId), Buffer.alloc(body.length, 120));
   await assert.rejects(read('discovery.document.get', { revisionId, content: true, cursor: page.nextCursor }), /ARTIFACT_CORRUPT/);
+});
+test('Discovery dispatch rejects non-client roles and unimplemented actions before reading private metadata', async t => {
+  const { createDiscoveryDispatch, DISCOVERY_METHODS } = await import('../../src/core/discovery/dispatch.js');
+  const f = await createDiscoveryMetadataFixture(t), dispatch = createDiscoveryDispatch({ storage: {
+    readDiscoveryMetadata: async q => f.store.readDiscoveryMetadata(q), getDiscoveryOperation: async id => f.store.getDiscoveryOperation(id),
+    readDiscoveryArtifact: async (id, offset, max) => f.store.readDiscoveryArtifact(id, offset, max), readDiscoveryManifestPage: async (id, offset, limit) => f.store.readDiscoveryManifestPage(id, offset, limit), getProject: async id => f.store.getProject(id),
+  } });
+  const request = { protocolVersion: 1 as const, correlationId: randomUUID(), method: 'discovery.get', params: { discoveryId: f.discovery.discoveryId } }, peer = { role: 'client' as const, identity: f.instanceId, credentialId: 'owned-fixture' };
+  const unauthorized = await dispatch(request, { ...peer, role: 'controller' }, f.store.readSnapshot()!); assert.equal((unauthorized.data as { code: string }).code, 'UNAUTHORIZED');
+  const ok = await dispatch(request, peer, f.store.readSnapshot()!); assert.equal(ok.result, 'OK'); assert.ok(Buffer.byteLength(JSON.stringify(ok)) <= 32768);
+  assert.equal(DISCOVERY_METHODS.includes('discovery.start'), false);
+  const unsupported = await dispatch({ ...request, method: 'discovery.start', params: { discoveryId: f.discovery.discoveryId, approved: true } }, peer, f.store.readSnapshot()!); assert.equal((unsupported.data as { code: string }).code, 'UNSUPPORTED_VERSION');
+});
+test('Discovery journal increments carry only metadata accepted by the current desktop decoder', async t => {
+  const f = await createDiscoveryMetadataFixture(t); let current = f.run;
+  for (const phase of ['HOST_READY', 'SPAWN_AUTHORIZED', 'PROVIDER_RUNNING'] as const) { const next = { ...current, phase }; f.commit({ kind: 'run', value: next, expectedPhase: current.phase, exitVerified: false }); current = next; }
+  f.commit({ kind: 'output', generation: f.run.generation, expectedWatermark: '0', value: { runId: f.run.runId, seq: '1', artifactId: f.artifact('OUTPUT'), sha256: 'a'.repeat(64), bytes: 12, kind: 'PROGRESS', createdAt: f.at, truncated: false } });
+  const module = await import(new URL('../../../apps/desktop/src/shared/activity-contract.ts', import.meta.url).href) as { decodeUiEvent(value: unknown, storeId: string): unknown };
+  const event = f.store.listEvents().records.find(entry => entry.type === 'discovery.output.available'); assert.ok(event); assert.equal(event.payload.watermark, '1'); assert.equal(event.payload.runId, f.run.runId);
+  assert.doesNotThrow(() => module.decodeUiEvent(event, f.storeId)); assert.doesNotMatch(JSON.stringify(event), /artifactId|credentialRef|canonicalIntent|corpus|prompt/);
 });

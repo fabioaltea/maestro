@@ -167,3 +167,28 @@ if (isEntrypoint(import.meta.url)) {
     : await inspectArchive(request.canonicalStateDir);
   process.stdout.write(JSON.stringify(result) + '\n');
 }
+
+/** Historical Discovery queries never construct an extractor or a provider adapter. */
+export async function inspectDiscovery(directory: string, method: string, params: Readonly<Record<string, unknown>>): Promise<PublicResult> {
+  const { validateDiscoveryParams } = await import('../protocol/discovery.js');
+  const { createDiscoveryReader } = await import('./discovery/read.js');
+  let storage: Awaited<ReturnType<typeof openStorage>> | undefined;
+  let snapshot: import('../ports/storage.js').StoreSnapshot | null = null;
+  const base = (): PublicResult => ({ protocolVersion: 1, requestId: method === 'discovery.operation.get' && typeof params.requestId === 'string' ? params.requestId : null,
+    storeId: snapshot?.store.storeId ?? null, instanceId: snapshot?.instance?.instanceId ?? null, result: 'OK', outcome: null,
+    freshness: 'LAST_KNOWN', liveness: snapshot?.instance?.lifecycle === 'STOPPED' ? 'ABSENT_VERIFIED' : 'UNKNOWN', data: {}, error: null });
+  try {
+    validateDiscoveryParams(method, params);
+    const paths = await createPlatformPaths().resolveArchive(directory, 'read'); if (!paths) throw new Error('STATE_ABSENT');
+    storage = await openStorage({ path: paths.stateFile, readonly: true }); snapshot = await storage.readSnapshot(); if (!snapshot) throw new Error('STATE_ABSENT');
+    if (snapshot.store.schemaVersion !== 4) throw new Error('DISCOVERY_NOT_INITIALIZED');
+    const data = await createDiscoveryReader({ storage, storeId: snapshot.store.storeId, offline: true })(method, params);
+    const operation = data.operation as { outcome?: string; error?: PublicResult['error'] } | undefined;
+    const result: PublicResult['result'] = operation?.outcome === 'IN_PROGRESS' ? 'BUSY' : operation?.outcome === 'UNKNOWN' ? 'UNKNOWN_OUTCOME' : operation?.outcome === 'BLOCKED' ? 'BLOCKED' : operation?.outcome === 'FAILED' || operation?.outcome === 'INTERRUPTED' ? 'ERROR' : 'OK';
+    const outcome = operation?.outcome && operation.outcome !== 'UNKNOWN' ? operation.outcome as PublicResult['outcome'] : null;
+    return { ...base(), result, outcome, data, error: operation?.error ?? null };
+  } catch (error) {
+    const code = (await import('./control-main.js')).classifyError(error);
+    return { ...base(), result: foundationError(code).category === 'SAFETY' ? 'BLOCKED' : 'ERROR', error: foundationError(code) };
+  } finally { await storage?.close(); }
+}

@@ -1,7 +1,8 @@
+import { DISCOVERY_READ_METHODS } from './discovery.js';
 export const MAX_FRAME_BYTES = 64 * 1024;
 export const HANDSHAKE_TIMEOUT_MS = 1_000;
 export const MAX_CLIENT_BUFFER_BYTES = 1024 * 1024;
-export const METHODS = ['status.get', 'diagnostics.get', 'operation.get', 'events.list',
+export const METHODS = [...DISCOVERY_READ_METHODS, 'status.get', 'diagnostics.get', 'operation.get', 'events.list',
   'events.subscribe', 'subscription.close', 'internal.prepareStop', 'internal.readiness',
   'projects.register', 'projects.list', 'projects.get', 'projects.verify', 'projects.update', 'projects.remove', 'projects.operation.get'] as const;
 
@@ -39,7 +40,7 @@ export interface PublicResult {
 export const MAX_EVENT_BYTES = 16 * 1024;
 export const MAX_OUTBOX_BYTES = 64 * 1024;
 export const MAX_EVENT_PAGE_BYTES = 60 * 1024;
-export const EVENT_TYPES = ['discovery.changed', 'lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed',
+export const EVENT_TYPES = ['discovery.changed', 'discovery.output.available', 'discovery.question.available', 'discovery.document.changed', 'discovery.approval.changed', 'lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed',
   'operation.blocked', 'recovery.started', 'recovery.completed', 'resource.blocked', 'authorization.denied', 'diagnostics.degraded'] as const;
 export type EventType = typeof EVENT_TYPES[number];
 export interface EventDraft {

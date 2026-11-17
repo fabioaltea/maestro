@@ -1,6 +1,6 @@
 # Quickstart e qualifica004 — procedura futura
 
-004 è in implementazione: G0 sintetico qualificato, flussi Discovery non ancora disponibili. Non eseguire comandi provider, installazioni, login, setup Keychain o campagne di prova durante questa fase. Gli esempi `maestro discovery` saranno introdotti dai task. Non vengono riproposti benchmark lunghi.
+004 è in implementazione: G0 sintetico e primitive Foundation qualificati; T016 espone letture CLI/IPC e storico offline. I flussi di avvio/intervista/review saranno introdotti dai task successivi. Nessun login, installazione, setup Keychain o inferenza è autorizzato da queste verifiche. Gli esempi `maestro discovery` saranno introdotti dai task. Non vengono riproposti benchmark lunghi.
 
 ## Prerequisiti
 

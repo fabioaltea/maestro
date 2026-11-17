@@ -108,6 +108,10 @@ export interface DiscoveryArtifactBudget {
 export interface DiscoveryArtifactStoragePort {
   reserveDiscoveryArtifact?(kind: DiscoveryArtifact['kind'], maximumBytes: number): Promise<DiscoveryResult<DiscoveryArtifact>>;
   publishDiscoveryArtifact?(artifactId: string, bytes: Uint8Array): Promise<DiscoveryResult<DiscoveryArtifact>>;
+  readDiscoveryManifestPage?(artifactId: string, offset: number, limit: number): Promise<DiscoveryResult<{
+    readonly storeId: string; readonly projectId: string; readonly snapshotId: string; readonly configRevision: string; readonly contextDigest: string;
+    readonly items: readonly import('./discovery-context.js').DiscoverySource[]; readonly nextOffset: number | null;
+  }>>;
   readDiscoveryArtifact?(artifactId: string, offset: number, maximumBytes: number): Promise<DiscoveryResult<{ readonly bytes: Uint8Array; readonly sha256: string; readonly totalBytes: number }>>;
   reconcileDiscoveryArtifacts?(): Promise<DiscoveryResult<void>>;
   getDiscoveryBudget?(): Promise<DiscoveryResult<DiscoveryArtifactBudget>>;

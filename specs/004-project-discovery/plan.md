@@ -68,7 +68,7 @@ src/storage/{discovery-schema,discovery-upgrade,discovery-store,discovery-metada
 src/cli/discovery.ts
 src/{bootstrap.ts,core/daemon-main.ts,core/runtime.ts}
 src/{client/local-client.ts,ports/platform.ts,ports/storage.ts,ports/registry.ts}
-src/protocol/{messages,validation,events}.ts
+src/protocol/{messages,validation,discovery,events}.ts
 src/storage/{schema,registry-upgrade,sqlite-store,worker,readonly-host,readonly-main}.ts
 apps/desktop/src/main/{discovery,core-cli,ports,action-handlers,receipt-store,operation-recovery,index}.ts
 apps/desktop/src/shared/{bridge-contract,validation,activity-contract,discovery-contract}.ts

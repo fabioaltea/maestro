@@ -37,3 +37,19 @@ test('Discovery read of schema3 is unavailable and byte-preserving rather than m
   const result = await (await reader())(directory, 'discovery.list', { projectId: f.projectId });
   assert.equal(result.error?.code, 'DISCOVERY_NOT_INITIALIZED'); assert.deepEqual(await readFile(f.path), before); assert.deepEqual((await readdir(directory)).sort(), files);
 });
+test('shipped CLI reads actual daemon capabilities and the same registry offline without starting a provider', async t => {
+  const { createCliHarness, invokeCli } = await import('../fixtures/cli-harness.js');
+  const { createProjectRepositories } = await import('../fixtures/project-repositories.js');
+  const h = await createCliHarness(t), repositories = await createProjectRepositories(t), repo = await repositories.createRepository('headless');
+  assert.equal((await h.call('start')).code, 0);
+  const imported = await invokeCli(['project', 'add', repo, '--state-dir', h.archive, '--json']); assert.equal(imported.code, 0, imported.stdout);
+  const projectId = JSON.parse(imported.stdout).data.operation.result.projectId as string;
+  const before = await repositories.snapshotTree(repo);
+  const run = (...args: string[]) => invokeCli(['discovery', ...args, '--state-dir', h.archive, '--json']);
+  const provider = await run('provider', 'get'); assert.equal(provider.code, 0, provider.stdout); assert.equal(JSON.parse(provider.stdout).freshness, 'LIVE'); assert.equal(JSON.parse(provider.stdout).data.configuration, null);
+  const listed = await run('list', projectId); assert.equal(listed.code, 0, listed.stdout); assert.deepEqual(JSON.parse(listed.stdout).data.items, []);
+  const status = JSON.parse((await h.call('status')).stdout); assert.equal(status.data.capabilities.discoveryVersion, 1); assert.ok(!status.data.capabilities.discoveryMethods.includes('discovery.start'));
+  assert.equal((await h.call('stop')).code, 0);
+  const offline = await run('list', projectId); assert.equal(offline.code, 0, offline.stdout); assert.equal(JSON.parse(offline.stdout).freshness, 'LAST_KNOWN'); assert.deepEqual(JSON.parse(offline.stdout).data.items, []);
+  assert.deepEqual(await repositories.snapshotTree(repo), before);
+});

@@ -117,6 +117,7 @@ export class SQLiteStore {
   }
   reserveDiscoveryArtifact(kind: DiscoveryArtifact['kind'], bytes: number) { this.writable(); return this.artifacts().reserveDiscoveryArtifact(kind, bytes); }
   publishDiscoveryArtifact(id: string, bytes: Uint8Array) { this.writable(); return this.artifacts().publishDiscoveryArtifact(id, bytes); }
+  readDiscoveryManifestPage(id: string, offset: number, limit: number) { return this.artifacts().readDiscoveryManifestPage(id, offset, limit); }
   readDiscoveryArtifact(id: string, offset: number, maximumBytes: number) { return this.artifacts().readDiscoveryArtifact(id, offset, maximumBytes); }
   reconcileDiscoveryArtifacts() { this.writable(); return this.artifacts().reconcileDiscoveryArtifacts(); }
   getDiscoveryBudget() { return this.artifacts().getDiscoveryBudget(); }
@@ -144,6 +145,13 @@ export class SQLiteStore {
           ...(d ? { projectId: String(d.project_id), discoveryId, sessionId: String(d.session_id), state: String(d.state) } : {}),
           ...(runId ? { runId } : {}),
         } });
+        if (operationId && drafts.length) {
+          const payload = drafts[0]!.payload;
+          if (change.kind === 'questions') drafts.push({ type: 'discovery.question.available', operationId, payload: { ...payload, count: change.values.length } });
+          if (change.kind === 'output') drafts.push({ type: 'discovery.output.available', operationId, payload: { ...payload, watermark: change.value.seq } });
+          if (change.kind === 'revision') drafts.push({ type: 'discovery.document.changed', operationId, payload: { ...payload, revisionId: change.value.revisionId } });
+          if (change.kind === 'approval') drafts.push({ type: 'discovery.approval.changed', operationId, payload: { ...payload, revisionId: change.value.revisionId } });
+        }
         return value;
       }, drafts);
     } });
@@ -235,7 +243,6 @@ export class SQLiteStore {
       const after = (database.prepare('SELECT total_changes() AS count').get() as {count: bigint}).count;
       if (before !== after) database.prepare('UPDATE store SET revision=revision+1 WHERE singleton=1').run();
       if ((before !== after || forceEvents) && drafts.length) this.enqueue(drafts);
-      if (this.archiveVersion === 4) enforceDiscoveryBudget(database, true);
       this.hooks.checkpoint?.('event.beforeCommit');
       return value;
     }).immediate();

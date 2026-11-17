@@ -3,7 +3,7 @@ import { CORE_ERRORS } from './core-errors.ts';
 import type { Params } from './bridge-contract.ts';
 export interface UiEvent { protocolVersion: 1; storeId: string; eventId: string; seq: string; occurredAt: string; instanceId: string | null; operationId: string | null; type: string; payload: Params }
 export interface HistoryPage { records: UiEvent[]; firstAvailable: string; highWater: string; nextAfter: string; truncated: boolean; cursor: string }
-export const EVENT_TYPES = ['lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed', 'operation.blocked', 'recovery.started', 'recovery.completed', 'resource.blocked', 'authorization.denied', 'diagnostics.degraded'];
+export const EVENT_TYPES = ['discovery.changed', 'discovery.output.available', 'discovery.question.available', 'discovery.document.changed', 'discovery.approval.changed', 'lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed', 'operation.blocked', 'recovery.started', 'recovery.completed', 'resource.blocked', 'authorization.denied', 'diagnostics.degraded'];
 export function sequence(value: unknown): string {
   const v = text(value, 19); if (!/^(0|[1-9][0-9]*)$/.test(v) || BigInt(v) > 9223372036854775807n) throw new Error('CLIENT_PROTOCOL_ERROR'); return v;
 }
@@ -22,21 +22,26 @@ export function decodeUiEvent(value: unknown, expectedStoreId: string): UiEvent 
   if (!Number.isFinite(Date.parse(text(p.occurredAt, 64)))) throw new Error('CLIENT_PROTOCOL_ERROR');
   for (const k of ['instanceId', 'operationId']) if (p[k] !== null) uuid(p[k]);
   const payload = record(p.payload);
-  keys(payload, ['action', 'outcome', 'from', 'to', 'phase', 'code', 'resourceId', 'correlationId', 'generation', 'scope', 'projectId', 'configRevision', 'observationRevision', 'effect', 'pid', 'count', 'truncated', 'redactedFields']);
+  keys(payload, ['action', 'outcome', 'from', 'to', 'phase', 'code', 'resourceId', 'correlationId', 'generation', 'scope', 'projectId', 'configRevision', 'observationRevision', 'effect', 'pid', 'count', 'truncated', 'redactedFields', 'discoveryId', 'sessionId', 'runId', 'revisionId', 'state', 'stateRevision', 'watermark']);
+  const discovery = payload.scope === 'discovery';
+  if (String(p.type).startsWith('discovery.') && !discovery) throw new Error('CLIENT_PROTOCOL_ERROR');
   const enums: Record<string, readonly string[]> = {
-    action: payload.scope === 'project' ? ['REGISTER', 'VERIFY', 'UPDATE', 'REMOVE'] : ['start', 'stop', 'restart'], outcome: ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
+    state: discovery ? ['PREPARING', 'READY_TO_START', 'RUNNING', 'WAITING_USER', 'READY_FOR_REVIEW', 'UPDATING', 'APPROVED', 'STALE', 'FAILED', 'CANCELLED', 'INTERRUPTED', 'CANCELLING', 'RECONCILING'] : [],
+    action: discovery ? ['configure', 'start', 'answer', 'correct', 'approve', 'cancel', 'preview', 'check', 'discard'] : payload.scope === 'project' ? ['REGISTER', 'VERIFY', 'UPDATE', 'REMOVE'] : ['start', 'stop', 'restart'], outcome: discovery ? ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED', 'UNKNOWN'] : ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
     from: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'], to: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
-    phase: ['ACCEPTED', 'PRECHECK', 'SPAWN_INTENT', 'WAIT_READY', 'STOP_REQUESTED', 'DRAINING', 'WAIT_EXIT', 'FINALIZED'], effect: ['CREATED', 'EXISTING', 'UPDATED', 'OBSERVED', 'REMOVED', 'NONE'], scope: ['project'],
+    phase: ['ACCEPTED', 'PRECHECK', 'SPAWN_INTENT', 'WAIT_READY', 'STOP_REQUESTED', 'DRAINING', 'WAIT_EXIT', 'FINALIZED'], effect: ['CREATED', 'EXISTING', 'UPDATED', 'OBSERVED', 'REMOVED', 'NONE'], scope: ['project', 'discovery'],
   };
   for (const [key, value] of Object.entries(payload)) {
     if (enums[key]) { if (!enums[key]!.includes(String(value))) throw new Error('CLIENT_PROTOCOL_ERROR'); }
-    else if (['projectId', 'resourceId', 'correlationId'].includes(key)) uuid(value);
-    else if (['generation', 'configRevision', 'observationRevision'].includes(key)) sequence(value);
+    else if (['projectId', 'resourceId', 'correlationId', ...(discovery ? ['discoveryId', 'sessionId', 'runId', 'revisionId'] : [])].includes(key)) uuid(value);
+    else if (['generation', 'configRevision', 'observationRevision', ...(discovery ? ['stateRevision', 'watermark'] : [])].includes(key)) sequence(value);
     else if (key === 'code') { if (!Object.hasOwn(CORE_ERRORS, String(value))) throw new Error('CLIENT_PROTOCOL_ERROR'); }
     else if (key === 'truncated') { if (typeof value !== 'boolean') throw new Error('CLIENT_PROTOCOL_ERROR'); }
     else if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value > 2147483647) throw new Error('CLIENT_PROTOCOL_ERROR');
   }
-  if (payload.scope === 'project' && p.operationId === null) throw new Error('CLIENT_PROTOCOL_ERROR');
+  const required: Record<string, string[]> = { 'discovery.output.available': ['discoveryId', 'runId', 'watermark'], 'discovery.question.available': ['discoveryId', 'runId'], 'discovery.document.changed': ['discoveryId', 'revisionId'], 'discovery.approval.changed': ['discoveryId', 'revisionId'] };
+  if (required[String(p.type)]?.some(key => !Object.hasOwn(payload, key))) throw new Error('CLIENT_PROTOCOL_ERROR');
+  if (['project', 'discovery'].includes(String(payload.scope)) && p.operationId === null) throw new Error('CLIENT_PROTOCOL_ERROR');
   return p as unknown as UiEvent;
 }
 export function decodeHistoryPage(value: unknown, storeId: string): HistoryPage {

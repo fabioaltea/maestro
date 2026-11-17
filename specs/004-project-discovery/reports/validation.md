@@ -306,3 +306,49 @@ pagine documento8KiB/hash dopo tampering, errori statici, schema3 non migrato e
 letture offline LAST_KNOWN con eligibility sempre false/UNKNOWN anche con approval
 storica. Fixture documento/approval riguardano storage, non verità semantica o
 qualifica provider. Nessun client avvia sorgenti/modello per questi test.
+
+## T016 — letture CLI/IPC, pagine e offline,2026-11-17
+
+Implementati DTO/capability/errori statici, namespace read-only Discovery, dispatch
+autenticato client-only, CLI e backend senza polling LLM, reader storico confinato
+e pagine hash-validabili. Capability live espone soltanto gli otto metodi read
+implementati; azioni future non vengono pubblicate. Provider.get mostra solo
+configurazione pubblica e check=null, senza probe/login o falsa disponibilità.
+Offline rimane LAST_KNOWN e eligibility=false/UNKNOWN anche con approval storica.
+Schema3 viene rifiutato per Discovery senza migrazione o sidecar nuovi.
+
+Cursori base64url chiusi store/target/revisione/offset; liste≤20 e cap effettivo
+byte, chunk8KiB raw/base64 ed envelope finale≤32KiB. Manifest fonti letto e validato
+nel reader nativo con pagina metadata bounded: non ricaricare un intero manifest
+via centinaia di chunk/hash ripetuti. Nessun path oggetti/auth/host o intento/hash
+privato nell’API. Reader readonly mantiene il profilo OS esistente senza permessi
+nuovi; lookup oggetti da UUID registrati e owner/no-follow/hash, non input path.
+Il profilo storico nega scritture/fork/rete: non si afferma un filtro kernel di
+lettura per singolo UUID. Allowlist esplicita Discovery su host e child readonly.
+
+Cinque tipi eventi metadata, watermark e riferimenti senza contenuti; tutti i
+decoder desktop aggiornati insieme al catalogo SafeError. Pubblicazione nella
+stessa transazione della modifica. Nessun nuovo stream token/carico prolungato.
+Quota Discovery verificata nei suoi hook transazionali; eliminata la verifica
+ridondante da ogni mutazione Foundation per mantenere indipendente il lifecycle.
+
+Un test aggiuntivo ha osservato un difetto reale della serializzazione Buffer nel
+reader JSON: byteLength perso e cursore finale scorretto. Caso prima RED (1FAIL),
+corretto con DTO base64 esplicito su pipe nativa, decode/cap verificati nel proxy
+e Uint8Array alla porta interna. La prova ora attraversa il vero reader confinato,
+non soltanto il worker structured-clone. Fixture cursor cambiata da transizione
+WAITING_USER→CANCELLING non valida a cancellazione terminale valida; invarianti e
+soglie conservati.
+
+PASS build/build:test/typecheck/lint e typecheck desktop.70/70test mirati PASS,
+24496,73ms;29/29ulteriori API/quota/metadata PASS dopo isolamento hook budget.
+Suite generale `caffeinate -i npm test`:466test,461PASS/0FAIL/5SKIP G0 separati,
+150438,13ms. Desktop:28/28unit PASS,22/22integration PASS (30435,28ms). Dopo la
+campagna generale rafforzati solo allowlist/envelope readonly:28/28API/offline/
+artefatti e2/2pagine fonti su sigillo vero PASS sullo stato finale.
+
+La CLI reale su daemon temporaneo legge capability/config/lista, poi gli stessi
+dati offline dopo stop; repo importato invariato. Nessun modello o login avviato.
+T017–T018 e le storie restano aperti; questo checkpoint non rende disponibile
+una Discovery completa. Campioni002 rigenerati ripristinati; gate precedenti eG1
+reale non promossi. Nessuna modifica al lockfile desktop preesistente non tracciato.

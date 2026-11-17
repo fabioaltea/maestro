@@ -5,7 +5,7 @@ import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
-export const methods = ['reserveDiscoveryArtifact', 'publishDiscoveryArtifact', 'readDiscoveryArtifact', 'reconcileDiscoveryArtifacts', 'getDiscoveryBudget', 'discardDiscoveryPreview', 'readDiscoveryMetadata', 'commitDiscoveryMetadata', 'admitDiscoveryOperation', 'getDiscoveryOperation', 'saveDiscoveryGrant', 'captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
+export const methods = ['reserveDiscoveryArtifact', 'publishDiscoveryArtifact', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'reconcileDiscoveryArtifacts', 'getDiscoveryBudget', 'discardDiscoveryPreview', 'readDiscoveryMetadata', 'commitDiscoveryMetadata', 'admitDiscoveryOperation', 'getDiscoveryOperation', 'saveDiscoveryGrant', 'captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'getProject', 'listProjects', 'commitProjectRegistration', 'commitProjectObservation', 'commitProjectUpdate', 'commitProjectRemoval', 'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'listResourceSummaries', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
@@ -34,7 +34,7 @@ if (!isMainThread) {
     store = new SQLiteStore(workerData as StorageOptions);
     port.postMessage({ ready: true });
     let queue = Promise.resolve();
-    const reads = new Set<Method>(['readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'listResourceSummaries', 'getControllerAttempt']);
+    const reads = new Set<Method>(['readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'listResourceSummaries', 'getControllerAttempt']);
     port.on('message', (request: Request) => {
       const execute = async () => {
         if (!Number.isSafeInteger(request.id) || !methods.includes(request.method) || !Array.isArray(request.args)) {
@@ -129,7 +129,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
 
   function call<T>(method: Method, args: unknown[]): Promise<T> {
     if (closing || exited) return Promise.reject(new Error('PERSISTENCE_UNAVAILABLE'));
-    if (failure && !['readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'listResourceSummaries', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
+    if (failure && !['readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'listResourceSummaries', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
     const id = ++nextId;
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -154,7 +154,19 @@ export function createStorageProxy(call: <T>(method: Method, args: unknown[]) =>
   return {
     reserveDiscoveryArtifact: (kind, bytes) => call('reserveDiscoveryArtifact', [kind, bytes]),
     publishDiscoveryArtifact: (id, bytes) => call('publishDiscoveryArtifact', [id, bytes]),
-    readDiscoveryArtifact: (id, offset, bytes) => call('readDiscoveryArtifact', [id, offset, bytes]),
+    readDiscoveryManifestPage: (id, offset, limit) => call('readDiscoveryManifestPage', [id, offset, limit]),
+    readDiscoveryArtifact: async (id, offset, maximumBytes) => {
+      const result = await call<DiscoveryResult<{ bytes: unknown; sha256: string; totalBytes: number }>>('readDiscoveryArtifact', [id, offset, maximumBytes]);
+      if (!result.ok) return result;
+      let bytes: Uint8Array;
+      const encoded = result.value.bytes;
+      if (encoded instanceof Uint8Array) bytes = encoded;
+      else if (encoded && typeof encoded === 'object' && Object.keys(encoded).sort().join(',') === 'data,encoding' && 'encoding' in encoded && encoded.encoding === 'base64' && 'data' in encoded && typeof encoded.data === 'string' && encoded.data.length <= 10924) {
+        bytes = Buffer.from(encoded.data, 'base64'); if (Buffer.from(bytes).toString('base64') !== encoded.data) throw new Error('ARTIFACT_CORRUPT');
+      } else throw new Error('ARTIFACT_CORRUPT');
+      if (bytes.byteLength > 8192 || bytes.byteLength > maximumBytes || !Number.isSafeInteger(result.value.totalBytes) || result.value.totalBytes < 1 || offset + bytes.byteLength > result.value.totalBytes || !/^[a-f0-9]{64}$/.test(result.value.sha256)) throw new Error('ARTIFACT_CORRUPT');
+      return { ok: true, value: { ...result.value, bytes } };
+    },
     reconcileDiscoveryArtifacts: () => call('reconcileDiscoveryArtifacts', []),
     getDiscoveryBudget: () => call('getDiscoveryBudget', []),
     discardDiscoveryPreview: id => call('discardDiscoveryPreview', [id]),

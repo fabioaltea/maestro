@@ -1,3 +1,4 @@
+import { validateDiscoveryParams, requireDiscoveryEnvelope } from './discovery.js';
 import { MAX_FRAME_BYTES, METHODS } from './messages.js';
 import type { RpcRequest } from '../ports/platform.js';
 import { requireUuid } from '../domain/identifiers.js';
@@ -31,6 +32,7 @@ export function decodeRequest(frame: string | Uint8Array): RpcRequest {
     || !parsed.params || typeof parsed.params !== 'object' || Array.isArray(parsed.params)) throw new Error('INVALID_REQUEST');
   try { requireUuid(parsed.correlationId); }
   catch { throw new Error('INVALID_REQUEST'); }
+  if (parsed.method.startsWith('discovery.')) { requireDiscoveryEnvelope(parsed); validateDiscoveryParams(parsed.method, parsed.params); }
   if (parsed.method.startsWith('projects.')) validateProjectParams(parsed.method, parsed.params);
   return { protocolVersion: 1, correlationId: parsed.correlationId as string,
     method: parsed.method, params: parsed.params as Readonly<Record<string, unknown>> };
@@ -122,3 +124,5 @@ export function decodeProjectTombstone(input: unknown): ProjectTombstone {
     return { projectId, configRevision, removedAt: value.removedAt };
   } catch { throw new Error('INVALID_REQUEST'); }
 }
+
+export { validateDiscoveryParams, requireDiscoveryCapability, validateDiscoveryAdmission, decodeDiscoveryOperationView } from './discovery.js';

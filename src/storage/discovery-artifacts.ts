@@ -5,7 +5,7 @@ import { constants, closeSync, existsSync, fstatSync, fsyncSync, linkSync, lstat
 import { join } from 'node:path';
 import type { DiscoveryArtifact, DiscoveryArtifactBudget, DiscoveryArtifactStoragePort } from '../ports/discovery.js';
 import { DISCOVERY_LIMITS as limits, type DiscoveryResult } from '../domain/discovery/model.js';
-import { requireUuid } from '../domain/identifiers.js';
+import { requireUuid, requireDecimal } from '../domain/identifiers.js';
 import { DISCOVERY_TABLES, requireDiscoverySchema } from './discovery-schema.js';
 import { discoveryStorageFailure } from './discovery-store.js';
 
@@ -185,6 +185,24 @@ export function createDiscoveryArtifacts(database: Database.Database, options: A
           }, a.kind === 'EXIT_PROOF');
           reservations.delete(id); checkpoint('committed'); return dto(row(id)!);
         } finally { if (fd !== undefined) closeSync(fd); }
+      });
+    },
+    readDiscoveryManifestPage(id, offset, limit) {
+      return result(() => {
+        if (!Number.isInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > 20) fail('INVALID_REQUEST');
+        const a = row(id); if (!a || a.kind !== 'MANIFEST' || !['PUBLISHED', 'REFERENCED'].includes(String(a.state))) fail('ARTIFACT_CORRUPT');
+        let m: import('../ports/discovery-context.js').DiscoveryManifest;
+        try { m = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(load(a))) as typeof m; if (!m || typeof m !== 'object') fail('ARTIFACT_CORRUPT'); requireDecimal(m.configRevision); for (const key of [m.storeId, m.projectId, m.snapshotId]) requireUuid(key); }
+        catch { return fail('ARTIFACT_CORRUPT'); }
+        if (m.snapshotVersion !== 1 || !Array.isArray(m.sources) || m.sources.length > limits.files || offset > m.sources.length || !/^[a-f0-9]{64}$/.test(m.contextDigest)) fail('ARTIFACT_CORRUPT');
+        const items: import('../ports/discovery-context.js').DiscoverySource[] = [];
+        for (const source of m.sources.slice(offset, offset + limit)) {
+          if (!source || typeof source.relativePath !== 'string' || typeof source.sourceId !== 'string' || !/^[a-f0-9]{64}$/.test(source.sourceId) || Buffer.byteLength(source.relativePath) > 4096 || !source.relativePath.isWellFormed() || source.relativePath.startsWith('/') || source.relativePath.split('/').some((part: string) => !part || part === '.' || part === '..') || !/^[a-f0-9]{64}$/.test(source.sha256) || !Number.isInteger(source.byteLength) || source.byteLength < 0 || source.byteLength > limits.fileBytes || !Number.isInteger(source.lineCount) || source.lineCount < 0 || source.lineCount > limits.fileBytes + 1) fail('ARTIFACT_CORRUPT');
+          const item = { sourceId: source.sourceId, relativePath: source.relativePath, sha256: source.sha256, byteLength: source.byteLength, lineCount: source.lineCount };
+          if (Buffer.byteLength(JSON.stringify([...items, item])) > limits.envelopeBytes - 4096) break; items.push(item);
+        }
+        if (offset < m.sources.length && !items.length) fail('CONTEXT_LIMIT');
+        return { storeId: m.storeId, projectId: m.projectId, snapshotId: m.snapshotId, configRevision: m.configRevision, contextDigest: m.contextDigest, items, nextOffset: offset + items.length < m.sources.length ? offset + items.length : null };
       });
     },
     readDiscoveryArtifact(id, offset, maximumBytes) {

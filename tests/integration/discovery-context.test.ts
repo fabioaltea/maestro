@@ -136,6 +136,10 @@ for (const failPublication of [false, true]) {
       assert.equal(result.value.state, 'SEALED'); assert.equal(value(archive.store.readDiscoveryMetadata({ kind: 'snapshot', id: result.value.snapshotId })).data?.contextDigest, result.value.contextDigest);
       assert.ok(value(archive.store.readDiscoveryArtifact(result.value.manifestArtifactId!, 0, 8192)).totalBytes > 0);
       assert.ok(value(archive.store.readDiscoveryArtifact(result.value.corpusArtifactId!, 0, 8192)).totalBytes > 0);
+      const { inspectDiscovery } = await import('../../src/core/inspect-main.js');
+      const page = await inspectDiscovery(archive.directory, 'discovery.preview.get', { snapshotId: result.value.snapshotId, sources: true });
+      assert.equal(page.result, 'OK'); assert.equal(page.freshness, 'LAST_KNOWN'); assert.equal((page.data.items as { relativePath: string }[])[0]?.relativePath, 'tracked.txt');
+      assert.ok(Buffer.byteLength(JSON.stringify(page)) <= 32768); assert.doesNotMatch(JSON.stringify(page), /relativeKey|manifestArtifactId|corpusArtifactId|credentialRef/);
     } else assert.equal(Number((database.prepare('SELECT count(*) AS n FROM discovery_snapshots').get() as { n: number }).n), 0);
   });
 }
