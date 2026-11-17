@@ -13,7 +13,7 @@ import { DISCOVERY_RUNTIME_POLICY, type AgentProcessIdentity, type AgentRuntimeP
 import type { ArchitectResult } from '../../domain/discovery/documents.js';
 
 const hash = (bytes: string | Uint8Array) => createHash('sha256').update(bytes).digest('hex');
-async function artifact(artifacts: DiscoveryArtifactPort, id: string, maximum: number) {
+export async function readDiscoveryArtifact(artifacts: DiscoveryArtifactPort, id: string, maximum: number) {
   const chunks: Uint8Array[] = []; let offset = 0, sha: string | undefined, total: number | undefined;
   for (;;) {
     const page = await artifacts.read(id, offset, limits.chunkBytes); if (!page.ok) throw new Error(page.code);
@@ -30,7 +30,7 @@ async function artifact(artifacts: DiscoveryArtifactPort, id: string, maximum: n
  * assemble provider input after consent. Revalidation is a separate check. */
 export async function readDiscoverySnapshot(artifacts: DiscoveryArtifactPort, snapshot: DiscoverySnapshot, storeId: string) {
   if (snapshot.state !== 'SEALED' || !snapshot.contextDigest || !snapshot.manifestArtifactId || !snapshot.corpusArtifactId) throw new Error('CONTEXT_CHANGED');
-  const [manifestBytes, corpusBytes] = await Promise.all([artifact(artifacts, snapshot.manifestArtifactId, limits.inputBytes), artifact(artifacts, snapshot.corpusArtifactId, limits.corpusBytes)]);
+  const [manifestBytes, corpusBytes] = await Promise.all([readDiscoveryArtifact(artifacts, snapshot.manifestArtifactId, limits.inputBytes), readDiscoveryArtifact(artifacts, snapshot.corpusArtifactId, limits.corpusBytes)]);
   const decoder = new TextDecoder('utf-8', { fatal: true });
   const manifest = JSON.parse(decoder.decode(manifestBytes)) as DiscoveryManifest;
   const corpus = JSON.parse(decoder.decode(corpusBytes)) as { schemaVersion: number; sources: ProviderInput['sources'] };
@@ -54,6 +54,7 @@ export interface DiscoveryLaunch {
   readonly configuration: ProviderConfiguration; readonly stdin: string;
 }
 interface LaunchPreparation {
+  readonly correction?: { readonly priorDraft: import('../../domain/discovery/documents.js').DiscoveryDocument; readonly text: string };
   readonly continuation?: { readonly discovery: DiscoveryRecord; readonly previousRun: DiscoveryRun; readonly answers: readonly import('../../domain/discovery/model.js').DiscoveryAnswer[]; readonly questions: readonly import('../../domain/discovery/model.js').DiscoveryQuestion[] };
   readonly requestId: string; readonly grantId: string; readonly intent: DiscoveryIntent; readonly snapshot: DiscoverySnapshot;
   readonly configuration: ProviderConfiguration; readonly contextRequest: ContextRequest;
@@ -82,11 +83,11 @@ async function prepareWithin(input: LaunchPreparation, dependencies: LaunchDepen
   if (!availability.capabilities.readOnlyAnalysis || !availability.capabilities.portableTurns || !availability.capabilities.localCancellation) throw new Error('PROVIDER_UNSAFE');
   if (deadline.expired()) throw new Error('DEADLINE_EXCEEDED');
   const discoveryId = input.continuation?.discovery.discoveryId ?? randomUUID(), runId = randomUUID(), generation = randomUUID(), at = new Date().toISOString();
-  const serialized = dependencies.provider.serializeInput({ runId, generation, schemaVersion: 1, instructionsVersion: 'project-architect-v1', requestKind: input.continuation ? 'ANSWER' : 'INITIAL',
-    sources: sealed.sources, answers: input.continuation?.answers ?? [], ...(input.continuation ? { questions: input.continuation.questions } : {}), priorDraft: null, correction: null });
+  const serialized = dependencies.provider.serializeInput({ runId, generation, schemaVersion: 1, instructionsVersion: 'project-architect-v1', requestKind: input.correction ? 'CORRECTION' : input.continuation ? 'ANSWER' : 'INITIAL',
+    sources: sealed.sources, answers: input.continuation?.answers ?? [], ...(input.continuation ? { questions: input.continuation.questions } : {}), priorDraft: input.correction?.priorDraft ?? null, correction: input.correction?.text ?? null });
   if (!serialized.ok) throw new Error(serialized.code);
   if (!serialized.value.isWellFormed() || Buffer.byteLength(serialized.value) > limits.inputBytes) throw new Error('PROVIDER_CONTEXT_LIMIT');
-  const discovery: DiscoveryRecord = { discoveryId, storeId: input.intent.storeId, projectId: input.snapshot.projectId, sessionId: input.continuation?.discovery.sessionId ?? randomUUID(), state: 'RUNNING', stateRevision: input.continuation ? String(BigInt(input.continuation.discovery.stateRevision) + 1n) : '1',
+  const discovery: DiscoveryRecord = { discoveryId, storeId: input.intent.storeId, projectId: input.snapshot.projectId, sessionId: input.continuation?.discovery.sessionId ?? randomUUID(), state: input.correction ? 'UPDATING' : 'RUNNING', stateRevision: input.continuation ? String(BigInt(input.continuation.discovery.stateRevision) + 1n) : '1',
     snapshotId: input.snapshot.snapshotId, configRevision: input.snapshot.configRevision, providerRevision: input.configuration.revision, currentRunId: runId,
     latestDocumentRevisionId: input.continuation?.discovery.latestDocumentRevisionId ?? null, createdAt: input.continuation?.discovery.createdAt ?? at, updatedAt: at, error: null };
   const run: DiscoveryRun = { runId, discoveryId, generation, turnIndex: input.continuation ? input.continuation.previousRun.turnIndex + 1 : 1, grantId: input.grantId, requestId: input.requestId, contextDigest: input.snapshot.contextDigest!, inputDigest: hash(serialized.value),

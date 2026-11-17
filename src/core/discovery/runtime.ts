@@ -34,8 +34,8 @@ export function createDiscoveryRuntime(storage: StoragePort, paths: ArchivePaths
   launcher = createDiscoveryLauncher({ storage, paths, instanceId, provider, runtime: agent, files: dependencies.files ?? createDiscoveryRunFiles(paths),
     onEvent: (identity, event) => output.publish(identity, event),
     onResult: dependencies.onResult ?? (async (identity, result) => {
-      if (result.kind !== 'QUESTIONS') throw new Error('PROVIDER_UNSUPPORTED');
-      await operations.publishQuestions(identity, result);
+      if (result.kind === 'QUESTIONS') await operations.publishQuestions(identity, result);
+      else await operations.publishDocument(identity, result);
     }) });
   const lifecycle = createDiscoveryLifecycle({ storage, agent, settle: (identity, proof) => launcher.exited(identity, proof) });
   const operations = createDiscoveryOperations({ storage, paths, instanceId, ownerUid: paths.ownerUid, provider, inspection, context, artifacts, launch: input => launcher.launch(input), cancel: (discoveryId, requestId) => lifecycle.cancel(discoveryId, requestId) });

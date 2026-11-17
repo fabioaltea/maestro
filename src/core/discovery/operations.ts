@@ -13,6 +13,7 @@ import { requireDiscoveryEnvelope } from '../../protocol/discovery.js';
 import type { CodexInspectionPort, ProviderAvailability, ProviderConfiguration, ProviderPort } from '../../ports/provider.js';
 import { CODEX_DISCOVERY_PIN } from '../../providers/codex/argv.js';
 import { CODEX_DISCOVERY_QUALIFICATION, validCodexModel } from '../../providers/codex/capabilities.js';
+import { createDiscoveryReview } from './review.js';
 import { createDiscoveryInterview } from './interview.js';
 import type { AgentProcessIdentity } from '../../ports/agent-runtime.js';
 import type { DiscoveryQuestions } from '../../domain/discovery/documents.js';
@@ -37,6 +38,7 @@ function exact(value: object, keys: readonly string[]) { if (!value || Object.ke
 export function createDiscoveryOperations(options: Options) {
   const { storage } = options;
   const interview = options.context && options.artifacts ? createDiscoveryInterview({ storage, paths: options.paths, context: options.context, artifacts: options.artifacts, provider: options.provider }) : null;
+  const review = options.context && options.artifacts ? createDiscoveryReview({ storage, paths: options.paths, context: options.context, artifacts: options.artifacts, provider: options.provider }) : null;
   const answering = new Set<string>();
   let lastCheck: { revision: string; value: ProviderAvailability } | null = null;
   const jobs = new Set<Promise<void>>();
@@ -150,6 +152,10 @@ export function createDiscoveryOperations(options: Options) {
             selectors: current.snapshot.selectors, fileCount: sealed.manifest.sources.length, byteCount: current.snapshot.byteCount, omissions: current.snapshot.omissions,
             providerId: current.configuration.providerId, providerRevision: current.configuration.revision, modelId: current.configuration.modelId,
             sendsProjectData: true, data: 'Selected sealed source text is sent to the configured AI provider for read-only project discovery.' };
+        } else if (intent.action === 'correct' || intent.action === 'approve') {
+          if (!review) fail('DISCOVERY_NOT_INITIALIZED');
+          const current = await review!.inspect(intent);
+          summary = { action: intent.action, projectId: current.discovery.projectId, revisionId: current.revision.revisionId, bundleDigest: current.revision.bundleDigest, contextDigest: current.revision.contextDigest, sendsProjectData: intent.action === 'correct', modelId: current.configuration.modelId };
         } else if (intent.action === 'cancel') {
           const d = await cancelIntent(intent); summary = { action: 'cancel', projectId: d.projectId, snapshotId: d.snapshotId, contextDigest: intent.contextDigest, sendsProjectData: false, data: 'Stop only the owned local execution; remote cancellation is not verified.' };
         } else if (intent.action === 'answer') {
@@ -165,6 +171,25 @@ export function createDiscoveryOperations(options: Options) {
         if (!storage.saveDiscoveryGrant) fail('DISCOVERY_NOT_INITIALIZED');
         const saved = await storage.saveDiscoveryGrant!(grant); if (!saved.ok) fail(saved.code);
         return { ok: true, value: prepared } as const;
+      } catch (error) { return failure(error); }
+    },
+    async publishDocument(identity: AgentProcessIdentity, result: import('../../domain/discovery/documents.js').DiscoveryDocument) {
+      if (!review) fail('DISCOVERY_NOT_INITIALIZED'); await review!.publish(identity, result);
+    },
+    async correct(peer: AuthenticatedPeer, input: DiscoveryCommand): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'grantId', 'canonicalIntent']); const { intent } = await intentFor(peer, input.canonicalIntent);
+        if (intent.action !== 'correct' || !review || !options.launch) fail('INVALID_REQUEST');
+        if (await original(input, 'correct')) return { ok: true, value: { accepted: true, requestId: input.requestId } };
+        await review!.inspect(intent);
+        const admitted = await storage.admitDiscoveryOperation!({ ...admission(input.requestId, input.canonicalIntent, input.grantId), startStage: 'PREPARE', expectedStateRevision: intent.stateRevision }); if (!admitted.ok) fail(admitted.code);
+        if (admitted.value.inserted) job(async () => {
+          try { const prepared = await review!.continuation(intent, input.requestId, input.grantId!); await guard(peer);
+            const active = await storage.admitDiscoveryOperation!({ ...admission(input.requestId, input.canonicalIntent, input.grantId), startStage: 'ACTIVATE', discovery: prepared.discovery, run: prepared.run, expectedStateRevision: intent.stateRevision, acquireSlot: true });
+            if (!active.ok) fail(active.code); if (active.value.inserted) await options.launch!({ ...prepared, operation: active.value.operation });
+          } catch (error) { await blocked(input.requestId, error); }
+        });
+        return { ok: true, value: { accepted: true, requestId: input.requestId } };
       } catch (error) { return failure(error); }
     },
     async publishQuestions(identity: AgentProcessIdentity, result: DiscoveryQuestions) {

@@ -101,7 +101,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
             if (original.phase !== 'ACCEPTED' || original.outcome !== 'IN_PROGRESS' || original.result?.pendingGrantId !== input.grantId
               || owner.owning_instance_id !== input.instanceId) throw new Error('APPROVAL_REQUIRED');
           }
-          if (input.startStage !== undefined && (!['PREPARE', 'ACTIVATE'].includes(input.startStage) || !['start', 'answer'].includes(input.action))) throw new Error('INVALID_REQUEST');
+          if (input.startStage !== undefined && (!['PREPARE', 'ACTIVATE'].includes(input.startStage) || !['start', 'answer', 'correct'].includes(input.action))) throw new Error('INVALID_REQUEST');
           if (input.startStage === 'ACTIVATE' && !original) throw new Error('APPROVAL_REQUIRED');
           if (!original && database.prepare('SELECT 1 FROM request_catalog WHERE request_id=?').get(input.requestId)) throw new Error('IDEMPOTENCY_CONFLICT');
           const remote = !['preview', 'check', 'discard'].includes(input.action);
@@ -119,7 +119,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
           }
           const discovery = input.discovery, run = input.run;
           if (input.startStage === 'PREPARE' || input.acquireSlot) {
-            const pending = database.prepare("SELECT request_id FROM discovery_operations WHERE action='start' AND phase<>'FINALIZED' AND json_extract(result,'$.pendingGrantId') IS NOT NULL AND request_id<>? LIMIT 1").get(input.requestId);
+            const pending = database.prepare("SELECT request_id FROM discovery_operations WHERE action IN ('start','correct') AND phase<>'FINALIZED' AND json_extract(result,'$.pendingGrantId') IS NOT NULL AND request_id<>? LIMIT 1").get(input.requestId);
             if (pending) throw new Error('DISCOVERY_BUSY');
           }
           if (input.startStage === 'PREPARE') {
@@ -127,7 +127,12 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
             const slot = database.prepare('SELECT discovery_id FROM discovery_slot WHERE singleton=1').get() as Row;
             let discoveryId: string | null = null;
             if (input.action === 'start') { if (slot.discovery_id !== null) throw new Error('DISCOVERY_BUSY'); }
-            else {
+            else if (input.action === 'correct') {
+              const d = database.prepare('SELECT * FROM discoveries WHERE discovery_id=?').get(String(intent.targetId)) as Row | undefined;
+              const payload = intent.payload as Record<string, unknown>;
+              if (!d || !['READY_FOR_REVIEW', 'APPROVED'].includes(String(d.state)) || String(d.state_revision) !== intent.stateRevision || input.expectedStateRevision !== intent.stateRevision || d.latest_document_revision_id !== payload.revisionId || slot.discovery_id !== null) throw new Error('APPROVAL_STALE');
+              discoveryId = String(d.discovery_id);
+            } else {
               const payload = intent.payload as Record<string, unknown>, q = database.prepare('SELECT * FROM discovery_questions WHERE question_id=?').get(String(payload.questionId)) as Row | undefined;
               const d = q ? database.prepare('SELECT * FROM discoveries WHERE discovery_id=?').get(q.discovery_id) as Row | undefined : undefined;
               if (!q || !d || intent.targetId !== q.question_id || String(q.question_revision) !== payload.questionRevision || d.state !== 'WAITING_USER' || slot.discovery_id !== d.discovery_id
