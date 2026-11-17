@@ -7,6 +7,7 @@ process.stdin.on('end', () => {
   process.stderr.write('SYNTHETIC_PRIVATE_STDERR_NOT_PUBLIC\n');
   line({ type: 'thread.started', thread_id: 'synthetic-thread' }); line({ type: 'turn.started' });
   line({ type: 'item.completed', item: { id: 'reasoning', type: 'reasoning', text: 'Checking approved synthetic sources.' } });
+  if (mode === 'waiting') { setTimeout(() => process.exit(0), 10000); return; }
   if (mode === 'tool') { line({ type: 'item.completed', item: { id: 'unapproved', type: 'command_execution', command: 'never executed' } }); setTimeout(() => process.exit(0), 3000); return; }
   if (mode === 'empty') return;
   if (mode === 'malformed') { process.stdout.write(new Uint8Array([0xff])); return; }

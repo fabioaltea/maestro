@@ -11,7 +11,7 @@ import { CODEX_DISCOVERY_QUALIFICATION } from '../../providers/codex/capabilitie
 export const DISCOVERY_METHODS: readonly string[] = DISCOVERY_READ_METHODS;
 export const DISCOVERY_LIVE_METHODS: readonly string[] = [...DISCOVERY_READ_METHODS, 'discovery.prepare', ...DISCOVERY_ADMISSION_METHODS];
 export function createDiscoveryDispatch(options: { storage: Pick<StoragePort, 'readDiscoveryMetadata' | 'getDiscoveryOperation' | 'readDiscoveryArtifact' | 'readDiscoveryManifestPage' | 'getProject'>;
-  operations?: ReturnType<typeof createDiscoveryOperations>; accepting?: () => boolean }) {
+  operations?: ReturnType<typeof createDiscoveryOperations>; accepting?: () => boolean; canCancel?: () => boolean }) {
   return async (request: RpcRequest, peer: AuthenticatedPeer, snapshot: StoreSnapshot): Promise<RpcResponse> => {
     const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
     try {
@@ -22,7 +22,8 @@ export function createDiscoveryDispatch(options: { storage: Pick<StoragePort, 'r
       let data: Record<string, unknown>;
       const p = request.params, service = options.operations;
       if (request.method === 'discovery.prepare' || (DISCOVERY_ADMISSION_METHODS as readonly string[]).includes(request.method)) {
-        if (!service || snapshot.instance?.lifecycle !== 'RUNNING' || options.accepting?.() === false) throw new Error('BLOCKED');
+        const cancelling = request.method === 'discovery.cancel' || request.method === 'discovery.prepare' && (p.intent as DiscoveryIntent).action === 'cancel';
+        if (!service || snapshot.instance?.lifecycle !== 'RUNNING' || (cancelling ? options.canCancel?.() === false : options.accepting?.() === false)) throw new Error('BLOCKED');
         const result = request.method === 'discovery.prepare' ? await service.prepare(peer, p.intent as DiscoveryIntent)
           : request.method === 'discovery.start' ? await service.startGranted(peer, p as unknown as Parameters<typeof service.startGranted>[1])
           : request.method === 'discovery.provider.configure' ? await service.configureGranted(peer, p as unknown as Parameters<typeof service.configureGranted>[1])

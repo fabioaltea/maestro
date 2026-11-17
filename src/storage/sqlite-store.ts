@@ -131,9 +131,9 @@ export class SQLiteStore {
         enforceDiscoveryBudget(this.database!, !['provider', 'configure', 'snapshot', 'questions', 'answer', 'revision', 'output'].includes(change?.kind ?? ''));
         if (!change || ['provider', 'snapshot', 'artifact'].includes(change.kind)) return value;
         let discoveryId: string | null = null, runId: string | null = null, operationId: string | null = null;
-        if (change.kind === 'operation') operationId = change.requestId;
+        if (change.kind === 'operation' || change.kind === 'operation-uncertain') operationId = change.requestId;
         else if (change.kind === 'configure') operationId = change.admission.requestId;
-        else if (change.kind === 'state' || change.kind === 'questions') discoveryId = change.discoveryId;
+        else if (change.kind === 'state' || change.kind === 'questions' || change.kind === 'cancel') { discoveryId = change.discoveryId; if (change.kind === 'cancel') operationId = change.admission.requestId; }
         else if (change.kind === 'answer') {
           const question = this.database!.prepare('SELECT discovery_id FROM discovery_questions WHERE question_id=?').get(change.value.questionId) as Row | undefined;
           discoveryId = change.admission.discovery?.discoveryId ?? (question ? String(question.discovery_id) : null); operationId = change.value.requestId;

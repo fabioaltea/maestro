@@ -799,3 +799,30 @@ Quattro test output/eventi PASS; insieme a intervista, API e host/provider-launc
 fixture28PASS/0FAIL/0SKIP,17777,05ms. Inclusa compatibilità evento truncated con
 preload/renderer e assenza di redazioni spurie; prima selezione11PASS. Build
 core/test e typecheck PASS; nessun provider/account reale, G1 NOT_RUN invariato.
+
+
+## T033 — recovery e cancellazione locale verificata, 2026-11-17
+
+Separati recovery/lifecycle Agent Runtime. Startup enumera soltanto metadata
+bounded: intento SPAWN_INTENT senza record processo non viene avviato; diventa
+INTERRUPTED/FINALIZED. Prove autenticate di uscita o release/assenza già durevoli
+permettono finalizzazione; identità non provata conserva processo/slot e
+RECONCILING. WAITING_USER, output e domande non vengono cancellati o ripresi.
+Operazioni accettate prima del crash restano interrogabili e vengono interrotte
+senza replay; risposta già confermata conservata.
+
+Cancel usa grant distinto, CAS e transazione writer: WAITING_USER termina senza
+processo, RUNNING passa CANCELLING e aspetta prova locale≤4s. Esito incerto resta
+WORKING/UNKNOWN e può essere riconciliato, senza terminale fittizio. Risultati
+tardivi dopo cancel/reconcile non pubblicano domande. Stop drena nel deadline
+core esistente e non confonde cessazione locale e remota. Query/cancel intent
+restano disponibili con admission bloccata per proprietà runtime incerta.
+
+Tre casi iniziali RED (0PASS/3FAIL,5829,19ms); ora4test recovery PASS, inclusi
+veri host/provider fixture per cancel RUNNING/WAITING_USER e riapertura con
+risposta accettata ma continuazione non partita. Selezione recovery/bootstrap/
+metadata/provider-launch27PASS/0FAIL/0SKIP,14003,31ms. Caso bootstrap con PID
+estraneo/UNKNOWN preservato ancora PASS. Compilazione iniziale con inferenza
+stringa dell'outcome corretta annotando DiscoveryRun. Typecheck/lint PASS.
+La qualifica completa SIGKILL daemon/host e UI rimane T036/G2; nessun account
+o modello reale, G1 e gate preesistenti invariati.

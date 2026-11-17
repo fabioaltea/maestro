@@ -130,10 +130,11 @@ export function createDiscoveryLauncher(options: LauncherOptions) {
     const r = await meta({ kind: 'run', id: entry.identity.runId });
     if (!r || r.generation !== entry.generation) throw new Error('STALE_TARGET');
     if (r.phase === 'FINALIZED' || r.phase === 'EXIT_OBSERVED') return;
-    const decoded = entry.failure === null && proof.outcome === 'SUCCEEDED' ? entry.decoder.finish(proof.exitCode ?? null) : null;
-    const code = entry.failure ?? (decoded && !decoded.ok ? decoded.code : proof.outcome === 'SUCCEEDED' ? null : proof.error ?? 'PROVIDER_UNAVAILABLE');
+    const d = await meta({ kind: 'discovery', id: r.discoveryId }), cancelling = d?.state === 'CANCELLING', uncertain = d?.state === 'RECONCILING';
+    const decoded = !cancelling && !uncertain && entry.failure === null && proof.outcome === 'SUCCEEDED' ? entry.decoder.finish(proof.exitCode ?? null) : null;
+    const code = cancelling || uncertain ? null : entry.failure ?? (decoded && !decoded.ok ? decoded.code : proof.outcome === 'SUCCEEDED' ? null : proof.error ?? (['CANCELLED', 'INTERRUPTED'].includes(proof.outcome) ? null : 'PROVIDER_UNAVAILABLE'));
     const succeeded = code === null && decoded?.ok === true;
-    const outcome = succeeded ? 'SUCCEEDED' : entry.failure === null && ['CANCELLED', 'INTERRUPTED', 'TIMED_OUT'].includes(proof.outcome) ? proof.outcome : 'FAILED';
+    const outcome = cancelling ? 'CANCELLED' : uncertain ? 'INTERRUPTED' : succeeded ? 'SUCCEEDED' : entry.failure === null && ['CANCELLED', 'INTERRUPTED', 'TIMED_OUT'].includes(proof.outcome) ? proof.outcome : 'FAILED';
     const exited: DiscoveryRun = { ...r, phase: 'EXIT_OBSERVED', outcome, endedAt: new Date().toISOString(), error: code };
     await commit({ kind: 'run', value: exited, expectedPhase: r.phase, exitVerified: true });
     const process = await meta({ kind: 'process', id: r.runId });
@@ -147,7 +148,7 @@ export function createDiscoveryLauncher(options: LauncherOptions) {
     } else {
       const d = await meta({ kind: 'discovery', id: r.discoveryId });
       await state(exited, d?.state === 'CANCELLING' ? outcome === 'CANCELLED' ? 'CANCELLED' : 'INTERRUPTED'
-        : d?.state === 'RECONCILING' || outcome === 'INTERRUPTED' ? 'INTERRUPTED' : 'FAILED', true);
+        : d?.state === 'RECONCILING' || outcome === 'INTERRUPTED' || outcome === 'CANCELLED' ? 'INTERRUPTED' : 'FAILED', true);
     }
     entry.finalized = true; active.delete(r.runId);
   }

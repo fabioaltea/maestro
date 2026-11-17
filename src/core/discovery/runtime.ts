@@ -15,7 +15,7 @@ import type { DiscoveryArtifactPort } from '../../ports/discovery.js';
 import type { AgentProcessIdentity, AgentExitProof } from '../../ports/agent-runtime.js';
 import type { Deadline } from '../../ports/clock.js';
 import type { CoreDependencies } from '../runtime.js';
-import type { DiscoveryMetadataData, DiscoveryMetadataQuery, DiscoveryMetadataChange } from '../../ports/discovery.js';
+import { createDiscoveryLifecycle } from './lifecycle.js';
 
 /** Composition only: test substitutions never come from a public command. */
 export function createDiscoveryRuntime(storage: StoragePort, paths: ArchivePaths, instanceId: string, dependencies: CoreDependencies['discovery'] = {}) {
@@ -37,47 +37,20 @@ export function createDiscoveryRuntime(storage: StoragePort, paths: ArchivePaths
       if (result.kind !== 'QUESTIONS') throw new Error('PROVIDER_UNSUPPORTED');
       await operations.publishQuestions(identity, result);
     }) });
-  const operations = createDiscoveryOperations({ storage, paths, instanceId, ownerUid: paths.ownerUid, provider, inspection, context, artifacts, launch: input => launcher.launch(input) });
-  async function meta<Q extends DiscoveryMetadataQuery>(query: Q): Promise<DiscoveryMetadataData<Q>> {
-    const r = await storage.readDiscoveryMetadata!(query); if (!r.ok) throw new Error(r.code); return r.value.data;
-  }
-  async function commit(change: DiscoveryMetadataChange) { const r = await storage.commitDiscoveryMetadata!(change); if (!r.ok) throw new Error(r.code); }
-  async function processes() {
-    const all: AgentProcessIdentity[] = []; let offset = 0;
-    for (;;) {
-      const page = await meta({ kind: 'processes', offset, limit: 20 }); all.push(...page.items);
-      if (page.nextOffset === null) return all;
-      if (page.nextOffset <= offset || all.length > 2000) throw new Error('DISCOVERY_LIMIT'); offset = page.nextOffset;
-    }
-  }
-  async function interrupted(identity: AgentProcessIdentity, proof: AgentExitProof | null) {
-    const run = await meta({ kind: 'run', id: identity.runId }); if (!run || run.generation !== identity.generation) throw new Error('STALE_TARGET');
-    const discovery = await meta({ kind: 'discovery', id: run.discoveryId }); if (!discovery || discovery.currentRunId !== run.runId) throw new Error('STALE_TARGET');
-    if (!proof || !proof.hostExited || !proof.providerExited || proof.runId !== run.runId || proof.generation !== run.generation) {
-      if (['RUNNING', 'UPDATING', 'CANCELLING'].includes(discovery.state)) await commit({ kind: 'state', discoveryId: discovery.discoveryId, expectedRevision: discovery.stateRevision, next: 'RECONCILING', exitVerified: false });
-      return false;
-    }
-    await commit({ kind: 'process', value: { ...identity, observation: 'ABSENT', releaseState: 'RELEASED' } });
-    if (!['FINALIZED', 'EXIT_OBSERVED'].includes(run.phase)) await commit({ kind: 'run', expectedPhase: run.phase, exitVerified: true, value: { ...run, phase: 'EXIT_OBSERVED', outcome: 'INTERRUPTED', endedAt: new Date().toISOString(), error: null } });
-    if (['RUNNING', 'UPDATING', 'CANCELLING', 'RECONCILING'].includes(discovery.state)) await commit({ kind: 'state', discoveryId: discovery.discoveryId, expectedRevision: discovery.stateRevision, next: 'INTERRUPTED', exitVerified: true });
-    return true;
-  }
+  const lifecycle = createDiscoveryLifecycle({ storage, agent, settle: (identity, proof) => launcher.exited(identity, proof) });
+  const operations = createDiscoveryOperations({ storage, paths, instanceId, ownerUid: paths.ownerUid, provider, inspection, context, artifacts, launch: input => launcher.launch(input), cancel: (discoveryId, requestId) => lifecycle.cancel(discoveryId, requestId) });
   async function bounded(work: Promise<unknown>, deadline: Deadline) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try { await Promise.race([work, new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new Error('DEADLINE_EXCEEDED')), Math.max(1, deadline.remainingMs())); })]); }
     finally { clearTimeout(timer); }
   }
-  return { methods: DISCOVERY_LIVE_METHODS, operations, dispatch: createDiscoveryDispatch({ storage, operations, accepting: () => accepting && safe }),
+  return { methods: DISCOVERY_LIVE_METHODS, operations, dispatch: createDiscoveryDispatch({ storage, operations, accepting: () => accepting && safe, canCancel: () => accepting }),
     fence() { accepting = false; },
     async recover() {
       safe = false;
       try {
         const result = await artifacts.reconcile(); if (!result.ok) throw new Error(result.code);
-        let complete = true;
-        for (const identity of await processes()) if (identity.releaseState !== 'RELEASED') {
-          const r = await agent.reconcile(identity); complete = await interrupted(identity, r.ok ? r.value : null) && complete;
-        }
-        safe = complete;
+        safe = await lifecycle.recover();
       } catch { safe = false; }
       accepting = true;
     },
@@ -86,11 +59,7 @@ export function createDiscoveryRuntime(storage: StoragePort, paths: ArchivePaths
       // A historical store has no Agent Runtime records and must retain its
       // existing Foundation lifecycle without initializing Discovery on read.
       if ((await storage.readSnapshot())?.store.schemaVersion !== 4) return;
-      const stopped = await agent.stopWithin(deadline); if (!stopped.ok) throw new Error(stopped.code);
-      for (const identity of await processes()) if (identity.releaseState !== 'RELEASED') {
-        const result = await agent.cancel(identity, deadline);
-        if (!await interrupted(identity, result.ok ? result.value : null)) throw new Error('RESOURCE_IDENTITY_UNKNOWN');
-      }
+      await lifecycle.stop(deadline);
     },
   };
 }

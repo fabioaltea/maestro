@@ -66,7 +66,9 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
   function mapped(kind: string, row: Row): unknown {
     const storeId = String(identity().store_id);
     if (kind === 'grant') return { grantId: row.grant_id, canonicalIntent: row.canonical_intent, expiresAtMs: Number(row.expires_at_ms), consumedByRequestId: row.consumed_by_request_id };
-    if (kind === 'discovery' || kind === 'discoveries') return discovery(row, storeId);
+    if (kind === 'discovery' || kind === 'discoveries' || kind === 'activeDiscoveries') return discovery(row, storeId);
+    if (kind === 'pendingOperations') return { requestId: row.request_id, action: row.action, phase: row.phase, outcome: row.outcome, acceptedAt: row.accepted_at, completedAt: row.completed_at,
+      discoveryId: row.discovery_id, runId: row.run_id, result: row.result === null ? null : JSON.parse(String(row.result)), error: cleanCode(row.error) };
     if (kind === 'run') return run(row);
     if (kind === 'snapshot') return { ...JSON.parse(String(row.metadata)), snapshotId: String(row.snapshot_id), projectId: String(row.project_id), configRevision: String(row.config_revision),
       state: row.state, contextDigest: row.context_digest, manifestArtifactId: row.manifest_artifact_id, corpusArtifactId: row.corpus_artifact_id, createdAt: row.created_at, expiresAtMs: row.expires_at_ms === null ? null : Number(row.expires_at_ms), pinned: Number(row.pinned) === 1 };
@@ -83,7 +85,7 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
     read<Q extends DiscoveryMetadataQuery>(query: Q): DiscoveryResult<DiscoveryMetadataReply<Q>> {
       try {
         const singular: Record<string, [string, string]> = { question: ['discovery_questions', 'question_id'], grant: ['discovery_grants', 'grant_id'], snapshot: ['discovery_snapshots', 'snapshot_id'], discovery: ['discoveries', 'discovery_id'], run: ['discovery_runs', 'run_id'], process: ['discovery_processes', 'run_id'], revision: ['discovery_revisions', 'revision_id'], approval: ['discovery_approvals', 'revision_id'], artifact: ['discovery_artifacts', 'artifact_id'] };
-        const plural: Record<string, [string, string, string]> = { discoveries: ['discoveries', 'project_id', 'created_at,discovery_id'], questions: ['discovery_questions', 'discovery_id', 'question_id'], answers: ['discovery_answers a JOIN discovery_questions q ON q.question_id=a.question_id', 'q.discovery_id', 'a.question_id,a.answer_revision,a.answer_id'], revisions: ['discovery_revisions', 'discovery_id', 'revision_number'], processes: ['discovery_processes', '', 'run_id'], output: ['discovery_output', 'run_id', 'seq'] };
+        const plural: Record<string, [string, string, string]> = { activeDiscoveries: ['discoveries', '', 'discovery_id'], pendingOperations: ['discovery_operations', '', 'accepted_at,request_id'], discoveries: ['discoveries', 'project_id', 'created_at,discovery_id'], questions: ['discovery_questions', 'discovery_id', 'question_id'], answers: ['discovery_answers a JOIN discovery_questions q ON q.question_id=a.question_id', 'q.discovery_id', 'a.question_id,a.answer_revision,a.answer_id'], revisions: ['discovery_revisions', 'discovery_id', 'revision_number'], processes: ['discovery_processes', '', 'run_id'], output: ['discovery_output', 'run_id', 'seq'] };
         let data: unknown;
         if (query.kind === 'provider') { exact(query, ['kind']); const row = database.prepare('SELECT configuration FROM discovery_provider WHERE singleton=1').get() as Row | undefined; data = row ? JSON.parse(String(row.configuration)) : null; }
         else if (query.kind === 'outputStatus') {
@@ -98,7 +100,8 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
           const q = query as { id?: string; offset?: number; limit?: number }, offset = q.offset ?? 0, limit = q.limit ?? 20;
           if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isInteger(limit) || limit < 1 || limit > 20) fail();
           const [table, key, order] = plural[query.kind]!; if (key) requireUuid(q.id!); else if (q.id !== undefined) fail();
-          const rows = database.prepare(`SELECT ${query.kind === 'answers' ? 'a.*' : '*'} FROM ${table}${key ? ` WHERE ${key}=?` : ''} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...(key ? [q.id!] : []), limit + 1, offset) as Row[];
+          const where = key ? ` WHERE ${key}=?` : query.kind === 'activeDiscoveries' ? " WHERE state IN ('RUNNING','UPDATING','WAITING_USER','CANCELLING','RECONCILING')" : query.kind === 'pendingOperations' ? " WHERE phase<>'FINALIZED'" : '';
+          const rows = database.prepare(`SELECT ${query.kind === 'answers' ? 'a.*' : '*'} FROM ${table}${where} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...(key ? [q.id!] : []), limit + 1, offset) as Row[];
           const items: unknown[] = [];
           for (const row of rows.slice(0, limit)) { const value = mapped(query.kind, row); if (Buffer.byteLength(JSON.stringify({ items: [...items, value], nextOffset: offset + items.length + 1 })) > MAX_PAGE_BYTES) break; items.push(value); }
           if (rows.length && !items.length) fail('CONTEXT_LIMIT');
@@ -111,7 +114,25 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
     commit(change: DiscoveryMetadataChange): DiscoveryResult<void> {
       try {
         mutate(() => {
-          if (change.kind === 'configure') {
+          if (change.kind === 'cancel') {
+            exact(change, ['kind', 'discoveryId', 'expectedRevision', 'admission']);
+            if (change.admission.action !== 'cancel') fail('INVALID_REQUEST');
+            const admitted = createDiscoveryLedger(database, { mutate: body => body(), ...(options.nowMs ? { nowMs: options.nowMs } : {}) }).admit(change.admission);
+            if (!admitted.ok) fail(admitted.code); if (!admitted.value.inserted) return;
+            const d = current(change.discoveryId, change.expectedRevision), intent = JSON.parse(change.admission.canonicalIntent), snapshot = one('discovery_snapshots', 'snapshot_id', String(d.snapshot_id));
+            if (intent.targetId !== d.discovery_id || intent.stateRevision !== change.expectedRevision || intent.configRevision !== String(d.config_revision) || intent.providerRevision !== String(d.provider_revision)
+              || intent.snapshotId !== d.snapshot_id || intent.contextDigest !== snapshot?.context_digest || intent.modelId !== null || intent.providerProfileDigest !== null || Object.keys(intent.payload).length) fail('APPROVAL_STALE');
+            if (['WAITING_USER', 'READY_FOR_REVIEW'].includes(String(d.state))) {
+              const run = one('discovery_runs', 'run_id', String(d.current_run_id)), process = one('discovery_processes', 'run_id', String(d.current_run_id));
+              if (!run || run.phase !== 'FINALIZED' || process && (process.release_state !== 'RELEASED' || process.observation !== 'ABSENT')) fail('RESOURCE_IDENTITY_UNKNOWN');
+              changeState(d, 'CANCELLED', true);
+              database.prepare("UPDATE discovery_operations SET phase='FINALIZED',outcome='SUCCEEDED',completed_at=?,result=? WHERE request_id=?").run(new Date().toISOString(), json({ discoveryId: d.discovery_id, sessionId: d.session_id }), change.admission.requestId);
+            } else if (['RUNNING', 'UPDATING', 'CANCELLING', 'RECONCILING'].includes(String(d.state))) { if (d.state !== 'CANCELLING') changeState(d, 'CANCELLING', false); }
+            else fail('APPROVAL_STALE');
+          } else if (change.kind === 'operation-uncertain') {
+            exact(change, ['kind', 'requestId', 'error']); if (!isDiscoveryFailure(change.error)) fail();
+            database.prepare("UPDATE discovery_operations SET phase='WORKING',outcome='UNKNOWN',error=? WHERE request_id=? AND phase<>'FINALIZED'").run(change.error, requireUuid(change.requestId));
+          } else if (change.kind === 'configure') {
             exact(change, ['kind', 'admission', 'configuration', 'expectedRevision']);
             if (change.admission.action !== 'configure') fail();
             const intent = JSON.parse(change.admission.canonicalIntent) as { payload: Record<string, unknown> };

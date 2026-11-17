@@ -23,6 +23,7 @@ interface Options {
   readonly provider: ProviderPort; readonly inspection?: CodexInspectionPort;
   readonly context?: DiscoveryContextPort; readonly artifacts?: DiscoveryArtifactPort;
   readonly launch?: (input: DiscoveryLaunch) => Promise<void>;
+  readonly cancel?: (discoveryId: string, requestId: string) => Promise<void>;
   readonly checkpoint?: (point: string) => Promise<void>;
 }
 export interface DiscoveryCommand { readonly requestId: string; readonly grantId: string | null; readonly canonicalIntent: string }
@@ -123,6 +124,13 @@ export function createDiscoveryOperations(options: Options) {
     if (!checked.capabilities.readOnlyAnalysis || !checked.capabilities.portableTurns || !checked.capabilities.localCancellation) fail('PROVIDER_UNSAFE');
     return checked;
   }
+  async function cancelIntent(intent: DiscoveryIntent) {
+    const d = await meta({ kind: 'discovery', id: intent.targetId }), snapshot = d ? await meta({ kind: 'snapshot', id: d.snapshotId }) : null;
+    if (!d || intent.action !== 'cancel' || d.storeId !== intent.storeId || d.stateRevision !== intent.stateRevision || d.configRevision !== intent.configRevision
+      || d.providerRevision !== intent.providerRevision || d.snapshotId !== intent.snapshotId || snapshot?.contextDigest !== intent.contextDigest || intent.modelId !== null || intent.providerProfileDigest !== null || Object.keys(intent.payload).length
+      || !['RUNNING', 'UPDATING', 'WAITING_USER', 'READY_FOR_REVIEW', 'CANCELLING', 'RECONCILING'].includes(d.state)) fail('APPROVAL_STALE');
+    return d;
+  }
   async function blocked(requestId: string, error: unknown) {
     const operation = await storage.getDiscoveryOperation?.(requestId);
     if (operation && operation.phase !== 'FINALIZED') await commit({ kind: 'operation', requestId, outcome: 'BLOCKED', completedAt: new Date().toISOString(), result: null, error: failure(error).code });
@@ -142,6 +150,8 @@ export function createDiscoveryOperations(options: Options) {
             selectors: current.snapshot.selectors, fileCount: sealed.manifest.sources.length, byteCount: current.snapshot.byteCount, omissions: current.snapshot.omissions,
             providerId: current.configuration.providerId, providerRevision: current.configuration.revision, modelId: current.configuration.modelId,
             sendsProjectData: true, data: 'Selected sealed source text is sent to the configured AI provider for read-only project discovery.' };
+        } else if (intent.action === 'cancel') {
+          const d = await cancelIntent(intent); summary = { action: 'cancel', projectId: d.projectId, snapshotId: d.snapshotId, contextDigest: intent.contextDigest, sendsProjectData: false, data: 'Stop only the owned local execution; remote cancellation is not verified.' };
         } else if (intent.action === 'answer') {
           if (!interview) fail('DISCOVERY_NOT_INITIALIZED');
           const current = await interview!.inspect(intent);
@@ -159,6 +169,23 @@ export function createDiscoveryOperations(options: Options) {
     },
     async publishQuestions(identity: AgentProcessIdentity, result: DiscoveryQuestions) {
       if (!interview) fail('DISCOVERY_NOT_INITIALIZED'); await interview!.publish(identity, result);
+    },
+    async cancelGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; discoveryId: string }): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'grantId', 'discoveryId']); requireUuid(input.requestId); requireUuid(input.discoveryId); await guard(peer);
+        const grant = await meta({ kind: 'grant', id: input.grantId }); if (!grant) fail('APPROVAL_REQUIRED');
+        const { intent } = await intentFor(peer, grant.canonicalIntent);
+        if (intent.action !== 'cancel' || intent.targetId !== input.discoveryId) fail('APPROVAL_REQUIRED');
+        const command = { requestId: input.requestId, grantId: input.grantId, canonicalIntent: grant.canonicalIntent };
+        if (await original(command, 'cancel')) return { ok: true, value: { accepted: true, requestId: input.requestId } };
+        const d = await cancelIntent(intent);
+        await commit({ kind: 'cancel', discoveryId: d.discoveryId, expectedRevision: d.stateRevision, admission: { ...admission(input.requestId, grant.canonicalIntent, input.grantId), discovery: d, expectedStateRevision: d.stateRevision } });
+        if ((await storage.getDiscoveryOperation?.(input.requestId))?.phase !== 'FINALIZED') job(async () => {
+          try { if (!options.cancel) fail('RESOURCE_IDENTITY_UNKNOWN'); await options.cancel!(d.discoveryId, input.requestId); }
+          catch { await commit({ kind: 'operation-uncertain', requestId: input.requestId, error: 'RESOURCE_IDENTITY_UNKNOWN' }); }
+        });
+        return { ok: true, value: { accepted: true, requestId: input.requestId } };
+      } catch (error) { return failure(error); }
     },
     async answer(peer: AuthenticatedPeer, input: DiscoveryCommand): Promise<DiscoveryResult<DiscoveryAccepted>> {
       let uncertain = false;
