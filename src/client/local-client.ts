@@ -1,4 +1,5 @@
-import { DISCOVERY_READ_METHODS, validateDiscoveryParams, decodeDiscoveryOperationView, requireDiscoveryEnvelope } from '../protocol/discovery.js';
+import { DISCOVERY_READ_METHODS, DISCOVERY_ADMISSION_METHODS, validateDiscoveryParams, validateDiscoveryAdmission, decodeDiscoveryOperationView, requireDiscoveryEnvelope } from '../protocol/discovery.js';
+import { canonicalDiscoveryIntent } from '../domain/discovery/intent.js';
 import { randomUUID } from 'node:crypto';
 import type { ClientBackend } from '../ports/platform.js';
 import type { PublicResult } from '../protocol/messages.js';
@@ -19,18 +20,61 @@ export class LocalClient {
   constructor(private readonly backend: ClientBackend) {}
   async runDiscovery(method: string, params: Readonly<Record<string, unknown>>, options: CommandOptions = {}): Promise<PublicResult> {
     const directory = options.stateDirectory ?? this.backend.defaultDirectory;
-    validateDiscoveryParams(method, params);
-    if (!DISCOVERY_READ_METHODS.includes(method as typeof DISCOVERY_READ_METHODS[number]) && method !== 'discovery.eligibility.get') throw new Error('UNSUPPORTED_VERSION');
+    const mutation = (DISCOVERY_ADMISSION_METHODS as readonly string[]).includes(method);
+    if (!mutation && !DISCOVERY_READ_METHODS.includes(method as typeof DISCOVERY_READ_METHODS[number]) && !['discovery.prepare', 'discovery.eligibility.get'].includes(method)) throw new Error('UNSUPPORTED_VERSION');
+    if (options.limit !== undefined || options.after !== undefined || mutation && Object.hasOwn(params, 'requestId') || !mutation && options.requestId !== undefined) throw new Error('INVALID_REQUEST');
+    const requestId = mutation ? requireUuid(options.requestId ?? randomUUID()) : method === 'discovery.operation.get' ? requireUuid(params.requestId) : null;
+    const command = mutation ? { ...params, requestId } : { ...params };
+    validateDiscoveryParams(method, command);
+    const original = JSON.parse(JSON.stringify(command)) as Readonly<Record<string, unknown>>;
     if (!this.backend.discovery) throw new Error('UNSUPPORTED_VERSION');
     const timeout = options.timeoutMs ?? 2000;
-    if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 30000) throw new Error('INVALID_REQUEST');
+    if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 2000) throw new Error('INVALID_REQUEST');
+    const expires = performance.now() + timeout;
+    const unknown = (): PublicResult => ({ protocolVersion: 1, requestId, storeId: null, instanceId: null,
+      result: 'UNKNOWN_OUTCOME', outcome: null, freshness: 'LAST_KNOWN', liveness: 'UNKNOWN', data: {},
+      error: foundationError('UNKNOWN_OUTCOME', requestId ? { operationId: requestId } : {}) });
+    function checked(response: PublicResult) {
+      requireDiscoveryEnvelope(response);
+      if (response.requestId !== requestId) throw new Error('INVALID_REQUEST');
+      if (response.data.operation !== undefined) {
+        const operation = decodeDiscoveryOperationView(response.data.operation);
+        if (operation.requestId !== requestId || operation.outcome !== 'UNKNOWN' && operation.outcome !== response.outcome) throw new Error('INVALID_REQUEST');
+        const actions: Record<string, string> = { 'discovery.start': 'start', 'discovery.preview': 'preview', 'discovery.preview.discard': 'discard', 'discovery.provider.configure': 'configure', 'discovery.provider.check': 'check' };
+        if (mutation && operation.action !== actions[method]) throw new Error('INVALID_REQUEST');
+      }
+      if (Object.hasOwn(response.data, 'accepted')) {
+        const { storeId: _store, observabilityDegraded: _degraded, ...admission } = response.data;
+        validateDiscoveryAdmission(admission); if (admission.requestId !== requestId) throw new Error('INVALID_REQUEST');
+      }
+      if (mutation && (response.result === 'OK' || response.result === 'BUSY' && response.error === null) && !Object.hasOwn(response.data, 'accepted') && response.data.operation === undefined) throw new Error('INVALID_REQUEST');
+      if (method === 'discovery.prepare' && response.result === 'OK') {
+        const data = response.data;
+        requireUuid(data.grantId);
+        if (typeof data.canonicalIntent !== 'string' || data.canonicalIntent !== canonicalDiscoveryIntent(original.intent)
+          || !Number.isSafeInteger(data.expiresAtMs) || Number(data.expiresAtMs) <= 0 || !data.summary || typeof data.summary !== 'object' || Array.isArray(data.summary)) throw new Error('INVALID_REQUEST');
+      }
+      return response;
+    }
+    const observe = async () => {
+      if (!mutation) return checked(await this.backend.discovery!(directory, method, original, Math.max(1, expires - performance.now())));
+      try {
+        const response = checked(await this.backend.discovery!(directory, method, original, Math.max(1, expires - performance.now())));
+        if (response.result !== 'UNKNOWN_OUTCOME' && !['UNKNOWN_OUTCOME', 'PERSISTENCE_UNAVAILABLE', 'DEADLINE_EXCEEDED'].includes(response.error?.code ?? '')) return response;
+      } catch { /* The command may already have committed; observe only its original UUID. */ }
+      if (performance.now() < expires) {
+        try {
+          const response = checked(await this.backend.discovery!(directory, 'discovery.operation.get', { requestId }, Math.max(1, expires - performance.now())));
+          if (response.data.operation !== undefined) return response;
+        } catch { /* NOT_FOUND/error cannot prove non-invio. */ }
+      }
+      return unknown();
+    };
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const expired = new Promise<PublicResult>(resolve => { timer = setTimeout(() => resolve({ protocolVersion: 1, requestId: method === 'discovery.operation.get' ? params.requestId as string : null,
+    const expired = new Promise<PublicResult>(resolve => { timer = setTimeout(() => resolve(mutation ? unknown() : { protocolVersion: 1, requestId,
       storeId: null, instanceId: null, result: 'ERROR', outcome: null, freshness: 'LAST_KNOWN', liveness: 'UNKNOWN', data: {}, error: foundationError('DEADLINE_EXCEEDED') }), timeout); });
     try {
-      const result = await Promise.race([this.backend.discovery(directory, method, params, timeout), expired]); requireDiscoveryEnvelope(result);
-      if (result.data.operation !== undefined) decodeDiscoveryOperationView(result.data.operation);
-      return result;
+      return await Promise.race([observe(), expired]);
     } finally { clearTimeout(timer); }
   }
   async runProject(command: 'register' | 'list' | 'get' | 'verify' | 'update' | 'remove' | 'operation',

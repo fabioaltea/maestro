@@ -24,13 +24,13 @@ Ogni comando usa `--state-dir ABS --json`. Mutazioni con `--request-id UUID`; qu
 | CLI `maestro discovery ...` | Metodo locale | Input essenziale |
 |---|---|---|
 | provider get | discovery.provider.get | nessuno; config/capability/ultimo check senza segreti |
-| provider configure --binary ABS --model ID --grant UUID | discovery.provider.configure | grantId, native path/hash/version/profile, expectedProviderRevision |
-| provider check | discovery.provider.check | configurazione attesa; probe locale intenzionale, nessun modello/login |
-| preview PROJECT --scope-file FILE | discovery.preview | projectId/configRevision,≤16selettori relativi; scope-file letto solo dalla CLI e serializzato in DTO chiuso |
+| provider configure --binary ABS --model ID --grant UUID | discovery.provider.configure | requestId,grantId,binaryRealpath,modelId; hash/versione/profilo/revisione attesa risolti dal grant |
+| provider check --expected-provider-revision REV | discovery.provider.check | requestId,expectedProviderRevision; probe locale intenzionale, nessun modello/login |
+| preview PROJECT --expected-revision REV --scope-file FILE | discovery.preview | requestId,projectId,expectedConfigRevision,≤16selettori relativi; scope-file JSON array letto solo dalla CLI |
 | preview show SNAPSHOT | discovery.preview.get | snapshotId, metadata/copertura/omissioni; source page separata |
-| preview discard SNAPSHOT | discovery.preview.discard | snapshotId/revisione, nessun riferimento attivo |
+| preview discard SNAPSHOT | discovery.preview.discard | requestId,snapshotId immutabile; nessun riferimento attivo |
 | prepare --intent-file FILE | discovery.prepare | action, DTO canonico, expected revisions/digests |
-| start PROJECT --grant UUID | discovery.start | grantId, snapshotId, projectId/configRevision/providerRevision; niente prompt/argv arbitrari |
+| start PROJECT --grant UUID | discovery.start | requestId,grantId,projectId; snapshot/config/provider/modello risolti dal grant, niente prompt/argv arbitrari |
 | list PROJECT [--cursor C] | discovery.list | projectId,limit≤20,cursor |
 | show DISCOVERY | discovery.get | discoveryId |
 | output RUN [--after C] | discovery.output.list | runId,cursor,limit≤20; chunk raw8KiB |
@@ -44,6 +44,14 @@ Ogni comando usa `--state-dir ABS --json`. Mutazioni con `--request-id UUID`; qu
 | operation REQUEST | discovery.operation.get | requestId |
 
 CLI prepare stampa riepilogo/ambito/hash/scadenza; operatore conferma intenzionalmente usando grant con la stessa richiesta. UI usa prepare/confirm e ricevuta propria. `provider configure` accetta file path soltanto dal client headless fidato; il renderer usa un handle native-picker risolto main. Nessuna chiave/token accettata come parametro.
+
+Il core risolve l’intent canonico conservato nel grant per start/configure e
+confronta progetto oppure binario/modello richiesti prima di consumarlo. Il
+client non deve persistere un secondo intent per confermare. Gli input file CLI
+sono regolari, UTF-8, bounded32KiB e stabili durante la lettura; non vengono
+trasmessi path di scope-file/intent-file al daemon. Nessun flag è accettato da
+comandi cui non appartiene. Le ricevute incerte preservano UUID e azione, senza
+scambiare un’operazione Discovery di altro tipo per il risultato richiesto.
 
 ## Autorizzazione e idempotenza
 

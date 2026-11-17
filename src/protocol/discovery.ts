@@ -1,8 +1,9 @@
 import { requireUuid, requireDecimal } from '../domain/identifiers.js';
 import { foundationError, type ErrorCode } from '../domain/errors.js';
 import { DISCOVERY_LIMITS, isDiscoveryFailure } from '../domain/discovery/model.js';
-import { validateDiscoveryText } from '../domain/discovery/intent.js';
+import { canonicalDiscoveryIntent, validateDiscoveryText } from '../domain/discovery/intent.js';
 export const DISCOVERY_READ_METHODS = ['discovery.provider.get', 'discovery.preview.get', 'discovery.list', 'discovery.get', 'discovery.questions.list', 'discovery.output.list', 'discovery.document.get', 'discovery.operation.get'] as const;
+export const DISCOVERY_ADMISSION_METHODS = ['discovery.provider.configure', 'discovery.provider.check', 'discovery.preview', 'discovery.preview.discard', 'discovery.start'] as const;
 export function discoveryObject(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('INVALID_REQUEST'); return value as Record<string, unknown>; }
 export function discoveryFields(value: Record<string, unknown>, required: readonly string[], optional: readonly string[] = []) {
   if (required.some(key => !Object.hasOwn(value, key)) || Object.keys(value).some(key => !required.includes(key) && !optional.includes(key))) throw new Error('INVALID_REQUEST');
@@ -13,6 +14,27 @@ export function requireDiscoveryCapability(value: unknown) { if (!value || typeo
 export function requireDiscoveryEnvelope(value: unknown) { if (Buffer.byteLength(JSON.stringify(value)) > DISCOVERY_LIMITS.envelopeBytes) throw new Error('CONTEXT_LIMIT'); }
 export function validateDiscoveryParams(method: string, input: unknown): void {
   const p = discoveryObject(input); requireDiscoveryEnvelope(p);
+  if (method === 'discovery.prepare') { discoveryFields(p, ['intent']); canonicalDiscoveryIntent(p.intent); return; }
+  if ((DISCOVERY_ADMISSION_METHODS as readonly string[]).includes(method)) {
+    uuid(p.requestId);
+    if (method === 'discovery.start') { discoveryFields(p, ['requestId', 'grantId', 'projectId']); uuid(p.grantId); uuid(p.projectId); }
+    else if (method === 'discovery.provider.configure') {
+      discoveryFields(p, ['requestId', 'grantId', 'binaryRealpath', 'modelId']); uuid(p.grantId);
+      if (typeof p.binaryRealpath !== 'string' || !p.binaryRealpath.startsWith('/') || /[\x00-\x1f\x7f]/.test(p.binaryRealpath)) throw new Error('INVALID_REQUEST');
+      validateDiscoveryText(p.binaryRealpath, 4096);
+      if (typeof p.modelId !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/.test(p.modelId)) throw new Error('INVALID_REQUEST');
+    } else if (method === 'discovery.provider.check') { discoveryFields(p, ['requestId', 'expectedProviderRevision']); revision(p.expectedProviderRevision); }
+    else if (method === 'discovery.preview.discard') { discoveryFields(p, ['requestId', 'snapshotId']); uuid(p.snapshotId); }
+    else {
+      discoveryFields(p, ['requestId', 'projectId', 'expectedConfigRevision', 'selectors']); uuid(p.projectId); revision(p.expectedConfigRevision);
+      if (!Array.isArray(p.selectors) || !p.selectors.length || p.selectors.length > DISCOVERY_LIMITS.selectors || new Set(p.selectors).size !== p.selectors.length) throw new Error('INVALID_REQUEST');
+      for (const selector of p.selectors) {
+        if (typeof selector !== 'string' || selector.normalize('NFC') !== selector || (selector !== '.' && (!selector.length || /[\x00-\x1f\x7f\\]/.test(selector) || selector.startsWith('/') || selector.split('/').some(s => !s || s === '..' || s === '.')))) throw new Error('INVALID_REQUEST');
+        validateDiscoveryText(selector, 4096);
+      }
+    }
+    return;
+  }
   const singles: Record<string, string> = { 'discovery.get': 'discoveryId', 'discovery.operation.get': 'requestId', 'discovery.preview.get': 'snapshotId', 'discovery.document.get': 'revisionId' };
   if (method === 'discovery.provider.get') { discoveryFields(p, []); return; }
   if (Object.hasOwn(singles, method)) {

@@ -15,7 +15,7 @@ import { CODEX_DISCOVERY_PIN } from '../../providers/codex/argv.js';
 import { CODEX_DISCOVERY_QUALIFICATION, validCodexModel } from '../../providers/codex/capabilities.js';
 
 interface Options {
-  readonly storage: Pick<StoragePort, 'readSnapshot' | 'readDiscoveryMetadata' | 'commitDiscoveryMetadata' | 'admitDiscoveryOperation' | 'getDiscoveryOperation' | 'saveDiscoveryGrant' | 'getProject'>;
+  readonly storage: Pick<StoragePort, 'readSnapshot' | 'readDiscoveryMetadata' | 'commitDiscoveryMetadata' | 'admitDiscoveryOperation' | 'getDiscoveryOperation' | 'saveDiscoveryGrant' | 'getProject' | 'discardDiscoveryPreview'>;
   readonly paths: ArchivePaths; readonly instanceId: string; readonly ownerUid: number;
   readonly provider: ProviderPort; readonly inspection?: CodexInspectionPort;
   readonly context?: DiscoveryContextPort; readonly artifacts?: DiscoveryArtifactPort;
@@ -180,6 +180,24 @@ export function createDiscoveryOperations(options: Options) {
         return { ok: true, value: { accepted: true, requestId: input.requestId } };
       } catch (error) { return admissionUncertain ? { ok: false, code: 'UNKNOWN_OUTCOME' } : failure(error); }
     },
+    async startGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; projectId: string }): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'grantId', 'projectId']); requireUuid(input.requestId); requireUuid(input.projectId); await guard(peer);
+        const grant = await meta({ kind: 'grant', id: input.grantId }); if (!grant) fail('APPROVAL_REQUIRED');
+        const { intent } = await intentFor(peer, grant.canonicalIntent);
+        if (intent.action !== 'start' || intent.targetId !== input.projectId) fail('APPROVAL_REQUIRED');
+        return await this.start(peer, { requestId: input.requestId, grantId: input.grantId, canonicalIntent: grant.canonicalIntent });
+      } catch (error) { return failure(error); }
+    },
+    async configureGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; binaryRealpath: string; modelId: string }): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'grantId', 'binaryRealpath', 'modelId']); requireUuid(input.requestId); await guard(peer);
+        const grant = await meta({ kind: 'grant', id: input.grantId }); if (!grant) fail('APPROVAL_REQUIRED');
+        const { intent } = await intentFor(peer, grant.canonicalIntent);
+        if (intent.action !== 'configure' || intent.payload.binaryRealpath !== input.binaryRealpath || intent.payload.modelId !== input.modelId) fail('APPROVAL_REQUIRED');
+        return await this.configure(peer, { requestId: input.requestId, grantId: input.grantId, canonicalIntent: grant.canonicalIntent });
+      } catch (error) { return failure(error); }
+    },
     async preview(peer: AuthenticatedPeer, input: { requestId: string; projectId: string; expectedConfigRevision: string; selectors: readonly string[] }): Promise<DiscoveryResult<DiscoveryAccepted>> {
       try {
         exact(input, ['requestId', 'projectId', 'expectedConfigRevision', 'selectors']);
@@ -202,6 +220,22 @@ export function createDiscoveryOperations(options: Options) {
             } }, { deadline: makeDeadline(systemClock, DISCOVERY_LIMITS.contextMs) });
             if (!sealed.ok) fail(sealed.code);
             await commit({ kind: 'operation', requestId: input.requestId, outcome: 'SUCCEEDED', completedAt: new Date().toISOString(), result: { snapshotId: sealed.value.snapshotId }, error: null });
+          } catch (error) { await blocked(input.requestId, error); }
+        });
+        return { ok: true, value: { accepted: true, requestId: input.requestId } };
+      } catch (error) { return failure(error); }
+    },
+    async discard(peer: AuthenticatedPeer, input: { requestId: string; snapshotId: string }): Promise<DiscoveryResult<DiscoveryAccepted>> {
+      try {
+        exact(input, ['requestId', 'snapshotId']); requireUuid(input.snapshotId); const s = await guard(peer);
+        if (!storage.admitDiscoveryOperation || !storage.discardDiscoveryPreview) fail('DISCOVERY_NOT_INITIALIZED');
+        const canonicalIntent = canonicalDiscoveryIntent({ ownerUid: options.ownerUid, storeId: s.store.storeId, action: 'discard', targetId: input.snapshotId,
+          configRevision: null, stateRevision: null, snapshotId: input.snapshotId, contextDigest: null, providerRevision: null, providerProfileDigest: null, modelId: null, payload: { snapshotId: input.snapshotId } });
+        const accepted = await storage.admitDiscoveryOperation(admission(input.requestId, canonicalIntent, null)); if (!accepted.ok) fail(accepted.code);
+        if (accepted.value.inserted) job(async () => {
+          try {
+            await guard(peer); const discarded = await storage.discardDiscoveryPreview!(input.snapshotId); if (!discarded.ok) fail(discarded.code);
+            await commit({ kind: 'operation', requestId: input.requestId, outcome: 'SUCCEEDED', completedAt: new Date().toISOString(), result: { snapshotId: input.snapshotId }, error: null });
           } catch (error) { await blocked(input.requestId, error); }
         });
         return { ok: true, value: { accepted: true, requestId: input.requestId } };

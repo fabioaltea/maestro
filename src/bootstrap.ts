@@ -1,5 +1,5 @@
 import { inspectDiscovery } from './core/inspect-main.js';
-import { validateDiscoveryParams, requireDiscoveryCapability, decodeDiscoveryOperationView, requireDiscoveryEnvelope } from './protocol/discovery.js';
+import { DISCOVERY_ADMISSION_METHODS, validateDiscoveryParams, requireDiscoveryCapability, decodeDiscoveryOperationView, requireDiscoveryEnvelope } from './protocol/discovery.js';
 import { createPlatformPaths } from './platform/macos/paths.js';
 import { createLocalTransport } from './platform/macos/transport.js';
 import { randomUUID } from 'node:crypto';
@@ -87,9 +87,11 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
     },
     async discovery(directory, method, params, timeoutMs) {
       validateDiscoveryParams(method, params);
-      const requestId = method === 'discovery.operation.get' ? requireUuid(params.requestId) : null;
-      const offline = () => inspectDiscovery(directory, method, params);
+      const mutation = (DISCOVERY_ADMISSION_METHODS as readonly string[]).includes(method);
+      const requestId = mutation || method === 'discovery.operation.get' ? requireUuid(params.requestId) : null;
+      const offline = () => mutation || method === 'discovery.prepare' ? Promise.resolve(failureResult('DAEMON_UNAVAILABLE', requestId)) : inspectDiscovery(directory, method, params);
       const expires = performance.now() + timeoutMs;
+      let possiblySent = false;
       try {
         const adapter = createPlatformPaths(), paths = await adapter.resolveArchive(directory, 'read');
         if (!paths) return failureResult('STATE_ABSENT', requestId);
@@ -104,6 +106,7 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
         const methods = (state.capabilities as { discoveryMethods?: unknown }).discoveryMethods;
         if (!Array.isArray(methods) || !methods.includes(method)) throw new Error('UNSUPPORTED_VERSION');
         if (performance.now() >= expires) throw new Error('DEADLINE_EXCEEDED');
+        possiblySent = true;
         const response = await transport.call(paths.daemonEndpoint, key, { protocolVersion: 1, correlationId: randomUUID(), method, params }, Math.max(1, Math.min(2000, expires - performance.now())));
         requireDiscoveryEnvelope(response); const data = response.data as Record<string, unknown>;
         if (!data || typeof data !== 'object' || data.storeId !== state.storeId) throw new Error('WRONG_STORE');
@@ -113,7 +116,7 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
           outcome: operation?.outcome && operation.outcome !== 'UNKNOWN' ? operation.outcome as PublicResult['outcome'] : null,
           freshness: state.freshness === 'VOLATILE' ? 'VOLATILE' : 'LIVE', liveness: 'LIVE_VERIFIED', data,
           error: code ? foundationError(code) : operation?.error as PublicResult['error'] ?? null };
-      } catch (error) { return failureResult(classifyError(error), requestId); }
+      } catch (error) { return possiblySent && mutation ? { ...failureResult('UNKNOWN_OUTCOME', requestId), result: 'UNKNOWN_OUTCOME' } : failureResult(classifyError(error), requestId); }
     },
     inspect: inspectArchive,
     async follow(directory, consume, signal, timeoutMs, after) {

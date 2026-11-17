@@ -31,6 +31,9 @@ export interface DiscoveryOperations {
   check(peer: AuthenticatedPeer, input: { requestId: string; expectedProviderRevision: string }): Promise<DiscoveryResult<StartAdmission>>;
   get(peer: AuthenticatedPeer, requestId: string): Promise<DiscoveryOperationView | null>;
   idle(): Promise<void>;
+  startGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; projectId: string }): Promise<DiscoveryResult<StartAdmission>>;
+  configureGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; binaryRealpath: string; modelId: string }): Promise<DiscoveryResult<StartAdmission>>;
+  discard(peer: AuthenticatedPeer, input: { requestId: string; snapshotId: string }): Promise<DiscoveryResult<StartAdmission>>;
 }
 export async function launchFixture(t: TestContext, settings: { configured?: boolean; repository?: 'clean' | 'dirty' | 'conflict' | 'unborn'; checkpoint?: (point: string) => Promise<void>; onLaunch?: (input: DiscoveryLaunch) => Promise<void>; cleanupAllowed?: () => boolean } = {}) {
   const { createDiscoveryOperations } = await loadContract<{ createDiscoveryOperations(options: object): DiscoveryOperations }>('core/discovery/operations.js', ['createDiscoveryOperations']);

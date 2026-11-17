@@ -565,3 +565,41 @@ nuovo parser lo rifiuta correttamente come UNSUPPORTED. G0 qualifica isolamento,
 non modello/account/inferenza reali. Nessun cambio al profilo per ottenere PASS;
 G1 e gate precedenti aperti. Fonti formato JSONL: [documentazione ufficiale](https://learn.chatgpt.com/docs/non-interactive-mode) e osservazione locale del
 pin con backend esclusivamente loopback/sintetico, senza account utente.
+
+
+## T023 — CLI admission e UUID originale,2026-11-17
+
+CLI provider configure/check, preview/show/discard, prepare/start e operation;
+DTO chiusi nel protocollo e LocalClient. Scope/intent JSON letti soltanto dalla
+CLI fidata:32KiB, UTF-8, file regolari/no-follow/nonblocking, stabilità fstat;
+path dei file non inviati al core. Flag non pertinenti/prompt/argv vietati.
+Versioni attese esplicite per preview/check; start/configure risolvono l’intent
+dal grant nel core e confrontano target o binario/modello, senza persistere
+intent/provider-path replayabili nelle future ricevute. Discard conserva oggetti
+conteggiati come orfani e nega snapshot referenziati/pinned.
+
+LocalClient congela il DTO JSON e conserva UUID prima del possibile invio.
+Ritorna admission≤2s senza polling del modello. Risposta persa/errore storage
+incerto: al più una query discovery.operation.get sullo stesso UUID; NOT_FOUND
+non prova non-invio e non permette un nuovo start. Ricevuta di altra azione o
+UUID non diventa successo. Reiezione busy certa non viene interrogata a ciclo.
+Backend non esegue mutate/prepare offline e non fa autostart/fallback registry;
+lo storico e l’idoneità offline false/UNKNOWN restano disponibili. Human output
+include UUID anche su errore incerto.
+
+Otto casi CLI/client, compresi veri subprocess CLI e IPC autenticato contro
+porte core fixture: scope→prepare→start→UUID originale, retry senza doppio run,
+check senza inferenza, configure senza grant negato, discard metadata, FIFO/
+oversize/flag impropri senza invio. Il transport fixture compone i servizi core
+ma non è il daemon di produzione: T027 resta il gate di bootstrap/mutazioni
+registrate. Il daemon attuale continua ad annunciare soltanto i metodi read
+implementati; nessuna capability funzionale simulata.
+
+Quattro casi iniziali RED per client ancora read-only; primo gruppo CLI7/7PASS,
+3915,94ms, poi8casi con il controllo azione originale. Prima suite generale:
+535test,528PASS/1FAIL/6SKIP,101256,86ms; il nuovo filtro reader aveva escluso
+l’eccezione eligibility offline. Corretto il filtro mantenendo il rifiuto delle
+mutazioni, confermati12/12casi CLI/offline,4179,58ms. Suite finale caffeinate -i
+npm test:536test,530PASS/0FAIL/6SKIP,102479,71ms. Typecheck/lint/build/build:test
+PASS; campioni002 ripristinati ai byte originali. Nessuna chiamata modello o
+account reale, G1 e gate precedenti invariati.

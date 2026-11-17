@@ -2,7 +2,7 @@ import { DISCOVERY_LIMITS as limits } from '../../domain/discovery/model.js';
 import { requireUuid } from '../../domain/identifiers.js';
 import type { StoragePort } from '../../ports/storage.js';
 import type { DiscoveryMetadataData, DiscoveryMetadataQuery } from '../../ports/discovery.js';
-import { validateDiscoveryParams, requireDiscoveryEnvelope, discoveryObject, discoveryFields, publicDiscoveryOperation } from '../../protocol/discovery.js';
+import { DISCOVERY_READ_METHODS, validateDiscoveryParams, requireDiscoveryEnvelope, discoveryObject, discoveryFields, publicDiscoveryOperation } from '../../protocol/discovery.js';
 
 interface Cursor { version: 1; storeId: string; kind: string; targetId: string; revision: string; offset: number }
 const encode = (c: Cursor) => Buffer.from(JSON.stringify(c)).toString('base64url');
@@ -33,6 +33,7 @@ export function createDiscoveryReader(options: { storage: Pick<StoragePort, 'rea
     if (result.value.sha256 !== sha) throw new Error('ARTIFACT_CORRUPT'); return result.value;
   }
   return async (method: string, params: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>> => {
+    if (!(DISCOVERY_READ_METHODS as readonly string[]).includes(method) && method !== 'discovery.eligibility.get') throw new Error('UNSUPPORTED_VERSION');
     validateDiscoveryParams(method, params);
     let result: Record<string, unknown>;
     if (method === 'discovery.provider.get') {
