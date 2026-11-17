@@ -897,3 +897,7 @@ Host/provider reali di fixture: lifecycle + agent-host + recovery 20/20 PASS (13
 ### T037–T040 — revisioni e approvazione
 
 Test inizialmente RED per API mancanti. Build:test e 7/7 test documenti/revisioni/approval/eligibility PASS (6,38 s). Tre sezioni, cap, riferimenti source/hash/range/citazione/risposte, parent append-only, grant esatto, UNKNOWN espliciti e fingerprint prima di approval. Approval e ricevuta terminale nello stesso commit SQLite; eligibility è una fotografia volatile TTL30s, max4 check globali e1/progetto, senza coda. Nessuna inferenza reale.
+
+### T041–T043 — headless, desktop e G3 locale
+
+CLI review 1/1 PASS (6,09 s): documento completo256KiB via32chunk≤8KiB, frame stdout<32KiB, approval esatta e eligibility live/offline. E2E review+approval2/2 PASS (19,4 s); corretti reset selezioni UNKNOWN/focus al ritorno dalla conferma. Test processo G3 1/1 PASS (6,35 s): provider fixture→domanda→risposta→bozza→correzione→nuova revisione→approval→eligibility, tre run, vecchia revisione negata, storico offline e repository invariato. UI qualificata con revisioni fixture persistite, flusso provider completo qualificato nel core headless: non è SC-001 reale né una prova UI completa con provider reale.
