@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { copyFileSync, constants } from 'node:fs';
+import { join } from 'node:path';
 import { outputFixture } from '../fixtures/discovery-output.js';
 import { value } from '../fixtures/discovery-artifacts.js';
 import { createDiscoveryReader } from '../../src/core/discovery/read.js';
@@ -27,12 +29,27 @@ test('foreign generations and output after exit cannot publish an artifact or ad
 });
 test('retained4MiB overflow marks truncation without another file or a false successful result', async t => {
   const f = await outputFixture(t), bytes = Buffer.alloc(8192, 97), reserved = value(f.store.reserveDiscoveryArtifact('OUTPUT', bytes.length)), artifact = value(f.store.publishDiscoveryArtifact(reserved.artifactId, bytes));
-  f.database.prepare("WITH RECURSIVE n(i) AS (VALUES(1) UNION ALL SELECT i+1 FROM n WHERE i<512) INSERT INTO discovery_output(run_id,seq,artifact_id,sha256,bytes,kind,created_at,truncated) SELECT ?,i,?,?,8192,'AGENT_TEXT',?,0 FROM n").run(f.run.runId, artifact.artifactId, artifact.sha256, new Date().toISOString());
+  // Seed the exact boundary as fixture data, without driving a volume/event workload.
+  f.database.transaction(() => {
+    for (let seq = 1; seq <= 512; seq++) {
+      const id = seq === 1 ? artifact.artifactId : randomUUID();
+      if (seq > 1) {
+        copyFileSync(join(f.directory, 'discovery/objects', artifact.artifactId), join(f.directory, 'discovery/objects', id), constants.COPYFILE_EXCL);
+        f.database.prepare("INSERT INTO discovery_artifacts(artifact_id,kind,relative_key,sha256,allocated_bytes,state,ref_count) VALUES(?,'OUTPUT',?,?,?,'REFERENCED',1)").run(id, id, artifact.sha256, artifact.allocatedBytes);
+      }
+      f.database.prepare("INSERT INTO discovery_output(run_id,seq,artifact_id,sha256,bytes,kind,created_at,truncated) VALUES(?,?,?,?,8192,'AGENT_TEXT',?,0)").run(f.run.runId, seq, id, artifact.sha256, new Date().toISOString());
+    }
+    f.database.prepare('UPDATE discovery_budget SET allocated_files=allocated_files+511,allocated_bytes=allocated_bytes+?').run(511 * artifact.allocatedBytes);
+  })();
   f.database.prepare('UPDATE discovery_runs SET output_watermark=512 WHERE run_id=?').run(f.run.runId);
   const before = value(f.store.getDiscoveryBudget()).allocatedFiles;
   await assert.rejects(f.publisher.publish(f.identity, { kind: 'AGENT_TEXT', text: 'overflow' }), /PROVIDER_OUTPUT_LIMIT/);
   assert.equal(value(f.store.getDiscoveryBudget()).allocatedFiles, before);
   const last = value(f.store.readDiscoveryMetadata({ kind: 'output', id: f.run.runId, offset: 511, limit: 1 })).data.items[0]!;
   assert.equal(last.seq, '512'); assert.equal(last.truncated, true);
+  const event = f.store.listEvents().records.filter(e => e.type === 'discovery.output.available').at(-1)!;
+  assert.equal(event.payload.truncated, true); assert.equal(event.payload.watermark, '512'); assert.equal(event.payload.redactedFields, undefined);
+  const desktop = await import(new URL('../../../apps/desktop/src/shared/activity-contract.ts', import.meta.url).href) as { decodeUiEvent(value: unknown, storeId: string): unknown };
+  assert.doesNotThrow(() => desktop.decodeUiEvent(event, f.storeId));
   assert.equal(value(f.store.readDiscoveryMetadata({ kind: 'run', id: f.run.runId })).data!.outcome, 'RUNNING');
 });

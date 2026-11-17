@@ -134,7 +134,11 @@ export class SQLiteStore {
         if (change.kind === 'operation') operationId = change.requestId;
         else if (change.kind === 'configure') operationId = change.admission.requestId;
         else if (change.kind === 'state' || change.kind === 'questions') discoveryId = change.discoveryId;
-        else if (change.kind === 'answer') { discoveryId = change.admission.discovery?.discoveryId ?? null; operationId = change.value.requestId; }
+        else if (change.kind === 'answer') {
+          const question = this.database!.prepare('SELECT discovery_id FROM discovery_questions WHERE question_id=?').get(change.value.questionId) as Row | undefined;
+          discoveryId = change.admission.discovery?.discoveryId ?? (question ? String(question.discovery_id) : null); operationId = change.value.requestId;
+        }
+        else if (change.kind === 'output-truncated') runId = change.runId;
         else if (change.kind === 'revision' || change.kind === 'approval' || change.kind === 'run') discoveryId = change.value.discoveryId;
         else if (change.kind === 'process' || change.kind === 'output') runId = change.value.runId;
         if (change.kind === 'approval') operationId = change.value.requestId;
@@ -150,6 +154,7 @@ export class SQLiteStore {
           const payload = drafts[0]!.payload;
           if (change.kind === 'questions') drafts.push({ type: 'discovery.question.available', operationId, payload: { ...payload, count: change.values.length } });
           if (change.kind === 'output') drafts.push({ type: 'discovery.output.available', operationId, payload: { ...payload, watermark: change.value.seq } });
+          if (change.kind === 'output-truncated') drafts.push({ type: 'discovery.output.available', operationId, payload: { ...payload, watermark: change.expectedWatermark, truncated: true } });
           if (change.kind === 'revision') drafts.push({ type: 'discovery.document.changed', operationId, payload: { ...payload, revisionId: change.value.revisionId } });
           if (change.kind === 'approval') drafts.push({ type: 'discovery.approval.changed', operationId, payload: { ...payload, revisionId: change.value.revisionId } });
         }

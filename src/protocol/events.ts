@@ -38,6 +38,7 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
         && ['CREATED', 'EXISTING', 'UPDATED', 'OBSERVED', 'REMOVED', 'NONE'].includes(value)) allowed = true;
       if (enums[key] && typeof value === 'string' && enums[key]!.includes(value)) allowed = true;
       if (['pid', 'count'].includes(key) && typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 2_147_483_647) allowed = true;
+      if (discovery && key === 'truncated' && typeof value === 'boolean') allowed = true;
     } catch { allowed = false; }
     if (allowed) payload[key] = value; else redacted++;
   }

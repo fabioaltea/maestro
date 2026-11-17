@@ -8,6 +8,7 @@ import { createDiscoveryRunFiles } from '../../platform/macos/discovery/runtime-
 import { createDiscoveryLauncher } from './launch.js';
 import { createDiscoveryOperations } from './operations.js';
 import { createDiscoveryDispatch, DISCOVERY_LIVE_METHODS } from './dispatch.js';
+import { createDiscoveryOutput } from './output.js';
 import type { ArchivePaths } from '../../ports/platform.js';
 import type { StoragePort } from '../../ports/storage.js';
 import type { DiscoveryArtifactPort } from '../../ports/discovery.js';
@@ -27,9 +28,11 @@ export function createDiscoveryRuntime(storage: StoragePort, paths: ArchivePaths
     runtimeRoot: paths.runtimeDirectory, instanceId, onResource: resource => storage.saveResource(resource) });
   const provider = dependencies.provider ?? createCodexAdapter({ inspection }), context = dependencies.context ?? createMacOSDiscoveryContext();
   let launcher: ReturnType<typeof createDiscoveryLauncher>;
+  const output = createDiscoveryOutput({ storage, artifacts });
   const callbacks = { onStdout: (identity: AgentProcessIdentity, bytes: Uint8Array) => launcher.output(identity, bytes), onExit: (identity: AgentProcessIdentity, proof: AgentExitProof) => launcher.exited(identity, proof) };
   const agent = dependencies.agent ?? dependencies.createAgent?.(callbacks) ?? createAgentRuntime({ storage, paths, instanceId, ...callbacks });
   launcher = createDiscoveryLauncher({ storage, paths, instanceId, provider, runtime: agent, files: dependencies.files ?? createDiscoveryRunFiles(paths),
+    onEvent: (identity, event) => output.publish(identity, event),
     onResult: dependencies.onResult ?? (async (identity, result) => {
       if (result.kind !== 'QUESTIONS') throw new Error('PROVIDER_UNSUPPORTED');
       await operations.publishQuestions(identity, result);

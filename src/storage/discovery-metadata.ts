@@ -86,7 +86,11 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
         const plural: Record<string, [string, string, string]> = { discoveries: ['discoveries', 'project_id', 'created_at,discovery_id'], questions: ['discovery_questions', 'discovery_id', 'question_id'], answers: ['discovery_answers a JOIN discovery_questions q ON q.question_id=a.question_id', 'q.discovery_id', 'a.question_id,a.answer_revision,a.answer_id'], revisions: ['discovery_revisions', 'discovery_id', 'revision_number'], processes: ['discovery_processes', '', 'run_id'], output: ['discovery_output', 'run_id', 'seq'] };
         let data: unknown;
         if (query.kind === 'provider') { exact(query, ['kind']); const row = database.prepare('SELECT configuration FROM discovery_provider WHERE singleton=1').get() as Row | undefined; data = row ? JSON.parse(String(row.configuration)) : null; }
-        else if (Object.hasOwn(singular, query.kind)) {
+        else if (query.kind === 'outputStatus') {
+          exact(query, ['kind', 'id']); const r = one('discovery_runs', 'run_id', query.id); if (!r) fail('STALE_TARGET');
+          const total = database.prepare('SELECT coalesce(sum(bytes),0) AS bytes,coalesce(max(truncated),0) AS truncated FROM discovery_output WHERE run_id=?').get(query.id) as Row;
+          data = { runId: query.id, bytes: Number(total.bytes), watermark: String(r.output_watermark), truncated: Number(total.truncated) === 1 };
+        } else if (Object.hasOwn(singular, query.kind)) {
           exact(query, ['kind', 'id']); const [table, key] = singular[query.kind]!;
           const row = one(table, key, (query as { id: string }).id); data = row ? mapped(query.kind, row) : null;
         } else if (Object.hasOwn(plural, query.kind)) {
@@ -207,6 +211,10 @@ export function createDiscoveryMetadata(database: Database.Database, options: Di
             database.prepare('INSERT INTO discovery_approvals(approval_id,request_id,revision_id,discovery_id,project_id,config_revision,bundle_digest,context_digest,accepted_unknown_ids,owner_uid,approved_at,checked_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(a.approvalId, a.requestId, a.revisionId, a.discoveryId, a.projectId, a.configRevision, a.bundleDigest, a.contextDigest, json(a.acceptedUnknownIds), a.ownerUid, a.approvedAt, a.checkedAt);
             for (const q of open) database.prepare("UPDATE discovery_questions SET status='UNKNOWN_ACCEPTED' WHERE question_id=?").run(q.question_id);
             changeState(d, 'APPROVED', true, true);
+          } else if (change.kind === 'output-truncated') {
+            exact(change, ['kind', 'runId', 'generation', 'expectedWatermark']); const r = one('discovery_runs', 'run_id', change.runId);
+            if (!r || r.generation !== change.generation || r.phase !== 'PROVIDER_RUNNING' || r.outcome !== 'RUNNING' || String(r.output_watermark) !== change.expectedWatermark) fail('STALE_TARGET');
+            database.prepare('UPDATE discovery_output SET truncated=1 WHERE run_id=? AND seq=?').run(change.runId, change.expectedWatermark);
           } else if (change.kind === 'output') {
             exact(change, ['kind', 'value', 'generation', 'expectedWatermark']); const o = change.value, r = one('discovery_runs', 'run_id', o.runId);
             if (!r || r.generation !== change.generation || r.outcome !== 'RUNNING' || r.phase !== 'PROVIDER_RUNNING' || String(r.output_watermark) !== change.expectedWatermark || BigInt(o.seq) !== BigInt(change.expectedWatermark) + 1n) fail('STALE_TARGET');

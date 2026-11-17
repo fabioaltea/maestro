@@ -61,6 +61,7 @@ export interface DiscoveryArtifactPort {
 
 
 export interface DiscoveryMetadataSingles {
+  outputStatus: { readonly runId: string; readonly bytes: number; readonly watermark: string; readonly truncated: boolean };
   question: DiscoveryQuestion;
   grant: DiscoveryGrant;
   provider: ProviderConfiguration;
@@ -89,6 +90,7 @@ export type DiscoveryMetadataData<Q extends DiscoveryMetadataQuery> = Q['kind'] 
   ? DiscoveryMetadataSingles[Q['kind']] | null : Q['kind'] extends keyof DiscoveryMetadataLists ? DiscoveryMetadataPage<DiscoveryMetadataLists[Q['kind']]> : never;
 export interface DiscoveryMetadataReply<Q extends DiscoveryMetadataQuery = DiscoveryMetadataQuery> { readonly kind: Q['kind']; readonly data: DiscoveryMetadataData<Q> }
 export type DiscoveryMetadataChange =
+  | { readonly kind: 'output-truncated'; readonly runId: string; readonly generation: string; readonly expectedWatermark: string }
   | { readonly kind: 'provider'; readonly configuration: ProviderConfiguration; readonly expectedRevision: string | null }
   | { readonly kind: 'configure'; readonly admission: DiscoveryAdmission; readonly configuration: ProviderConfiguration; readonly expectedRevision: string | null }
   | { readonly kind: 'artifact'; readonly value: DiscoveryArtifact }

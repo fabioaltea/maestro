@@ -775,3 +775,27 @@ grant/stato/cap4KiB/20turni/20domande e reader offline. Insieme a regressioni
 metadata/ledger/adapter:28PASS/0FAIL/0SKIP,12987,14ms. Prima compilazione ha
 segnalato nullability nella paginazione generica, corretta con check esplicito.
 Build:test/typecheck/lint PASS. DOCUMENT/review restano US3, G1 reale NOT_RUN.
+
+
+## T032 — pubblicazione output normalizzato, 2026-11-17
+
+Publisher collegato al vero percorso host/decoder, accetta soltanto PROGRESS e
+AGENT_TEXT normalizzati. UTF-8 rigoroso e chunk≤8KiB senza spezzare caratteri;
+artefatto privato pubblicato prima di indice/watermark/outbox atomici. Letture
+core/CLI/offline preesistenti restituiscono solo chunk registrati e hash-validi,
+con cursori scoped/envelope32KiB. Nessun token, corpo modello o raw stderr nel
+journal; metadata Discovery includono identità e watermark e sono accettati
+dal decoder desktop003 esistente. Generazioni estranee e dati dopo uscita
+rifiutati prima di allocare. Coda interna limitata, nessun nuovo stream pubblico.
+
+Cap conservazione4MiB, overflow segna l'ultimo chunk truncated usando metadata
+terminali senza altro file; il launcher conserva l'errore senza falso successo.
+Fault prima del commit conserva l'oggetto non autorevole contato, senza evento
+o watermark falsi. Il primo seed del test limite riusava un artifactId e ha
+fallito UNIQUE: corretto con512oggetti fixture distinti/4MiB, preparati in blocco
+senza carico eventi o run prolungato (la descrizione T030 era preliminare).
+
+Quattro test output/eventi PASS; insieme a intervista, API e host/provider-launch
+fixture28PASS/0FAIL/0SKIP,17777,05ms. Inclusa compatibilità evento truncated con
+preload/renderer e assenza di redazioni spurie; prima selezione11PASS. Build
+core/test e typecheck PASS; nessun provider/account reale, G1 NOT_RUN invariato.
