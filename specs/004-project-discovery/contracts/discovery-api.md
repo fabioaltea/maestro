@@ -17,6 +17,23 @@ metadata/approval storica; `{revisionId,content:true,cursor?}` legge un chunk ra
 in base64. La CLI document usa contenuti per default, `--metadata` per i soli
 metadata. Preview show usa `--sources` per la pagina fonti.
 
+## Disponibilità incrementale T027
+
+Il daemon compone ora provider/configurazione/check, preview/discard, prepare
+e start con runtime posseduto e artefatti nello stesso writer. Le capability
+annunciano questi metodi oltre alle letture; un dispatch senza servizio resta
+read-only. Provider.get espone requisiti pubblici pin/profilo e ultimo check
+solo cached, senza probe da consultazione. Schema4 solo su start esplicito.
+Admission sospesa durante recovery/drain; identità non riconciliata mantiene
+RECONCILING e blocca nuove mutazioni senza impedire registro o storia.
+
+Questo checkpoint collega l'avvio, non completa US2/US3. La pubblicazione dei
+risultati strutturati viene installata con intervista/review: fino ad allora
+un risultato parsato non diventa una domanda/documento approvabile (rifiuto
+PROVIDER_UNSUPPORTED dopo uscita verificata). Output/intervista/review, recovery
+completa T033 e G1 reale restano aperti. Nessuna prova modello reale da questa
+composizione; non presentare il solo spawn come Discovery utile completata.
+
 ## CLI e metodi
 
 Ogni comando usa `--state-dir ABS --json`. Mutazioni con `--request-id UUID`; query operation usa UUID originale. Gli esempi sono comandi futuri, non eseguiti nel planning.

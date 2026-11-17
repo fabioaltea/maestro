@@ -1,4 +1,4 @@
-import { createDiscoveryDispatch, DISCOVERY_METHODS } from './discovery/dispatch.js';
+import { createDiscoveryRuntime } from './discovery/runtime.js';
 import { EventStreamError } from '../protocol/event-cursor.js';
 import { createLiveEvents } from './live-events.js';
 import { diagnosticsData, readEventPage } from './diagnostics.js';
@@ -57,7 +57,8 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     let lastSnapshot: StoreSnapshot | null = null;
     let streams: ReturnType<typeof createLiveEvents> | undefined;
     let projects: ReturnType<typeof createProjectOperations> | undefined;
-    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); void projects?.shutdown(); });
+    let discovery: ReturnType<typeof createDiscoveryRuntime> | undefined;
+    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); void projects?.shutdown(); discovery?.fence(); });
     const ticket = await storage.getTicket(intent.ticketId);
     if (!ticket || ticket.instanceId !== intent.instanceId || ticket.generation !== intent.generation
       || !await createOperations(storage, paths.ownerUid).claimLaunch(intent.ticketId, intent.generation, process.pid)) {
@@ -80,8 +81,9 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
         });
       } });
     const inspection = await createGitRunner().capabilities();
-    const capabilities = { discoveryVersion: 1, discoveryMethods: DISCOVERY_METHODS, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
-    const discoveryDispatch = createDiscoveryDispatch({ storage });
+    discovery = createDiscoveryRuntime(storage, paths, intent.instanceId, dependencies.discovery);
+    const capabilities = { discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
+    const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });
     let draining = false;
     let deniedCount = 0, lastDeniedAudit = -Infinity;
@@ -176,11 +178,13 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
         const drainDeadline = makeDeadline(systemClock, 8_000);
         // Fence synchronously before publishing STOPPING; accepted work is independent of the RPC.
         void projects!.shutdown();
+        discovery!.fence();
         try { await storage.transitionInstance(intent.instanceId, 'STOPPING'); }
         catch (error) { draining = false; throw error; }
         setImmediate(() => {
           void (async () => {
             await drainProjectOperations(projects!, drainDeadline);
+            await discovery!.stop(drainDeadline);
             await drainFoundationAuxiliaries({ store: storage, instanceId: intent.instanceId, paths,
               identity: createProcessIdentity(), transport: createLocalTransport(), platformPaths: adapter,
               deadline: drainDeadline, excludedPids: [process.pid, attempt!.pid],
@@ -214,6 +218,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     });
     await interruptProjectOperations(storage, new Date().toISOString());
     await checkpoint('daemon.projectsRecovered');
+    await discovery.recover();
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
     lastSnapshot = await storage.readSnapshot();
     await checkpoint('daemon.running');

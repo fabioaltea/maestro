@@ -48,7 +48,7 @@ test('shipped CLI reads actual daemon capabilities and the same registry offline
   const run = (...args: string[]) => invokeCli(['discovery', ...args, '--state-dir', h.archive, '--json']);
   const provider = await run('provider', 'get'); assert.equal(provider.code, 0, provider.stdout); assert.equal(JSON.parse(provider.stdout).freshness, 'LIVE'); assert.equal(JSON.parse(provider.stdout).data.configuration, null);
   const listed = await run('list', projectId); assert.equal(listed.code, 0, listed.stdout); assert.deepEqual(JSON.parse(listed.stdout).data.items, []);
-  const status = JSON.parse((await h.call('status')).stdout); assert.equal(status.data.capabilities.discoveryVersion, 1); assert.ok(!status.data.capabilities.discoveryMethods.includes('discovery.start'));
+  const status = JSON.parse((await h.call('status')).stdout); assert.equal(status.data.capabilities.discoveryVersion, 1); assert.ok(status.data.capabilities.discoveryMethods.includes('discovery.start'));
   assert.equal((await h.call('stop')).code, 0);
   const offline = await run('list', projectId); assert.equal(offline.code, 0, offline.stdout); assert.equal(JSON.parse(offline.stdout).freshness, 'LAST_KNOWN'); assert.deepEqual(JSON.parse(offline.stdout).data.items, []);
   assert.deepEqual(await repositories.snapshotTree(repo), before);

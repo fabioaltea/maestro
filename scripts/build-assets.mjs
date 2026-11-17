@@ -1,8 +1,13 @@
-import { copyFile, mkdir, readdir } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, writeFile } from 'node:fs/promises';
 
 const target = process.argv[2];
 if (!['dist', 'dist-tests'].includes(target)) throw new Error('Expected dist or dist-tests');
 const root = new URL('../', import.meta.url);
+// Confined Node children must resolve their ESM package metadata inside the
+// shipped code root, independently of the source/test compilation depth.
+const codeRoot = new URL(`${target}/${target === 'dist-tests' ? 'src/' : ''}`, root);
+await mkdir(codeRoot, { recursive: true });
+await writeFile(new URL('package.json', codeRoot), '{"type":"module"}\n');
 const relative = `${target}/${target === 'dist-tests' ? 'src/' : ''}platform/macos/git/`;
 const directory = new URL(relative, root);
 await mkdir(directory, { recursive: true });

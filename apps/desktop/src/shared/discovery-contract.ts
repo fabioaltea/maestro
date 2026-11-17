@@ -102,7 +102,8 @@ export function validateDiscoveryData(action: string, raw: unknown): Params {
     if (p.operation !== undefined) {
       const op = record(p.operation); fields(op, ['requestId', 'action', 'phase', 'outcome', 'acceptedAt', 'completedAt', 'result', 'error']); uuid(op.requestId);
       if (!['configure', 'check', 'preview', 'discard', 'start', 'answer', 'correct', 'approve', 'cancel'].includes(String(op.action)) || !['ACCEPTED', 'WORKING', 'FINALIZED'].includes(String(op.phase))
-        || !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED', 'UNKNOWN'].includes(String(op.outcome)) || (op.phase === 'FINALIZED') !== (op.completedAt !== null)) return invalid();
+        || !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED', 'UNKNOWN'].includes(String(op.outcome)) || (op.phase === 'FINALIZED') !== (op.completedAt !== null)
+        || op.phase === 'FINALIZED' && op.outcome === 'IN_PROGRESS' || op.phase !== 'FINALIZED' && !['IN_PROGRESS', 'UNKNOWN'].includes(String(op.outcome))) return invalid();
       if (op.result !== null) fields(record(op.result), [], ['snapshotId', 'discoveryId', 'sessionId', 'runId', 'revisionId', 'approvalId', 'providerRevision', 'stateRevision']);
     }
     if (p.chunk !== undefined) {

@@ -59,3 +59,9 @@ test('Discovery confirmations cannot consume or cancel a project or Foundation t
   const discovery = confirmations.prepare({ namespace: 'discovery', action: 'start', archive: '/owned/archive', params: { projectId: randomUUID(), grantId: randomUUID() } }, scope, []);
   assert.throws(() => confirmations.consume(discovery.confirmationId, scope, ['daemon', 'project']));
 });
+test('Discovery operation phases and outcomes cannot contradict a claimed completion', () => {
+  const requestId = randomUUID(), command: CliCommand = { namespace: 'discovery', action: 'operation', archive: '/owned/archive', params: { requestId } };
+  const operation = { requestId, action: 'start', phase: 'FINALIZED', outcome: 'SUCCEEDED', acceptedAt: new Date().toISOString(), completedAt: new Date().toISOString(), result: null, error: null };
+  const response = { protocolVersion: 1, requestId, storeId: randomUUID(), instanceId: null, result: 'OK', outcome: 'SUCCEEDED', freshness: 'LIVE', liveness: 'LIVE_VERIFIED', data: { operation }, error: null };
+  for (const patch of [{ phase: 'WORKING', completedAt: null }, { outcome: 'IN_PROGRESS' }]) assert.throws(() => decodeResult(JSON.stringify({ ...response, data: { operation: { ...operation, ...patch } } }), command));
+});

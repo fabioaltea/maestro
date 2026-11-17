@@ -9,7 +9,7 @@ import { readContextFrames, writeContextFrames } from './context-framing.js';
 export { createDirectContextExtractor } from './context-sources.js';
 
 const PROFILE = fileURLToPath(new URL('./context.sb', import.meta.url));
-const PACKAGE = fileURLToPath(new URL('../../../../../package.json', import.meta.url));
+const PACKAGE = fileURLToPath(new URL('../../../package.json', import.meta.url));
 const MAIN = fileURLToPath(new URL('./context-main.js', import.meta.url));
 const CODE = fileURLToPath(new URL('../../../', import.meta.url)).replace(/\/$/, '');
 export function contextProfileArguments(executable: string, code: string, root: string, excluded: readonly string[]): string[] {

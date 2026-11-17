@@ -675,3 +675,58 @@ tree; nessun provider/account reale. Prima esecuzione anticipata senza bundle
 aggiornato fallita per pulsante Discovery assente; ricompilazione e prove finali
 PASS. Nessuna nuova libreria grafica/runtime. US2/output/intervista e US3/review
 restano incrementi successivi; i due E2E non qualificano G1.
+
+
+## T027 — composizione daemon/headless e bootstrap, 2026-11-17
+
+Composti provider Codex e inspection, estrattore confinato, artefatti sul writer
+esistente, host Agent Runtime, launcher e servizi admission nel daemon unico.
+Le sostituzioni sono soltanto CoreDependencies fidate, mai DTO pubblici. Status
+annuncia metodi effettivamente instradati; get provider non controlla login né
+modello. Configurazione/check/preview/discard/prepare/start mantengono UUID e
+controlli core. Nessun autostart, login, installazione, upgrade da lettura o
+import Electron nel core. Registry/storico restano interrogabili con provider
+UNSAFE o admission Discovery bloccata.
+
+Prima barriera runtime su recover/drain/storage failure. Reconcile usa soltanto
+prove Agent Runtime; assenza non provata conserva identità/slot e RECONCILING,
+nessun kill da PID. Stop con deadline esistente attende job accettati e drena
+runtime separatamente dalla Foundation; incertezza non prepara uno shutdown
+fittizio. Schema storico senza Discovery mantiene lo stop Foundation senza
+inizializzare agenti. T033 conserva la responsabilità per recovery completa,
+finestre crash e cancel pubblico; questi controlli iniziali non attestano G2.
+
+La pubblicazione domande/documenti è ancora il gate di US2/US3: il callback
+produzione rifiuta un risultato parsato con PROVIDER_UNSUPPORTED dopo prova
+d'uscita, senza inventare WAITING_USER/READY_FOR_REVIEW o approvazioni. Le porte
+di pubblicazione sono sostituibili nei test e verranno collegate a T031/T039.
+Non qualificato un flusso utile completo e nessun run reale eseguito.
+
+Il nuovo test production-bootstrap era RED sul vecchio bundle read-only. La
+prima composizione ha esposto CONTEXT_UNSTABLE in headless: il percorso package
+JSON assumeva la profondità dist-tests/src e nel dist reale Node tentava di
+leggere package.json fuori dal codice autorizzato. Riprodotto con soli dati
+sintetici; build-assets ora emette metadati ESM nel root di codice per entrambe
+le build. Profilo OS invariato, nessun ampliamento di permessi. Bootstrap e
+contesto/offline21PASS dopo fix. Due test successivi hanno esposto ERROR al
+posto di BLOCKED per admission fenced: corretto mapping; DISCOVERY_BUSY resta
+BUSY distinto. Decoder desktop rifiuta phase/outcome contraddittori.
+
+Verifiche finali su macOS26.3.1 arm64, Node26.13.0, Electron45.3.0:
+- Build/typecheck core e desktop e lint architetturale PASS.
+- Discovery unit/contract/integration + bootstrap/lifecycle daemon/controller +
+  readonly selezionati:191test,185PASS/0FAIL/6SKIP,35862,13ms. I6SKIP sono
+  opt-in G0 separati, non promossi a PASS e non nuove qualifiche G1.
+- Bootstrap dedicato:5PASS/0FAIL/0SKIP,6674,54ms (preview vero CLI/daemon senza provider e repo
+  invariato/offline; letture senza probe e check UNSAFE intenzionale; identità
+  UNKNOWN preservata e stop negato; stop store storico senza agenti; start con
+  porte sintetiche dopo admission durevole, replay UUID senza secondo launch
+  e drain verificato dalla porta fixture). Quest’ultimo caso non crea processi
+  provider reali e non sostituisce le prove host locali T018/T022 o G1.
+- Desktop unit/contract35PASS/0FAIL/0SKIP,3684,20ms.
+- Desktop integrazione29PASS/0FAIL/0SKIP,29231,95ms.
+- Electron Discovery E2E2PASS/0FAIL,7,9s, inclusi tastiera/focus/errore scope.
+
+Nessuna acceptance completa, benchmark, inferenza/account/provider reale o
+nuova campagna prolungata. G0 precedente invariato, G1/T028 NOT_RUN; gate
+001/T082,001/T085,002/T093 e review umana003/T054 conservati.
