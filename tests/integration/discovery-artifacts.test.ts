@@ -70,3 +70,33 @@ test('ownership check rejects a different uid independently of file permissions'
   const stat = { uid: process.getuid!(), mode: 0o100600, nlink: 1, isFile: () => true };
   assert.equal(isPrivateArtifact(stat, stat.uid), true); assert.equal(isPrivateArtifact({ ...stat, uid: stat.uid + 1 }, stat.uid), false);
 });
+test('writer worker publishes and pages bytes; readonly worker never creates or repairs artifacts', async t => {
+  const { openStorage } = await import('../../src/storage/worker.js');
+  const f = await artifactFixture(t); f.store.close(); const writer = await openStorage({ path: f.path });
+  let id: string;
+  try {
+    const a = value(await writer.reserveDiscoveryArtifact!('DOCUMENT', 1024)); id = a.artifactId;
+    value(await writer.publishDiscoveryArtifact!(id, body));
+    assert.deepEqual(Buffer.from(value(await writer.readDiscoveryArtifact!(id, 0, 8192)).bytes), body);
+  } finally { await writer.close(); }
+  const reader = await openStorage({ path: f.path, readonly: true });
+  try {
+    assert.deepEqual(Buffer.from(value(await reader.readDiscoveryArtifact!(id, 0, 8192)).bytes), body);
+    await assert.rejects(reader.reserveDiscoveryArtifact!('OUTPUT', 12), /UNAUTHORIZED/);
+    await assert.rejects(reader.reconcileDiscoveryArtifacts!(), /UNAUTHORIZED/);
+  } finally { await reader.close(); }
+});
+for (const point of ['artifact.fileSynced', 'artifact.directorySynced', 'artifact.committed']) {
+  test(`actual SIGKILL at ${point} leaves only committed content readable after restart`, async t => {
+    const { once } = await import('node:events'); const Database = (await import('better-sqlite3')).default;
+    const f = await artifactFixture(t); f.store.close();
+    const child = f.context.spawnNode([new URL('../fixtures/discovery-artifact-owner.js', import.meta.url).pathname, f.path, point]);
+    const [code, signal] = await once(child, 'exit'); assert.equal(code, null); assert.equal(signal, 'SIGKILL');
+    const db = new Database(f.path); const rows = db.prepare('SELECT artifact_id FROM discovery_artifacts').all() as { artifact_id: string }[]; db.close(); assert.equal(rows.length, 1);
+    const reopened = new SQLiteStore({ path: f.path }); t.after(() => reopened.close());
+    value(reopened.reconcileDiscoveryArtifacts());
+    const read = reopened.readDiscoveryArtifact(rows[0]!.artifact_id, 0, 8192);
+    assert.equal(read.ok, point === 'artifact.committed');
+    assert.equal(value(reopened.getDiscoveryBudget()).reservedBytes, 0);
+  });
+}

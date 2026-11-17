@@ -1,3 +1,5 @@
+import { createDiscoveryArtifacts, enforceDiscoveryBudget } from './discovery-artifacts.js';
+import type { DiscoveryArtifact } from '../ports/discovery.js';
 import { createDiscoveryMetadata } from './discovery-metadata.js';
 import type { DiscoveryMetadataChange, DiscoveryMetadataQuery } from '../ports/discovery.js';
 import { createDiscoveryLedger } from './discovery-store.js';
@@ -43,6 +45,7 @@ export class SQLiteStore {
   private readonly readOnly: boolean;
   private readonly directory: string;
   private journal: ReturnType<typeof openJournal> | undefined;
+  private artifactStore: ReturnType<typeof createDiscoveryArtifacts> | undefined;
   private eventError: string | null = null;
   private archiveVersion = SCHEMA_VERSION;
   private releaseReadLeases: (() => void) | undefined;
@@ -107,12 +110,24 @@ export class SQLiteStore {
     if (this.archiveVersion < REGISTRY_SCHEMA_VERSION) throw new Error('REGISTRY_NOT_INITIALIZED');
     return this.database;
   }
+  private artifacts() {
+    if (!this.database) throw new Error('STATE_ABSENT');
+    return this.artifactStore ??= createDiscoveryArtifacts(this.database, { directory: this.directory, readonly: this.readOnly,
+      checkpoint: point => this.hooks.checkpoint?.(point), mutate: (body, terminal) => this.mutate(() => { const value = body(); enforceDiscoveryBudget(this.database!, terminal); return value; }) });
+  }
+  reserveDiscoveryArtifact(kind: DiscoveryArtifact['kind'], bytes: number) { this.writable(); return this.artifacts().reserveDiscoveryArtifact(kind, bytes); }
+  publishDiscoveryArtifact(id: string, bytes: Uint8Array) { this.writable(); return this.artifacts().publishDiscoveryArtifact(id, bytes); }
+  readDiscoveryArtifact(id: string, offset: number, maximumBytes: number) { return this.artifacts().readDiscoveryArtifact(id, offset, maximumBytes); }
+  reconcileDiscoveryArtifacts() { this.writable(); return this.artifacts().reconcileDiscoveryArtifacts(); }
+  getDiscoveryBudget() { return this.artifacts().getDiscoveryBudget(); }
+  discardDiscoveryPreview(id: string) { this.writable(); return this.artifacts().discardDiscoveryPreview(id); }
   private discoveryMetadata() {
     if (!this.database) throw new Error('STATE_ABSENT');
     return createDiscoveryMetadata(this.database, { mutate: (body, change) => {
       const drafts: EventDraft[] = [];
       return this.mutate(() => {
         const value = body();
+        enforceDiscoveryBudget(this.database!, !['provider', 'snapshot', 'questions', 'answer', 'revision', 'output'].includes(change?.kind ?? ''));
         if (!change || ['provider', 'snapshot', 'artifact'].includes(change.kind)) return value;
         let discoveryId: string | null = null, runId: string | null = null, operationId: string | null = null;
         if (change.kind === 'operation') operationId = change.requestId;
@@ -137,7 +152,7 @@ export class SQLiteStore {
   commitDiscoveryMetadata(change: DiscoveryMetadataChange) { this.writable(); return this.discoveryMetadata().commit(change); }
   private discoveryLedger() {
     if (!this.database) throw new Error('STATE_ABSENT');
-    return createDiscoveryLedger(this.database, { mutate: (body, input) => this.mutate(body, input ? [{
+    return createDiscoveryLedger(this.database, { mutate: (body, input, terminal) => this.mutate(() => { const value = body(); enforceDiscoveryBudget(this.database!, terminal === true || input?.action === 'cancel'); return value; }, input ? [{
       type: 'operation.accepted', instanceId: input.instanceId, operationId: input.requestId,
       payload: { scope: 'discovery', action: input.action, ...(input.discovery ? {
         projectId: input.discovery.projectId, discoveryId: input.discovery.discoveryId, sessionId: input.discovery.sessionId,
@@ -220,6 +235,7 @@ export class SQLiteStore {
       const after = (database.prepare('SELECT total_changes() AS count').get() as {count: bigint}).count;
       if (before !== after) database.prepare('UPDATE store SET revision=revision+1 WHERE singleton=1').run();
       if ((before !== after || forceEvents) && drafts.length) this.enqueue(drafts);
+      if (this.archiveVersion === 4) enforceDiscoveryBudget(database, true);
       this.hooks.checkpoint?.('event.beforeCommit');
       return value;
     }).immediate();

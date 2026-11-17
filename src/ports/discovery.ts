@@ -99,3 +99,17 @@ export interface DiscoveryMetadataStoragePort {
   readDiscoveryMetadata?<Q extends DiscoveryMetadataQuery>(query: Q): Promise<DiscoveryResult<DiscoveryMetadataReply<Q>>>;
   commitDiscoveryMetadata?(change: DiscoveryMetadataChange): Promise<DiscoveryResult<void>>;
 }
+
+export interface DiscoveryArtifactBudget {
+  readonly allocatedBytes: number; readonly reservedBytes: number; readonly metadataBytes: number;
+  readonly allocatedFiles: number; readonly reservedFiles: number;
+}
+/** Private worker port. No caller-supplied path, hash or publication flag. */
+export interface DiscoveryArtifactStoragePort {
+  reserveDiscoveryArtifact?(kind: DiscoveryArtifact['kind'], maximumBytes: number): Promise<DiscoveryResult<DiscoveryArtifact>>;
+  publishDiscoveryArtifact?(artifactId: string, bytes: Uint8Array): Promise<DiscoveryResult<DiscoveryArtifact>>;
+  readDiscoveryArtifact?(artifactId: string, offset: number, maximumBytes: number): Promise<DiscoveryResult<{ readonly bytes: Uint8Array; readonly sha256: string; readonly totalBytes: number }>>;
+  reconcileDiscoveryArtifacts?(): Promise<DiscoveryResult<void>>;
+  getDiscoveryBudget?(): Promise<DiscoveryResult<DiscoveryArtifactBudget>>;
+  discardDiscoveryPreview?(snapshotId: string): Promise<DiscoveryResult<void>>;
+}

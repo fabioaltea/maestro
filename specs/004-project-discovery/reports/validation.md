@@ -194,3 +194,42 @@ o alterati, link/permessi/owner, orfani preservati e conteggiati, pagine SQLite
 Discovery e indici, riserva terminale e preview/discard/pinning. Fixture private
 nel runner Node esistente; nessun account, sorgente utente o modello reale.
 La checkbox attesta la definizione dei test, non la qualifica del filesystem.
+
+## T012 — artefatti e quota nello stesso writer,2026-11-17
+
+Implementato discovery-artifacts nel worker esistente, senza nuovi pacchetti o
+writer: reservation DB prima dei byte, staging esclusivo UUID0600, fsync file,
+link esclusivo senza overwrite, unlink del solo staging verificato, fsync delle
+directory e commit hash/metadata. Root0700 con identità ricontrollate. Letture
+raw≤8KiB solo da oggetti registrati, regolari0600/nlink1/owner valido, hash e
+fstat verificati. Nessuna promozione da filename, riparazione o cancellazione
+automatica. Il filesystem privato protegge dal provider confinato; non si dichiara
+una sandbox contro un attaccante con controllo dello stesso UID/codice Maestro.
+
+Quota64MiB fisici/4096nomi, compresi staging e orfani conservati, più pagine btree
+Discovery e indici. Un inode temporaneamente con due nomi dopo un crash viene
+conteggiato conservativamente due volte e non letto come pubblicato. Directory
+sconosciute/link impediscono nuove scritture senza essere attraversati/eliminati.
+La freelist globale SQLite resta nel diagnostic budget esistente, non duplicata
+come pagina Discovery: nessun aumento del budget50MiB o WAL2MiB. Ultimi5MiB e due
+posti riservati a proof/finalizzazione; grant cancel/admission e recovery usano
+capacità terminale. Il limite100Discovery resta nell’admission T009.
+
+Preview max4/TTL15min e pinning T010 conservati. Discard esplicito rimuove soltanto
+metadata di preview senza sessioni/revisioni; decrementa riferimenti e conserva
+gli oggetti come orfani conteggiati. Nessuna eviction di revisioni/approvazioni.
+
+PASS typecheck/lint/build.21test artefatti/quota PASS (ultima verifica2985,80ms):
+sette fault sincroni, tre SIGKILL reali su figli posseduti, hash/file mancanti/link/
+permessi, controllo UID con stat sintetico (non una prova secondo UID), proxy
+worker e readonly, pagine DB/indici e allocazione effettiva, limite4096, quota
+ordinaria esaurita con grant/admission cancel su WAITING_USER e una approvazione
+storica ancora presente/leggibile. La prova di cancellazione qui riguarda la
+persistenza: non sostituisce la terminazione nativa T018/T033.
+
+PASS suite generale `caffeinate -i npm test`:431test,426PASS,0FAIL,5SKIP G0
+separati,143365,83ms osservati. Dopo l’avvio della suite è stata aggiunta soltanto
+la liberazione della mappa reservation nella riconciliazione e rafforzata la
+fixture cancel; i21test mirati ricompilati sullo stato finale sono tutti PASS.
+Campioni002 rigenerati ripristinati ai byte originali. G1/account/modello reale
+NOT_RUN; readiness/gate001/002/003 invariati.

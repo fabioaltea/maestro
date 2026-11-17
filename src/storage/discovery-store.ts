@@ -8,7 +8,7 @@ import { requireDiscoverySchema } from './discovery-schema.js';
 
 type Row = Record<string, string | number | bigint | null>;
 export interface DiscoveryMutation {
-  <T>(body: () => T, input?: DiscoveryAdmission): T;
+  <T>(body: () => T, input?: DiscoveryAdmission, terminal?: boolean): T;
 }
 export interface DiscoveryLedgerOptions { readonly nowMs?: () => number; readonly mutate?: DiscoveryMutation }
 
@@ -75,7 +75,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
           if (count >= (intent.action === 'cancel' ? DISCOVERY_LIMITS.activeGrants : DISCOVERY_LIMITS.activeGrants - 1)) throw new Error('DISCOVERY_LIMIT');
           database.prepare('INSERT INTO discovery_grants(grant_id,canonical_intent,expires_at_ms,consumed_by_request_id) VALUES(?,?,?,NULL)').run(grant.grantId, grant.canonicalIntent, grant.expiresAtMs);
           return { ok: true, value: undefined } as const;
-        });
+        }, undefined, intent.action === 'cancel');
       } catch (error) { return discoveryStorageFailure(error); }
     },
     admit(input: DiscoveryAdmission): DiscoveryResult<DiscoveryAdmissionResult> {

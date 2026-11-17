@@ -1,4 +1,4 @@
-import type { DiscoveryLedgerStoragePort, DiscoveryMetadataStoragePort } from './discovery.js';
+import type { DiscoveryArtifactStoragePort, DiscoveryLedgerStoragePort, DiscoveryMetadataStoragePort } from './discovery.js';
 import type { Lifecycle, Outcome } from '../domain/states.js';
 import type { SafeError } from '../domain/errors.js';
 import type { RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort, RegistryUpdatePort, RegistryRemovalPort } from './registry.js';
@@ -88,7 +88,7 @@ export interface ControllerAttemptRecord {
   readonly endedAt: string | null;
   readonly result: string | null;
 }
-export interface StoragePort extends DiscoveryMetadataStoragePort, DiscoveryLedgerStoragePort, EventStoragePort, RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort, RegistryUpdatePort, RegistryRemovalPort {
+export interface StoragePort extends DiscoveryArtifactStoragePort, DiscoveryMetadataStoragePort, DiscoveryLedgerStoragePort, EventStoragePort, RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort, RegistryUpdatePort, RegistryRemovalPort {
   onFailure(callback: (error: SafeError) => void): () => void;
   listTickets(requestId: string): Promise<readonly LaunchTicket[]>;
   reopenOperation(requestId: string): Promise<OperationRecord>;

@@ -114,3 +114,11 @@ Primo incremento eventi: discovery.changed di soli IDs/stato, stessa commit. Le
 tipologie specifiche output/question/document/approval e le API pubbliche sono
 introdotte in T016. Risultati operation contengono soltanto IDs/revisioni, mai
 prompt o stderr; l’intento privato non attraversa il reader di stato.
+
+Implementazione T012: staging UUID privato, pubblicazione con link esclusivo e
+fsync delle due directory prima del commit. Reservation non riprese dopo crash;
+oggetti non autorevoli preservati/conteggiati, mai promossi dal nome. Il budget
+include blocchi filesystem, nomi staging/orfani e tutte le pagine btree/indici
+Discovery; freelist/WAL condivisi restano nel budget Foundation esistente.
+Discard di preview senza riferimenti rimuove i soli metadata e conserva gli
+oggetti orfani. Due posti file e5MiB restano riservati alla finalizzazione.
