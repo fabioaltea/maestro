@@ -79,3 +79,15 @@ flag produzione conservati. Il probe C sintetico ora verifica anche connessioni
 AF_UNIX, senza cambiamenti ai controlli precedenti. G1/account/modello reale
 restano NOT_RUN. Una prima compilazione della nuova asserzione ha rilevato tipi
 fixture incompleti (executable mancante), corretti prima di eseguire questa prova.
+
+
+## Riqualifica dopo T022,2026-11-17
+
+G0 esplicito8/8PASS,1997,60ms. Pin/profilo/schema/argv/env produzione invariati.
+Aggiunta verifica decoder sul vero stdout: il modello sintetico maestro-fixture
+produce il warning nativo item.error per metadata assente. Anche con successivi
+QUESTIONS/turn.completed/exit0 il core rifiuta UNSUPPORTED; non accetta fallback
+metadata come qualifica di un modello. G0 resta una prova di confinamento, non
+un primo flusso funzionale reale. Il parser positivo è verificato con fixture
+JSONL e con veri host/provider Node locali, senza presentarli come Codex reale.
+G1/account/modello/refresh restano NOT_RUN. Nessuna chiamata ufficiale o token.

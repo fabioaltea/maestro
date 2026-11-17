@@ -517,3 +517,51 @@ Il launch è ancora una porta fixture che conta gli effetti: T022 collegherà
 l’adapter/parser al runtime. Queste prove non qualificano un account reale né
 il percorso UI/daemon completo T027/T033. Recovery delle riserve dopo crash
 resta T033, senza auto-resume; G1 e gate precedenti restano aperti.
+
+
+## T022 — adapter, parser e collegamento runtime,2026-11-17
+
+Adapter Codex con input portabile chiuso, istruzioni trusted, hash/sourceId e
+limiti200fonti/128KiBfile/1MiBcorpus/2MiBinput; budget byte inferiore impostabile
+soltanto nel constructor trusted. Gli errori di contesto/modello nativi sono
+normalizzati, senza troncamento o stime presentate come token misurati. Modello
+non riconosciuto/fallback metadata è UNSUPPORTED, non una capacità presunta.
+Argv/env e profilo G0 già qualificati vengono riusati senza nuovi flag o SDK.
+
+Decoder per-run NDJSON UTF-8 incrementale,1MiBlinea/8MiBrun; oggetti QUESTIONS/
+DOCUMENT chiusi e bounded, sezioni obbligatorie, claim≤200totali, documenti≤256KiB.
+Eventi/tool inattesi, malformati, duplicati, dati dopo turn.completed, JSON
+troncato e completamento mancante invalidano il risultato. exit0 da solo non
+basta. Quote/risposte hanno qui verifica strutturale: provenance rimane T039.
+Nessun RESULT prima della verifica dell’uscita; stderr resta privato nel host.
+Record validi prima di un errore nello stesso chunk restano output parziale.
+
+Core launcher controlla admission/run/input prima degli effetti; OS port prepara
+runtime0700/schema0600 esclusiva e fsync, senza sovrascrivere directory esistenti.
+Host WAIT_GO→HOST_READY durevole→SPAWN_AUTHORIZED durevole→GO. Solo proof runtime
+riconfermata e parsing valido permettono onResult; errori noti finalizzano con
+esito safe, nessuna approvazione. Process intent preesistente non è adottato o
+terminato e mantiene lo slot; nessuna falsa assenza derivata dal PID. Fallimento
+prima di chiamare AgentRuntime è distinta assenza di processi per control flow.
+Pubblicazione/intervista/review e output durevole restano callback core T031/
+T032/T039, non implementazioni surrogate; bootstrap completo resta T027.
+
+I test con veri host/provider Node locali hanno trovato che Node può omettere
+close dopo disconnect IPC: finalizzazione runtime ora osserva anche exit del
+proprio handle, attende la coda e richiede sempre proof autenticata. SIGKILL/
+prova assente non diventano assenza provider. Corretto anche il mantenimento del
+prefisso valido nello stesso chunk contenente UTF-8/tool/errori non validi.
+Teardown dei nuovi fixture conserva archivio/runtime se l’uscita non è provata.
+
+Sette test iniziali RED (0/7PASS,66,95ms); dopo implementazione33/33test mirati
+PASS,13400,77ms, poi aggiunto caso intent processi preesistente nella suite.
+Typecheck/lint/build/build:test PASS. Suite generale caffeinate -i npm test:
+528test,522PASS/0FAIL/6SKIP separati,100268,51ms. Include8contratti decoder/adapter,
+8integrazioni launcher e regressioni runtime/001/002. Campioni002 ripristinati.
+
+G0 esplicito8/8PASS,1997,60ms. Nel vero stream del modello sintetico si osserva
+un item.error per metadata modello assente, seguito da QUESTIONS e exit0: il
+nuovo parser lo rifiuta correttamente come UNSUPPORTED. G0 qualifica isolamento,
+non modello/account/inferenza reali. Nessun cambio al profilo per ottenere PASS;
+G1 e gate precedenti aperti. Fonti formato JSONL: [documentazione ufficiale](https://learn.chatgpt.com/docs/non-interactive-mode) e osservazione locale del
+pin con backend esclusivamente loopback/sintetico, senza account utente.

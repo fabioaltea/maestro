@@ -125,6 +125,13 @@ g0('G0 real Codex ignores hostile config and exposes no uncontrolled hosted/exec
   // through it. QUESTIONS is the portable protocol. New tool surfaces require review.
   for (const tool of tools) assert.ok(['request_user_input'].includes(tool.name ?? ''), `UNQUALIFIED_TOOL_CATALOG: ${JSON.stringify(tools.map(value => ({ type: value.type, name: value.name })))}`);
   assert.ok(result.stdout.includes('QUESTIONS'), 'NO_STRUCTURED_FINAL_RESULT');
+  // The deliberately synthetic model has no native metadata. Its CLI exit0
+  // remains useful for confinement qualification, but is not an eligible core
+  // result: production must reject the native fallback warning.
+  const { createCodexOutputDecoder } = await import('../../src/providers/codex/parser.js');
+  const parsed = createCodexOutputDecoder();
+  assert.deepEqual(parsed.feed(Buffer.from(result.stdout)), { ok: false, code: 'PROVIDER_UNSUPPORTED' });
+  assert.equal(parsed.finish(0).ok, false);
   assert.deepEqual(await fixture.snapshot(), before);
 });
 

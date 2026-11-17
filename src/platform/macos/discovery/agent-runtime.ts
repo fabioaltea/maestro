@@ -139,7 +139,14 @@ export function createAgentRuntime(options: AgentRuntimeOptions): AgentRuntimePo
             } else if (m.kind !== 'agent.exit') fail('INVALID_REQUEST');
           }).catch(error => { readyReject(error instanceof Error ? error : new Error('RESOURCE_IDENTITY_UNKNOWN')); if (child.connected) child.disconnect(); });
         });
-        child.once('close', () => { void own.queue.then(async () => { const p = await proof(own.identity); if (p) { settled.set(own.identity.runId, { identity: own.identity, proof: p, fingerprint: own.fingerprint }); owned.delete(own.identity.runId); await options.onExit?.(own.identity, p); } }).catch(() => {}); });
+        let finalizing = false;
+        const finalize = () => {
+          if (finalizing || !own.exited) return; finalizing = true;
+          void own.queue.then(async () => { const p = await proof(own.identity); if (p) { settled.set(own.identity.runId, { identity: own.identity, proof: p, fingerprint: own.fingerprint }); owned.delete(own.identity.runId); await options.onExit?.(own.identity, p); } }).catch(() => {});
+        };
+        // Node may omit close after an owner-initiated IPC disconnect. Exit of
+        // the captured host plus authenticated provider proof is still required.
+        child.once('exit', finalize); child.once('close', finalize);
         await commit({ kind: 'process', value: own.identity });
         const bootstrap: AgentBootstrap = { kind: 'agent.bootstrap', identity: own.identity, invocation, stdin: input.stdin, timeoutMs: limits.runMs, ...(options.providerModuleUrl ? { providerModuleUrl: options.providerModuleUrl } : {}) };
         child.send(bootstrap, error => { if (error) readyReject(new Error('PROVIDER_UNAVAILABLE')); });

@@ -19,6 +19,7 @@ import { createProjectRepositories } from './project-repositories.js';
 import { createRegistryStore } from './registry-store.js';
 import { value } from './discovery-artifacts.js';
 import { loadContract } from './load-contract.js';
+import type { DiscoveryLaunch } from '../../src/core/discovery/launch.js';
 
 export interface StartInput { requestId: string; grantId: string | null; canonicalIntent: string }
 export interface StartAdmission { accepted: true; requestId: string; discoveryId?: string; sessionId?: string; runId?: string }
@@ -31,10 +32,10 @@ export interface DiscoveryOperations {
   get(peer: AuthenticatedPeer, requestId: string): Promise<DiscoveryOperationView | null>;
   idle(): Promise<void>;
 }
-export async function launchFixture(t: TestContext, settings: { configured?: boolean; repository?: 'clean' | 'dirty' | 'conflict' | 'unborn'; checkpoint?: (point: string) => Promise<void> } = {}) {
+export async function launchFixture(t: TestContext, settings: { configured?: boolean; repository?: 'clean' | 'dirty' | 'conflict' | 'unborn'; checkpoint?: (point: string) => Promise<void>; onLaunch?: (input: DiscoveryLaunch) => Promise<void>; cleanupAllowed?: () => boolean } = {}) {
   const { createDiscoveryOperations } = await loadContract<{ createDiscoveryOperations(options: object): DiscoveryOperations }>('core/discovery/operations.js', ['createDiscoveryOperations']);
   let service: DiscoveryOperations | undefined, runtimeDirectory: string | undefined;
-  t.after(async () => { await service?.idle(); if (runtimeDirectory) await rm(runtimeDirectory, { recursive: true }); });
+  t.after(async () => { await service?.idle(); if (settings.cleanupAllowed && !settings.cleanupAllowed()) throw new Error('PRESERVE_UNVERIFIED_LAUNCH_FIXTURE'); if (runtimeDirectory) await rm(runtimeDirectory, { recursive: true }); });
   const repositories = await createProjectRepositories(t), repo = await repositories.createRepository('launch', { commit: settings.repository !== 'unborn' });
   if (settings.repository === 'unborn') await writeFile(join(repo, 'tracked.txt'), 'unborn project\n');
   if (settings.repository === 'dirty') await writeFile(join(repo, 'tracked.txt'), 'dirty working input\n');
@@ -43,6 +44,10 @@ export async function launchFixture(t: TestContext, settings: { configured?: boo
     await repositories.git(repo, ['switch', 'fixture-base']); await writeFile(join(repo, 'tracked.txt'), 'base changed\n'); await repositories.git(repo, ['commit', '-am', 'base']); await repositories.git(repo, ['merge', 'other'], 1);
   }
   const f = await createRegistryStore(t), paths = (await createPlatformPaths().resolveArchive(f.directory, 'write'))!; runtimeDirectory = paths.runtimeDirectory;
+  if (settings.cleanupAllowed) {
+    const cleanup = f.context.cleanup.bind(f.context);
+    f.context.cleanup = async () => { if (!settings.cleanupAllowed!()) throw new Error('PRESERVE_UNVERIFIED_LAUNCH_FIXTURE'); await cleanup(); };
+  }
   const database = new Database(f.path); database.pragma('foreign_keys=ON'); t.after(() => database.close());
   const projectId = randomUUID(), at = new Date().toISOString();
   const inspected = await createDirectRepositoryInspector().inspectCandidate(repo, undefined, { deadline: makeDeadline(systemClock, 30000) }); assert.ok(inspected.ok);
@@ -66,6 +71,7 @@ export async function launchFixture(t: TestContext, settings: { configured?: boo
     assert.equal((database.prepare('SELECT consumed_by_request_id FROM discovery_grants WHERE grant_id=?').get(c.run.grantId) as { consumed_by_request_id: string }).consumed_by_request_id, c.operation.requestId);
     assert.equal((database.prepare('SELECT discovery_id FROM discovery_slot WHERE singleton=1').get() as { discovery_id: string }).discovery_id, c.discovery.discoveryId);
     launches.push({ requestId: c.operation.requestId, runId: c.run.runId, discoveryId: c.discovery.discoveryId });
+    await settings.onLaunch?.(raw as DiscoveryLaunch);
   };
   service = createDiscoveryOperations({ storage: f.store, paths, instanceId: f.instanceId, ownerUid: process.getuid!(), provider, context, artifacts, launch, ...(settings.checkpoint ? { checkpoint: settings.checkpoint } : {}) });
   const peer: AuthenticatedPeer = { role: 'client', identity: f.instanceId, credentialId: 'owned-launch-fixture' };
