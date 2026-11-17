@@ -412,3 +412,20 @@ composizione funzionale avvio/intervista/review e recovery daemon T033/G2 restan
 da realizzare. I test di owner loss qui usano veri host/provider fixture e perdita
 dell’IPC; non sostituiscono il futuro SIGKILL del daemon completo. Proof outcome
 locale non equivale a documento valido o approvato. Gate001/002/003 eG1 invariati.
+
+## T019 — avvio US1 inizialmente RED,2026-11-17
+
+Quattordici casi compilano e falliscono come atteso per operations US1 ancora
+assente (14FAIL,67,62ms). Provider/auth/capability, scope owner/store/modello/
+revisioni, grant assente/scaduto, nessun run da preview/check/prepare, risposta
+immediata mentre il fingerprint è pendente (grant ancora inutilizzato), UUID
+confliggenti, retry identico, richieste distinte concorrenti senza coda e risposta
+persa prima/dopo accettazione. Identità/run/slot/grant devono essere durevoli
+prima del callback di lancio. Repo Git reali dirty/conflict/unborn restano invariati.
+
+Il callback di lancio qui è una porta fixture che conta gli effetti, non una
+prova provider o daemon end-to-end. Il precedente T018 copre i veri processi
+locali. Le fixture di US1 usano snapshot/file reali e provider simulato; nessuna
+credenziale o chiamata modello. La checkbox riguarda i test definiti, non l’avvio
+funzionale già completato. La suite completa rimane intenzionalmente RED finché
+T020–T022 non soddisfano i relativi contratti.
