@@ -144,7 +144,7 @@ export function createDiscoveryLauncher(options: LauncherOptions) {
       try { await options.onResult(entry.identity, decoded.value); }
       catch (error) {
         await commit({ kind: 'run', value: { ...exited, phase: 'FINALIZED', outcome: 'FAILED', error: launchError(error) }, expectedPhase: 'EXIT_OBSERVED', exitVerified: true });
-        await state(exited, 'FAILED', true); entry.finalized = true; active.delete(r.runId); throw error;
+        if ((await meta({ kind: 'discovery', id: exited.discoveryId }))?.state !== 'STALE') await state(exited, 'FAILED', true); entry.finalized = true; active.delete(r.runId); throw error;
       }
     } else {
       const d = await meta({ kind: 'discovery', id: r.discoveryId });
