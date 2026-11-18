@@ -1,11 +1,11 @@
 # maestro Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-11-17
+Auto-generated from all feature plans. Last updated: 2026-11-18
 
 ## Active Technologies
 
-- 004-project-discovery (in implementazione, output/intervista locali UI e headless disponibili; G1 reale aperto): Codex CLI standalone 0.167.0 con login ufficiale Keychain-only; corpus selezionato/sigillato e profilo OS dedicato. Nessun nuovo SDK o pacchetto runtime; G0 sintetico PASS; G1/login reale NOT_RUN. Consultare reports/provider-qualification.md della004.
-- Schema 4 implementato sul writer SQLite esistente (metadata e letture Discovery; avvio/output/intervista UI e headless collegati; review/idoneità ancora da completare): ledger/slot/approvazioni Discovery e artefatti privati bounded. Upgrade solo start esplicito; Agent Runtime separato dalla policy Foundation. Consultare specs/004-project-discovery/ e contracts.
+- 004-project-discovery (implementazione locale fino aT054; qualifica reale BLOCKED): Codex CLI standalone 0.167.0 con login ufficiale Keychain-only; corpus selezionato/sigillato e profilo OS dedicato. Nessun nuovo SDK o pacchetto runtime; G0 sintetico PASS; G1/login reale BLOCKED: precheck PROVIDER_UNSAFE, nessuna inferenza. Consultare reports/provider-qualification.md della004.
+- Schema 4 implementato sul writer SQLite esistente (metadata e letture Discovery; avvio/output/intervista/review/correzioni/approval/freshness/storico UI e headless collegati): ledger/slot/approvazioni Discovery e artefatti privati bounded. Upgrade solo start esplicito; Agent Runtime separato dalla policy Foundation. Consultare specs/004-project-discovery/ e contracts.
 
 - 003-desktop-core-ui (implementato, review umana pendente): Electron 45.3.0, React/react-dom 19.3.1, esbuild 0.28.2 e Playwright 1.65.0; TypeScript 6.0.3. Main Electron Node24 ESM, preload CJS sandboxed e renderer browser; CLI core tramite Node26.13.0 esterno. Pin/compatibilità qualificati con sandbox in G0.
 - Ricevute UI private e bounded per query originali dopo crash; nessuna modifica schema3, replica registro o nuovo daemon. Consultare specs/003-desktop-core-ui/{spec,plan,research,data-model,quickstart}.md e contracts prima dell’implementazione desktop.
@@ -52,7 +52,7 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 004: T001–T027 e T029–T035 completati; Discovery locale UI/headless con output persistente, domande/risposte append-only, continuazione intenzionale e cancel/recovery. Ultime verifiche core mirato204PASS/6SKIP; desktop37unit/29integration/3E2EPASS. G0 precedente8/8PASS; G1 reale NOT_RUN, G2 completo/T036 aperto; documenti/review/idoneità e freshness ancora da completare. Il primo run core sotto carico parallelo ha avuto un errore SIGINT non riprodotto in isolamento e nella selezione finale: consultare reports/validation.md. Scelta utente: Codex CLI con login ufficiale, nessuna API key/fallback automatico. Verifiche mirate, niente nuove campagne di volume/durata.
+- 004: implementazione localeT001–T027/T029–T049/T051–T054; T028/T050 aperti/BLOCKED. G0 sinteticoPASS e G2/G3/G4 fixture localiPASS; core576PASS/6SKIP, desktop39unit/29integration/34E2EPASS (1SKIP reale separato). Precheck reale autorizzato2026-11-18 con gpt-6.1-sol/pin0.167.0: PROVIDER_UNSAFE prima dell’inferenza; non equivale a login mancante e non è SC-001PASS. Review finale/readinessBLOCKED; nessuna API key/fallback o profilo allentato. Consultare reports/{validation,provider-qualification,release-readiness}.md e real-provider-status.json. Verifiche mirate, niente nuove campagne di volume/durata.
 
 - 003: prima UI locale sul core001/002; CLI con Node26 esterno, conferme/ricevute, progetti live/offline e attività. G0–G4 qualificati localmente; T054 review umana/picker nativo ancora NOT_RUN. Benchmark eventi di volume/durata rinviati dall’utente2026-11-15; non ricrearli come gate MVP. Gate001/002 invariati. Consultare specs/003-desktop-core-ui/reports/.
 

@@ -33,7 +33,7 @@ maestro discovery operation REQUEST
 --state-dir ABS --json --timeout-ms MS
 Mutazioni: --request-id UUID; la risposta attesta admission, non fine del modello.
 scope-file: array JSON di selettori relativi; intent-file: intent canonico chiuso.
-Per pipe JSON: --scope-stdin, --intent-stdin oppure --answer-stdin, alternativi al file.
+Per pipe JSON: --scope-stdin, --intent-stdin, --answer-stdin o --review-stdin, alternativi al file.
 Risposta incerta: interrogare operation con lo stesso UUID, senza un nuovo start.
 `;
 async function jsonFile(path: string | undefined): Promise<unknown> {

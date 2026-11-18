@@ -40,7 +40,9 @@ Alla riapertura scegli nuovamente l’archivio; non si conserva una selezione im
 
 La UI espone progetti live/offline, importazione di repository esistenti, verifica,
 nome/base, rimozione della sola registrazione, lifecycle, operazioni e attività.
-Non contiene provider, agenti, terminale, gestione worktree o workflow futuro.
+Il pannello Discovery aggiunge analisi, intervista, review e approvazione locale.
+Il provider reale resta bloccato dal precheck Keychain descritto nelle evidenze004.
+Terminale, gestione worktree e implementazione di feature restano fuori ambito.
 Le osservazioni Git restano datate anche quando il registro è live.
 
 Conferme monouso precedono ogni mutazione. Ricevute private conservano l’UUID originale
@@ -118,11 +120,45 @@ Errors include safe cause, retryable and nextAction. BUSY accepted=false has no 
 promise. UNKNOWN_OUTCOME retains the original request ID. A stale configuration
 revision requires rereading and an explicit new intent, not an automatic retry.
 
-Schema 3 upgrades this greenfield Foundation's known schema 2 only on explicit
+Schema 4 upgrades known schema 2→3→4 only on explicit
 start with exclusive leases; storeId, journal and outcome history remain intact.
 Read-only schema 2 registry requests return REGISTRY_NOT_INITIALIZED without upgrade.
 Unknown versions/corrupt or uncertain storage fail explicitly; there is no migration
 from the earlier Maestro product and no automatic rebind/recreation of a checkout.
+
+## Project Discovery
+
+Il flusso locale comprende anteprima delle fonti, consenso all’invio, analisi,
+intervista con risposte persistenti, revisioni, correzioni e approvazione precisa.
+Documenti e output risiedono nell’archivio Maestro; il repository rimane in sola
+lettura. Una nuova Discovery richiede una nuova anteprima e conferma dalla UI.
+Lo storico resta associato al progetto originale anche dopo remove/reimport.
+
+Codex CLI0.167.0 nativa è il provider previsto, con login ufficiale nel profilo
+Keychain dedicato. Modello scelto: `gpt-6.1-sol`. **G1/SC-001 reale BLOCKED**:
+il precheck autorizzato del2026-11-18 restituisce `PROVIDER_UNSAFE` prima
+dell’inferenza. Le prove locali G0/G2/G3/G4 non chiudono questa qualifica.
+Vedi [procedura Discovery](specs/004-project-discovery/quickstart.md),
+[stato reale redatto](specs/004-project-discovery/reports/real-provider-status.json)
+e [readiness](specs/004-project-discovery/reports/release-readiness.md).
+
+```sh
+node dist/cli/main.js discovery --help
+```
+
+Letture: `provider get`, `list PROJECT`, `show DISCOVERY`, `questions DISCOVERY`,
+`output RUN`, `revisions DISCOVERY`, `document REVISION`, `operation REQUEST`.
+Le pagine sono limitate; `document` restituisce chunk≤8KiB con cursore, oppure
+metadata con `--metadata`. Queste letture funzionano anche offline.
+`eligibility PROJECT [--check-id UUID]` restituisce prima CHECKING/false e poi
+la stessa fotografia verificata, valida30s; offline/restart non riusano true.
+
+Le mutazioni `configure`, `start`, `answer`, `correct`, `approve` e `cancel`
+richiedono un grant esatto ottenuto da `prepare --intent-file FILE`; ogni richiesta
+ha un UUID durevole. Scope, risposte e correzioni entrano da file/pipe bounded,
+mai da argomenti testuali liberi. In caso di esito incerto consulta l’operazione
+originale. Cancel dimostra la terminazione locale posseduta; la cancellazione
+remota non è verificata. Nessuna approvazione avvia implementazione di codice.
 
 ## Observations and events
 
@@ -168,9 +204,9 @@ errors are in [performance](specs/002-project-registry/reports/performance.md).
 
 All four user stories and E1/E2/E3 have separate evidence in
 [002 reports](specs/002-project-registry/reports/), with bounded-pressure and final
-acceptance status recorded separately. Provider integrations, Agent Runtime,
-Discovery approval, Git/worktree management and dependency execution
-are future scope. The first Electron client is feature003, with its own evidence
+acceptance status recorded separately. Discovery and Agent Runtime are feature004, with local fixture evidence and
+real-provider qualification still blocked. Git/worktree management and dependency
+execution remain future scope. The first Electron client is feature003, with its own evidence
 and pending human review. No registration declares a project ready or approves future work.
 See [quickstart](specs/002-project-registry/quickstart.md),
 [contracts](specs/002-project-registry/contracts/) and

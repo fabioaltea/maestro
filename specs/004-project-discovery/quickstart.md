@@ -1,70 +1,175 @@
-# Quickstart e qualifica004 — procedura futura
+# Quickstart004 — implementazione locale e qualifica reale bloccata
 
-004 è in implementazione: G0 sintetico e primitive Foundation qualificati; T016 espone letture CLI/IPC e storico offline. I flussi di avvio/intervista/review saranno introdotti dai task successivi. Nessun login, installazione, setup Keychain o inferenza è autorizzato da queste verifiche. Gli esempi `maestro discovery` saranno introdotti dai task. Non vengono riproposti benchmark lunghi.
+Stato2026-11-18: avvio, output, intervista, correzioni, review, approval, freshness e
+storico implementati nel core e nei client. G0 sintetico e G2/G3/G4 locali su fixture
+qualificati; G1/SC-001 reale **BLOCKED** nel precheck Keychain (`PROVIDER_UNSAFE`),
+prima di qualsiasi inferenza. T028/T050 restano aperti. Consultare
+[validation](reports/validation.md), [provider](reports/provider-qualification.md),
+[readiness](reports/release-readiness.md) e [status redatto](reports/real-provider-status.json).
 
-## Prerequisiti
+## Prerequisiti e avvio
 
-macOS26.3/26.3.1 arm64/APFS, Node26.13.0/npm11.20.0, checkout con001–003. Codex0.167.0 standalone nativa già osservata; hash/versione vanno qualificati G0 prima dell’uso. Un modello espressamente configurato e disponibile sul proprio account; nessuna disponibilità/costo dedotta dall’installazione.
-
-G0 deve passare con fixture sintetiche prima di sorgenti reali. La prova reale successiva richiede consenso esplicito, credenziali ufficiali del provider e repository scratch, non il progetto dell’utente. Se manca l’autorizzazione si continua con test locali dove indipendenti e si registra prova reale NOT_RUN, mai PASS.
-
-## Setup provider — solo quando autorizzato
-
-Configurare il nativeBinary risolto e modello tramite nuova CLI/UI. CODEX_HOME provider dedicata e stabile, non il checkout; Maestro non copia il login corrente. Login esclusivamente ufficiale con keyring obbligatorio, senza auth.json o fallback auto. Comando indicativo futuro da verificare sul pin:
+Piattaforma qualificata: macOS26.3/26.3.1 arm64/APFS, Node26.13.0/npm11.20.0.
+Stesso daemon e writer001/002; Electron45.3.0 è client. Dalla root:
 
 ```sh
-maestro_codex_home="$HOME/Library/Application Support/Maestro/providers/codex-discovery"
-CODEX_HOME="$maestro_codex_home" codex --no-daemon -c 'cli_auth_credentials_store="keyring"' login
+npm run build
+npm run build:desktop
+npm run desktop
 ```
 
-Il core prepara il profilo privato solo su configurazione esplicita. Se Keychain non disponibile o policy managed incompatibile, correggere il prerequisito supportato o lasciare avvio bloccato; niente estrazione token/permessi allentati. Login ufficiale non equivale a qualifica G0 o autorizzazione di ogni run. [Autenticazione ufficiale](https://learn.chatgpt.com/docs/auth).
+Un archivio dati può contenere più progetti registrati, ognuno collegato a un
+repository Git separato. Aprire la UI o interrogare l’archivio non avvia il daemon.
+Start esplicito aggiorna esclusivamente gli schemi noti2→3→4 sotto lease esclusivi;
+le letture non inizializzano né aggiornano. Conservare storeId/projectId/requestId.
 
-## Percorso headless / UI
+## Provider e login ufficiale
 
-1. Archivio separato e repository scratch (anche dirty/unborn/conflicted), start esplicito dopo upgrade4 esclusivo; snapshot prima.
-2. Provider configure/check, progetto importato e verificato. Apertura pannello Discovery senza invocare il modello.
-3. Scope esplicito → preview corpus/file/omissioni/digest → consenso invio/provider → start. Salvare UUID di richiesta/discovery/session/run; query operation se risposta persa.
-4. Seguire output/domande. Chiudere UI: sessione continua; riaprire archivio/progetto, rispondere con «Invia e continua». Nuovo run intenzionale, stesso contesto/risposte persistite.
-5. Review: CODE/fonti verificabili, USER_CONFIRMED/answerId, HYPOTHESIS/UNKNOWN. Correggere → nuova revisione. Approvare preciso digest/contesto dopo rivalidazione.
-6. Eligibility corrente confermata dal core; modificare un file analizzato/untracked/config → nuova query nega idoneità, storico conservato. Nessuna implementazione feature ancora disponibile.
-7. Snapshot dopo identico a prima per tutte le azioni Discovery. Cancel/crash: query originale e stato verificato o incerto, nessun run o kill estraneo.
+Binario standalone Codex0.167.0, SHA256
+`030316ecfbb41f4e7946e584b0063ef333b7a36cd312ba349f2f6869e39b62cc`;
+profilo/schema qualificati in G0. Un altro pin/profilo richiede riqualifica.
+Dalla UI scegliere il binario nativo e configurare il modello. L’utente ha scelto
+Sol6.1, ID `gpt-6.1-sol` secondo la [documentazione ufficiale](https://learn.chatgpt.com/docs/models?surface=cli).
+La disponibilità dell’account non è dedotta dal catalogo.
 
-L’intervista su fixture deve lasciare un’informazione realmente non presente nel corpus, per verificare la domanda e la provenienza della risposta, senza pretendere uno specifico testo naturale dal modello.
+Maestro prepara esplicitamente il profilo privato
+`~/Library/Application Support/Maestro/providers/codex-discovery`.
+Il login è un’azione distinta nella CLI ufficiale, con `CODEX_HOME` dedicato,
+`cli_auth_credentials_store="keyring"` e metodo ChatGPT. Il login ordinario può
+appartenere a un’altra identità. Maestro non legge/copia token; non accetta API key,
+auth.json o fallback automatico. La modalità keyring ufficiale fallisce se il
+credential store OS non è disponibile: [autenticazione](https://learn.chatgpt.com/docs/auth?surface=cli).
 
-## Verifiche pianificate
+**Verifica provider e login** è un controllo locale, non inferenza. Il precheck
+reale autorizzato ha restituito UNSAFE/PROVIDER_UNSAFE sul profilo confinato.
+Mantenere l’avvio bloccato finché compatibilità Keychain/policy non viene corretta
+e riqualificata; la causa non è dimostrata come semplice login mancante.
+Nessun profilo ampliato o autenticazione alternativa è stato introdotto per la prova.
 
-G0 implementato: `npm run test:discovery:boundary`, solo binario pin/fixture sintetiche,
-nessun account o egress Internet; non è la prova reale G1. Le suite ordinarie
-segnalano questo gate separato come non eseguito (skip esplicito), senza dedurre PASS.
+## Flusso UI
+
+1. Aprire l’archivio, avviare esplicitamente il servizio, importare un repository.
+2. Aprire **Discovery**; il pannello legge soltanto stato. Configurare/verificare
+   il provider, indicare1–16 selettori relativi, quindi **Prepara anteprima**.
+3. Controllare file, byte, omissioni, digest e scope; il consenso dichiara l’invio
+   delle sole fonti sigillate. **Avvia Discovery** richiede una conferma monouso.
+4. Consultare output/intervista. Rispondere con **Invia e continua** o **Non so**:
+   risposta persistita prima della nuova esecuzione intenzionale, stessi corpus e
+   sessione. Chiudere UI non cancella il lavoro.
+5. Review delle tre sezioni: CODE con source/hash/righe, USER_CONFIRMED con risposta
+   e revisione, HYPOTHESIS, UNKNOWN e NOT_APPLICABLE distinti. La provenance verifica
+   i riferimenti, non la verità semantica. Testo e citazioni sono inerti.
+6. **Invia correzione** crea un nuovo run e una revisione con parent; la precedente
+   resta immutabile. Per **Approva questa revisione**, accettare separatamente ogni
+   UNKNOWN/domanda aperta e confermare revisione/digest/contesto esatti.
+7. **Verifica idoneità attuale** rivalida il fingerprint. Il true è una fotografia
+   con checkedAt/TTL30s, non l’autorizzazione a una feature futura. Un errore o dubbio
+   produce false/UNKNOWN; un cambiamento rilevante produce Da aggiornare.
+8. **Nuova Discovery** riporta a una nuova anteprima e conferma. Lo storico,
+   comprese approvazioni e revisioni precedenti, conserva identità e contesto originali.
+
+## CLI headless
+
+```sh
+node dist/cli/main.js discovery --help
+node dist/cli/main.js discovery provider get --state-dir /percorso/archivio --json
+node dist/cli/main.js discovery list PROJECT --state-dir /percorso/archivio --json
+node dist/cli/main.js discovery show DISCOVERY --state-dir /percorso/archivio --json
+node dist/cli/main.js discovery revisions DISCOVERY --state-dir /percorso/archivio --json
+node dist/cli/main.js discovery document REVISION --metadata --state-dir /percorso/archivio --json
+```
+
+Sostituire gli identificativi segnaposto con UUID reali. `questions DISCOVERY`,
+`output RUN`, `operation REQUEST` e documenti/storico sono leggibili offline come
+LAST_KNOWN. `document REVISION` restituisce chunk≤8KiB e `nextCursor`; usare
+`--after CURSOR` fino a null, controllando hash, offset e totale≤256KiB.
+`revisions`, `list`, `questions` e `output` hanno pagine≤20 con cursori bound a
+store/target/revisione. `eligibility PROJECT` ritorna CHECKING/false con checkId;
+`eligibility PROJECT --check-id UUID` interroga lo stesso job/risultato. Senza ID
+si richiede una nuova verifica, coalescente se già attiva; max1/progetto/4globali,
+senza coda. Offline/restart/scadenza non restituiscono un true cached.
+
+Le mutazioni Discovery hanno admission≤2s e UUID proprio; l’ammissione non attesta
+il completamento dell’analisi. `prepare --intent-file FILE` o `--intent-stdin`
+richiede l’intento canonico chiuso dei [contratti](contracts/): owner/store/azione/
+target/config/state/snapshot/context/provider/profile/model e payload. Il grant
+monouso vale5min e vincola esattamente quell’intento. Il client deve presentare il
+riepilogo per il consenso prima di inviare il comando col grant.
+
+| Comando | Input privato aggiuntivo |
+|---|---|
+| `preview PROJECT --expected-revision REV --scope-file FILE` | array JSON selettori; alternativa `--scope-stdin` |
+| `start PROJECT --grant UUID` | snapshot/ambito nel grant preparato |
+| `answer QUESTION --grant UUID --answer-file FILE` | `{kind:"ANSWER"\|"UNKNOWN",text:"..."}`; alternativa `--answer-stdin` |
+| `correct DISCOVERY --grant UUID --review-file FILE` | `{correction:"..."}`; alternativa `--review-stdin` |
+| `approve DISCOVERY --grant UUID --review-file FILE` | `{revisionId,bundleDigest,acceptedUnknownIds}`; alternativa `--review-stdin` |
+| `cancel DISCOVERY --grant UUID` | solo target e state revision nel grant |
+
+I file contengono JSON valido con chiavi fra virgolette; gli schemi in tabella sono
+notazione descrittiva. File/pipe≤32KiB; risposte/correzioni≤4KiB UTF-8. Scope,
+risposte e correzioni non viaggiano in argv. `--request-id UUID` conserva l’intento
+originale; dopo una risposta persa interrogare `operation REQUEST`, senza un nuovo
+UUID per indovinare se il comando è stato eseguito.
+
+## Errori e recovery
+
+| Stato/codice | Significato e azione |
+|---|---|
+| PROVIDER_AUTH_REQUIRED | login ufficiale del profilo dedicato richiesto |
+| PROVIDER_UNSAFE/UNSUPPORTED | compatibilità/policy non qualificata; bloccare l’invio e correggere il prerequisito |
+| CONTEXT_CHANGED / Da aggiornare | nuova anteprima e nuovo consenso; storico conservato |
+| CONTEXT_UNSTABLE / UNKNOWN | fingerprint incerto; idoneità false, osservazione esplicita successiva |
+| UNKNOWN_OUTCOME / RECONCILING | consultare UUID/stato originali; preservare slot/ownership finché l’assenza non è provata |
+| WAITING_USER | nessun processo necessario; domanda e risposta persistenti, slot mantenuto |
+| INTERRUPTED | storico conservato dopo perdita owner/restart; nessun resume automatico |
+| CHECK_EXPIRED | risultato eligibility scaduto o di altro runtime/progetto; nuova verifica esplicita |
+
+Cancel usa solo handle posseduti e prova autenticata di uscita; massimo locale4s.
+Un PID persistito non autorizza kill/adoption. Cancellazione remota non verificata.
+Output troncato viene segnalato; renderer≤500righe/1MiB, archivio≤4MiB/run,
+parser≤8MiB/run. Contesto≤30s, run≤10min, senza garanzie di durata LLM.
+Rimozione/reimport genera una nuova identità e non trasferisce approvazioni.
+
+## Verifiche e prova reale opt-in
 
 ```sh
 npm run build
 npm run typecheck
 npm run lint
+npm test
 npm run typecheck:desktop
 npm run build:desktop
-npm test
 npm run test:desktop:unit
 npm run test:desktop:integration
 npm run test:desktop:e2e
 ```
 
-Aggiungere G0 e prova opt-in agli attuali test Node, senza runner nuovo. File previsti:
-`tests/integration/discovery-provider-boundary.test.ts` (G0 sintetico) e
-`tests/acceptance/discovery-real-provider.test.ts` (una prova reale controllata, non inclusa negli ordinari).
-Il comando preciso opt-in e la redazione delle evidenze si definiscono nel task della prova; non iniziare traffico per discovery di capability.
+`npm test` esclude acceptance. Per le sole acceptance Discovery locali, dopo build:test:
 
-## Gate / evidenze da creare nell’implementazione
+```sh
+node --test dist-tests/tests/acceptance/discovery-review.test.js dist-tests/tests/acceptance/discovery-refresh.test.js
+```
 
-| Gate | Prova mirata | Stato ora |
-|---|---|---|
-| G0 |pin/argv/config, confinamento OS, letture auth/checkout/archivio e exec negati, tool residui, fixture inferenza locale con segreti sintetici |PASS sintetico: [evidenze](reports/provider-qualification.md) |
-| Schema/context |2→3→4, crash upgrade, reader3 immutato, slot/ledger UUID, symlink/hardlink/growth, archive-inside-repo |NOT_RUN |
-| G1 |avvio UI/headless, login Keychain e provider reale opt-in, repository invariato, doppio invio/query |NOT_RUN |
-| G2 |intervista/risposta/reopen UI, cancel e crash daemon/host, owner incerto, output limitato |NOT_RUN |
-| G3 |provenance/versioni/CAS/UNKNOWN, approvazione soltanto esplicita e idoneità core |NOT_RUN |
-| G4 |stale contesto/untracked/membership/HEAD/config, reimport, callback tardive e storico |NOT_RUN |
+G0 sintetico esplicito: `npm run test:discovery:boundary`, senza account o inferenza
+ufficiale. Non usare `test:acceptance` o `bench:foundation` per questa verifica:
+contengono campagne idle reali distinte, non necessarie a004.
 
-Report futuri in `reports/{validation,provider-qualification,release-readiness}.md` e campioni redatti. Uno scenario reale completo SC001 basta come qualifica iniziale funzionale; nessuna garanzia di durata LLM/throughput. Budget provider/run e troncamenti verificati con tempo/fault controllati, non aspettando10min. Log contengono IDs/codici/byte/stato, non corpus, risposte, token o stderr.
+T028/T050 richiedono consenso esplicito alla prova e login compatibile. Il runner
+usa esclusivamente un repository sintetico, disabilita trace/video/screenshot e
+registra solo metadata redatti. Comando per un’esecuzione già autorizzata:
 
-La prova Keychain non dimostra assenza di tutti gli errori futuri e il fake backend non dimostra un’integrazione reale. Un gate runtime fallito resta BLOCKED. Non promuovere001/T082,001/T085,002/T093 o la review manuale003 con le prove004. Nessun merge/push/pubblicazione da questa procedura.
+```sh
+MAESTRO_DISCOVERY_REAL=1 \
+MAESTRO_DISCOVERY_REAL_CONSENT=synthetic-scratch-readonly \
+MAESTRO_DISCOVERY_REAL_MODEL=gpt-6.1-sol \
+MAESTRO_DISCOVERY_REAL_BINARY=/percorso/assoluto/binario/nativo/codex \
+node --test dist-tests/tests/acceptance/discovery-real-provider.test.js
+```
+
+Prima compilare core/test/desktop. Senza opt-in il runner segnala NOT_RUN; login
+assente produce NOT_RUN, incompatibilità di sicurezza produce FAIL/BLOCKED.
+Il consenso ricevuto in questa sessione resta registrato nel report; il fallimento
+UNSAFE non viene trasformato in PASS o aggirato. G0 e fixture non sono SC-001.
+
+Gate001/T082,001/T085,002/T093 e review umana003/T054 rimangono aperti. Nessun
+merge/push/release o fase ulteriore è autorizzato da questa procedura.
