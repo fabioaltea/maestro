@@ -1,7 +1,7 @@
 # Tasks: Project Discovery & First Agent Session
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md).
-**Branch**: `004-project-discovery` · **Date**: 2026-11-16 · **Stato**: implementazione avviata; avanzamento e gate nei report, non dedotti dalle sole checkbox.
+**Branch**: `004-project-discovery` · **Date**: 2026-11-16 · **Stato**: review fino aT054 conclusa2026-11-18;52/54task chiusi, T028/T050 aperti/BLOCKED. ReadinessBLOCKED; gate nei report, non dedotti dalle sole checkbox.
 
 **Organizzazione**: 54 task in sette fasi; quattro storie con priorità e criteri indipendenti. I test sugli invarianti sono richiesti esplicitamente dalla specifica e dalla Constitution. Scrivere prima i casi pertinenti, osservarne il fallimento atteso e portarli a PASS con l’implementazione; registrare separatamente eventuali impossibilità ambientali. Non introdurre un nuovo runner, dipendenze runtime o campagne lunghe.
 
@@ -112,7 +112,7 @@
 - [X] T051 Consolidare privacy/accessibilità/limiti in `tests/contract/discovery-privacy.test.ts` e `apps/desktop/tests/e2e/discovery-accessibility.spec.ts`: canary sintetici assenti in argv/log/journal/ricevute/errori, nessun raw stderr, testo ostile inerte, tastiera nei flussi start/interview/review/approve/cancel, cap e troncamenti espliciti. Verificare i target30s/10min/2s/4s con clock/fault e misure pertinenti, distinguendo limiti progettuali e tempi osservati in `specs/004-project-discovery/reports/validation.md`; niente benchmark prolungato.
 - [X] T052 Eseguire build/typecheck/lint core e desktop e suite pertinenti esistenti secondo `specs/004-project-discovery/quickstart.md`; registrare comandi, piattaforma, conteggi effettivi, errori e NOT_RUN in `specs/004-project-discovery/reports/validation.md`. Verificare regressioni001–003, nessun driver SQLite/provider in Electron e letture offline. Non avviare bench:foundation o test reali implicitamente; ripetere test soltanto per cambi/fallimenti non risolti.
 - [X] T053 Aggiornare `README.md`, `specs/004-project-discovery/quickstart.md` e sezioni generate di `AGENTS.md` con comandi realmente disponibili, upgrade su start, distinzione archivio/progetto/Discovery, configurazione pin/modello/login ufficiale e limiti/cause/azioni recovery. Preservare manual additions e gate preesistenti; documentare opt-in reale e modalità headless senza mostrare credenziali o promettere capability non qualificate.
-- [ ] T054 Chiudere tracciabilità e review in `specs/004-project-discovery/reports/release-readiness.md`, `specs/004-project-discovery/reports/validation.md` e `specs/004-project-discovery/tasks.md`: 15 scenari, FR-001…018, NFR-001…005, SC-001…007 e otto invarianti con evidenza o NOT_RUN/BLOCKED. Separare baseline automatica, G0, G1 reale, G2/G3/G4 e review umana; conservare aperti001/T082,001/T085,002/T093 e003/T054 se non qualificati dalla relativa procedura. Non marcare task/gate superati senza prova, non eseguire merge/push/release né fasi ulteriori.
+- [X] T054 Chiudere tracciabilità e review in `specs/004-project-discovery/reports/release-readiness.md`, `specs/004-project-discovery/reports/validation.md` e `specs/004-project-discovery/tasks.md`: 15 scenari, FR-001…018, NFR-001…005, SC-001…007 e otto invarianti con evidenza o NOT_RUN/BLOCKED. Separare baseline automatica, G0, G1 reale, G2/G3/G4 e review umana; conservare aperti001/T082,001/T085,002/T093 e003/T054 se non qualificati dalla relativa procedura. Non marcare task/gate superati senza prova, non eseguire merge/push/release né fasi ulteriori.
 
 ## Dipendenze e ordine di esecuzione
 
@@ -222,3 +222,13 @@ Implementazioni e integrazioni successive sono sequenziali quando condividono wr
 | VIII Osservabilità | T009–T012, T015–T016, T022, T025, T030, T032–T036, T041, T051–T054 |
 
 Worktree/merge/cleanup/installazioni/release/failover sono N/A per004, come motivato nel piano. Nessun test di queste funzionalità future viene introdotto.
+
+## Esito della reviewT054 —2026-11-18
+
+52/54task chiusi. T028/T050 restano aperti: consenso reale ricevuto, gpt-6.1-sol
+scelto e pin verificato, ma precheck ufficiale confinatoPROVIDER_UNSAFE; nessuna
+inferenza. Ultima suite generale576PASS/1FAIL/6SKIP (REGISTER globale revision50
+contro49, isolato1/1PASS, causa aperta); precedente suite576PASS/0FAIL/6SKIP.
+G0 sintetico8/8PASS, G2/G3/G4 fixture localiPASS, desktop39unit/29integration/
+34E2EPASS. La review può concludersiBLOCKED e non chiude i gate001/002/003.
+Evidenze e limiti in reports/{validation,provider-qualification,release-readiness}.md.

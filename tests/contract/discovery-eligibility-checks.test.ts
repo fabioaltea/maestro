@@ -19,3 +19,16 @@ test('timeout and errors are false; late resolution never rewrites the result', 
   const check = createEligibilityChecks({ timeoutMs: 5, job: work => { jobs.push(work()); }, check: async id => { await new Promise<void>(resolve => { release = resolve; }); return result(id); } });
   const id = randomUUID(), first = await check(id); await Promise.all(jobs); const timed = await check(id, first.checkId!); assert.equal(timed.eligible, false); assert.equal(timed.reason, 'UNKNOWN'); release(); await Promise.resolve(); assert.deepEqual(await check(id, first.checkId!), timed);
 });
+
+test('timed-out I/O retains all four debits until actual completion instead of admitting unbounded replacements', async () => {
+  assert.throws(() => createEligibilityChecks({ timeoutMs: 30001, job: () => {}, check: async id => result(id) }), /INVALID_REQUEST/);
+  let release!: () => void, calls = 0; const gate = new Promise<void>(resolve => { release = resolve; }), jobs: Promise<void>[] = [];
+  const check = createEligibilityChecks({ timeoutMs: 5, job: work => { jobs.push(work()); }, check: async id => { calls++; await gate; return result(id); } });
+  const projects = Array.from({ length: 5 }, () => randomUUID()), ids: string[] = [];
+  for (const id of projects.slice(0, 4)) ids.push((await check(id)).checkId!);
+  await Promise.all(jobs); assert.equal(calls, 4);
+  assert.equal((await check(projects[0]!)).checkId, ids[0]); assert.equal((await check(projects[0]!, ids[0])).eligible, false);
+  await assert.rejects(check(projects[4]!), /DISCOVERY_BUSY/); assert.equal(calls, 4);
+  release(); await new Promise<void>(resolve => setImmediate(resolve));
+  await check(projects[4]!); await Promise.all(jobs); assert.equal(calls, 5);
+});

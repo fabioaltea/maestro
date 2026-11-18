@@ -966,3 +966,30 @@ API key/fallback o permesso ampliato per passare il gate.
 - Output parser≤8MiB/run, archivio≤4MiB/run; vista500righe/1MiB, troncamento esplicito.
   Provenance validata come riferimento, non come correttezza semantica automatica.
 
+
+### T054 — review finale e concorrenza dopo timeout
+
+La review ha rilevato che il timeout pubblico eligibility liberava il debito
+prima della conclusione dell’I/O sottostante. Corretto:1/progetto/4globali restano
+occupati fino alla conclusione reale; una fotografia UNKNOWN non ammette sostituti
+illimitati, nessuna coda e nessuna riscrittura da callback tardiva. Il seam timeout
+accetta soltanto1…30000ms.8/8test mirati PASS (7,15s), inclusi approval, eligibility,
+G3 e G4; typecheck/lint finaliPASS. Nuovo caso di regressione incluso negli ordinari.
+
+L’ulteriore suite completa dopo questa correzione ha583test:
+**576PASS/1FAIL/6SKIP,125,52s**. Il caso preesistente
+`tests/integration/project-register-crash.test.ts`, REGISTER a
+`project.probing/clean`, ha osservato revisione globale store50 anziché49 durante
+il replay. La causa non è stata determinata. Rerun isolato del solo caso:
+**1/1PASS,2,71s**. Nessuna asserzione o timeout è stato indebolito, nessuna
+modifica produzione001/002. L’ultimo run completo resta registrato con1FAIL;
+il precedente run completo576PASS/0FAIL/6SKIP non cancella questo risultato.
+I report002 rigenerati dal runner sono stati ripristinati al baseline.
+
+Tracciabilità15scenari/18FR/5NFR/7SC/8invarianti verificata nel
+[release-readiness](release-readiness.md). Documentazione aggiornata e CLI help
+verificato, manual additions AGENTS preservate.52/54task chiusi, T028/T050
+aperti/BLOCKED. Review conclusa con readinessglobaleBLOCKED per G1/precheck
+Keychain e regressione generale non isolata causalmente; SC-001 dopo il precheck
+NOT_RUN. Review umana004NOT_RUN; gate001/T082,001/T085,002/T093 e003/T054
+invariati/aperti. Nessun merge, push, release o fase ulteriore.

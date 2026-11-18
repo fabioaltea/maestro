@@ -4,6 +4,8 @@ import { requireUuid } from '../../domain/identifiers.js';
 /** Volatile photographs only. No result survives runtime restart. Each UUID is
  * owned by this store instance and project; polling never schedules work. */
 export function createEligibilityChecks(options: { check(projectId: string): Promise<Omit<DiscoveryEligibility, 'checkId'>>; job(work: () => Promise<void>): void; now?: () => number; timeoutMs?: number }) {
+  const timeoutMs = options.timeoutMs ?? 30000;
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 30000) throw new Error('INVALID_REQUEST');
   const now = options.now ?? Date.now, checks = new Map<string, { projectId: string; expires: number; value: DiscoveryEligibility; active: boolean }>();
   const pending = new Map<string, string>();
   return async (projectId: string, checkId?: string): Promise<DiscoveryEligibility> => {
@@ -19,9 +21,14 @@ export function createEligibilityChecks(options: { check(projectId: string): Pro
     checks.set(id, check); pending.set(projectId, id);
     options.job(async () => {
       let timer: ReturnType<typeof setTimeout> | undefined;
-      try { const result = await Promise.race([options.check(projectId), new Promise<never>((_r, reject) => { timer = setTimeout(() => reject(new Error('DEADLINE_EXCEEDED')), options.timeoutMs ?? 30000); })]); check.value = { ...result, checkId: id }; }
+      const work = Promise.resolve().then(() => options.check(projectId));
+      const release = () => { check.active = false; if (pending.get(projectId) === id) pending.delete(projectId); };
+      // A public timeout is not proof that its I/O stopped. Keep both the
+      // global and per-project debit until the underlying operation settles.
+      void work.then(release, release);
+      try { const result = await Promise.race([work, new Promise<never>((_r, reject) => { timer = setTimeout(() => reject(new Error('DEADLINE_EXCEEDED')), timeoutMs); })]); check.value = { ...result, checkId: id }; }
       catch { check.value = { ...check.value, eligible: false, reason: 'UNKNOWN', freshness: 'UNKNOWN', checkedAt: new Date(now()).toISOString() }; }
-      finally { clearTimeout(timer); check.active = false; check.expires = now() + 30000; pending.delete(projectId); }
+      finally { clearTimeout(timer); check.expires = now() + 30000; }
     });
     return { ...check.value };
   };

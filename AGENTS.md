@@ -52,7 +52,7 @@ TypeScript strict, ESM/NodeNext. Dominio e client non importano adapter OS o dri
 
 ## Recent Changes
 
-- 004: implementazione localeT001–T027/T029–T049/T051–T054; T028/T050 aperti/BLOCKED. G0 sinteticoPASS e G2/G3/G4 fixture localiPASS; core576PASS/6SKIP, desktop39unit/29integration/34E2EPASS (1SKIP reale separato). Precheck reale autorizzato2026-11-18 con gpt-6.1-sol/pin0.167.0: PROVIDER_UNSAFE prima dell’inferenza; non equivale a login mancante e non è SC-001PASS. Review finale/readinessBLOCKED; nessuna API key/fallback o profilo allentato. Consultare reports/{validation,provider-qualification,release-readiness}.md e real-provider-status.json. Verifiche mirate, niente nuove campagne di volume/durata.
+- 004: implementazione localeT001–T027/T029–T049/T051–T054; T028/T050 aperti/BLOCKED. G0 sinteticoPASS e G2/G3/G4 fixture localiPASS; core ultimo583test:576PASS/1FAIL/6SKIP (REGISTER isolatoPASS; causa aperta), precedente576PASS/0FAIL/6SKIP; desktop39unit/29integration/34E2EPASS (1SKIP reale separato). Precheck reale autorizzato2026-11-18 con gpt-6.1-sol/pin0.167.0: PROVIDER_UNSAFE prima dell’inferenza; non equivale a login mancante e non è SC-001PASS. Review finale/readinessBLOCKED; nessuna API key/fallback o profilo allentato. Consultare reports/{validation,provider-qualification,release-readiness}.md e real-provider-status.json. Verifiche mirate, niente nuove campagne di volume/durata.
 
 - 003: prima UI locale sul core001/002; CLI con Node26 esterno, conferme/ricevute, progetti live/offline e attività. G0–G4 qualificati localmente; T054 review umana/picker nativo ancora NOT_RUN. Benchmark eventi di volume/durata rinviati dall’utente2026-11-15; non ricrearli come gate MVP. Gate001/002 invariati. Consultare specs/003-desktop-core-ui/reports/.
 
