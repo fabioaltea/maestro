@@ -64,7 +64,7 @@ test('answer and new run commit together, replay cannot append the answer twice'
   if (answers.ok) assert.equal(answers.value.data.items.length, 1);
 });
 test('document revisions are append-only and approval needs its own exact consumed grant', async t => {
-  const { createDiscoveryMetadataFixture } = await import('../fixtures/discovery-metadata.js'); const f = await createDiscoveryMetadataFixture(t); f.exit(f.run);
+  const { createDiscoveryMetadataFixture } = await import('../fixtures/discovery-metadata.js'); const f = await createDiscoveryMetadataFixture(t); f.configureProvider(); f.exit(f.run);
   const revisionId = randomUUID(), artifactId = f.artifact('DOCUMENT');
   const revision = { revisionId, discoveryId: f.discovery.discoveryId, revisionNumber: '1', parentRevisionId: null, snapshotId: f.snapshot.snapshotId, contextDigest: f.run.contextDigest, artifactId, bundleDigest: 'a'.repeat(64), bytes: 128, provenanceValidated: true, status: 'READY_FOR_REVIEW' as const };
   f.commit({ kind: 'revision', value: revision, runId: f.run.runId, generation: f.run.generation, expectedRevision: '1' });

@@ -909,3 +909,60 @@ CLI review 1/1 PASS (6,09 s): documento completo256KiB via32chunk≤8KiB, frame 
 ### T050–T051 — opt-in, privacy e accessibilità
 
 Runner reale predisposto; senza opt-in0PASS/0FAIL/1SKIP NOT_RUN. Scelta utente Sol6.1 registrata, login/ID/consenso reale ancora non qualificati. Privacy2/2 PASS (2,98 s), incluso timeout host ridotto50ms con prova autenticata di uscita; limite produzione600000ms invariato, non aspettato. Desktop unit/contract39/39 PASS (3,87 s). Accessibilità Electron1/1 PASS (9,3 s): UNKNOWN viaTab/Space, focus cancel/default/confirm e ritorno Escape. Test start/interview/cancel precedenti completano copertura tastiera. Aggiunto cap intent220 per200claim+20domande e fence writer della pubblicazione contro cambio config/provider: nuova verifica nella suite finale. Nessuna campagna di volume/durata.
+
+### T052 — regressioni finali2026-11-18
+
+Piattaforma: macOS26.3.1 arm64/APFS, Node26.13.0, TypeScript6.0.3,
+SQLite better-sqlite3 13.0.3, Electron45.3.0/React19.3.1/Playwright1.65.0.
+Pin/runtime dependencies invariati, nessun SDK/pacchetto aggiunto.
+
+| Comando / selezione | Esito effettivo |
+|---|---|
+| `npm run build`, `build:test`, `typecheck`, `lint` |PASS; confini architetturali verificati |
+| `npm run typecheck:desktop`, `build:desktop` |PASS; core e desktop separati |
+| primo `npm test` finale |582test:572PASS/4FAIL/6SKIP,117,74s |
+| quattro file dopo correzione fixture |29/29PASS,4,01s |
+| secondo `npm test` finale |582test:576PASS/0FAIL/6SKIP,123,11s |
+| `npm run test:desktop:unit` |39/39PASS,3,87s |
+| `npm run test:desktop:integration` |29/29PASS,22,25s |
+| `npm run test:desktop:e2e` |34PASS/0FAIL/1SKIP,6,2min |
+| G0 esplicito sul pin (`MAESTRO_DISCOVERY_G0=1 node --test ...discovery-provider-boundary.test.js`) |8/8PASS,2,25s |
+| sole acceptance Discovery review/refresh/real-provider senza opt-in |2PASS/0FAIL/1SKIP,6,54s |
+| runner reale autorizzato con opt-in/model/binary |0PASS/1FAIL: G1BLOCKED, precheck PROVIDER_UNSAFE;9,10s |
+
+I quattro FAIL iniziali erano fixture metadata storiche senza configurazione
+provider, ora obbligatoria al commit di una revisione. Aggiunto setup esplicito
+nelle sole fixture pertinenti; nessun controllo produzione ridotto. La suite
+completa successiva passa. I6SKIP ordinari sono il gate G0 separato; G0 è stato
+poi eseguito esplicitamente8/8PASS. Lo SKIP E2E/acceptance ordinario è il guard
+reale senza opt-in e non sostituisce il fallimento del tentativo autorizzato.
+
+La suite E2E esistente include i propri casi precedenti di window/registry/stream
+pressure; sono regressioni esistenti, non nuovi gate o benchmark MVP004. I report
+002/003 rigenerati automaticamente sono stati ripristinati al baseline e non
+promossi. Non eseguiti acceptance globale con idle10min né bench:foundation.
+Nessuna campagna durata LLM; il timeout host è stato ridotto a50ms tramite seam
+trusted nei test, senza ampliare il limite produzione600000ms.
+
+T028/T050: consenso utente ricevuto e ID gpt-6.1-sol verificato. Il precheck reale
+ha osservato UNSAFE/PROVIDER_UNSAFE prima di ogni inferenza, repository scratch
+invariato. G1BLOCKED e percorso SC-001 successivoNOT_RUN; consultare
+[provider-qualification](provider-qualification.md) e
+[metadata redatti](real-provider-status.json). Nessun login interattivo o token estratto/copiato da Maestro,
+API key/fallback o permesso ampliato per passare il gate.
+
+#### Limiti progettuali e osservazioni
+
+- Admission/read≤2s: contratti client con deadline/lost reply e ricevute originali;
+  durata del modello separata. La suite non garantisce tutti i possibili carichi.
+- Context/eligibility≤30s: deadline/abort core, coalescenza1/progetto/4globali,
+  test timeout ridotto e scadenza con clock; non una misura di30s su ogni filesystem.
+- Run≤10min: limite bootstrap e host, fault controllato50ms con uscita verificata;
+  nessuna attesa reale di10min e nessuna durata LLM promessa.
+- Cancel≤4s: handle owned/escalation, deadline scaduta conserva unknown; prove G2
+  e host locali. Nessuna attestazione di cancellazione remota.
+- Documenti≤256KiB letti integralmente in32chunk≤8KiB; frame stdout<32KiB.
+  Domande/turni20, sezioni20, claim200; intent consente200UNKNOWN+20domande.
+- Output parser≤8MiB/run, archivio≤4MiB/run; vista500righe/1MiB, troncamento esplicito.
+  Provenance validata come riferimento, non come correttezza semantica automatica.
+

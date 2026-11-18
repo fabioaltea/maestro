@@ -69,6 +69,7 @@ test('at the ordinary quota, cancellation metadata and approved history remain d
   const { mkdir } = await import('node:fs/promises');
   const { createDiscoveryMetadataFixture } = await import('../fixtures/discovery-metadata.js');
   const f = await createDiscoveryMetadataFixture(t), artifacts = f.store as unknown as import('../fixtures/discovery-artifacts.js').ArtifactStorage;
+  f.configureProvider();
   // Turn metadata-only fixture objects into actual owned files for this storage test.
   const root = join(f.directory, 'discovery'); await mkdir(root, { mode: 0o700 }); await mkdir(join(root, 'objects'), { mode: 0o700 }); await mkdir(join(root, 'staging'), { mode: 0o700 });
   const hash = createHash('sha256').update('fixture').digest('hex');

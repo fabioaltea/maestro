@@ -125,3 +125,7 @@ compatibilità del login ufficiale con il confine OS prima di ripetere il percor
 reale; il consenso ricevuto resta valido per questa stessa prova sintetica.
 T028/T050 restano aperti/BLOCKED. Il PASS sintetico G0 descrive il proprio confine
 e non dimostra il percorso Keychain reale. Gate esterni001/002/review003 invariati.
+
+## Ricontrollo sintetico finale T052,2026-11-18
+
+G0 esplicito8/8PASS,2251,10ms sullo stesso pin/profilo/schema. Confinamento sintetico invariato; questa prova non modifica il BLOCKED osservato sul precheck Keychain reale. Nessuna inferenza/account ufficiale in G0.

@@ -66,7 +66,7 @@ test('all Discovery failures have static public messages and next actions', asyn
 });
 test('document bytes use hash-validated 8KiB pages and an encoded envelope below32KiB', async t => {
   const { mkdir, writeFile } = await import('node:fs/promises'), { join } = await import('node:path'), { createHash } = await import('node:crypto');
-  const f = await createDiscoveryMetadataFixture(t), root = join(f.directory, 'discovery');
+  const f = await createDiscoveryMetadataFixture(t), root = join(f.directory, 'discovery'); f.configureProvider();
   await mkdir(root, { mode: 0o700 }); await mkdir(join(root, 'objects'), { mode: 0o700 }); await mkdir(join(root, 'staging'), { mode: 0o700 });
   for (const id of [f.snapshot.manifestArtifactId!, f.snapshot.corpusArtifactId!]) { await writeFile(join(root, 'objects', id), 'fixture', { mode: 0o600 }); f.database.prepare('UPDATE discovery_artifacts SET sha256=? WHERE artifact_id=?').run(createHash('sha256').update('fixture').digest('hex'), id); }
   const body = Buffer.alloc(20000, 100), reserved = value(f.store.reserveDiscoveryArtifact('DOCUMENT', body.length)), published = value(f.store.publishDiscoveryArtifact(reserved.artifactId, body)); f.exit(f.run);

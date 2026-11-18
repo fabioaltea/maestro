@@ -21,7 +21,7 @@ test('offline metadata reads preserve files and never need source, provider, log
   assert.equal(operation.freshness, 'LAST_KNOWN'); assert.deepEqual(await readFile(f.path), before); assert.deepEqual((await readdir(f.directory)).sort(), files);
 });
 test('offline eligibility is UNKNOWN and false even for a historically approved revision', async t => {
-  const f = await createDiscoveryMetadataFixture(t); f.exit(f.run);
+  const f = await createDiscoveryMetadataFixture(t); f.configureProvider(); f.exit(f.run);
   const revisionId = randomUUID(), artifactId = f.artifact('DOCUMENT');
   f.commit({ kind: 'revision', runId: f.run.runId, generation: f.run.generation, expectedRevision: '1', value: { revisionId, discoveryId: f.discovery.discoveryId, revisionNumber: '1', parentRevisionId: null, snapshotId: f.snapshot.snapshotId, contextDigest: f.run.contextDigest, artifactId, bundleDigest: 'a'.repeat(64), bytes: 12, provenanceValidated: true, status: 'READY_FOR_REVIEW' } });
   const requestId = randomUUID(), grantId = randomUUID();

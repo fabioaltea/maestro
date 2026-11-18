@@ -34,6 +34,7 @@ export async function createDiscoveryMetadataFixture(t: TestContext, options: { 
   };
   const admission: DiscoveryAdmission = { ...prepare('start', projectId, '1', { snapshotId: snapshot.snapshotId }, requestId, grantId), discovery, run, expectedStateRevision: null, acquireSlot: true };
   assertSuccess(f.store.admitDiscoveryOperation(admission).ok);
+  const configureProvider = () => commit({ kind: 'provider', expectedRevision: null, configuration: { providerId: run.providerId, revision: run.providerRevision, binaryRealpath: '/synthetic/provider', binarySha256: 'a'.repeat(64), binaryVersion: 'fixture', modelId: run.modelId, authProfileRef: 'official-keyring', policyVersion: 'fixture', qualificationDigest: run.profileDigest, configuredAt: at } });
   const exit = (value: DiscoveryRun) => {
     let current = value;
     for (const phase of ['HOST_READY', 'SPAWN_AUTHORIZED', 'PROVIDER_RUNNING', 'EXIT_OBSERVED'] as const) {
@@ -42,6 +43,6 @@ export async function createDiscoveryMetadataFixture(t: TestContext, options: { 
     }
     return current;
   };
-  return { ...f, database, projectId, at, discovery, run, snapshot, artifact, commit, prepare, exit };
+  return { ...f, database, projectId, at, discovery, run, snapshot, artifact, commit, prepare, exit, configureProvider };
 }
 function assertSuccess(ok: boolean, code = '') { if (!ok) throw new Error(`METADATA_FIXTURE_FAILED:${code}`); }
