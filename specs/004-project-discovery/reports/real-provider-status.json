@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "phase": "LOGIN_PRECHECK",
+  "checkedAt": "2026-11-18T07:22:56.445Z",
+  "modelId": "gpt-6.1-sol",
+  "configuredBinaryVersion": "0.167.0",
+  "configuredBinarySha256": "030316ecfbb41f4e7946e584b0063ef333b7a36cd312ba349f2f6869e39b62cc",
+  "availability": "UNSAFE",
+  "code": "PROVIDER_UNSAFE",
+  "inferenceStarted": false,
+  "fixtureRepositoryUnchanged": true
+}

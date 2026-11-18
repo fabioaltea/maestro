@@ -97,3 +97,31 @@ G1/account/modello/refresh restano NOT_RUN. Nessuna chiamata ufficiale o token.
 Disponibili `tests/acceptance/discovery-real-provider.test.ts` e `apps/desktop/tests/e2e/discovery-real-provider.spec.ts`: profilo ufficiale, repository esclusivamente sintetico, UI configure/check/preview/start/interview/correct/approve e riscontro headless. Nessun fallback o login automatico. Guard obbligatori: MAESTRO_DISCOVERY_REAL=1, MAESTRO_DISCOVERY_REAL_CONSENT=synthetic-scratch-readonly, percorso nativo e model ID esatto. Trace/video/screenshot reali disabilitati. Login non disponibile produce NOT_RUN prima dello start.
 
 Utente: “sol 6.1 va bene”; nome scelto, ID esatto/account/login non ancora qualificati. Consenso alla prova reale richiesto separatamente secondo tasks.md; nessuna risposta autorizzativa osservata a questo checkpoint. Esecuzione senza opt-in:0PASS/0FAIL/1SKIP NOT_RUN (48,4 ms). T028 e T050 restano aperti; questa preparazione non costituisce G1 o SC-001 PASS.
+
+## T028/T050 — tentativo autorizzato2026-11-18, G1 BLOCKED
+
+L’utente ha autorizzato esplicitamente la prova reale sul solo repository sintetico.
+ID scelto `gpt-6.1-sol`, verificato nella [documentazione ufficiale](https://learn.chatgpt.com/docs/models?surface=cli).
+Binario risolto standalone0.167.0 con SHA256 identico a G0. Configurazione UI,
+conferma e controllo locale ufficiale eseguiti nel profilo Maestro dedicato.
+
+**Esito effettivo: precheck UNSAFE / PROVIDER_UNSAFE. Nessuna inferenza avviata.**
+La prova SC-001 dopo il precheck è NOT_RUN; G1 è BLOCKED. Il login/account/modello
+non sono qualificati come utilizzabili. Non è dimostrato che basti effettuare login.
+[Metadata redatti](real-provider-status.json): fase LOGIN_PRECHECK, pin/modello,
+checkedAt, codice e repository sintetico invariato, senza percorsi auth o token.
+
+Il runner iniziale classificava tutte le indisponibilità come SKIP: due tentativi
+precheck,9,73s e12,34s, hanno osservato lo stesso blocco senza inferenza. Corretto
+il runner per distinguere AUTH_REQUIRED/UNAVAILABLE→NOT_RUN da UNSAFE→FAIL/BLOCKED.
+Ultimo tentativo9,10s:0PASS/1FAIL, PROVIDER_UNSAFE. Non sostituire quest’ultimo esito
+con uno skip o un PASS. Un probe locale confinato aggiuntivo ha osservato exit1 e
+un diagnostico Keychain/permessi non normalizzabile; soltanto flag/bytecount/hash
+sono stati ispezionati, raw stderr soppresso. Causa specifica non isolata.
+
+Nessun login interattivo, copia/estrazione credenziali, API key, modello alternativo,
+profilo ampliato o inferenza non confinata. Occorre risolvere e riqualificare la
+compatibilità del login ufficiale con il confine OS prima di ripetere il percorso
+reale; il consenso ricevuto resta valido per questa stessa prova sintetica.
+T028/T050 restano aperti/BLOCKED. Il PASS sintetico G0 descrive il proprio confine
+e non dimostra il percorso Keychain reale. Gate esterni001/002/review003 invariati.
