@@ -91,3 +91,7 @@ Un install richiede piano PLANNED, pin esatto e input correnti. La decisione ter
 ## T024 — install, cancel e recovery
 
 Il worker acquisisce la lease del worktree e associa il processo al job tramite un supervisore e un canale privato. La prova d’uscita sigillata è vincolata a generazione e lease. Il successore legge l’esito originale senza avviare pnpm. Build:test e lint PASS. **3 PASS** in integrazione reale su fixture APFS e registry loopback, tra isolamento delle copie, input stale, cancellazione e recovery. I registry esterni non sono abilitati.
+
+## T025 — CLI US2
+
+Prepare e cancel per grant usano l’UUID originale. Job, output e artefatti hanno letture separate e bounded. Il corpo dell’autorizzazione viaggia da file o stdin. Build, build:test e **2 PASS** di contratto.

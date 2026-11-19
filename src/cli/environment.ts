@@ -11,7 +11,9 @@ import {projectExitCode} from './projects.js';
 
 const HELP=`maestro environment plan WORKSPACE --expected-revision N --request-id UUID [--manager-version VERSION]
 maestro environment prepare --input-file FILE | --input-stdin
-maestro environment attest --grant UUID --request-id UUID
+maestro environment prepare|attest|cancel --grant UUID --request-id UUID
+maestro environment job JOB
+maestro environment output JOB [--limit 1..20 --cursor CURSOR]
 maestro environment show WORKSPACE
 maestro environment list PROJECT [--limit 1..20 --cursor CURSOR]
 maestro environment operation REQUEST
@@ -35,10 +37,10 @@ export async function runEnvironmentCli(args:readonly string[]):Promise<number>{
      method='environment.plan';params={workspaceId:id,expectedStateRevision:values['expected-revision']};mutation=true;
      allowed.add('expected-revision');allowed.add('manager-version');
      if(values['manager-version']!==undefined)params.managerVersion=values['manager-version'];
-   }else if(action==='prepare'&&positionals.length===1){
+   }else if(action==='prepare'&&positionals.length===1&&values.grant===undefined){
      method='environment.prepare';params={};allowed.add('input-file');allowed.add('input-stdin');
-   }else if(action==='attest'&&positionals.length===1){
-     method='environment.attest';params={grantId:values.grant};mutation=true;allowed.add('grant');
+   }else if(['prepare','attest','cancel'].includes(action??'')&&positionals.length===1){
+     method=`environment.${action}`;params={grantId:values.grant};mutation=true;allowed.add('grant');
    }else if(action==='show'&&positionals.length===2){
      method='environment.get';params={workspaceId:id};
    }else if(action==='list'&&positionals.length===2){
@@ -47,6 +49,10 @@ export async function runEnvironmentCli(args:readonly string[]):Promise<number>{
      method='environment.operation.get';requestId=workspaceUuid(id);params={requestId};
    }else if(action==='artifact'&&positionals.length===2){
      method='environment.artifact.get';params={artifactId:id};allowed.add('cursor');
+   }else if(action==='job'&&positionals.length===2){
+     method='environment.job.get';params={jobId:id};
+   }else if(action==='output'&&positionals.length===2){
+     method='environment.output.list';params={jobId:id};allowed.add('limit');allowed.add('cursor');
    }else throw new Error('INVALID_REQUEST');
    if(mutation){requestId=workspaceUuid(values['request-id']);allowed.add('request-id');}
    if(Object.keys(values).some(key=>!allowed.has(key)))throw new Error('INVALID_REQUEST');
