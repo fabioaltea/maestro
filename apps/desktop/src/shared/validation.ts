@@ -1,3 +1,4 @@
+import {ENVIRONMENT_BRIDGE_METHODS,validateEnvironmentBridge} from './environment-contract.ts';
 import {FEATURE_BRIDGE_METHODS,validateFeatureBridge} from './feature-contract.ts';
 import {WORKSPACE_BRIDGE_METHODS,validateWorkspaceBridge} from './workspace-contract.ts';
 import { CORE_ERRORS } from './core-errors.ts';
@@ -45,7 +46,8 @@ const extras: Record<string, readonly string[]> = {
 export function validateRequest(method: string, input: unknown): BridgeRequest {
   if (!(METHODS as readonly string[]).includes(method)) throw new Error('INVALID_INPUT');
   const p = record(input);
-  if ((WORKSPACE_BRIDGE_METHODS as readonly string[]).includes(method)) validateWorkspaceBridge(method,p);
+  if ((ENVIRONMENT_BRIDGE_METHODS as readonly string[]).includes(method))validateEnvironmentBridge(method,p);
+  else if ((WORKSPACE_BRIDGE_METHODS as readonly string[]).includes(method)) validateWorkspaceBridge(method,p);
   else if ((FEATURE_BRIDGE_METHODS as readonly string[]).includes(method)) validateFeatureBridge(method,p);
   else if ((DISCOVERY_BRIDGE_METHODS as readonly string[]).includes(method)) validateDiscoveryBridge(method, p);
   else keys(p, ['bridgeVersion', 'callId', 'selectionEpoch', ...(extras[method] ?? [])]);

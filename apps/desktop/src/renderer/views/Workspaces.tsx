@@ -6,7 +6,7 @@ import type {Desktop} from '../state/desktop.ts';
 
 export interface WorkspaceSource {projectId:string;featureId:string;envelopeId:string}
 
-export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Desktop;source:WorkspaceSource|null;onProjects():void;onOperations():void}){
+export function Workspaces({desktop,source,onProjects,onOperations,onEnvironment}:{desktop:Desktop;source:WorkspaceSource|null;onProjects():void;onOperations():void;onEnvironment(workspaceId:string):void}){
  const {core,invoke}=desktop;
  const [projectId,setProjectId]=useState(source?.projectId??'');
  const [projects,setProjects]=useState<Params[]>([]);
@@ -136,6 +136,7 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
        <strong>{String(item.state)}</strong> · <span className="mono">{String(item.branchRef)}</span>
        <dl><div><dt>Base</dt><dd className="mono">{String(item.baseRef)} · {String(item.baseOid)}</dd></div>
          <div><dt>Aggiornato</dt><dd><time dateTime={String(item.updatedAt)}>{String(item.updatedAt)}</time></dd></div></dl>
+       <button className="button subtle" onClick={()=>onEnvironment(String(item.workspaceId))}>Apri ambiente</button>
        {item.safeError!==null&&<p>{String(item.safeError)}</p>}
        {observation&&<dl aria-label="Ultima osservazione Git">
          <div><dt>Osservazione</dt><dd><time dateTime={String(observation.checkedAt)}>{String(observation.checkedAt)}</time></dd></div>

@@ -67,3 +67,7 @@ Lettura bounded di dati statici su worktree con proprietà verificata. Il pin vi
 ## T018 — CLI US1
 
 La CLI usa la revisione e l’UUID originali. Le limitazioni di attestazione viaggiano da file o stdin. **6 PASS** delle prove mirate US1.
+
+## T019 — desktop US1
+
+Dalla vista Workspace si apre il piano d’ambiente. Conferma e ricevuta con digest, tastiera/focus, attestazione manuale, storico offline e cambio archivio verificati. Typecheck, build, **49 PASS** unit/contract e **1 PASS** E2E (29,2 s).
