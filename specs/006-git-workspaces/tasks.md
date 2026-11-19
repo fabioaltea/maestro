@@ -18,7 +18,7 @@
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [ ] T005 [P] Scrivere unit test di transizioni, scope/versioni dei grant e generazioni in `tests/unit/workspace-state.test.ts`; coprire invalidazione, terminali, retry e limiti numerici con tempo controllato (FR-011/012).
+- [X] T005 [P] Scrivere unit test di transizioni, scope/versioni dei grant e generazioni in `tests/unit/workspace-state.test.ts`; coprire invalidazione, terminali, retry e limiti numerici con tempo controllato (FR-011/012).
 - [ ] T006 [P] Scrivere integrazione schema5→6, letture storiche immutabili, crash pre/post commit e ledger UUID cross-namespace in entrambi i versi in `tests/integration/workspace-schema.test.ts` (FR-011).
 - [ ] T007 Implementare `src/storage/workspaces-schema.ts`, `src/storage/workspaces-upgrade.ts`, `src/storage/workspaces-store.ts` e collegamenti in `src/storage/worker.ts`/`src/storage/readonly-database.ts`: schema6 solo start, version-check storici, integrity/FK, CAS e outbox atomica. Aggiornare reader/driver/upgrade chain esistenti secondo i contratti trasversali, senza alterare SQL storici congelati.
 - [ ] T008 Collegare namespace e reservation del modulo in `src/storage/workspaces-store.ts` e `src/ports/workflow.ts`; estendere collision guard dei ledger Foundation/Registry/Discovery/workflow in `src/storage/workflow-store.ts`, senza secondo writer, e coprire artefatto mancante/quote/reply loss in `tests/integration/workspace-store.test.ts`.
