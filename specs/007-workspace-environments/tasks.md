@@ -1,7 +1,7 @@
 # Tasks: Workspace Environments & Dependencies
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [contracts/policy.md](contracts/policy.md), [quickstart.md](quickstart.md).
-**Branch**: `007-workspace-environments` · **Date**: 2026-11-19 · **Stato**: 0 task eseguiti, implementazione non autorizzata da questo documento.
+**Branch**: `007-workspace-environments` · **Date**: 2026-11-19 · **Stato**: implementazione locale autorizzata il 19 novembre 2026. Evidenze in reports/.
 
 **Tests**: richiesti esplicitamente dalla specifica per invarianti costituzionali. Scrivere i casi prima dell’implementazione pertinente; provider/clock/risorse sostituibili, integrazioni locali senza account. Ogni task concluso richiede un commit locale con ID ed evidenza; nessun push implicito.
 
@@ -9,7 +9,7 @@
 
 ## Phase 1: Setup & G0
 
-- [ ] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema6 in `specs/007-workspace-environments/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
+- [x] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema6 in `specs/007-workspace-environments/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
 - [ ] T002 Scrivere prove negative di capability/confine in `tests/integration/environment-boundary.test.ts` e fixture in `tests/fixtures/environment-boundary.ts`: G0 pnpm binario reale con registry locale di fixture, zero rete esterna/account: lockfile frozen, hook/config ostili, store mutation isolation e cancel descendant tree. Versione/flag esatti fissati nel report prima di dati reali. Nessun consenso reale assunto.
 - [ ] T003 Implementare la primitiva reale minima di confine in `src/platform/macos/environment/pnpm.ts` e la porta in `src/ports/environment.ts`, con fixture `tests/fixtures/environment-adapter.ts`; validare su questa primitiva i confini indicati in `specs/007-workspace-environments/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
 - [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/007-workspace-environments/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
