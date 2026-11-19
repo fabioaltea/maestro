@@ -39,3 +39,7 @@ Due casi RED per validator e inspector ancora assenti. Verificano input chiusi, 
 ## T010 — protocollo e reader confinato
 
 DTO chiusi per letture e ammissione, cursore legato a store/progetto/revisione, metadata senza path privati. LocalClient verifica la risposta e recupera soltanto l’UUID originale. Workspace e Feature condividono il trasporto e conservano la propria allowlist. Build, build:test, typecheck e lint PASS. Contratti/offline 006 e regressioni CLI/runtime 005 **7 PASS**. La pubblicazione dei metodi live richiede la composizione T011.
+
+## T011 — composizione e drain
+
+Il daemon instrada workspace sullo schema 6 e pubblica soltanto metodi composti. Fence prima della recovery e in stop. Il drain attende lavori già accettati e mantiene un blocco interrogabile quando il termine è superato. Build, build:test, lint e integrazioni workspace/feature runtime **5 PASS**.
