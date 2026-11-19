@@ -11,7 +11,8 @@ import {projectExitCode} from './projects.js';
 
 const HELP=`maestro environment plan WORKSPACE --expected-revision N --request-id UUID [--manager-version VERSION]
 maestro environment prepare --input-file FILE | --input-stdin
-maestro environment prepare|attest|cancel --grant UUID --request-id UUID
+maestro environment prepare|attest|cancel|validate --grant UUID --request-id UUID
+maestro environment reconcile JOB --expected-revision N --request-id UUID
 maestro environment job JOB
 maestro environment output JOB [--limit 1..20 --cursor CURSOR]
 maestro environment show WORKSPACE
@@ -39,8 +40,10 @@ export async function runEnvironmentCli(args:readonly string[]):Promise<number>{
      if(values['manager-version']!==undefined)params.managerVersion=values['manager-version'];
    }else if(action==='prepare'&&positionals.length===1&&values.grant===undefined){
      method='environment.prepare';params={};allowed.add('input-file');allowed.add('input-stdin');
-   }else if(['prepare','attest','cancel'].includes(action??'')&&positionals.length===1){
+   }else if(['prepare','attest','cancel','validate'].includes(action??'')&&positionals.length===1){
      method=`environment.${action}`;params={grantId:values.grant};mutation=true;allowed.add('grant');
+   }else if(action==='reconcile'&&positionals.length===2){
+     method='environment.reconcile';params={jobId:id,expectedStateRevision:values['expected-revision']};mutation=true;allowed.add('expected-revision');
    }else if(action==='show'&&positionals.length===2){
      method='environment.get';params={workspaceId:id};
    }else if(action==='list'&&positionals.length===2){

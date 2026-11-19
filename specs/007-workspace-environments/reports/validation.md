@@ -119,3 +119,7 @@ Registrazione limitata a script Node ESM alla radice, argv letterale, tempo mass
 ## T031 — esecuzione e riconciliazione US3
 
 Il piano sigilla entrypoint, argv, pin Node e profilo. Il supervisore confina le scritture, la rete e i figli. Il writer distingue esiti 0, 14, timeout, cap di output e uscita incerta. La riconciliazione osserva l’identità originale, completa la prova e libera la lease. Il cleanup rimuove la sola copia di esecuzione privata dopo uscita e rilascio; output, prova e worktree restano disponibili. Il controllo corrente invalida READY quando cambia un input. **7 PASS** nelle prove mirate US1/US3 aggiornate, inclusi perdita esito post-effetto, interruzione prima del lancio e admission concorrenti. Typecheck in build:test e lint PASS.
+
+## T032 — CLI US3
+
+Validate consuma un grant di controllo e reconcile accetta solo UUID del job e revisione. Entrambi mantengono l’UUID della richiesta in caso di risposta persa. **2 PASS** di contratto API/CLI.
