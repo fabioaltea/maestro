@@ -1,6 +1,6 @@
 # Implementation Plan: Session Scheduling, Quotas & Provider Policies
 
-**Branch**: `010-session-scheduling` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)  
+**Branch**: `010-session-scheduling` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/010-session-scheduling/spec.md`
 
 ## Summary
@@ -13,14 +13,14 @@ Scheduler nel daemon con clock iniettabile, durable queue e token atomici nel wr
 
 ## Technical Context
 
-**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.  
-**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.  
-**Storage**: SQLite schema10, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).  
-**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.  
-**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.  
-**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.  
-**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.  
-**Constraints**: Constitution e gate001–004 invariati; Nessun provider extra non qualificato, previsione inventata di quote/prezzi/reset, cron distribuito, autoscaling cloud o benchmark di lunga durata.  
+**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.
+**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.
+**Storage**: SQLite schema10, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).
+**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.
+**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.
+**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.
+**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.
+**Constraints**: Constitution e gate001–004 invariati; Nessun provider extra non qualificato, previsione inventata di quote/prezzi/reset, cron distribuito, autoscaling cloud o benchmark di lunga durata.
 **Scale/Scope**: Default4run totali, Discovery≤1,install≤2,validate≤2,un writer/workspace;128pending;max3attempt/policy; min retry60s e backoff≤15min solo se autorizzato; CPU/RAM campionati≤1/5s solo con job, budget soft e stato esplicito.
 
 ## Constitution Check

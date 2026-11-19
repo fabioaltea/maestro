@@ -1,6 +1,6 @@
 # Implementation Plan: Release Publishing, Pull Requests & Deployment Gates
 
-**Branch**: `012-release-publishing` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)  
+**Branch**: `012-release-publishing` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/012-release-publishing/spec.md`
 
 ## Summary
@@ -13,14 +13,14 @@ GitPublicationPort dietro adapter macOS e RemoteWorkflowPort per PR/CI/deploy. P
 
 ## Technical Context
 
-**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.  
-**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.  
-**Storage**: SQLite schema12, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).  
-**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.  
-**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.  
-**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.  
-**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.  
-**Constraints**: Constitution e gate001–004 invariati; Nessun force push, delete remoto, bypass branch protection, credenziali Maestro copiate, provider CI/CD presunto o deploy automatico non autorizzato.  
+**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.
+**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.
+**Storage**: SQLite schema12, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).
+**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.
+**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.
+**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.
+**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.
+**Constraints**: Constitution e gate001–004 invariati; Nessun force push, delete remoto, bypass branch protection, credenziali Maestro copiate, provider CI/CD presunto o deploy automatico non autorizzato.
 **Scale/Scope**: Push/PR/CI request≤60s, deploy≤10min configurable in preview; output cap comuni; max20CIobservations/release in cache metadata latest bounded con storico eventi, no polling quando UI chiusa salvo job follow esplicito; no network from history.
 
 ## Constitution Check

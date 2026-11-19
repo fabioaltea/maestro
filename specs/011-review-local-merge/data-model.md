@@ -20,6 +20,8 @@ Persistenza in `src/storage/review-schema.ts` e `review-store.ts`, tabelle prefi
 
 Non creare un secondo ledger: `workflow_operations`/grant/artefatti comuni sono introdotti005. Le operazioni di questo modulo usano il namespace canonico specificato nel contratto API, requestId e hash dell’intent. UUID globali devono essere esclusivi anche nei ledger preesistenti. Riferimenti a oggetti solo dopo seal/fsync/hash; reservation conteggiata finché reconcile o discard sicuro dimostrano la liberazione.
 
+Schema11 aggiunge anche purpose ai workspace006 (FEATURE di default, INTEGRATION_GUARD/STAGING solo interni011). Le risorse candidate sono ID006 validabili da007; ambiente/check sono nuovi per il tree candidate, non ereditati automaticamente dalla source.
+
 ## State Transitions
 
 Review DRAFT → CHECKING → CHANGES_REQUESTED/READY_FOR_APPROVAL/BLOCKED → APPROVED; input modificato → STALE. Integrazione PREPARING → CONFLICT/READY → REF_INTENT → REF_UPDATED → NEEDS_RECONCILE/GUARD_SYNCED → INTEGRATED; unknown mai remerge. Pulizia separata006.

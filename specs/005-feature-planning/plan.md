@@ -1,6 +1,6 @@
 # Implementation Plan: Feature Planning & Versioned Approval
 
-**Branch**: `005-feature-planning` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)  
+**Branch**: `005-feature-planning` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/005-feature-planning/spec.md`
 
 ## Summary
@@ -13,14 +13,14 @@ Port FeaturePlanningPort separata da ProviderPort Discovery; stessa estrazione r
 
 ## Technical Context
 
-**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.  
-**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.  
-**Storage**: SQLite schema5, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).  
-**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.  
-**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.  
-**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.  
-**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.  
-**Constraints**: Constitution e gate001–004 invariati; Nessun branch/worktree, installazione, implementazione, merge o pubblicazione. Non riutilizzare ArchitectResult come se fosse una specifica feature.  
+**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.
+**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.
+**Storage**: SQLite schema5, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).
+**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.
+**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.
+**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.
+**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.
+**Constraints**: Constitution e gate001–004 invariati; Nessun branch/worktree, installazione, implementazione, merge o pubblicazione. Non riutilizzare ArchitectResult come se fosse una specifica feature.
 **Scale/Scope**: Richiesta≤16KiB; bundle≤256KiB;≤50criteri e20domande/turni; generation readonly≤10min, contesto≤30s; quota workflow condivisa.
 
 ## Constitution Check
@@ -82,7 +82,7 @@ Richiesta≤16KiB; bundle≤256KiB;≤50criteri e20domande/turni; generation rea
 
 G0: test di confine readonly e schema FeaturePlanningResult con provider sintetico. G1 assistito reale solo dopo004/T028/T050; registrare NOT_RUN/BLOCKED senza impedire la verifica del percorso manuale con fixture.
 
-Gate di rilascio: tre storie con test mirati e flusso desktop, interruzione/cancel e recovery, grant stale/assente, limiti/privacy. Nessuna campagna lunga. La review finale riporta gate esterni distinti e può restare BLOCKED.
+L’authoring manuale e l’approvazione US1/US2 non dipendono dalla qualifica provider di US3; restano soggetti alla Discovery corrente. Gate di rilascio: tre storie con test mirati e flusso desktop, interruzione/cancel e recovery, grant stale/assente, limiti/privacy. Nessuna campagna lunga. La review finale riporta gate esterni distinti e può restare BLOCKED.
 
 ## Phase 2 — Confine dei task
 

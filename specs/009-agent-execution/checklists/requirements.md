@@ -1,7 +1,7 @@
 # Specification Quality Checklist: Agent Sessions, Runs & Portable Checkpoints
 
-**Purpose**: Validare completezza e qualità prima del piano.  
-**Created**: 2026-11-19  
+**Purpose**: Validare completezza e qualità prima del piano.
+**Created**: 2026-11-19
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality

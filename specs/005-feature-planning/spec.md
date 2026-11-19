@@ -1,8 +1,8 @@
 # Feature Specification: Feature Planning & Versioned Approval
 
-**Feature Branch**: `005-feature-planning`  
-**Created**: 2026-11-19  
-**Status**: Draft — verificata documentalmente; approvazione di prodotto e implementazione non implicite.  
+**Feature Branch**: `005-feature-planning`
+**Created**: 2026-11-19
+**Status**: Draft — verificata documentalmente; approvazione di prodotto e implementazione non implicite.
 **Input**: [brief della feature](brief.md), derivato dalla richiesta di completare le feature mancanti di Maestro e dal [brief generale](../../docs/missing-features-brief.md).
 
 ## User Scenarios & Testing *(mandatory)*

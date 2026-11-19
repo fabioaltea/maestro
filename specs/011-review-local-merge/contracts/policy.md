@@ -12,6 +12,8 @@ Ogni criterio required ha PASS su prova corrente, oppure decisione manuale docum
 4. staging detached owned da targetOid, merge sourceOid con comportamento deterministico e hooks/config eseguibile neutralizzati. Conflitto preserva source/staging, nessun target update; risoluzione manuale genera nuovo candidate/digest.
 5. Candidate immutabile con source/target parents e tree; eseguire check pertinenti sul candidate tree. Evitare riuso di prove source se merge cambia tree/config.
 
+Guard e staging devono essere registrati come risorse interne con ownership verificabile tramite006, non path scratch arbitrari. Schema11 estende i record workspace con purpose FEATURE/INTEGRATION_GUARD/INTEGRATION_STAGING (default FEATURE per quelli precedenti) e accesso di creazione solo interno011. Il consumer007 accetta questi ID solo dopo prova ownership006 e usa un nuovo EnvironmentPlan per il candidate tree: dipendenze o CommandSpec della source non rendono automaticamente pronto lo staging. I check sul candidate richiedono i grant di validazione/ambiente necessari; se il setup o i check sono mancanti resta BLOCKED. La UI mostra il lavoro preparatorio senza autorizzare l’integrazione finale fino al candidate completo.
+
 ## Approvazione e pubblicazione locale
 
 Integration decision e grant legano feature plan revision, review digest, candidateOid/tree, expectedTargetOid/ref, validation evidence digests, documentation refs, workspace/guard identity, core policy. Prepare mostra anche nome/identità autore dei commit e strategia deterministica (fast-forward se target è antenato di source, altrimenti merge commit con entrambi i parent). Nessuna riscrittura source/target non autorizzata.

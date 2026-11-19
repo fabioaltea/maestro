@@ -1,6 +1,6 @@
 # Implementation Plan: Review, Validation & Safe Local Merge
 
-**Branch**: `011-review-local-merge` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)  
+**Branch**: `011-review-local-merge` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/011-review-local-merge/spec.md`
 
 ## Summary
@@ -13,14 +13,14 @@ ReviewSnapshot dal core, EnvironmentJobPort per check, ReviewPort per lettura di
 
 ## Technical Context
 
-**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.  
-**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.  
-**Storage**: SQLite schema11, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).  
-**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.  
-**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.  
-**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.  
-**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.  
-**Constraints**: Constitution e gate001–004 invariati; Nessun push, PR o deploy, force/reset/stash checkout utente o risoluzione conflitti automatica. Target in checkout esterno blocca il merge.  
+**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.
+**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.
+**Storage**: SQLite schema11, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).
+**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.
+**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.
+**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.
+**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.
+**Constraints**: Constitution e gate001–004 invariati; Nessun push, PR o deploy, force/reset/stash checkout utente o risoluzione conflitti automatica. Target in checkout esterno blocca il merge.
 **Scale/Scope**: Max100file/2MiB diff visualizzabile per snapshot; eccedenza blocca approvazione finché scope review non coperto; candidate/preflight≤30s, check job≤5min ciascuno; mutation target una per repository.
 
 ## Constitution Check

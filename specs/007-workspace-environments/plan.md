@@ -1,6 +1,6 @@
 # Implementation Plan: Workspace Environments & Dependencies
 
-**Branch**: `007-workspace-environments` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)  
+**Branch**: `007-workspace-environments` | **Date**: 2026-11-19 | **Spec**: [spec.md](spec.md)
 **Input**: `/Users/fabioaltea/Repository/maestro/specs/007-workspace-environments/spec.md`
 
 ## Summary
@@ -13,14 +13,14 @@ EnvironmentPort e adapter pnpm su binario esterno versionato/hash qualificato; A
 
 ## Technical Context
 
-**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.  
-**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.  
-**Storage**: SQLite schema7, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).  
-**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.  
-**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.  
-**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.  
-**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.  
-**Constraints**: Constitution e gate001–004 invariati; Nessuna conversione automatica npm/yarn→pnpm, installazione globale/auto-update, terminale libero, pruning store globale o sofisticata build cache.  
+**Language/Version**: TypeScript 6.0.3 strict; Node.js 26.13.0 ESM/NodeNext, pin del checkout.
+**Primary Dependencies**: better-sqlite3 13.0.3 esistente e API native Node; Electron 45.3.0/React19.3.1 come client esistente. Nessun nuovo pacchetto runtime.
+**Storage**: SQLite schema7, stesso writer WAL/FULL; artefatti workflow privati immutabili, ledger e quote da [contratti trasversali](../../docs/missing-features-contracts.md).
+**Testing**: runner Node e Playwright esistenti; unit/contract/local integration senza account/rete; qualifica reale distinta opt-in.
+**Target Platform**: prima piattaforma macOS26.3/26.3.1 arm64/APFS; OS/processi dietro porte e profili qualificati per capability.
+**Project Type**: daemon/CLI con flussi desktop; nessun secondo servizio.
+**Performance Goals**: letture/admission target2s; operazioni lunghe asincrone; limiti specifici sotto, nessuna promessa generale sui provider.
+**Constraints**: Constitution e gate001–004 invariati; Nessuna conversione automatica npm/yarn→pnpm, installazione globale/auto-update, terminale libero, pruning store globale o sofisticata build cache.
 **Scale/Scope**: Install/validate max5min ciascuno; input config totale1MiB/200file; budget10GiB/workspace20GiBtotale, free<2GiB blocca; max2job solo quando010 disponibile, prima1.
 
 ## Constitution Check

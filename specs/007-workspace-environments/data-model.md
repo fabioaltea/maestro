@@ -21,7 +21,7 @@ Non creare un secondo ledger: `workflow_operations`/grant/artefatti comuni sono 
 
 ## State Transitions
 
-UNCONFIGURED → PLANNED → PREPARING → READY; input cambiati → STALE; manager unsupported → MANUAL_REQUIRED. Job QUEUED/RUNNING → SUCCEEDED/FAILED/CANCELLED/RECONCILING; nessun READY se uscita o integrità ignote.
+UNCONFIGURED → PLANNED → PREPARING → READY; input cambiati → STALE; manager unsupported → MANUAL_REQUIRED → MANUAL_VERIFIED solo su attestazione approvata; MANUAL_VERIFIED non equivale a QUALIFIED_READY e deve essere accettato nel grant009. Job QUEUED/RUNNING → SUCCEEDED/FAILED/CANCELLED/RECONCILING; nessun READY se uscita o integrità ignote.
 
 Stato operazione e stato dell’entità sono distinti: admission riuscita non implica workflow concluso. Un processo/evento di generation superata non modifica l’entità corrente. Esito remoto o uscita processo non provati restano UNKNOWN/RECONCILING con debit/lease, non terminali di successo.
 

@@ -47,6 +47,26 @@ Tutti i pacchetti includono CLI e il corrispondente flusso desktop sul core esis
 
 Ordine dello schema/pacchetti: 005 → 006 → 007 → 008 → 009 → 010 → 011 → 012. La precedenza dello schema è distinta dalle dipendenze funzionali; non si implementano feature fuori ordine sullo stesso archivio. [Contratti trasversali](missing-features-contracts.md) definisce ledger, quote, upgrade, autorizzazioni e confini condivisi.
 
+Dipendenze funzionali principali (lo schema continua a seguire l’ordine numerico):
+
+```mermaid
+flowchart LR
+  D[004 Discovery] --> P[005 Planning]
+  P --> W[006 Workspaces]
+  W --> E[007 Environments]
+  D --> A[008 Profiles]
+  P --> R[009 Execution]
+  E --> R
+  A --> R
+  R --> S[010 Scheduling]
+  R --> V[011 Review e merge]
+  W --> V
+  V --> L[012 Release]
+  A --> L
+```
+
 Primo slice: 005/US1, authoring locale con rifiuto della creazione se Discovery manca o è scaduta, idempotenza, stato leggibile headless/offline. Primo ciclo di sviluppo completo: 005–009 e 011 con provider reale qualificato. 010 aumenta concorrenza e resilienza; 012 aggiunge pubblicazione. Una review documentale PASS significa coerenza progettuale, mai autorizzazione all'implementazione o certificazione runtime.
 
 La validazione avviene per scenario e per checkpoint con fault bounded, fixture locali e test invarianti esplicitamente richiesti. Login, installazioni, inferenza reale, push e deployment non sono eseguiti durante questa pianificazione.
+
+[Verifica dei pacchetti e workflow eseguito](missing-features-validation.md):80artefatti di feature,24storie e288task aperti.

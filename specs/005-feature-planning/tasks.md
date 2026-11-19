@@ -1,6 +1,6 @@
 # Tasks: Feature Planning & Versioned Approval
 
-**Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [quickstart.md](quickstart.md).  
+**Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [contracts/policy.md](contracts/policy.md), [quickstart.md](quickstart.md).
 **Branch**: `005-feature-planning` · **Date**: 2026-11-19 · **Stato**: 0 task eseguiti, implementazione non autorizzata da questo documento.
 
 **Tests**: richiesti esplicitamente dalla specifica per invarianti costituzionali. Scrivere i casi prima dell’implementazione pertinente; provider/clock/risorse sostituibili, integrazioni locali senza account. Ogni task concluso richiede un commit locale con ID ed evidenza; nessun push implicito.
@@ -14,7 +14,7 @@
 - [ ] T003 Implementare la primitiva reale minima di confine in `src/providers/codex/feature-planning-parser.ts` e la porta in `src/ports/feature.ts`, con fixture `tests/fixtures/feature-adapter.ts`; validare su questa primitiva i confini indicati in `specs/005-feature-planning/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
 - [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/005-feature-planning/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
 
-**Checkpoint**: G0 locale necessario alle capacità dipendenti; non certifica autenticazione/provider/remoti reali.
+**Checkpoint**: G0 di authoring/input locale abilita US1/US2 senza provider; il ramo G0 assistito abilita solo US3. Un blocco sul provider non impedisce il lavoro manuale con Discovery corrente. Nessuno dei due certifica autenticazione/provider reale.
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
@@ -27,7 +27,7 @@
 - [ ] T011 Comporre admission/authorization/recovery con i servizi comuni in `src/core/features/runtime.ts` e `src/core/runtime.ts`; introdurre src/core/workflow/{admission,authorization,recovery}.ts e coordinare drain, intent e risultati generazione-bound, estendendo `scripts/check-architecture.mjs` ai nuovi confini e `scripts/build-assets.mjs` solo se ci sono asset trusted.
 - [ ] T012 Collegare eventi metadata e budget in `src/protocol/events.ts` e `src/core/features/events.ts`; provare correlazioni, segreti assenti, backpressure, quota piena con query/cancel/recovery possibili in `tests/integration/feature-limits.test.ts` (FR-010/011/012).
 
-**Checkpoint**: schema/store/contract/ownership testati senza UI o rete. T007→T008→T010→T011→T012 sequenziali; test T005/T006/T009 preparabili insieme dopo G0. Nessuna storia prima delle fondazioni.
+**Checkpoint**: schema/store/contract/ownership testati senza UI o rete. T007→T008→T010→T011→T012 sequenziali; test T005/T006/T009 preparabili insieme dopo G0. Nessuna storia prima delle fondazioni; per US1/US2 il gate di ingresso è quello locale di authoring, non la qualifica provider di US3.
 
 ## Phase 3: User Story 1 — Creare e correggere una feature (Priority: P1)
 

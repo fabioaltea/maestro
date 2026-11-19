@@ -20,7 +20,7 @@ Ogni metodo è sotto `environment.`; sottosezioni mantengono associazione esplic
 |---|---|---|
 | `plan` | workspaceId,expectedStateRevision,requestId | planId,digest,MANUAL_REQUIRED? |
 | `attest` | workspaceId,inputDigest,limitations,grantId | attestationId |
-| `get` | workspaceId | state,plan,currentness |
+| `get` | workspaceId | state,plan,currentness,qualificationKind |
 
 ### US2 — Preparare dipendenze isolate
 
