@@ -43,3 +43,7 @@ Il daemon espone solo le letture Environment già composte su schema 7. Fencing 
 ## T012 — metadata e quote
 
 Il writer include gli eventi Environment nell’outbox atomica. Core e desktop accettano soltanto identità, stato e watermark. Dati privati e testo rimangono fuori dagli eventi. Il backlog bloccato preserva l’UUID accettato e rifiuta nuove ammissioni. Build:test, typecheck desktop, lint e **4 PASS** mirati di limiti, store e runtime.
+
+## T013 — prove US1
+
+Due RED per lock concorrenti, pin, hook, fonti esterne e attestation stale.

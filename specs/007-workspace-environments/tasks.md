@@ -37,7 +37,7 @@
 
 **Coverage**: FR-001–FR-003; FR-010/011/012 trasversali.
 
-- [ ] T013 [P] [US1] Scrivere policy/transizioni US1 in `tests/unit/environment-us1.test.ts`: Lockfile multipli, version mismatch, file link/speciale, .pnpmfile e config globali, attestation stale; testare grant/revisioni e comportamento sicuro (FR-001–FR-003).
+- [x] T013 [P] [US1] Scrivere policy/transizioni US1 in `tests/unit/environment-us1.test.ts`: Lockfile multipli, version mismatch, file link/speciale, .pnpmfile e config globali, attestation stale; testare grant/revisioni e comportamento sicuro (FR-001–FR-003).
 - [ ] T014 [P] [US1] Scrivere contract US1 in `tests/contract/environment-us1.test.ts`: metodi della storia in `specs/007-workspace-environments/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-001–FR-003, FR-011).
 - [ ] T015 [P] [US1] Scrivere integrazione locale US1 in `tests/integration/environment-us1.test.ts` con fixture di repository/processi/clock pertinenti: Su repository pnpm/npm/ambiguo leggere manifest e produrre PLANNED o MANUAL_REQUIRED senza spawn né modifica. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-001–FR-003, FR-011/012).
 - [ ] T016 [US1] Implementare tipi/invarianti della storia in `src/domain/environments/plan.ts` e aggiornare `src/ports/environment.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-001–FR-003).
