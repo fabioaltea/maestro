@@ -73,7 +73,7 @@
 
 **Coverage**: FR-007–FR-009; FR-010/011/012 trasversali.
 
-- [ ] T027 [P] [US3] Scrivere policy/transizioni US3 in `tests/unit/workspace-us3.test.ts`: Dirty tracked/untracked/ignored, HEAD non integrato, conflitti, lease attivo, movimento target, crash remove prima/dopo branchdelete; testare grant/revisioni e comportamento sicuro (FR-007–FR-009).
+- [x] T027 [P] [US3] Scrivere policy/transizioni US3 in `tests/unit/workspace-us3.test.ts`: Dirty tracked/untracked/ignored, HEAD non integrato, conflitti, lease attivo, movimento target, crash remove prima/dopo branchdelete; testare grant/revisioni e comportamento sicuro (FR-007–FR-009).
 - [ ] T028 [P] [US3] Scrivere contract US3 in `tests/contract/workspace-us3.test.ts`: metodi della storia in `specs/006-git-workspaces/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-007–FR-009, FR-011).
 - [ ] T029 [P] [US3] Scrivere integrazione locale US3 in `tests/integration/workspace-us3.test.ts` con fixture di repository/processi/clock pertinenti: Con HEAD già antenato del target, clean e senza holder, rimuovere workspace e poi branch via CAS; dirty/untracked/commit non integrato producono zero cancellazioni. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-007–FR-009, FR-011/012).
 - [ ] T030 [US3] Implementare tipi/invarianti della storia in `src/domain/workspaces/cleanup.ts` e aggiornare `src/ports/workspace.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-007–FR-009).

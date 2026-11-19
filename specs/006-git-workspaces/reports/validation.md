@@ -103,3 +103,7 @@ L’osservazione esplicita usa workspace, revisione e UUID originali. CLI e RPC 
 ## T026 — desktop refresh
 
 Refresh richiede conferma dalla vista Workspace e conserva la ricevuta originale. Mostra l’ora, l’HEAD e le categorie dei file anche offline, con refresh disabilitato. Il recupero osservativo è disponibile anche quando una mutazione precedente è incerta. **47 PASS** unit/contract, **1 PASS** E2E mirato con file non tracciato, focus e storico.
+
+## T027 — invarianti cleanup (RED)
+
+Due test per modifiche tracked/untracked/ignored, conflitti, holder, target variato, ancestry e prova di assenza a passi.
