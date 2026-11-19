@@ -22,15 +22,20 @@ export function installEnvironment(router:BridgeRouter,context:ArchiveContext,ac
        `Workspace ${workspaceId}`,`Revisione ${expectedStateRevision}`,...(params.managerVersion?[`Versione pnpm ${params.managerVersion}`]:[])]};
    }
    const expectedStateRevision=revision(params.stateRevision);
-   const result=await core.call({namespace:'environment',action:'authorize',archive:c.path,params:{action,
-     intent:{workspaceId,inputDigest:params.inputDigest,limitations:params.limitations},expectedRevisions:{stateRevision:expectedStateRevision}}});
+   const intent=action==='attest'?{workspaceId,inputDigest:params.inputDigest,limitations:params.limitations}:
+     action==='prepare'?{planId:params.planId,planDigest:params.planDigest}:{jobId:params.jobId};
+   const result=await core.call({namespace:'environment',action:'authorize',archive:c.path,params:{action,intent,
+     expectedRevisions:{stateRevision:expectedStateRevision}}});
    context.apply(c,result);
    if(result.result!=='OK'||result.liveness!=='LIVE_VERIFIED')throw new Error(result.error?.code??'DAEMON_UNAVAILABLE');
    const data=validateEnvironmentData('authorize',result.data),summary=record(data.summary);
    if(summary.action!==action||summary.workspaceId!==workspaceId||summary.stateRevision!==expectedStateRevision||
-     summary.inputDigest!==params.inputDigest||JSON.stringify(summary.limitations)!==JSON.stringify(params.limitations))throw new Error('CLIENT_PROTOCOL_ERROR');
-   return{command:{...command,expectedStateRevision,params:{grantId:data.grantId}},summary:['Registra attestazione manuale',
-     `Workspace ${workspaceId}`,`Input ${summary.inputDigest}`,...summary.limitations as string[]]};
+     Object.entries(intent).some(([key,value])=>JSON.stringify(summary[key])!==JSON.stringify(value)))throw new Error('CLIENT_PROTOCOL_ERROR');
+   const scope=`Workspace ${workspaceId}`,grantCommand={...command,expectedStateRevision,params:{grantId:data.grantId}};
+   if(action==='cancel')return{command:{...grantCommand,jobId:uuid(summary.jobId)},summary:['Annulla il job',scope,`Job ${summary.jobId}`]};
+   if(action==='prepare')return{command:grantCommand,summary:['Installa le dipendenze isolate',scope,`Piano ${summary.planDigest}`,
+     `pnpm ${summary.managerVersion}`,summary.networkScope==='LOOPBACK'?'Registry locale':'Offline','Script di installazione disabilitati']};
+   return{command:grantCommand,summary:['Registra attestazione manuale',scope,`Input ${summary.inputDigest}`,...summary.limitations as string[]]};
  };
  for(const method of Object.keys(ENVIRONMENT_QUERIES) as (keyof typeof ENVIRONMENT_QUERIES)[]){
    router.register(method,request=>sync(async()=>{

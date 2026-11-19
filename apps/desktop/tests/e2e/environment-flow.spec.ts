@@ -4,6 +4,7 @@ import {join} from 'node:path';
 import {createScratch} from '../fixtures/desktop.ts';
 import {chooseDirectory} from '../fixtures/electron.ts';
 import {openOwnedWorktree} from '../fixtures/owned-worktree.ts';
+import {fixtureLock,fixturePackage,startFixtureRegistry} from '../../../../tests/fixtures/environment-registry.ts';
 
 test('environment plan and manual attestation use the original receipt across offline and archive change',async()=>{
  test.setTimeout(100000);
@@ -39,4 +40,40 @@ test('environment plan and manual attestation use the original receipt across of
      await expect(env.getByText('MANUAL_VERIFIED',{exact:true})).toHaveCount(0);
    }finally{await app.close();}
  }finally{await Promise.all([fixture.cleanup(),other.cleanup()]);}
+});
+
+test('qualified environment install requires confirmation and preserves the job result offline',async()=>{
+ test.setTimeout(100000);
+ const fixture=await createScratch(),registry=await startFixtureRegistry();
+ try{
+   const {app,page,workspaceId,worktree,workspaces}=await openOwnedWorktree(fixture);
+   try{
+     await writeFile(join(worktree,'package.json'),JSON.stringify({name:'fixture-pnpm',packageManager:'pnpm@9.4.0',dependencies:{[fixturePackage]:'1.0.0'}}));
+     await writeFile(join(worktree,'pnpm-lock.yaml'),fixtureLock(registry));
+     await workspaces.getByRole('button',{name:'Apri ambiente'}).click();
+     const env=page.getByRole('region',{name:'Ambiente del workspace'});
+     const confirm=page.getByRole('button',{name:'Conferma operazione',exact:true});
+     const refresh=env.getByRole('button',{name:'Aggiorna ambiente'}),plan=env.getByRole('button',{name:'Prepara piano d’ambiente'});
+     const install=env.getByRole('button',{name:'Prepara installazione'});
+     await plan.click();await confirm.click();
+     await expect.poll(async()=> (await fixture.cli(['environment','show',workspaceId])).result.data.environment?.state,{timeout:15000}).toBe('PLANNED');
+     await refresh.click();await install.click();
+     await expect(page.getByRole('dialog')).toContainText('Script di installazione disabilitati');
+     await page.keyboard.press('Escape');await expect(install).toBeFocused();
+     expect((await fixture.cli(['environment','show',workspaceId])).result.data.job).toBeNull();
+     await install.click();await confirm.click();
+     await expect.poll(async()=>{
+       const data=(await fixture.cli(['environment','show',workspaceId])).result.data;
+       return data.environment?.safeError??data.environment?.state;
+     },{timeout:12000}).toBe('READY');
+     await refresh.click();
+     const job=env.getByRole('region',{name:'Ultimo job d’ambiente'});
+     await expect(job).toContainText('SUCCEEDED');
+     const result=job.getByRole('button',{name:'Leggi risultato del job'});
+     await result.click();await expect(job.getByLabel('Risultato del job')).toContainText('"outcome":"SUCCEEDED"');
+     expect((await fixture.cli(['daemon','stop'])).result.outcome).toBe('SUCCEEDED');
+     await refresh.click();await expect(env).toContainText('Ultimo stato noto');await expect(plan).toBeDisabled();
+     await result.click();await expect(job.getByLabel('Risultato del job')).toContainText('"outcome":"SUCCEEDED"');
+   }finally{await app.close();}
+ }finally{await Promise.all([fixture.cleanup(),registry.close()]);}
 });

@@ -95,3 +95,7 @@ Il worker acquisisce la lease del worktree e associa il processo al job tramite 
 ## T025 — CLI US2
 
 Prepare e cancel per grant usano l’UUID originale. Job, output e artefatti hanno letture separate e bounded. Il corpo dell’autorizzazione viaggia da file o stdin. Build, build:test e **2 PASS** di contratto.
+
+## T026 — desktop US2
+
+Electron mostra scope e policy prima della conferma, collega la ricevuta originale al job e legge il risultato sigillato anche offline. La cancellazione ha una conferma separata e può intervenire su un job con ricevuta pendente. **50 PASS** unit/contract e **1 PASS** E2E (29,1 s) con pnpm reale e registry locale. pnpm 9.4.0 ha tentato di riscrivere anche il lockfile di una fixture senza dipendenze. Il confinamento ha bloccato la scrittura e la fixture E2E qualificata usa un pacchetto locale.

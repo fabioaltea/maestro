@@ -2,11 +2,14 @@ import type {Params} from './bridge-contract.ts';
 import {record,keys,text,uuid,revision} from './input.ts';
 import {CORE_ERRORS} from './core-errors.ts';
 
-export const ENVIRONMENT_MUTATIONS=['plan','attest'] as const;
+export const ENVIRONMENT_MUTATIONS=['plan','attest','prepare','cancel'] as const;
 export const ENVIRONMENT_QUERIES={
  getEnvironment:{action:'get',key:'workspaceId'},
  listEnvironments:{action:'list',key:'projectId'},
  getEnvironmentOperation:{action:'operation',key:'requestId'},
+ getEnvironmentJob:{action:'job',key:'jobId'},
+ getEnvironmentOutput:{action:'output',key:'jobId'},
+ getEnvironmentArtifact:{action:'artifact',key:'artifactId'},
 } as const;
 export const ENVIRONMENT_BRIDGE_METHODS=['prepareEnvironmentAction','confirmEnvironmentAction','cancelEnvironmentAction',
  ...Object.keys(ENVIRONMENT_QUERIES) as (keyof typeof ENVIRONMENT_QUERIES)[]] as const;
@@ -28,6 +31,10 @@ export function environmentBridgeAction(raw:unknown){
  }else if(action==='attest'){
    fields(params,['workspaceId','stateRevision','inputDigest','limitations']);
    uuid(params.workspaceId);revision(params.stateRevision);sha(params.inputDigest);limitations(params.limitations);
+ }else if(action==='prepare'){
+   fields(params,['workspaceId','stateRevision','planId','planDigest']);uuid(params.workspaceId);uuid(params.planId);revision(params.stateRevision);sha(params.planDigest);
+ }else if(action==='cancel'){
+   fields(params,['workspaceId','stateRevision','jobId']);uuid(params.workspaceId);uuid(params.jobId);revision(params.stateRevision);
  }else throw new Error('INVALID_INPUT');
  return{action,params};
 }
@@ -37,7 +44,7 @@ export function validateEnvironmentBridge(method:string,p:Params){
  if(method==='confirmEnvironmentAction'||method==='cancelEnvironmentAction'){fields(body,['confirmationId']);uuid(body.confirmationId);return;}
  const q=Object.hasOwn(ENVIRONMENT_QUERIES,method)?ENVIRONMENT_QUERIES[method as keyof typeof ENVIRONMENT_QUERIES]:undefined;
  if(!q)throw new Error('INVALID_INPUT');
- fields(body,[q.key],q.action==='list'?['limit','cursor']:[]);uuid(body[q.key]);
+ fields(body,[q.key],['list','output'].includes(q.action)?['limit','cursor']:q.action==='artifact'?['cursor']:[]);uuid(body[q.key]);
  if(body.cursor!==undefined)text(body.cursor,4096);
  if(body.limit!==undefined&&(!Number.isInteger(body.limit)||Number(body.limit)<1||Number(body.limit)>20))throw new Error('INVALID_INPUT');
 }
@@ -96,11 +103,31 @@ function operation(value:unknown){
  }
  return{...op,error:op.error===null?null:safeError(op.error)};
 }
+function job(value:unknown){
+ const p=record(value);
+ fields(p,['jobId','environmentId','planId','requestId','kind','commandSpecId','phase','stateRevision','inputDigest','outputWatermark','truncated',
+   'exitProof','safeError','createdAt','completedAt']);
+ for(const key of ['jobId','environmentId','planId','requestId'])uuid(p[key]);
+ if(p.commandSpecId!==null)uuid(p.commandSpecId);
+ valueIn(p.kind,['INSTALL','VALIDATE']);valueIn(p.phase,['QUEUED','RUNNING','CANCELLING','SUCCEEDED','FAILED','CANCELLED','RECONCILING']);
+ revision(p.stateRevision);sha(p.inputDigest);date(p.createdAt);
+ if(p.completedAt!==null)date(p.completedAt);
+ if(p.safeError!==null)safeCode(p.safeError);
+ if(!/^(0|[1-9][0-9]*)$/.test(text(p.outputWatermark,19))||typeof p.truncated!=='boolean')throw new Error('INVALID_INPUT');
+ if(p.exitProof!==null){
+   const proof=record(p.exitProof);fields(proof,['verified','code','reason']);
+   if(proof.verified!==true||proof.code!==null&&(!Number.isInteger(proof.code)||Number(proof.code)<0||Number(proof.code)>255))throw new Error('INVALID_INPUT');
+   if(proof.reason!==null)safeCode(proof.reason);
+ }
+ return p;
+}
 export function validateEnvironmentData(action:string,raw:unknown):Params{
  try{
    const p=record(raw),out={...p};
-   const extra:Record<string,readonly string[]>={get:['environment','plan','currentness','qualificationKind'],list:['items','nextCursor'],operation:['operation'],
-     authorize:['grantId','expiresAtMs','canonicalIntentHash','summary'],plan:['accepted','requestId','workspaceId','stateRevision','operation'],attest:['operation']};
+   const accepted=['accepted','requestId','workspaceId','stateRevision','jobId','operation'];
+   const extra:Record<string,readonly string[]>={get:['environment','plan','job','currentness','qualificationKind'],list:['items','nextCursor'],operation:['operation'],
+     authorize:['grantId','expiresAtMs','canonicalIntentHash','summary'],plan:accepted,attest:['operation'],prepare:accepted,cancel:accepted,job:['job'],
+     output:['jobId','chunks','watermark','truncated','nextCursor'],artifact:['artifactId','sha256','totalBytes','offset','base64','nextCursor']};
    if(!Object.hasOwn(extra,action)||new TextEncoder().encode(JSON.stringify(p)).length>32768)throw new Error('INVALID_INPUT');
    keys(p,[...extra[action]!,'storeId','freshness','code','error']);
    if(p.storeId!==undefined)uuid(p.storeId);
@@ -109,6 +136,7 @@ export function validateEnvironmentData(action:string,raw:unknown):Params{
    if(p.freshness!==undefined)valueIn(p.freshness,['CURRENT','LAST_KNOWN']);
    if(p.environment!==undefined)out.environment=environment(p.environment);
    if(p.plan!=null)out.plan=plan(p.plan);
+   if(p.job!=null)out.job=job(p.job);
    if(p.currentness!==undefined)valueIn(p.currentness,['UNKNOWN','STALE','LAST_CHECKED']);
    if(p.qualificationKind!==undefined)valueIn(p.qualificationKind,['NONE','MANUAL','QUALIFIED']);
    if(p.items!==undefined){
@@ -120,14 +148,36 @@ export function validateEnvironmentData(action:string,raw:unknown):Params{
    if(p.accepted!==undefined){
      if(p.accepted!==true)throw new Error('INVALID_INPUT');
      uuid(p.requestId);uuid(p.workspaceId);revision(p.stateRevision);
+     if(p.jobId!==undefined)uuid(p.jobId);
    }
    if(p.summary!==undefined){
      const summary=record(p.summary);
-     fields(summary,['action','workspaceId','planId','stateRevision','inputDigest','limitations']);
-     if(summary.action!=='attest')throw new Error('INVALID_INPUT');
-     uuid(summary.workspaceId);uuid(summary.planId);revision(summary.stateRevision);sha(summary.inputDigest);limitations(summary.limitations);
+     uuid(summary.workspaceId);revision(summary.stateRevision);
+     if(summary.action==='attest'){
+       fields(summary,['action','workspaceId','planId','stateRevision','inputDigest','limitations']);
+       uuid(summary.planId);sha(summary.inputDigest);limitations(summary.limitations);
+     }else if(summary.action==='prepare'){
+       fields(summary,['action','workspaceId','planId','planDigest','stateRevision','inputDigest','managerVersion','networkScope','scriptPolicy','importMethod']);
+       uuid(summary.planId);sha(summary.planDigest);sha(summary.inputDigest);version(summary.managerVersion);valueIn(summary.networkScope,['OFFLINE','LOOPBACK']);
+       if(summary.scriptPolicy!=='DISABLED'||summary.importMethod!=='clone-or-copy')throw new Error('INVALID_INPUT');
+     }else if(summary.action==='cancel'){
+       fields(summary,['action','workspaceId','jobId','stateRevision']);uuid(summary.jobId);
+     }else throw new Error('INVALID_INPUT');
      uuid(p.grantId);sha(p.canonicalIntentHash);
      if(!Number.isSafeInteger(p.expiresAtMs))throw new Error('INVALID_INPUT');
+   }
+   if(p.chunks!==undefined){
+     uuid(p.jobId);
+     if(!Array.isArray(p.chunks)||p.chunks.length>20||typeof p.truncated!=='boolean'||!/^(0|[1-9][0-9]*)$/.test(text(p.watermark,19)))throw new Error('INVALID_INPUT');
+     for(const value of p.chunks){
+       const chunk=record(value);fields(chunk,['seq','artifactId','sha256','bytes']);revision(chunk.seq);uuid(chunk.artifactId);sha(chunk.sha256);
+       if(!Number.isInteger(chunk.bytes)||Number(chunk.bytes)<1||Number(chunk.bytes)>8192)throw new Error('INVALID_INPUT');
+     }
+   }
+   if(p.base64!==undefined){
+     uuid(p.artifactId);sha(p.sha256);
+     if(!/^[a-zA-Z0-9+/]+={0,2}$/.test(text(p.base64,10924))||!Number.isInteger(p.offset)||!Number.isInteger(p.totalBytes)||
+       Number(p.offset)<0||Number(p.offset)>=Number(p.totalBytes)||Number(p.totalBytes)>262144)throw new Error('INVALID_INPUT');
    }
    return out;
  }catch{throw new Error('CLIENT_PROTOCOL_ERROR');}

@@ -89,8 +89,9 @@ export class ActionService {
     if(command.namespace==='environment'){
       const cap=record(status.data.capabilities);
       if(cap.environmentVersion!==1||!Array.isArray(cap.environmentMethods)||!cap.environmentMethods.includes(`environment.${command.action}`))throw new Error('UNSUPPORTED_VERSION');
-      const entity=command.action==='plan'?'workspace':'environment';
-      const current=await this.options.core.call({namespace:entity,action:'get',archive:c.path,params:{workspaceId:command.workspaceId}});
+      const entity=command.action==='plan'?'workspace':command.action==='cancel'?'job':'environment';
+      const current=await this.options.core.call({namespace:entity==='workspace'?'workspace':'environment',action:entity==='job'?'job':'get',archive:c.path,
+        params:entity==='job'?{jobId:command.jobId}:{workspaceId:command.workspaceId}});
       this.options.context.apply(c,current);
       if(current.result!=='OK'||record(current.data[entity]).stateRevision!==command.expectedStateRevision)throw new Error('REVISION_CONFLICT');
     }

@@ -24,11 +24,24 @@ export function buildEnvironmentCliArgs(command:CliCommand){
      }
      break;
    case 'authorize':args.push('prepare','--input-stdin');keys(p,['action','intent','expectedRevisions']);break;
-   case 'attest':
-     keys(p,['grantId']);args.push('attest',`--grant=${uuid(p.grantId)}`,`--request-id=${uuid(command.requestId)}`);break;
+   case 'job':args.push('job');keys(p,['jobId']);positional.push(uuid(p.jobId));break;
+   case 'output':
+     args.push('output');keys(p,['jobId','limit','cursor']);positional.push(uuid(p.jobId));
+     if(p.cursor!==undefined)args.push(`--cursor=${text(p.cursor,4096)}`);
+     if(p.limit!==undefined){
+       if(!Number.isInteger(p.limit)||Number(p.limit)<1||Number(p.limit)>20)throw new Error('INVALID_INPUT');
+       args.push(`--limit=${p.limit}`);
+     }
+     break;
+   case 'artifact':
+     args.push('artifact');keys(p,['artifactId','cursor']);positional.push(uuid(p.artifactId));
+     if(p.cursor!==undefined)args.push(`--cursor=${text(p.cursor,4096)}`);
+     break;
+   case 'attest':case 'prepare':case 'cancel':
+     keys(p,['grantId']);args.push(command.action,`--grant=${uuid(p.grantId)}`,`--request-id=${uuid(command.requestId)}`);break;
    default:throw new Error('INVALID_INPUT');
  }
- if(!['plan','attest'].includes(command.action)&&command.requestId!==undefined)throw new Error('INVALID_INPUT');
+ if(!['plan','attest','prepare','cancel'].includes(command.action)&&command.requestId!==undefined)throw new Error('INVALID_INPUT');
  args.push(`--state-dir=${command.archive}`,'--json');if(positional.length)args.push('--',...positional);
  return args;
 }

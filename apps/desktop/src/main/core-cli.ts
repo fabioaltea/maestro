@@ -74,6 +74,9 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
     if(c.namespace==='environment'){
       if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
       if(c.action==='get'&&p.result==='OK'&&record(data.environment).workspaceId!==c.params?.workspaceId)throw new Error();
+      if(c.action==='job'&&p.result==='OK'&&record(data.job).jobId!==c.params?.jobId)throw new Error();
+      if(c.action==='output'&&p.result==='OK'&&data.jobId!==c.params?.jobId)throw new Error();
+      if(c.action==='artifact'&&p.result==='OK'&&data.artifactId!==c.params?.artifactId)throw new Error();
       if(c.action==='get'&&p.freshness==='LAST_KNOWN'&&data.currentness!=='UNKNOWN'&&p.result==='OK')throw new Error();
     }
     if(c.namespace==='workspace'){

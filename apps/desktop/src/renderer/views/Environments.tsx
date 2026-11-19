@@ -9,10 +9,11 @@ export function Environments({desktop,workspaceId,onWorkspaces,onOperations}:{de
  const [view,setView]=useState<Params|null>(null),[workspace,setWorkspace]=useState<Params|null>(null);
  const [methods,setMethods]=useState<string[]>([]),[prepared,setPrepared]=useState<PreparedAction|null>(null);
  const [busy,setBusy]=useState(false),[receipt,setReceipt]=useState<Params|null>(null);
+ const [output,setOutput]=useState<string|null>(null);
  const [manual,setManual]=useState(''),[managerVersion,setManagerVersion]=useState('');
  const active=useRef(false),generation=useRef(0),trigger=useRef<HTMLButtonElement|null>(null),lastReceipt=useRef<Params|null>(null);
  useEffect(()=>{
-   active.current=true;void load();
+   active.current=true;setView(null);setWorkspace(null);setOutput(null);void load();
    return()=>{active.current=false;generation.current++;};
  },[workspaceId,core]);
  async function load(){
@@ -33,7 +34,17 @@ export function Environments({desktop,workspaceId,onWorkspaces,onOperations}:{de
    if(item?.result==='OK')setWorkspace(record(item.data.workspace));
    const environment=await core('getEnvironment',{workspaceId});
    if(!active.current||token!==generation.current)return;
-   if(environment?.result==='OK')setView(environment.data);
+   if(environment?.result==='OK'){setView(environment.data);setOutput(null);}
+ }
+ async function showOutput(jobId:string){
+   const token=generation.current;
+   const page=await core('getEnvironmentOutput',{jobId,limit:1});
+   if(!active.current||token!==generation.current||page?.result!=='OK')return;
+   const chunk=Array.isArray(page.data.chunks)?page.data.chunks[0]:null;
+   if(!chunk){setOutput('Nessun risultato disponibile.');return;}
+   const artifact=await core('getEnvironmentArtifact',{artifactId:record(chunk).artifactId});
+   if(!active.current||token!==generation.current||artifact?.result!=='OK'||typeof artifact.data.base64!=='string')return;
+   setOutput(new TextDecoder().decode(Uint8Array.from(atob(artifact.data.base64),character=>character.charCodeAt(0))));
  }
  async function prepare(params:Params,button:HTMLButtonElement){
    trigger.current=button;
@@ -64,6 +75,7 @@ export function Environments({desktop,workspaceId,onWorkspaces,onOperations}:{de
  if(!workspaceId)return <section aria-label="Ambiente del workspace"><p>Scegli un worktree per consultarne l’ambiente.</p>
    <button className="button subtle" onClick={onWorkspaces}>Vai ai workspace</button></section>;
  const environment=view?.environment as Params|undefined,plan=view?.plan as Params|null|undefined;
+ const job=view?.job as Params|null|undefined;
  const available=(method:string)=>methods.includes(`environment.${method}`);
  return <section aria-label="Ambiente del workspace">
    <div className="row-actions">
@@ -98,6 +110,23 @@ export function Environments({desktop,workspaceId,onWorkspaces,onOperations}:{de
        Prepara attestazione manuale
      </button>
    </div>}
+   {environment?.state==='PLANNED'&&plan&&<button className="button primary" disabled={!available('prepare')||busy||!!prepared}
+     onClick={event=>void prepare({action:'prepare',workspaceId,stateRevision:environment.stateRevision,planId:plan.planId,planDigest:plan.digest},event.currentTarget)}>
+     Prepara installazione
+   </button>}
+   {job&&<section aria-label="Ultimo job d’ambiente">
+     <dl><div><dt>Job</dt><dd className="mono">{String(job.jobId)}</dd></div>
+       <div><dt>Fase</dt><dd>{String(job.phase)}</dd></div>
+       {job.safeError!==null&&<div><dt>Esito</dt><dd>{String(job.safeError)}</dd></div>}
+       {job.truncated===true&&<div><dt>Output</dt><dd>Parziale</dd></div>}
+     </dl>
+     <div className="row-actions">
+       {['QUEUED','RUNNING'].includes(String(job.phase))&&<button className="button subtle" disabled={!available('cancel')||busy||!!prepared}
+         onClick={event=>void prepare({action:'cancel',workspaceId,jobId:job.jobId,stateRevision:job.stateRevision},event.currentTarget)}>Prepara annullamento job</button>}
+       {job.outputWatermark!=='0'&&<button className="button subtle" onClick={()=>void showOutput(String(job.jobId))}>Leggi risultato del job</button>}
+     </div>
+     {output!==null&&<pre aria-label="Risultato del job">{output}</pre>}
+   </section>}
    {receipt&&<p role="status">Operazione <span className="mono">{String(receipt.requestId)}</span> · {String(receipt.phase)}
      {' '}<button className="text-button" onClick={onOperations}>Consulta operazioni</button></p>}
    {prepared&&<ConfirmationDialog prepared={prepared} busy={busy} onConfirm={()=>void finish(true)} onCancel={()=>void finish(false)} returnFocus={()=>trigger.current}/>}
