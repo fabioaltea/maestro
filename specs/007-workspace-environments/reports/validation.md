@@ -11,3 +11,7 @@ Restano aperti 001/T082 NOT_RUN e 001/T085 FAIL/OPEN, 002/T093 BLOCKED, 003/T054
 ## T003 — primitiva pnpm macOS
 
 Porta neutra e adapter con pin del binario Node e dell’intera distribuzione pnpm, due root private, politica SBPL su file/processi/rete, input frozen e output bounded. Il processo osservato è l’unico che il profilo può eseguire. Cancellazione tramite handle del figlio e attesa di chiusura. La fixture qualifica anche config ambientale ostile e redirect HTTP verso altro endpoint. Build, build:test, lint e **4 PASS** in integrazione.
+
+## T005 — test iniziali
+
+Tre RED prima di modello e namespace, con stato manuale/stale, generazioni, limiti e scope dei grant.
