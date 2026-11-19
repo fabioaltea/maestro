@@ -16,8 +16,8 @@ interface Runtime {
  dispatch(r:RpcRequest,p:AuthenticatedPeer,s:NonNullable<Awaited<ReturnType<StoragePort['readSnapshot']>>>):Promise<RpcResponse>;
  idle():Promise<void>;fence():void;recover():Promise<void>;stop(d:Deadline):Promise<void>;
 }
-export async function featureAuthoringFixture(t:TestContext,settings:{loseCreateReply?:boolean;loseApprovalReply?:boolean;planning?:FeaturePlanningPort;clock?:Clock;planningFault?:(kind:string,point:'before'|'after')=>void}={}){
- const f=await reviewFixture(t);await f.service.publishDocument(await f.exit(),reviewDraft());
+export async function featureAuthoringFixture(t:TestContext,settings:{baseBranch?:string;loseCreateReply?:boolean;loseApprovalReply?:boolean;planning?:FeaturePlanningPort;clock?:Clock;planningFault?:(kind:string,point:'before'|'after')=>void}={}){
+ const f=await reviewFixture(t,settings);await f.service.publishDocument(await f.exit(),reviewDraft());
  const revision=value(f.store.readDiscoveryMetadata({kind:'revision',id:f.discovery().latestDocumentRevisionId!})).data!;
  const c=await f.command('approve',{revisionId:revision.revisionId,bundleDigest:revision.bundleDigest,acceptedUnknownIds:reviewDraft().sections.map(s=>`${s.id}:0`)});
  value(await f.service.approve(f.peer,c));await f.service.idle();

@@ -1,4 +1,13 @@
 const catalog = {
+  WORKSPACE_LIMIT: ['Limite di workspace raggiunto.', 'Consultare i workspace già conservati.', false],
+  WORKSPACE_NOT_FOUND: ['Workspace non trovato.', 'Rileggere i workspace nell’archivio corrente.', false],
+  WORKSPACE_IN_USE: ['Workspace o repository riservato.', 'Interrogare il lavoro attivo e il relativo esito.', true],
+  WORKSPACE_UNSAFE: ['Confine Git o configurazione non qualificati.', 'Verificare il pin, gli anchor e la configurazione locale.', false],
+  BASE_CHANGED: ['La base Git è cambiata.', 'Rileggere la base e preparare un nuovo consenso.', false],
+  BRANCH_EXISTS: ['Il branch riservato esiste già.', 'Verificare l’operazione originale e la proprietà.', false],
+  OWNERSHIP_UNPROVEN: ['Proprietà del workspace non provata.', 'Interrogare lo stato della risorsa prima di proseguire.', false],
+  UNINTEGRATED_WORK: ['Lavoro locale o integrazione non dimostrata.', 'Verificare i file e la destinazione Git.', false],
+  GIT_CONFLICT: ['Operazione Git in conflitto.', 'Ispezionare il workspace e conservare il lavoro.', false],
   WORKSPACE_NOT_INITIALIZED: ['Archivio workspace non inizializzato.', 'Avviare esplicitamente il servizio per aggiornare l’archivio.', false],
   FEATURE_NOT_INITIALIZED: ['Pianificazione feature non inizializzata.', 'Eseguire daemon start esplicito per aggiornare lo schema.', false],
   FEATURE_NOT_FOUND: ['Feature non presente.', 'Verificare archivio e identificativo.', false],
@@ -80,6 +89,8 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
+  WORKSPACE_LIMIT: 'PERSISTENCE', WORKSPACE_NOT_FOUND: 'RUNTIME', WORKSPACE_IN_USE: 'CONCURRENCY', WORKSPACE_UNSAFE:'SAFETY',
+  BASE_CHANGED:'AUTHORIZATION', BRANCH_EXISTS:'CONCURRENCY', OWNERSHIP_UNPROVEN:'SAFETY', UNINTEGRATED_WORK:'SAFETY', GIT_CONFLICT:'CONCURRENCY',
   WORKSPACE_NOT_INITIALIZED: 'RUNTIME', FEATURE_NOT_INITIALIZED: 'RUNTIME', FEATURE_NOT_FOUND: 'RUNTIME', FEATURE_IN_USE: 'CONCURRENCY', FEATURE_LIMIT: 'PERSISTENCE', DISCOVERY_REQUIRED: 'AUTHORIZATION', PLANNING_UNAVAILABLE: 'SAFETY', RESOURCE_LIMIT: 'PERSISTENCE',
   APPROVAL_REQUIRED: 'AUTHORIZATION',
   APPROVAL_STALE: 'AUTHORIZATION',

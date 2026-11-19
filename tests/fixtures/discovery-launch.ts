@@ -35,7 +35,7 @@ export interface DiscoveryOperations {
   configureGranted(peer: AuthenticatedPeer, input: { requestId: string; grantId: string; binaryRealpath: string; modelId: string }): Promise<DiscoveryResult<StartAdmission>>;
   discard(peer: AuthenticatedPeer, input: { requestId: string; snapshotId: string }): Promise<DiscoveryResult<StartAdmission>>;
 }
-export async function launchFixture(t: TestContext, settings: { configured?: boolean; repository?: 'clean' | 'dirty' | 'conflict' | 'unborn'; checkpoint?: (point: string) => Promise<void>; onLaunch?: (input: DiscoveryLaunch) => Promise<void>; cleanupAllowed?: () => boolean } = {}) {
+export async function launchFixture(t: TestContext, settings: { baseBranch?:string; configured?: boolean; repository?: 'clean' | 'dirty' | 'conflict' | 'unborn'; checkpoint?: (point: string) => Promise<void>; onLaunch?: (input: DiscoveryLaunch) => Promise<void>; cleanupAllowed?: () => boolean } = {}) {
   const { createDiscoveryOperations } = await loadContract<{ createDiscoveryOperations(options: object): DiscoveryOperations }>('core/discovery/operations.js', ['createDiscoveryOperations']);
   let service: DiscoveryOperations | undefined, runtimeDirectory: string | undefined;
   t.after(async () => { await service?.idle(); if (settings.cleanupAllowed && !settings.cleanupAllowed()) throw new Error('PRESERVE_UNVERIFIED_LAUNCH_FIXTURE'); if (runtimeDirectory) await rm(runtimeDirectory, { recursive: true }); });
@@ -54,7 +54,7 @@ export async function launchFixture(t: TestContext, settings: { configured?: boo
   const database = new Database(f.path); database.pragma('foreign_keys=ON'); t.after(() => database.close());
   const projectId = randomUUID(), at = new Date().toISOString();
   const inspected = await createDirectRepositoryInspector().inspectCandidate(repo, undefined, { deadline: makeDeadline(systemClock, 30000) }); assert.ok(inspected.ok);
-  database.prepare("INSERT INTO projects(project_id,display_name,repository_key,repository_identity,reference_checkout,base_branch,config_revision,created_at,updated_at) VALUES(?,'Launch fixture',?,?,?,NULL,1,?,?)").run(projectId, createHash('sha256').update(JSON.stringify(inspected.value.identity)).digest('hex'), JSON.stringify(inspected.value.identity), JSON.stringify(inspected.value.reference), at, at);
+  database.prepare("INSERT INTO projects(project_id,display_name,repository_key,repository_identity,reference_checkout,base_branch,config_revision,created_at,updated_at) VALUES(?,'Launch fixture',?,?,?,?,1,?,?)").run(projectId, createHash('sha256').update(JSON.stringify(inspected.value.identity)).digest('hex'), JSON.stringify(inspected.value.identity), JSON.stringify(inspected.value.reference), settings.baseBranch??null, at, at);
   const authHome = join(f.directory, 'fixture-provider'); await mkdir(authHome, { mode: 0o700 });
   const configuration: ProviderConfiguration = { providerId: 'fixture', revision: '1', binaryRealpath: '/fixture/native', binarySha256: 'a'.repeat(64), binaryVersion: 'fixture-v1', modelId: 'fixture-model', authProfileRef: authHome, policyVersion: 'fixture-readonly-v1', qualificationDigest: 'c'.repeat(64), configuredAt: at };
   if (settings.configured !== false) value(f.store.commitDiscoveryMetadata({ kind: 'provider', expectedRevision: null, configuration }));

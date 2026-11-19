@@ -27,3 +27,7 @@ Quattro integrazioni RED prima del migratore. La fixture costruisce lo schema 5 
 ## T007 — schema 6 e upgrade esclusivo
 
 Lo start esplicito esegue la catena storica fino a 6. Il passaggio 5→6 conserva operazioni e grant, ricrea i guard UUID e verifica integrità e FK nella stessa transazione sotto le due lease. Reader e worker supportano lo schema cumulativo. Build, build:test, typecheck e lint PASS. Integrazioni schema 006 e regressioni schema/runtime/offline 005 **12 PASS**. Transizioni e fence **2 PASS**. La prova di ammissione del nuovo grant è parte di T008.
+
+## T008 — ledger e reservation condivisi
+
+Namespace WORKSPACE nel ledger esistente. Grant monouso e reservation persistono con contesto, envelope, anchor, branch e quota verificati. La verifica dei byte sigillati precede la reservation. Build:test e suite workspace-state/store e workflow-store **9 PASS**. Artefatto mancante, saturazione e concorrenza lasciano il grant intatto. Un reply loss restituisce l’operazione originale al replay.

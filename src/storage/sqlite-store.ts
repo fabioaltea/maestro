@@ -1,6 +1,6 @@
 import {WORKSPACE_TABLES} from './workspaces-schema.js';
-import {readWorkspaceState} from './workspaces-store.js';
-import type {WorkspaceQuery} from '../ports/workspace.js';
+import {commitWorkspaceState,readWorkspaceState} from './workspaces-store.js';
+import type {WorkspaceChange,WorkspaceQuery} from '../ports/workspace.js';
 import { workflowEventDrafts } from '../protocol/feature-events.js';
 import { createWorkflowArtifacts } from './workflow-artifacts.js';
 import { createWorkflowStore } from './workflow-store.js';
@@ -188,7 +188,7 @@ export class SQLiteStore {
         const result = body();
         for (const requestId of event?.requestIds ?? []) {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
-          if (!op) continue;
+          if (!op||op.namespace==='WORKSPACE') continue;
           const feature = op.namespace === 'FEATURE' && op.targetId ? readFeatureState(this.database!, {kind: 'feature', id: op.targetId}).feature : null;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
           drafts.push(...workflowEventDrafts(op, String(owner.owning_instance_id), feature));
@@ -200,6 +200,11 @@ export class SQLiteStore {
   commitFeatureState(change: WorkflowChange) { this.writable(); return this.workflowStore().commit(change); }
   readWorkflowArtifact(id: string, offset: number, maximum: number) { return this.workflowArtifacts().read(id, offset, maximum); }
   reconcileWorkflowArtifacts() { const db = this.writable(); return this.mutate(() => { this.workflowArtifacts().reconcile(); }, []); }
+  commitWorkspaceState(change:WorkspaceChange) {
+    return commitWorkspaceState(this.writable(),change,this.workflowStore(),id=>{
+      try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
+    });
+  }
   readWorkspaceState(query:WorkspaceQuery) {
     if(!this.database)throw new Error('STATE_ABSENT');
     return this.database.transaction(()=>readWorkspaceState(this.database!,query)).deferred();

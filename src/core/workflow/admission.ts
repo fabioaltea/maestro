@@ -7,10 +7,10 @@ export function workflowAdmission(input:{readonly requestId:string;readonly inte
  requireUuid(input.requestId);requireUuid(input.instanceId);if(input.grantId!==null)requireUuid(input.grantId);
  return{requestId:input.requestId,canonicalIntent:canonicalWorkflowIntent(input.intent),grantId:input.grantId,instanceId:input.instanceId,nowMs:input.nowMs};
 }
-export async function originalWorkflowGrant(storage:StoragePort,requestId:string,grantId:string,action:string){
+export async function originalWorkflowGrant(storage:StoragePort,requestId:string,grantId:string,action:string,namespace:WorkflowIntent['namespace']='FEATURE'){
  requireUuid(requestId);requireUuid(grantId);if(!storage.readFeatureState)throw new Error('FEATURE_NOT_INITIALIZED');
  const grant=(await storage.readFeatureState({kind:'grant',id:grantId})).grant;if(!grant)throw new Error('APPROVAL_REQUIRED');
- const intent=JSON.parse(grant.canonicalIntent) as WorkflowIntent;if(intent.action!==action||intent.namespace!=='FEATURE'||canonicalWorkflowIntent(intent)!==grant.canonicalIntent)throw new Error('APPROVAL_REQUIRED');
+ const intent=JSON.parse(grant.canonicalIntent) as WorkflowIntent;if(intent.action!==action||intent.namespace!==namespace||canonicalWorkflowIntent(intent)!==grant.canonicalIntent)throw new Error('APPROVAL_REQUIRED');
  const operation=(await storage.readFeatureState({kind:'operation',id:requestId})).operation;
  if(operation&&(operation.canonicalIntent!==grant.canonicalIntent||operation.action!==action))throw new Error('IDEMPOTENCY_CONFLICT');
  return{grant,intent,operation};

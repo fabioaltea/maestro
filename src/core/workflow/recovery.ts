@@ -5,5 +5,5 @@ export async function recoverWorkflow(storage:StoragePort,instanceId:string):Pro
  if(!storage.reconcileWorkflowArtifacts||!storage.commitFeatureState||!storage.readFeatureState)throw new Error('FEATURE_NOT_INITIALIZED');
  await storage.reconcileWorkflowArtifacts();await storage.commitFeatureState({kind:'reconcile',instanceId,nowMs:Date.now()});
  const pending=(await storage.readFeatureState({kind:'pending'})).items as readonly WorkflowOperationRecord[];
- return !pending.some(p=>p.outcome==='UNKNOWN'&&!['generate','answer','cancel'].includes(p.action));
+ return !pending.some(p=>p.namespace!=='WORKSPACE'&&p.outcome==='UNKNOWN'&&!['generate','answer','cancel'].includes(p.action));
 }

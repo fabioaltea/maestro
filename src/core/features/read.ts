@@ -15,7 +15,7 @@ export function createFeatureReader(options:{readonly storage:Pick<StoragePort,'
  validateFeatureParams(method,p);let data:Record<string,unknown>;
  if(method==='feature.provider.get')data={capabilities:FEATURE_PLANNING_CAPABILITIES,reason:'PLANNING_UNAVAILABLE'};
  else if(method==='feature.artifact.budget')data={budget:(await query({kind:'budget'})).budget};
- else if(method==='feature.operation.get'){const o=(await query({kind:'operation',id:p.requestId as string})).operation;if(!o)throw new Error('OPERATION_NOT_FOUND');data={operation:publicFeatureOperation(o)};}
+ else if(method==='feature.operation.get'){const o=(await query({kind:'operation',id:p.requestId as string})).operation;if(!o||o.namespace==='WORKSPACE')throw new Error('OPERATION_NOT_FOUND');data={operation:publicFeatureOperation(o)};}
  else if(method==='feature.eligibility.get')data={featureId:p.featureId,eligible:false,reason:offline?'UNKNOWN':'CHECKING',freshness:offline?'LAST_KNOWN':'UNKNOWN',checkId:null,checkedAt:null};
  else if(method==='feature.artifact.get'){
  const id=p.artifactId as string,a=(await query({kind:'artifact',id})).artifact;if(!a||!['SEALED','REFERENCED'].includes(a.state))throw new Error('ARTIFACT_CORRUPT');const at=offset(p.cursor,id,a.sha256);if(!storage.readWorkflowArtifact)throw new Error('FEATURE_NOT_INITIALIZED');const r=await storage.readWorkflowArtifact(id,at,8192);data={artifactId:id,sha256:r.sha256,totalBytes:r.totalBytes,offset:at,base64:Buffer.from(r.bytes).toString('base64'),nextCursor:at+r.bytes.length<r.totalBytes?cursor(id,r.sha256,at+r.bytes.length):null};

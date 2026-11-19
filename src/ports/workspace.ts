@@ -1,3 +1,4 @@
+import type {WorkflowAdmission,WorkflowOperationRecord} from './workflow.js';
 import type {WorkspaceFence,WorkspaceState} from '../domain/workspaces/model.js';
 import type {Deadline} from './clock.js';
 import type {FilesystemAnchor} from './repository.js';
@@ -63,5 +64,13 @@ export interface WorkspaceRead {
  readonly pageRevision?:string;
 }
 export interface WorkspaceStoragePort {
+ commitWorkspaceState?(change:WorkspaceChange):Promise<WorkspaceWrite>;
  readWorkspaceState?(query:WorkspaceQuery):Promise<WorkspaceRead>;
+}
+
+export type WorkspaceChange={readonly kind:'reserve';readonly admission:WorkflowAdmission;readonly contextCheckedAt:string};
+export interface WorkspaceWrite{
+ readonly workspace?:WorkspaceRecord;
+ readonly operation:WorkflowOperationRecord;
+ readonly inserted?:boolean;
 }
