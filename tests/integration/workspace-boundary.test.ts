@@ -101,3 +101,26 @@ for(const point of ['before-add','after-add'] as const){
     else {assert.equal(observation.worktree,null);await absent(f.path);}
   });
 }
+
+test('G0 removes a clean integrated worktree with its branch still recoverable',async t=>{
+  const f=await workspaceBoundary(t),m=createWorkspaceMutator();
+  await m.createBranch(f.request,f.deadline());
+  const result=await m.addWorktree(f.request,f.deadline());
+  await m.removeWorktree(f.request,result.worktree!,{targetRef:f.request.baseRef,targetOid:f.request.baseOid},f.deadline());
+  await absent(f.path);
+  await absent(f.admin);
+  assert.equal((await m.observe(f.request,f.deadline())).branchOid,f.request.baseOid);
+});
+
+test('G0 preserves an ignored file that appears after cleanup inventory',async t=>{
+  const f=await workspaceBoundary(t);
+  const unexpected=join(f.path,'late.owned-by-user');
+  const m=createWorkspaceMutator({beforeRemove:()=>writeFile(unexpected,'preserve new work')});
+  await writeFile(join(f.checkout,'.git','info','exclude'),'late.owned-by-user\n');
+  await m.createBranch(f.request,f.deadline());
+  const result=await m.addWorktree(f.request,f.deadline());
+  await assert.rejects(m.removeWorktree(f.request,result.worktree!,
+    {targetRef:f.request.baseRef,targetOid:f.request.baseOid},f.deadline()),/OWNERSHIP_UNPROVEN/);
+  assert.equal(await readFile(unexpected,'utf8'),'preserve new work');
+  assert.equal((await f.repositories.git(f.checkout,['rev-parse','--verify',f.ref])).trim(),f.request.baseOid);
+});

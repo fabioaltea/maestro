@@ -1,7 +1,7 @@
 import {execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {constants} from 'node:fs';
-import {lstat,open,readFile,realpath,stat} from 'node:fs/promises';
+import {lstat,open,opendir,readFile,realpath,stat} from 'node:fs/promises';
 import {dirname,isAbsolute,join,relative,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {promisify} from 'node:util';
@@ -25,6 +25,7 @@ const prefix=['--no-pager','--no-optional-locks','--no-lazy-fetch','--no-replace
 const hash=(bytes:Uint8Array)=>createHash('sha256').update(bytes).digest('hex');
 const filesystem=createFilesystemIdentity();
 const allowedConfig=/^(?:core\.(?:repositoryformatversion|filemode|bare|logallrefupdates|ignorecase|precomposeunicode|symlinks|hookspath|fsmonitor)|extensions\.(?:objectformat|worktreeconfig)|user\.(?:name|email)|remote\..+\.(?:url|fetch)|branch\..+\.(?:remote|merge))$/;
+const localRef=(value:string)=>/^refs\/heads\/[!-~]{1,1024}$/.test(value);
 
 function nested(root:string,path:string){
   const suffix=relative(root,path);
@@ -69,7 +70,7 @@ async function stableFile(path:string,limit=16384){
 
 async function scopeFor(input:WorkspaceMutationTarget){
   const workspaceId=requireUuid(input.workspaceId),featureId=requireUuid(input.featureId);
-  if(workspaceId!==input.workspaceId||featureId!==input.featureId||!/^refs\/heads\/[!-~]{1,1024}$/.test(input.baseRef)||
+  if(workspaceId!==input.workspaceId||featureId!==input.featureId||!localRef(input.baseRef)||
     !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(input.baseOid))throw new Error('INVALID_REQUEST');
   const [owner]=await Promise.all([anchored(input.ownedRoot),anchored(input.reference),anchored(input.commonDirectory),anchored(input.adminDirectory)]);
   const root=input.ownedRoot.canonicalPath,reference=input.reference.canonicalPath;
@@ -97,7 +98,7 @@ async function fingerprint(path:string){
 }
 
 /** Closed native Git adapter. No user argv, environment, helper or general editor. */
-export function createWorkspaceMutator():WorkspacePort {
+export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promise<void>}={}):WorkspacePort {
   type Scope=Awaited<ReturnType<typeof scopeFor>>;
   const reader=createGitRunner();
   let pin:Promise<WorkspaceGitPin&{executable:string;identity:string}>|undefined;
@@ -114,16 +115,21 @@ export function createWorkspaceMutator():WorkspacePort {
   }
   const selected=()=>pin??=resolvePin();
   function check(deadline:Deadline){if(deadline.expired())throw new Error('DEADLINE_EXCEEDED');}
-  async function git(scope:Scope,deadline:Deadline,args:readonly string[]){
+  async function git(scope:Scope,deadline:Deadline,args:readonly string[],unlink?:readonly string[]){
     check(deadline);
     const {executable,identity,profileSha256}=await selected();
-    if(identity!==await fingerprint(executable)||profileSha256!==hash(await readFile(profile)))throw new Error('WORKSPACE_UNSAFE');
+    const body=await readFile(profile);
+    if(identity!==await fingerprint(executable)||profileSha256!==hash(body))throw new Error('WORKSPACE_UNSAFE');
     check(deadline);
     const params={EXECUTABLE:executable,REFERENCE:scope.reference,COMMON:scope.common,ADMIN:scope.admin,WORKTREE:scope.checkout,
       WORKTREES:scope.worktrees,WORKTREE_ADMIN:scope.worktreeAdmin,REF:scope.ref,REF_LOCK:scope.ref+'.lock',
       REF_HEADS:join(scope.common,'refs','heads'),REF_MAESTRO:join(scope.common,'refs','heads','maestro'),
       REF_FEATURE:join(scope.common,'refs','heads','maestro','feature'),REF_FEATURE_ID:dirname(scope.ref)};
-    return exec(sandbox,[...Object.entries(params).flatMap(([k,v])=>['-D',`${k}=${v}`]),'-f',profile,executable,...prefix,...args],
+    const literals=unlink?.map((path,index)=>[`UNLINK_${index}`,path] as const);
+    const guard=literals?`(deny file-write-unlink (require-all (subpath (param "WORKTREE")) (require-not (require-any ${literals.map(([key])=>`(literal (param "${key}"))`).join(' ')}))))`:null;
+    const policy=guard?['-p',body.toString('utf8')+'\n'+guard]:['-f',profile];
+    const bindings=[...Object.entries(params),...(literals??[])].flatMap(([k,v])=>['-D',`${k}=${v}`]);
+    return exec(sandbox,[...bindings,...policy,executable,...prefix,...args],
       {cwd:scope.reference,env:{...env,GIT_EXEC_PATH:dirname(executable)},timeout:Math.max(1,Math.min(26000,Math.floor(deadline.remainingMs()))),maxBuffer:1024*1024,encoding:'utf8'})
       .then(({stdout,stderr})=>({stdout,stderr,code:0}),(error:unknown)=>{
         if(!deadline.expired()&&error instanceof Error&&'code'in error&&typeof error.code==='number'&&'stderr'in error)
@@ -164,7 +170,9 @@ export function createWorkspaceMutator():WorkspacePort {
   async function disk(scope:Scope,deadline:Deadline):Promise<WorkspaceDiskObservation>{
     const listed=await git(scope,deadline,['worktree','list','--porcelain','-z']);
     if(listed.code||listed.stderr)throw new Error('OWNERSHIP_UNPROVEN');
-    const matches=listed.stdout.split('\0\0').map(record=>record.split('\0')).filter(record=>record.includes(`worktree ${scope.checkout}`));
+    const records=listed.stdout.split('\0\0').map(record=>record.split('\0'));
+    const matches=records.filter(record=>record.includes(`worktree ${scope.checkout}`));
+    if(records.some(record=>record.includes(`branch ${scope.branchRef}`)&&!matches.includes(record)))throw new Error('OWNERSHIP_UNPROVEN');
     if(matches.length>1)throw new Error('OWNERSHIP_UNPROVEN');
     const [entry]=matches;
     const baseOid=await oid(scope,deadline,scope.baseRef),branchOid=await oid(scope,deadline,scope.branchRef);
@@ -192,6 +200,37 @@ export function createWorkspaceMutator():WorkspacePort {
   async function verify(input:WorkspaceMutationTarget,scope:Scope,fingerprint:string,deadline:Deadline){
     await scopeFor(input);
     if(await config(scope,deadline)!==fingerprint)throw new Error('WORKSPACE_UNSAFE');
+  }
+  async function unlinkInventory(scope:Scope,deadline:Deadline){
+    const status=await git(scope,deadline,['-C',scope.checkout,'status','--porcelain=v2','-z','--untracked-files=all','--ignored=matching']);
+    if(status.code||status.stderr||status.stdout)throw new Error('UNINTEGRATED_WORK');
+    const tracked=await git(scope,deadline,['-C',scope.checkout,'ls-files','-z','--cached']);
+    if(tracked.code||tracked.stderr)throw new Error('OWNERSHIP_UNPROVEN');
+    const allowed=new Set(tracked.stdout.split('\0').filter(Boolean));
+    allowed.add('.git');
+    const directories=new Set<string>();
+    for(const entry of allowed){
+      if(!entry.isWellFormed()||entry.includes('\uFFFD')||isAbsolute(entry)||entry.split('/').some(piece=>['','.','..'].includes(piece)))throw new Error('WORKSPACE_UNSAFE');
+      for(let parent=dirname(entry);parent!=='.';parent=dirname(parent))directories.add(parent);
+    }
+    const paths=[scope.checkout];
+    let bytes=Buffer.byteLength(scope.checkout);
+    async function walk(root:string){
+      check(deadline);
+      const entries=await opendir(root);
+      for await(const entry of entries){
+        const path=join(root,entry.name),key=relative(scope.checkout,path);
+        const tracked=allowed.delete(key);
+        if(entry.isDirectory()?tracked||!directories.delete(key):!tracked||!entry.isFile()&&!entry.isSymbolicLink())throw new Error('UNINTEGRATED_WORK');
+        bytes+=Buffer.byteLength(path);
+        if(paths.length>=512||bytes>64000)throw new Error('RESOURCE_LIMIT');
+        paths.push(path);
+        if(entry.isDirectory())await walk(path);
+      }
+    }
+    await walk(scope.checkout);
+    if(allowed.size||directories.size)throw new Error('UNINTEGRATED_WORK');
+    return paths;
   }
   return{
     async qualification(){const {version,sha256,profileSha256}=await selected();return{version,sha256,profileSha256};},
@@ -224,6 +263,23 @@ export function createWorkspaceMutator():WorkspacePort {
       const after=await disk(scope,deadline);
       if(after.worktree?.headOid!==scope.baseOid||after.baseOid!==scope.baseOid)throw new Error('OWNERSHIP_UNPROVEN');
       return after;
+    },
+    async removeWorktree(input,expected,integrated,deadline){
+      const {scope,fingerprint}=await prepare(input,deadline);
+      if(!localRef(integrated.targetRef)||integrated.targetRef===scope.branchRef
+        ||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(integrated.targetOid))throw new Error('INVALID_REQUEST');
+      const observed=(await disk(scope,deadline)).worktree;
+      if(!observed||observed.headOid!==expected.headOid||observed.branchRef!==expected.branchRef
+        ||(['root','adminDirectory','gitFile'] as const).some(key=>filesystem.compare(expected[key],observed[key])!=='VERIFIED'))throw new Error('OWNERSHIP_UNPROVEN');
+      if((await git(scope,deadline,['check-ref-format',integrated.targetRef])).code)throw new Error('INVALID_REQUEST');
+      if(await oid(scope,deadline,integrated.targetRef)!==integrated.targetOid)throw new Error('BASE_CHANGED');
+      const merged=await git(scope,deadline,['merge-base','--is-ancestor',observed.headOid,integrated.targetOid]);
+      if(merged.code||merged.stderr)throw new Error('UNINTEGRATED_WORK');
+      const paths=await unlinkInventory(scope,deadline);
+      await verify(input,scope,fingerprint,deadline);
+      await options.beforeRemove?.();
+      const result=await git(scope,deadline,['worktree','remove','--',scope.checkout],paths);
+      if(result.code||result.stderr||await pathInfo(scope.checkout)||await pathInfo(scope.worktreeAdmin))throw new Error('OWNERSHIP_UNPROVEN');
     },
   };
 }

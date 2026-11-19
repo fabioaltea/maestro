@@ -36,4 +36,6 @@ export interface WorkspacePort {
   observe(target:WorkspaceMutationTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
   createBranch(target:WorkspaceMutationTarget,deadline:Deadline):Promise<void>;
   addWorktree(target:WorkspaceMutationTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
+  removeWorktree(target:WorkspaceMutationTarget,expected:NonNullable<WorkspaceDiskObservation['worktree']>,
+    integrated:{readonly targetRef:string;readonly targetOid:string},deadline:Deadline):Promise<void>;
 }
