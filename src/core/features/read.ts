@@ -47,7 +47,7 @@ export function createFeatureReader(options:{readonly storage:Pick<StoragePort,'
  data={turnId:turn.turnId,items:items.slice(at,end),nextCursor:end<items.length?cursor(turn.turnId,turn.phase,end):null};
  }
  }else{
- const map:Record<string,[FeatureQuery['kind'],string,string]>={'feature.get':['feature','featureId','feature'],'feature.revision.get':['revision','revisionId','revision'],'feature.approval.get':['approval','revisionId','approval'],'feature.envelope.get':['envelope','envelopeId','envelope']};const info=map[method];if(!info)throw new Error('UNSUPPORTED_VERSION');const [kind,key,resultKey]=info;const r=await query({kind,id:p[key] as string} as FeatureQuery);const value=r[resultKey as keyof typeof r];if(!value)throw new Error('FEATURE_NOT_FOUND');data={[resultKey]:value};
+ const map:Record<string,[FeatureQuery['kind'],string,string]>={'feature.get':['feature','featureId','feature'],'feature.revision.get':['revision','revisionId','revision'],'feature.approval.get':['approval','revisionId','approval'],'feature.envelope.get':['envelope','envelopeId','envelope']};const info=map[method];if(!info)throw new Error('UNSUPPORTED_VERSION');const [kind,key,resultKey]=info;const r=await query({kind,id:p[key] as string} as FeatureQuery);const value=r[resultKey as keyof typeof r];if(!value)throw new Error('FEATURE_NOT_FOUND');data={[resultKey]:value,...(kind==='revision'?{contextSnapshotId:r.contextSnapshotId}: {})};
  }
  const result={...data,freshness:offline?'LAST_KNOWN':'CURRENT'};requireFeatureEnvelope(result);return result;
  };

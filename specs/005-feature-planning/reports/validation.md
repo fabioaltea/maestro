@@ -131,3 +131,7 @@ Limiti, riferimenti risposta, identity, transizioni osservabili, fencing di stat
 ### T031 — turni assistiti, fencing e recupero
 
 Core e writer persistono il grant monouso, la generazione, la fase prima dell’avvio e i riferimenti agli artefatti. Il rilascio del debit richiede evidenza di uscita correlata. Lo stesso writer coordina i turni attivi con quelli di Discovery e conserva il risultato precedente se una reply arriva tardi. Typecheck, build, build:test e lint PASS. Suite mirata US3/runtime 12/12 PASS, poi US3 integrazione/limiti metadata 6/6 PASS. Le prove comprendono due turni con provenance, retry, fault ai confini di commit, deadline, exit proof errata e riconciliazione. La porta qualificata è composta nelle fixture. Il daemon di produzione continua a dichiarare la generazione indisponibile in assenza di G1.
+
+### T032 — parità CLI per generazione e risposte
+
+I comandi assistiti riusano grant e recovery per UUID. La risposta usa un JSON string da file/stdin, con 4096 byte dopo decodifica, e resta in un artefatto sigillato circoscritto alla feature. Turni, domande ed output sono interrogabili con pagine e storico offline. Il client verifica snapshot, turno, domanda e artefatto nel grant. Typecheck, build e build:test PASS. Contract US3 e integrazioni CLI 4/4 PASS (15,5 s).

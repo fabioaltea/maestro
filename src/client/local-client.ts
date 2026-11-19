@@ -61,6 +61,10 @@ export class LocalClient {
           || original.expectedConfigRevision !== undefined && prepared.configRevision !== original.expectedConfigRevision
           || original.bundleArtifactId !== undefined && prepared.payload.bundleArtifactId !== original.bundleArtifactId
           || original.revisionId !== undefined && prepared.payload.revisionId !== original.revisionId
+          || original.contextSnapshotId !== undefined && prepared.payload.contextSnapshotId !== original.contextSnapshotId
+          || original.turnId !== undefined && prepared.payload.parentTurnId !== original.turnId
+          || original.questionId !== undefined && prepared.payload.questionId !== original.questionId
+          || original.answerArtifactId !== undefined && prepared.payload.answerArtifactId !== original.answerArtifactId
           || Array.isArray(original.acceptedUnknownIds) && JSON.stringify(prepared.payload.acceptedUnknownIds) !== JSON.stringify([...original.acceptedUnknownIds].sort())
           || !Number.isSafeInteger(data.expiresAtMs) || Number(data.expiresAtMs) <= 0 || !data.summary || typeof data.summary !== 'object' || Array.isArray(data.summary)) throw new Error('INVALID_REQUEST');
       }

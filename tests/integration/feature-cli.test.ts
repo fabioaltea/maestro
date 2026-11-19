@@ -7,11 +7,16 @@ import {featureAuthoringFixture} from '../fixtures/feature-authoring.js';
 import {featureDraft} from '../fixtures/feature-boundary.js';
 import {createPlatformPaths} from '../../src/platform/macos/paths.js';
 import {createLocalTransport} from '../../src/platform/macos/transport.js';
+import type {FeaturePlanningPort} from '../../src/ports/feature-planning.js';
 import {invokeCli} from '../fixtures/cli-harness.js';
-test('feature CLI imports, authors, approves and releases a handoff with original UUIDs and offline history',async t=>{
- const f=await featureAuthoringFixture(t),key=await createPlatformPaths().createCredential(f.paths.clientKeyFile);
+async function connect(f:Awaited<ReturnType<typeof featureAuthoringFixture>>){
+ const key=await createPlatformPaths().createCredential(f.paths.clientKeyFile);
  const server=await createLocalTransport().listen(f.paths.daemonEndpoint,f.instanceId,new Map([[key,'client']]),async(request,peer)=>request.method==='status.get'?{protocolVersion:1,correlationId:request.correlationId,result:'OK',data:{storeId:f.storeId,instanceId:f.instanceId,lifecycle:'RUNNING',capabilities:{featureVersion:1,featureMethods:f.runtime.methods}}}:f.runtime.dispatch(request,peer,f.store.readSnapshot()!));
  const call=async(...args:string[])=>{const r=await invokeCli(['feature',...args,'--state-dir',f.directory,'--json']);assert.ok(Buffer.byteLength(r.stdout)<32768);return JSON.parse(r.stdout);};
+ return{server,call};
+}
+test('feature CLI imports, authors, approves and releases a handoff with original UUIDs and offline history',async t=>{
+ const f=await featureAuthoringFixture(t),{server,call}=await connect(f);
  try{
  const bundle=featureDraft();bundle.request='x'.repeat(12000);const path=join(f.directory,'bundle.json');await writeFile(path,JSON.stringify(bundle));const root=randomUUID();
  const uploaded=await call('artifact','import',`--bundle-file=${path}`,`--request-id=${root}`);assert.equal(uploaded.result,'OK',JSON.stringify(uploaded));assert.equal(uploaded.data.operation.outcome,'SUCCEEDED');
@@ -54,5 +59,56 @@ test('feature CLI imports, authors, approves and releases a handoff with origina
  const offlineEligibility=await call('eligibility',featureId);
  assert.equal(offlineEligibility.data.eligible,false);
  assert.equal(offlineEligibility.freshness,'LAST_KNOWN');
+ }finally{await server.close();}
+});
+
+test('assisted CLI prepares from JSON and seals answers, preserving pages and the original turn UUID',async t=>{
+ const planning:FeaturePlanningPort={
+   capabilities:{readonlyPlanning:true,qualified:true},async check(){},async cancel(){return null;},async reconcile(){return null;},
+   async run({identity,answers}){
+     return {exit:{...identity,hostExited:true,providerExited:true},value:answers.length?{kind:'DRAFT',bundle:featureDraft()}:
+       {kind:'QUESTIONS',questions:[{questionId:'Q1',text:'Quale stato?',reason:'Ambito'}]}};
+   },
+ };
+ const f=await featureAuthoringFixture(t,{planning}),{server,call}=await connect(f);
+ try{
+   const artifactId=await f.upload(featureDraft());
+   const createGrant=await f.prepareFeature('create',{projectId:f.projectId,expectedConfigRevision:'1',bundleArtifactId:artifactId});
+   const created=await f.execute('create',String(createGrant.grantId));
+   const {featureId,revisionId}=created.operation!.result! as {featureId:string;revisionId:string};
+   const contextSnapshotId=(await call('revision',revisionId)).data.contextSnapshotId;
+   assert.equal(contextSnapshotId,f.discovery().snapshotId);
+   const filename=join(f.directory,'prepare.json');
+   async function prepare(params:Record<string,unknown>){
+     await writeFile(filename,JSON.stringify({featureId,...params}));
+     const result=await call('prepare',`--input-file=${filename}`);
+     assert.equal(result.result,'OK',JSON.stringify(result));
+     return result.data.grantId as string;
+   }
+   const generate=await prepare({action:'generate',expectedStateRevision:'1',contextSnapshotId});
+   const first=randomUUID();
+   assert.equal((await call('generate',`--grant=${generate}`,`--request-id=${first}`)).requestId,first);
+   await f.runtime.idle();
+   const waiting=await call('operation',first);
+   const {turnId,stateRevision}=waiting.data.operation.result;
+   assert.equal((await call('planning',turnId)).data.turn.phase,'WAITING_USER');
+   const page=await call('questions',featureId,'--limit=1');
+   assert.equal(page.data.items[0].questionId,'Q1');
+   assert.equal((await call('output',turnId)).data.items[0].kind,'OUTPUT');
+   const answerFile=join(f.directory,'answer.json');
+   await writeFile(answerFile,JSON.stringify('Stato sintetico'));
+   const sealRequest=randomUUID();
+   const uploaded=await call('artifact','import-answer',featureId,`--answer-file=${answerFile}`,`--request-id=${sealRequest}`);
+   assert.equal(uploaded.data.operation.outcome,'SUCCEEDED',JSON.stringify(uploaded));
+   const answerArtifactId=uploaded.data.operation.result.artifactId;
+   const answer=await prepare({action:'answer',expectedStateRevision:stateRevision,turnId,questionId:'Q1',answerArtifactId});
+   const second=randomUUID();
+   assert.equal((await call('answer',`--grant=${answer}`,`--request-id=${second}`)).requestId,second);
+   await f.runtime.idle();
+   const finished=await call('operation',second);
+   assert.equal(finished.data.operation.outcome,'SUCCEEDED');
+   await server.close();
+   assert.equal((await call('planning',turnId)).freshness,'LAST_KNOWN');
+   assert.equal((await call('output',finished.data.operation.result.turnId)).data.items[0].kind,'BUNDLE');
  }finally{await server.close();}
 });

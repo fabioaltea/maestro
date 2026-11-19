@@ -34,7 +34,13 @@ export function readFeatureState(db:Database.Database,q:FeatureQuery):FeatureRea
  const row=db.prepare('SELECT * FROM features_turns WHERE feature_id=? ORDER BY turn_index DESC LIMIT 1').get(q.id) as FeatureRow|undefined;
  return{turn:row?featureTurn(row):null};
  }
- const singles:Record<string,[string,string,(r:FeatureRow)=>unknown]>={feature:['features_records','feature_id',featureRecord],revision:['features_revisions','revision_id',featureRevision],approval:['features_approvals','revision_id',featureApproval],envelope:['features_envelopes','envelope_id',featureEnvelope],operation:['workflow_operations','request_id',workflowOperation],artifact:['workflow_artifacts','artifact_id',workflowArtifact],
+ if(q.kind==='revision'){
+ const row=db.prepare(`SELECT r.*,d.snapshot_id AS context_snapshot_id FROM features_revisions r
+   JOIN discovery_approvals a ON a.approval_id=r.discovery_approval_id
+   JOIN discoveries d ON d.discovery_id=a.discovery_id WHERE r.revision_id=?`).get(q.id) as FeatureRow|undefined;
+ return row?{revision:featureRevision(row),contextSnapshotId:s(row,'context_snapshot_id')}:{revision:null};
+ }
+ const singles:Record<string,[string,string,(r:FeatureRow)=>unknown]>={feature:['features_records','feature_id',featureRecord],approval:['features_approvals','revision_id',featureApproval],envelope:['features_envelopes','envelope_id',featureEnvelope],operation:['workflow_operations','request_id',workflowOperation],artifact:['workflow_artifacts','artifact_id',workflowArtifact],
  grant:['workflow_grants','grant_id',r=>({grantId:s(r,'grant_id'),canonicalIntent:s(r,'canonical_intent'),createdAtMs:Number(r.created_at_ms),expiresAtMs:Number(r.expires_at_ms),consumedByRequestId:nullable(r,'consumed_by_request_id')} satisfies WorkflowGrant)],turn:['features_turns','turn_id',featureTurn]};
  const single=singles[q.kind];if(single){const [table,key,map]=single;const row=db.prepare(`SELECT * FROM ${table} WHERE ${key}=? ORDER BY rowid DESC LIMIT 1`).get(q.id) as FeatureRow|undefined;return{[q.kind]:row?map(row):null};}
  if(!['features','revisions','approvals','turns'].includes(q.kind))throw new Error('INVALID_REQUEST');
