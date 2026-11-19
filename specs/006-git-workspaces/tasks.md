@@ -1,7 +1,7 @@
 # Tasks: Owned Git Workspaces
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [contracts/policy.md](contracts/policy.md), [quickstart.md](quickstart.md).
-**Branch**: `006-git-workspaces` · **Date**: 2026-11-19 · **Stato**: 0 task eseguiti, implementazione non autorizzata da questo documento.
+**Branch**: `006-git-workspaces` · **Date**: 2026-11-19 · **Stato**: implementazione locale autorizzata il 19 novembre 2026. Evidenze in reports/.
 
 **Tests**: richiesti esplicitamente dalla specifica per invarianti costituzionali. Scrivere i casi prima dell’implementazione pertinente; provider/clock/risorse sostituibili, integrazioni locali senza account. Ogni task concluso richiede un commit locale con ID ed evidenza; nessun push implicito.
 
@@ -9,7 +9,7 @@
 
 ## Phase 1: Setup & G0
 
-- [ ] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema5 in `specs/006-git-workspaces/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
+- [X] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema5 in `specs/006-git-workspaces/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
 - [ ] T002 Scrivere prove negative di capability/confine in `tests/integration/workspace-boundary.test.ts` e fixture in `tests/fixtures/workspace-boundary.ts`: G0 locale con Git reale su repository temporanei, hook/config ostili, path/symlink sostituiti e crash pre/post worktree add; niente repository utente modificato nel planning. Nessun consenso reale assunto.
 - [ ] T003 Implementare la primitiva reale minima di confine in `src/platform/macos/git/workspace-mutator.ts` e la porta in `src/ports/workspace.ts`, con fixture `tests/fixtures/workspace-adapter.ts`; validare su questa primitiva i confini indicati in `specs/006-git-workspaces/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
 - [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/006-git-workspaces/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
