@@ -58,7 +58,7 @@ export function createDiscoveryRuntime(storage: StoragePort, paths: ArchivePaths
       accepting = false; await bounded(operations.idle(), deadline);
       // A historical store has no Agent Runtime records and must retain its
       // existing Foundation lifecycle without initializing Discovery on read.
-      if ((await storage.readSnapshot())?.store.schemaVersion !== 4) return;
+      if (((await storage.readSnapshot())?.store.schemaVersion ?? 0) < 4) return;
       await lifecycle.stop(deadline);
     },
   };

@@ -24,7 +24,7 @@ async function fixture(t: Parameters<typeof createTestContext>[0]) {
 test('feature schema upgrade is explicit; historical reads do not migrate or create sidecars', async t => {
  const f=await fixture(t), before=await readFile(f.path), names=await readdir(f.options.paths.directory);
  assert.equal(needsFeaturesUpgrade(f.options.paths),true);
- const reader=new SQLiteStore({path:f.path,readonly:true}); assert.equal(reader.readSnapshot()!.store.schemaVersion,4); reader.close();
+ const reader=new SQLiteStore({path:f.path,readonly:true,readonlyQuiescent:true}); assert.equal(reader.readSnapshot()!.store.schemaVersion,4); reader.close();
  assert.deepEqual(await readFile(f.path),before); assert.deepEqual(await readdir(f.options.paths.directory),names);
  upgradeFeatures(f.options); assert.equal(needsFeaturesUpgrade(f.options.paths),false);
  const db=new Database(f.path,{readonly:true});t.after(()=>db.close()); assert.equal(db.pragma('user_version',{simple:true}),5);

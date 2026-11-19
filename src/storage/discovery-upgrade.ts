@@ -15,7 +15,7 @@ function validate(paths: ArchivePaths) {
 }
 function version(database: Database.Database, paths: ArchivePaths): number {
   const value = Number(database.pragma('user_version', { simple: true }));
-  if (![2, 3, 4].includes(value)) throw new Error('STATE_INCOMPATIBLE');
+  if (![2, 3, 4, 5].includes(value)) throw new Error('STATE_INCOMPATIBLE');
   if (database.pragma('quick_check', { simple: true }) !== 'ok' || (database.pragma('foreign_key_check') as unknown[]).length) throw new Error('STATE_CORRUPT');
   const row = database.prepare('SELECT schema_version,owner_uid,canonical_path FROM store WHERE singleton=1').get() as {
     schema_version: number; owner_uid: number; canonical_path: string;
@@ -43,7 +43,7 @@ export function upgradeDiscovery(options: RegistryUpgradeOptions): void {
   let database: Database.Database | undefined;
   try {
     database = new Database(paths.stateFile, { readonly: true, fileMustExist: true, timeout: 50 });
-    if (version(database, paths) === 4) {
+    if (version(database, paths) >= 4) {
       for (const name of DISCOVERY_TABLES) {
         if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
       }

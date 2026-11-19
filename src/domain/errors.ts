@@ -1,4 +1,11 @@
 const catalog = {
+  FEATURE_NOT_INITIALIZED: ['Pianificazione feature non inizializzata.', 'Eseguire daemon start esplicito per aggiornare lo schema.', false],
+  FEATURE_NOT_FOUND: ['Feature non presente.', 'Verificare archivio e identificativo.', false],
+  FEATURE_IN_USE: ['Feature utilizzata da lavoro attivo.', 'Consultare e riconciliare lo stato prima di archiviare.', false],
+  FEATURE_LIMIT: ['Limite locale delle feature raggiunto.', 'Consultare quota e revisioni; nessuna cancellazione automatica.', false],
+  DISCOVERY_REQUIRED: ['Discovery approvata e corrente richiesta.', 'Completare e approvare la Discovery del progetto.', false],
+  PLANNING_UNAVAILABLE: ['Generazione assistita non qualificata.', 'Usare authoring manuale con Discovery corrente o verificare il provider.', false],
+  RESOURCE_LIMIT: ['Quota locale raggiunta.', 'Consultare risorse e limiti senza eliminare lavoro referenziato.', false],
   APPROVAL_REQUIRED: ["Approvazione esplicita richiesta.", "Preparare e confermare lo scope corrente prima di inviare.", false],
   APPROVAL_STALE: ["Approvazione non più valida per questo intento.", "Rileggere revisioni e contesto, poi confermare un nuovo intento.", false],
   ANSWER_CONFLICT: ["Risposta o revisione domanda non più corrente.", "Rileggere la domanda e conservare la risposta già registrata.", false],
@@ -72,6 +79,7 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
+  FEATURE_NOT_INITIALIZED: 'RUNTIME', FEATURE_NOT_FOUND: 'RUNTIME', FEATURE_IN_USE: 'CONCURRENCY', FEATURE_LIMIT: 'PERSISTENCE', DISCOVERY_REQUIRED: 'AUTHORIZATION', PLANNING_UNAVAILABLE: 'SAFETY', RESOURCE_LIMIT: 'PERSISTENCE',
   APPROVAL_REQUIRED: 'AUTHORIZATION',
   APPROVAL_STALE: 'AUTHORIZATION',
   ANSWER_CONFLICT: 'CONCURRENCY',

@@ -1,3 +1,6 @@
+import { FEATURE_TABLES } from './features-upgrade.js';
+import { readFeatureState } from './features-store.js';
+import type { FeatureQuery } from '../ports/workflow.js';
 import { createDiscoveryArtifacts, enforceDiscoveryBudget } from './discovery-artifacts.js';
 import type { DiscoveryArtifact } from '../ports/discovery.js';
 import { createDiscoveryMetadata } from './discovery-metadata.js';
@@ -74,12 +77,13 @@ export class SQLiteStore {
     try {
       if (!existed) initializeSchema(database, options.identity!);
       const version = Number(database.pragma('user_version', { simple: true }));
-      if (version !== SCHEMA_VERSION && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(Number(version)))) throw new Error('STATE_INCOMPATIBLE');
-      if (version === 4) {
+      if (![4, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(Number(version)))) throw new Error('STATE_INCOMPATIBLE');
+      if (version >= 4) {
         for (const name of DISCOVERY_TABLES) {
           if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
         }
       }
+      if (version === 5) for (const name of FEATURE_TABLES) if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
       this.archiveVersion = version;
       if (database.pragma('quick_check', { simple: true }) !== 'ok' || (database.pragma('foreign_key_check') as unknown[]).length !== 0) throw new Error('STATE_CORRUPT');
       const store = database.prepare('SELECT * FROM store WHERE singleton=1').get() as Row | undefined;
@@ -162,6 +166,7 @@ export class SQLiteStore {
       }, drafts);
     } });
   }
+  readFeatureState(query: FeatureQuery) { if (!this.database) throw new Error('STATE_ABSENT'); return readFeatureState(this.database, query); }
   readDiscoveryMetadata<Q extends DiscoveryMetadataQuery>(query: Q) { return this.discoveryMetadata().read(query); }
   commitDiscoveryMetadata(change: DiscoveryMetadataChange) { this.writable(); return this.discoveryMetadata().commit(change); }
   private discoveryLedger() {
@@ -176,7 +181,7 @@ export class SQLiteStore {
   }
   admitDiscoveryOperation(input: DiscoveryAdmission) { this.writable(); return this.discoveryLedger().admit(input); }
   getDiscoveryRunOwner(runId: string): string | null {
-    requireUuid(runId); if (!this.database || this.archiveVersion !== 4) throw new Error('DISCOVERY_NOT_INITIALIZED');
+    requireUuid(runId); if (!this.database || this.archiveVersion < 4) throw new Error('DISCOVERY_NOT_INITIALIZED');
     const row = this.database.prepare('SELECT o.owning_instance_id FROM discovery_runs r JOIN discovery_operations o ON o.request_id=r.request_id WHERE r.run_id=?').get(runId) as Row | undefined;
     return row ? String(row.owning_instance_id) : null;
   }

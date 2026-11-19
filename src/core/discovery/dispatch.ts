@@ -16,7 +16,7 @@ export function createDiscoveryDispatch(options: { storage: Pick<StoragePort, 'r
     const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
     try {
       if (peer.role !== 'client') throw new Error('UNAUTHORIZED');
-      if (snapshot.store.schemaVersion !== 4) throw new Error('DISCOVERY_NOT_INITIALIZED');
+      if (snapshot.store.schemaVersion < 4) throw new Error('DISCOVERY_NOT_INITIALIZED');
       if (!(options.operations ? DISCOVERY_LIVE_METHODS : DISCOVERY_METHODS).includes(request.method)) throw new Error('UNSUPPORTED_VERSION');
       validateDiscoveryParams(request.method, request.params);
       let data: Record<string, unknown>;

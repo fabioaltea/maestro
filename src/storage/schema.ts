@@ -1,9 +1,11 @@
 import type Database from 'better-sqlite3';
 import type { StoreIdentity } from '../ports/storage.js';
+import { WORKFLOW_SCHEMA_SQL } from './workflow-schema.js';
+import { FEATURES_SCHEMA_SQL } from './features-schema.js';
 import { DISCOVERY_SCHEMA_SQL } from './discovery-schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 export const REGISTRY_SCHEMA_VERSION = 3;
 export const STORE_SCHEMA_V3_SQL = `
 CREATE TABLE store (
@@ -99,7 +101,7 @@ CREATE TRIGGER retained_projects BEFORE DELETE ON projects
 BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 `;
 export const REGISTRY_SCHEMA_SQL = REGISTRY_SCHEMA_V3_SQL;
-export const SCHEMA_SQL = `${STORE_SCHEMA_SQL}
+export const SCHEMA_SQL = `${STORE_SCHEMA_SQL.replace('CHECK(schema_version = 4)', 'CHECK(schema_version = 5)')}
 CREATE TABLE instances (
   instance_id TEXT PRIMARY KEY,
   pid INTEGER NOT NULL CHECK(pid > 0),
@@ -173,7 +175,9 @@ CREATE TABLE journal_metadata (
 INSERT INTO journal_metadata(singleton) VALUES(1);
 CREATE INDEX resources_by_instance ON managed_resources(owning_instance_id, release_state);
 ${REGISTRY_SCHEMA_SQL}
-${DISCOVERY_SCHEMA_SQL}`;
+${DISCOVERY_SCHEMA_SQL}
+${WORKFLOW_SCHEMA_SQL}
+${FEATURES_SCHEMA_SQL}`;
 
 export function initializeSchema(database: Database.Database, identity: StoreIdentity): void {
   requireUuid(identity.storeId);

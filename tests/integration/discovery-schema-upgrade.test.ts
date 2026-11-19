@@ -31,11 +31,11 @@ async function fixture(t: Parameters<typeof createTestContext>[0], version = 3) 
   t.after(() => { daemon.handle.release(); control.handle.release(); });
   return { context, archive, options: { paths, controlLease: control.handle, daemonLease: daemon.handle, deadline: makeDeadline(systemClock, 3000) } };
 }
-test('fresh schema4 adds Discovery and leaves managed_resources scoped only to Foundation', () => {
-  assert.equal(SCHEMA_VERSION, 4);
+test('fresh current schema retains Discovery and leaves managed_resources scoped only to Foundation', () => {
+  assert.equal(SCHEMA_VERSION, 5);
   const database = new Database(':memory:');
   try {
-    initializeSchema(database, { storeId: randomUUID(), ownerUid: process.getuid!(), canonicalPath: '/fixture', schemaVersion: 4, revision: '0' });
+    initializeSchema(database, { storeId: randomUUID(), ownerUid: process.getuid!(), canonicalPath: '/fixture', schemaVersion: SCHEMA_VERSION, revision: '0' });
     for (const table of ['discoveries', 'discovery_provider', 'discovery_snapshots', 'discovery_slot', 'discovery_runs', 'discovery_processes', 'discovery_operations', 'discovery_grants', 'discovery_questions', 'discovery_answers', 'discovery_revisions', 'discovery_approvals', 'discovery_output', 'discovery_artifacts', 'discovery_budget']) {
       assert.ok(database.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table), table);
     }

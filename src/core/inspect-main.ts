@@ -181,7 +181,7 @@ export async function inspectDiscovery(directory: string, method: string, params
     validateDiscoveryParams(method, params);
     const paths = await createPlatformPaths().resolveArchive(directory, 'read'); if (!paths) throw new Error('STATE_ABSENT');
     storage = await openStorage({ path: paths.stateFile, readonly: true }); snapshot = await storage.readSnapshot(); if (!snapshot) throw new Error('STATE_ABSENT');
-    if (snapshot.store.schemaVersion !== 4) throw new Error('DISCOVERY_NOT_INITIALIZED');
+    if (snapshot.store.schemaVersion < 4) throw new Error('DISCOVERY_NOT_INITIALIZED');
     const data = await createDiscoveryReader({ storage, storeId: snapshot.store.storeId, offline: true })(method, params);
     const operation = data.operation as { outcome?: string; error?: PublicResult['error'] } | undefined;
     const result: PublicResult['result'] = operation?.outcome === 'IN_PROGRESS' ? 'BUSY' : operation?.outcome === 'UNKNOWN' ? 'UNKNOWN_OUTCOME' : operation?.outcome === 'BLOCKED' ? 'BLOCKED' : operation?.outcome === 'FAILED' || operation?.outcome === 'INTERRUPTED' ? 'ERROR' : 'OK';

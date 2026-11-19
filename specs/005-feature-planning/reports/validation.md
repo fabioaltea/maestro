@@ -29,3 +29,7 @@ Grant action/store/revision binding, expiry/clock rollback, replay-only consumpt
 ## T006 — RED schema and UUID guards
 
 Frozen schema4 fixture captured from004 before changing current schema. Tests cover read-only immutability, explicit4→5, fault pre/post commit, integrity/FK/store identity and UUID collision against lifecycle/project/Discovery in both directions. Compilation is RED for the absent features-upgrade module and the previously pending state/authorization modules.
+
+## T007 — schema5 and historical paths
+
+Explicit start migration4→5, fresh schema5, strict tables/FK, cross-ledger guards and read metadata added on the existing writer/reader. Frozen2→3/3→4 SQL unchanged; Discovery accepts4/5 without losing historical upgrade semantics. Updated the current-schema assertion in the Discovery test to5 while keeping historical4 outcomes exact. Added pure grant/lifecycle models required by T005. Build:test and lint PASS; feature-state/schema plus Discovery historical upgrade14/14PASS, including pre/post-commit faults. No public feature capability yet.
