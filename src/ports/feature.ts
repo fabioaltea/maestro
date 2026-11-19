@@ -12,6 +12,17 @@ export type FeaturePlanningResult = { readonly kind: 'DRAFT'; readonly bundle: F
   | { readonly kind: 'QUESTIONS'; readonly questions: readonly PlanningQuestion[] };
 export interface FeatureProvenanceScope { readonly sourceIds: readonly string[]; readonly answerIds: readonly string[] }
 
+export interface FeaturePlanningIdentity {
+ readonly runId:string;readonly generation:string;readonly owningInstanceId:string;
+}
+/** The trusted host port emits this only after authenticating and observing both exits. */
+export interface FeaturePlanningExit extends FeaturePlanningIdentity {
+ readonly hostExited:true;readonly providerExited:true;
+}
+export interface FeaturePlanningAnswer {
+ readonly answerId:string;readonly questionId:string;readonly text:string;
+}
+
 export const UNAVAILABLE_FEATURE_PLANNING_CAPABILITIES = Object.freeze({ readonlyPlanning: false, qualified: false });
 
 /** Produced only by an authoritative core revalidation, never accepted from a public DTO. */

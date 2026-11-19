@@ -1,14 +1,8 @@
-import { featureFields, featureIdentifier, featureObject, featureText, validateFeatureBundle } from '../../domain/features/bundle.js';
-import type { FeaturePlanningResult, FeatureProvenanceScope, PlanningQuestion } from '../../ports/feature.js';
+import {validatePlanningResult} from '../../domain/features/planning.js';
+import type {FeaturePlanningResult,FeatureProvenanceScope} from '../../ports/feature.js';
+
 /** Data decoder availability never certifies the provider's runtime/authentication. */
-export { UNAVAILABLE_FEATURE_PLANNING_CAPABILITIES as FEATURE_PLANNING_CAPABILITIES } from '../../ports/feature.js';
-export function parseFeaturePlanningResult(value: unknown, scope: FeatureProvenanceScope = { sourceIds: [], answerIds: [] }): FeaturePlanningResult {
-  const p = featureObject(value);
-  if (p.kind === 'DRAFT') { featureFields(p, ['kind','bundle']); return { kind: 'DRAFT', bundle: validateFeatureBundle(p.bundle, scope) }; }
-  featureFields(p, ['kind','questions']);
-  if (p.kind !== 'QUESTIONS' || !Array.isArray(p.questions) || !p.questions.length || p.questions.length > 20) throw new Error('PROVIDER_PROTOCOL_ERROR');
-  const questions: PlanningQuestion[] = p.questions.map(raw => { const q = featureObject(raw); featureFields(q, ['questionId','text','reason']);
-    return { questionId: featureIdentifier(q.questionId), text: featureText(q.text, 4096, true), reason: featureText(q.reason, 4096, true) }; });
-  if (new Set(questions.map(q => q.questionId)).size !== questions.length || new TextEncoder().encode(JSON.stringify(questions)).length > 256 * 1024) throw new Error('PROVIDER_PROTOCOL_ERROR');
-  return { kind: 'QUESTIONS', questions };
+export {UNAVAILABLE_FEATURE_PLANNING_CAPABILITIES as FEATURE_PLANNING_CAPABILITIES} from '../../ports/feature.js';
+export function parseFeaturePlanningResult(value:unknown,scope:FeatureProvenanceScope={sourceIds:[],answerIds:[]}):FeaturePlanningResult {
+  return validatePlanningResult(value,scope);
 }

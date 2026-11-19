@@ -123,3 +123,7 @@ Due casi di contratto verificano prepare con snapshot e artefatto risposta, rifi
 ### T029 — scenari assistiti con fixture (RED)
 
 Tre integrazioni locali coprono due turni espliciti con provenance, grant di altro ambito, reply loss/fault al confine writer, retry originale e cancel con risultato tardivo. Build:test PASS e 3/3 RED in prepare, in attesa di DTO e servizio.
+
+### T030 — modello neutro del turno e prova di uscita
+
+Limiti, riferimenti risposta, identity, transizioni osservabili, fencing di stato/generazione e validazione risultato condivisa tra dominio e decoder Codex. Build:test PASS, prove unitarie e boundary 5 PASS, 1 SKIP perché G0 esplicito fuori da questa invocazione.
