@@ -1,7 +1,7 @@
 # Tasks: Owned Git Workspaces
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [contracts/policy.md](contracts/policy.md), [quickstart.md](quickstart.md).
-**Branch**: `006-git-workspaces` · **Date**: 2026-11-19 · **Stato**: implementazione locale autorizzata il 19 novembre 2026. Evidenze in reports/.
+**Branch**: `006-git-workspaces` · **Date**: 2026-11-19 · **Stato**: T001–T036 completati localmente. Readiness globale BLOCKED per i gate ereditati. Evidenze in reports/.
 
 **Tests**: richiesti esplicitamente dalla specifica per invarianti costituzionali. Scrivere i casi prima dell’implementazione pertinente; provider/clock/risorse sostituibili, integrazioni locali senza account. Ogni task concluso richiede un commit locale con ID ed evidenza; nessun push implicito.
 
@@ -87,7 +87,7 @@
 
 - [x] T034 Eseguire build/typecheck/lint e suite mirate core/desktop per i file modificati, aggiornando `specs/006-git-workspaces/reports/validation.md` con matrice FR/SC, comandi/esiti e limiti; non rilanciare acceptance/bench lunghi né promuovere skip a PASS.
 - [x] T035 Verificare le tre storie di `specs/006-git-workspaces/quickstart.md` e i cap del piano; registrare in `specs/006-git-workspaces/reports/qualification.md` prove reali solo se autorizzate e capability effettive, altrimenti NOT_RUN/BLOCKED. Preservare separati gli esiti fixture, provider/login/hosting reali e review umana.
-- [ ] T036 Concludere review degli otto principi, permessi e gate precedenti in `specs/006-git-workspaces/reports/release-readiness.md`, aggiornando `specs/006-git-workspaces/tasks.md` solo per lavoro provato; annotare dipendenze ancora bloccate e nessuna integrazione/pubblicazione implicita.
+- [x] T036 Concludere review degli otto principi, permessi e gate precedenti in `specs/006-git-workspaces/reports/release-readiness.md`, aggiornando `specs/006-git-workspaces/tasks.md` solo per lavoro provato; annotare dipendenze ancora bloccate e nessuna integrazione/pubblicazione implicita.
 
 ## Dependencies & Execution Order
 

@@ -98,3 +98,5 @@ indisponibile in produzione. Readiness globale BLOCKED. Consultare reports/valid
 reports/qualification.md e reports/release-readiness.md. Constitution e gate001–004 vigenti.
 Baseline005: 576PASS/1FAIL/6SKIP, UPDATE replay revision61 vs60; isolatoPASS, causa aperta.
 Nessun nuovo pin/package. Un commit per task; preservare apps/desktop/package-lock.json non tracciato.
+
+006-git-workspaces-implementation completata localmente il 2026-11-19 da base005 bfeb84f. Schema6, tre storie su Git Xcode pin, CLI/desktop, refresh, lease interni, cleanup CAS e recovery verificati su fixture. T001–T036 chiusi; 50 PASS core mirati, 48 unit/contract desktop, 13 regressioni desktop e 1 E2E mirato. Worktree e branch conservati negli effetti incerti. Readiness globale BLOCKED per gate001–005. Consultare specs/006-git-workspaces/reports/.
