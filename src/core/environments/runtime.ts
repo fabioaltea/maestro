@@ -1,3 +1,5 @@
+import {createEnvironmentInspector} from '../../platform/macos/environment/inspect.js';
+import {createEnvironmentPlanning,type EnvironmentPlanningOptions} from './plan.js';
 import type {StoragePort} from '../../ports/storage.js';
 import type {Deadline} from '../../ports/clock.js';
 import {ENVIRONMENT_READ_METHODS} from '../../protocol/environment.js';
@@ -11,6 +13,10 @@ export interface EnvironmentRuntimeServices {
  readonly actions:Readonly<Record<string,EnvironmentRpcAction>>;
  recover?():Promise<void>;
  stop?():void;
+}
+
+export function nativeEnvironmentServices(options:Omit<EnvironmentPlanningOptions,keyof EnvironmentRuntimeContext|'inspector'>){
+ return (context:EnvironmentRuntimeContext)=>createEnvironmentPlanning({...options,...context,inspector:createEnvironmentInspector()});
 }
 
 export function createEnvironmentRuntime(options:{storage:StoragePort;instanceId:string;

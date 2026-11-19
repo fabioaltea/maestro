@@ -13,6 +13,7 @@ export interface EnvironmentInstallScope {
  readonly workspace:FilesystemAnchor;readonly store:FilesystemAnchor;readonly scratch:FilesystemAnchor;
  readonly registryOrigin:string|null;
  readonly manifestDigest:string;readonly lockDigest:string;
+ readonly selectedVersion?:string;
 }
 export interface EnvironmentInstallResult{
  readonly outcome:'SUCCEEDED'|'FAILED'|'CANCELLED'|'RECONCILING';
@@ -22,6 +23,7 @@ export interface EnvironmentInstallResult{
  readonly bytes:number;
 }
 export interface EnvironmentInstallPort {
+ configuredPin():Promise<EnvironmentManagerPin>;
  qualification():Promise<EnvironmentManagerPin>;
  install(scope:EnvironmentInstallScope,deadline:Deadline,signal?:AbortSignal):Promise<EnvironmentInstallResult>;
 }
@@ -85,6 +87,7 @@ export interface EnvironmentStoragePort {
 
 export type EnvironmentChange=
  |{readonly kind:'plan-admit';readonly admission:WorkflowAdmission}
+ |{readonly kind:'attest';readonly admission:WorkflowAdmission;readonly observedInputDigest:string;readonly checkedAt:string}
  |{readonly kind:'plan-finish';readonly instanceId:string;readonly requestId:string;
    readonly fence:WorkspaceFence;readonly plan:EnvironmentPlan}
  |{readonly kind:'plan-block';readonly instanceId:string;readonly requestId:string;readonly error:string;readonly interrupted?:boolean};

@@ -59,3 +59,7 @@ Due RED per piano da input statici, replay e attestation stale su worktree reale
 ## T016 — piano statico e fence d’attestazione
 
 Il dominio riconosce il pin e il formato lock, distingue piano qualificabile e MANUAL_REQUIRED e conserva solo i nomi degli script. Regole esplicite per config eseguibile, fonti non dichiarate e digest, generazione e revisione dell’attestazione. Build:test e **2 PASS** mirati.
+
+## T017 — piano e attestazione
+
+Lettura bounded di dati statici su worktree con proprietà verificata. Il pin viene verificato dai file e la pianificazione non lancia pnpm. Il consenso attesta solo input e revisione correnti. Test pnpm PLANNED, npm manuale e replay attestazione PASS. Build, build:test e lint PASS.

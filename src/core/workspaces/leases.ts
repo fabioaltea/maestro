@@ -61,7 +61,11 @@ export function createWorkspaceLeases(options:LeaseOptions){
      },
    };
  }
- return{forConsumer,async recover(){
+ return{forConsumer,async owned(workspace:WorkspaceRecord){
+   const snapshot=await storage.readSnapshot();
+   if(!snapshot||snapshot.instance?.instanceId!==instanceId)throw new Error('STALE_TARGET');
+   return verifyOwnedWorktree(options,snapshot.store.storeId,workspace);
+ },async recover(){
    const {leases}=await storage.readWorkspaceState!({kind:'interrupted-leases'});
    for(const lease of leases??[])if(lease.instanceId!==instanceId)await storage.commitWorkspaceLease!({kind:'owner-lost',lease,instanceId});
  }};

@@ -43,7 +43,10 @@ export function validateEnvironmentParams(method:string,value:unknown){
  switch(method){
    case 'environment.prepare':case 'environment.attest':case 'environment.cancel':case 'environment.validate':
      featureFields(p,['requestId','grantId']);break;
-   case 'environment.plan':featureFields(p,['requestId','workspaceId','expectedStateRevision']);break;
+   case 'environment.plan':
+     featureFields(p,['requestId','workspaceId','expectedStateRevision'],['managerVersion']);
+     if(p.managerVersion!==undefined&&!/^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}$/.test(featureText(p.managerVersion,14,true)))throw new Error('INVALID_REQUEST');
+     break;
    case 'environment.reconcile':featureFields(p,['requestId','jobId','expectedStateRevision']);break;
    case 'environment.get':featureFields(p,['workspaceId']);break;
    case 'environment.operation.get':featureFields(p,['requestId']);break;

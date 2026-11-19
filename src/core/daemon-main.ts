@@ -1,4 +1,4 @@
-import {createEnvironmentRuntime} from './environments/runtime.js';
+import {createEnvironmentRuntime,nativeEnvironmentServices} from './environments/runtime.js';
 import {createWorkspaceRuntime,nativeWorkspaceServices} from './workspaces/runtime.js';
 import {createFeatureRuntime} from './features/runtime.js';
 import { createDiscoveryRuntime } from './discovery/runtime.js';
@@ -94,7 +94,10 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       storage,paths,instanceId:intent.instanceId,currentEligibility:(peer,projectId)=>discovery!.operations.currentEligibility(peer,projectId),
       ...(dependencies.workspaceFiles?{files:dependencies.workspaceFiles}:{}),
     }));
-    environments=createEnvironmentRuntime({storage,instanceId:intent.instanceId,...(dependencies.environments?{compose:dependencies.environments}:{})});
+    const environmentCompose=dependencies.environments??(workspaces.leases?nativeEnvironmentServices({
+      storage,instanceId:intent.instanceId,paths,owned:workspaces.leases.owned,
+    }):undefined);
+    environments=createEnvironmentRuntime({storage,instanceId:intent.instanceId,...(environmentCompose?{compose:environmentCompose}:{})});
     const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=7?{environmentVersion:1,environmentMethods:environments.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });

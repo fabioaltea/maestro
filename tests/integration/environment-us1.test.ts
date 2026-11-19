@@ -7,9 +7,9 @@ import {workspaceRuntimeFixture} from '../fixtures/workspace-runtime.js';
 import {verifyOwnedWorktree} from '../../src/core/workspaces/leases.js';
 import {createEnvironmentRuntime} from '../../src/core/environments/runtime.js';
 
-const planModule='../../src/core/environments/plan.js',inspectModule='../../src/platform/macos/environment/inspect.js';
+import {createEnvironmentPlanning} from '../../src/core/environments/plan.js';
+import {createEnvironmentInspector} from '../../src/platform/macos/environment/inspect.js';
 async function fixture(t:Parameters<typeof workspaceRuntimeFixture>[0]){
- const {createEnvironmentPlanning}=await import(planModule),{createEnvironmentInspector}=await import(inspectModule);
  const f=await workspaceRuntimeFixture(t),created=await f.prepare(),workspaceId=created.data.summary.workspaceId;
  assert.equal((await f.submit(created.data.grantId)).operation?.outcome,'SUCCEEDED');
  const workspace=f.store.readWorkspaceState({kind:'get',id:workspaceId}).workspace!,path=workspace.ownership!.root.canonicalPath;
@@ -55,4 +55,16 @@ test('ambiguous configuration is manual and stale attestation cannot be consumed
  const stale=await f.send('environment.attest',{requestId:randomUUID(),grantId:(prepared.data as {grantId:string}).grantId});
  assert.equal((stale.data as {code:string}).code,'ENVIRONMENT_STALE');
  assert.equal(f.store.readEnvironmentState({kind:'workspace',id:f.workspaceId}).environment?.state,'MANUAL_REQUIRED');
+ const updated=await f.plan(),newPlan=f.store.readEnvironmentState({kind:'plan',id:updated.state!.currentPlanId!}).plan!;
+ const current=await f.send('environment.prepare',{...approval,intent:{...approval.intent,inputDigest:newPlan.inputDigest},
+   expectedRevisions:{stateRevision:updated.state!.stateRevision}});
+ assert.equal(current.result,'OK',JSON.stringify(current));
+ const manual={requestId:randomUUID(),grantId:(current.data as {grantId:string}).grantId};
+ assert.equal((await f.send('environment.attest',manual)).result,'OK');
+ const result=await f.send('environment.get',{workspaceId:f.workspaceId});
+ assert.equal((result.data as {qualificationKind:string}).qualificationKind,'MANUAL');
+ assert.equal(f.store.readEnvironmentState({kind:'workspace',id:f.workspaceId}).environment?.state,'MANUAL_VERIFIED');
+ const revision=f.store.readSnapshot()?.store.revision;
+ assert.equal((await f.send('environment.attest',manual)).result,'OK');
+ assert.equal(f.store.readSnapshot()?.store.revision,revision);
 });

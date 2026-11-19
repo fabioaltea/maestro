@@ -37,7 +37,7 @@ async function anchor(expected:FilesystemAnchor,privateDirectory:boolean){
    filesystem.compare(expected,await filesystem.capture(expected.canonicalPath,'directory'))!=='VERIFIED')throw new Error('OWNERSHIP_UNPROVEN');
 }
 
-async function stableFile(path:string,maximum:number){
+export async function stableEnvironmentFile(path:string,maximum:number){
  const file=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
  try{
    const before=await file.stat({bigint:true});
@@ -74,7 +74,7 @@ async function pinDistribution(){
      const path=join(directory,item.name);
      if(item.isDirectory()){await walk(path,depth+1);continue;}
      if(!item.isFile()||entries.length>=1024||!item.name.isWellFormed())throw new Error('MANAGER_MISMATCH');
-     const bytes=await stableFile(path,16*1024*1024);
+     const bytes=await stableEnvironmentFile(path,16*1024*1024);
      totalBytes+=bytes.length;
      if(totalBytes>32*1024*1024)throw new Error('MANAGER_MISMATCH');
      entries.push({name:relative(distribution,path),hash:digest(bytes)});
@@ -132,9 +132,10 @@ async function verifyInputs(scope:EnvironmentInstallScope){
  const modules=join(workspace,'node_modules'),moduleInfo=await optionalInfo(modules);
  if(moduleInfo&&(!moduleInfo.isDirectory()||moduleInfo.uid!==BigInt(process.getuid!())))throw new Error('OWNERSHIP_UNPROVEN');
  for(const name of configFiles)if(await optionalInfo(join(workspace,name)))throw new Error('CONFIG_UNSAFE');
- const [manifest,lock]=await Promise.all([stableFile(join(workspace,'package.json'),1024*1024),stableFile(join(workspace,'pnpm-lock.yaml'),1024*1024)]);
+ const [manifest,lock]=await Promise.all([stableEnvironmentFile(join(workspace,'package.json'),1024*1024),stableEnvironmentFile(join(workspace,'pnpm-lock.yaml'),1024*1024)]);
  if(digest(manifest)!==scope.manifestDigest||digest(lock)!==scope.lockDigest)throw new Error('ENVIRONMENT_STALE');
- if(JSON.parse(manifest.toString('utf8')).packageManager!==`pnpm@${pnpmVersion}`)throw new Error('MANAGER_MISMATCH');
+ const declared=JSON.parse(manifest.toString('utf8')).packageManager;
+ if(declared!==`pnpm@${pnpmVersion}`&&(declared!==undefined||scope.selectedVersion!==pnpmVersion))throw new Error('MANAGER_MISMATCH');
  const remote=registry(scope.registryOrigin);
  for(const url of lock.toString('utf8').match(/https?:\/\/[^\s,}'"]+/g)??[]){
    if(!remote||new URL(url).origin!==remote.origin)throw new Error('CONFIG_UNSAFE');
@@ -143,6 +144,8 @@ async function verifyInputs(scope:EnvironmentInstallScope){
 }
 
 export function createPnpmEnvironment():EnvironmentInstallPort{
+ const pin:EnvironmentManagerPin={manager:'pnpm',version:pnpmVersion,nodeVersion,entryDigest,distributionDigest,nodeDigest,profileDigest,
+   descendants:'DENIED',importMethod:'clone-or-copy'};
  async function selected(){
    if(process.platform!=='darwin'||process.arch!=='arm64'||process.versions.node!==nodeVersion)throw new Error('MANAGER_UNSUPPORTED');
    try{
@@ -162,10 +165,9 @@ export function createPnpmEnvironment():EnvironmentInstallPort{
    const probe="const r=require('node:child_process').spawnSync(process.execPath,['--version']); if (!r.error || !['EPERM','EACCES'].includes(r.error.code)) process.exitCode=1";
    const child=await run([...args,'-e',probe],'/',empty,deadline);
    if(child.code!==0||child.stderr)throw new Error('MANAGER_UNSUPPORTED');
-   return{manager:'pnpm',version:pnpmVersion,nodeVersion,entryDigest,distributionDigest,nodeDigest,profileDigest,
-     descendants:'DENIED',importMethod:'clone-or-copy'};
+   return pin;
  }
- return{qualification,async install(scope,deadline,signal){
+ return{async configuredPin(){await selected();return pin;},qualification,async install(scope,deadline,signal){
    if(signal?.aborted)return{outcome:'CANCELLED',exitVerified:true,exitCode:null,error:'CANCELLED',bytes:0};
    const paths=await verifyInputs(scope),node=await selected();
    for(const root of [paths.workspace,paths.store]){

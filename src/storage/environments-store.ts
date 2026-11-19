@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {requireCurrentEnvironmentPlan} from '../domain/environments/plan.js';
 import {transitionEnvironment} from '../domain/environments/state.js';
 import {requireWorkspaceFence,nextWorkspaceRevision} from '../domain/workspaces/model.js';
 import {foundationError,type ErrorCode} from '../domain/errors.js';
@@ -108,6 +109,7 @@ export function commitEnvironmentState(db:Database.Database,change:EnvironmentCh
        .get(workspace.workspaceId,admission.requestId))throw new Error('BUSY');
    });
  }
+ if(change.kind==='attest')return attest(db,change,ledger,verifyArtifact);
  return ledger.transaction(()=>{
    const operation=readFeatureState(db,{kind:'operation',id:change.requestId}).operation;
    if(!operation||operation.namespace!=='ENVIRONMENT'||operation.action!=='plan')throw new Error('OPERATION_NOT_FOUND');
@@ -155,4 +157,33 @@ export function commitEnvironmentState(db:Database.Database,change:EnvironmentCh
    const result={environmentId,planId:value.planId,workspaceId:id,stateRevision};
    return{operation:ledger.complete(change.requestId,result),plan:value,environment:readEnvironmentState(db,{kind:'environment',id:environmentId}).environment!};
  },true,{requestIds:[change.requestId]});
+}
+
+function attest(db:Database.Database,change:Extract<EnvironmentChange,{kind:'attest'}>,ledger:FeatureLedger,verifyArtifact:(id:string)=>void):EnvironmentWrite{
+ const {admission}=change,intent=ledger.intent(admission.canonicalIntent);
+ if(intent.namespace!=='ENVIRONMENT'||intent.action!=='attest')throw new Error('APPROVAL_REQUIRED');
+ const workspaceId=requireUuid(intent.targetId);
+ const admitted=ledger.admit(admission,()=>{
+   environmentInstance(db,admission.instanceId,'RUNNING');
+   const workspace=planWorkspace(db,{...intent,expectedRevision:String(intent.payload.workspaceRevision)});
+   const {environment}=readEnvironmentState(db,{kind:'workspace',id:workspaceId});
+   if(!environment?.currentPlanId||environment.state!=='MANUAL_REQUIRED')throw new Error('ENVIRONMENT_STALE');
+   const {plan}=readEnvironmentState(db,{kind:'plan',id:environment.currentPlanId});
+   if(!plan||change.observedInputDigest!==plan.inputDigest)throw new Error('ENVIRONMENT_STALE');
+   verifyArtifact(plan.artifactId);
+   requireCurrentEnvironmentPlan({planId:plan.planId,workspaceGeneration:workspace.ownerGeneration,stateRevision:environment.stateRevision,inputDigest:plan.inputDigest},
+     {planId:String(intent.payload.planId),workspaceGeneration:String(intent.payload.workspaceGeneration),
+       stateRevision:String(intent.expectedRevision),inputDigest:String(intent.payload.inputDigest)});
+   const {limitations}=intent.payload;
+   if(!Array.isArray(limitations)||limitations.length<1||limitations.length>8||limitations.some(v=>typeof v!=='string'||Buffer.byteLength(v)>256||!v.trim())||
+     !Number.isFinite(Date.parse(change.checkedAt)))throw new Error('INVALID_REQUEST');
+   const attestationId=admission.requestId,stateRevision=nextWorkspaceRevision(environment.stateRevision);
+   db.prepare(`INSERT INTO environments_attestations(attestation_id,environment_id,plan_id,request_id,input_digest,limitations,owner_uid,created_at)
+     VALUES(?,?,?,?,?,?,?,?)`).run(attestationId,environment.environmentId,plan.planId,admission.requestId,plan.inputDigest,JSON.stringify(limitations),intent.ownerUid,change.checkedAt);
+   db.prepare("UPDATE environments_records SET state=?,state_revision=?,attestation_id=?,safe_error=NULL,checked_at=?,updated_at=? WHERE environment_id=? AND state_revision=?")
+     .run(transitionEnvironment(environment.state,'attest'),BigInt(stateRevision),attestationId,change.checkedAt,change.checkedAt,
+       environment.environmentId,BigInt(environment.stateRevision));
+   ledger.complete(admission.requestId,{workspaceId,environmentId:environment.environmentId,planId:plan.planId,attestationId,stateRevision});
+ });
+ return admitted;
 }
