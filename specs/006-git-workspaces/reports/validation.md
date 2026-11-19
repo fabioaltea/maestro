@@ -79,3 +79,7 @@ L’handoff approvato apre il progetto nella sezione Workspace. Conferma con ref
 ## T020 — proprietà e prova di rilascio (RED)
 
 Due unit test per anchor spostati/sostituiti, HEAD avanzato, scope della lease e prova di uscita o checkpoint riferita alla generazione.
+
+## T021 — superficie di refresh
+
+Il contratto rifiuta capability assente e input con grant, holder, generazione, PID o revisione non permessi. Il lease resta un’operazione interna.
