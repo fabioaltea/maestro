@@ -83,3 +83,7 @@ Due unit test per anchor spostati/sostituiti, HEAD avanzato, scope della lease e
 ## T021 — superficie di refresh
 
 Il contratto rifiuta capability assente e input con grant, holder, generazione, PID o revisione non permessi. Il lease resta un’operazione interna.
+
+## T022 — lease e refresh locale (RED)
+
+Fixture Git con due holder concorrenti, prova di uscita legata alla generazione, refresh datato, replay UUID e spostamento reale del worktree senza perdita dei file. I fault della primitiva Git restano coperti da T002–T004 e T017.
