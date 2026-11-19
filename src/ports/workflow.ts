@@ -9,7 +9,7 @@ export type FeatureQuery={readonly kind:'feature'|'revision'|'approval'|'envelop
 export interface FeatureRead {
  readonly feature?:FeatureRecord|null;readonly revision?:FeatureRevision|null;readonly approval?:FeatureApproval|null;readonly envelope?:ImplementationEnvelope|null;
  readonly operation?:WorkflowOperationRecord|null;readonly grant?:WorkflowGrant|null;readonly artifact?:WorkflowArtifact|null;
- readonly items?:readonly unknown[];readonly nextOffset?:number|null;readonly turn?:Readonly<Record<string,unknown>>|null;
+ readonly items?:readonly unknown[];readonly nextOffset?:number|null;readonly pageRevision?:string;readonly turn?:Readonly<Record<string,unknown>>|null;
  readonly budget?:{readonly allocatedBytes:number;readonly reservedBytes:number;readonly allocatedFiles:number;readonly openUploads:number;readonly metadataBytes:number};
 }
 export interface WorkflowAdmission {readonly requestId:string;readonly canonicalIntent:string;readonly grantId:string|null;readonly instanceId:string;readonly nowMs:number}

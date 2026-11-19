@@ -180,7 +180,7 @@ export class SQLiteStore {
   commitFeatureState(change: WorkflowChange) { this.writable(); return this.workflowStore().commit(change); }
   readWorkflowArtifact(id: string, offset: number, maximum: number) { return this.workflowArtifacts().read(id, offset, maximum); }
   reconcileWorkflowArtifacts() { const db = this.writable(); return this.mutate(() => { this.workflowArtifacts().reconcile(); }, []); }
-  readFeatureState(query: FeatureQuery) { if (!this.database) throw new Error('STATE_ABSENT'); return readFeatureState(this.database, query); }
+  readFeatureState(query: FeatureQuery) { if (!this.database) throw new Error('STATE_ABSENT'); return this.database.transaction(() => readFeatureState(this.database!, query)).deferred(); }
   readDiscoveryMetadata<Q extends DiscoveryMetadataQuery>(query: Q) { return this.discoveryMetadata().read(query); }
   commitDiscoveryMetadata(change: DiscoveryMetadataChange) { this.writable(); return this.discoveryMetadata().commit(change); }
   private discoveryLedger() {

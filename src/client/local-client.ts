@@ -1,3 +1,5 @@
+import { FEATURE_READ_METHODS, FEATURE_ADMISSION_METHODS,validateFeatureParams,validateFeatureAdmission,decodeFeatureOperationView,requireFeatureEnvelope } from '../protocol/feature.js';
+import {canonicalWorkflowIntent} from '../domain/workflow/authorization.js';
 import { DISCOVERY_READ_METHODS, DISCOVERY_ADMISSION_METHODS, validateDiscoveryParams, validateDiscoveryAdmission, decodeDiscoveryOperationView, requireDiscoveryEnvelope } from '../protocol/discovery.js';
 import { canonicalDiscoveryIntent } from '../domain/discovery/intent.js';
 import { randomUUID } from 'node:crypto';
@@ -18,6 +20,67 @@ export interface CommandOptions {
 
 export class LocalClient {
   constructor(private readonly backend: ClientBackend) {}
+  async runFeature(method: string, params: Readonly<Record<string, unknown>>, options: CommandOptions = {}): Promise<PublicResult> {
+    const directory = options.stateDirectory ?? this.backend.defaultDirectory;
+    const mutation = (FEATURE_ADMISSION_METHODS as readonly string[]).includes(method);
+    if (!mutation && !FEATURE_READ_METHODS.includes(method as typeof FEATURE_READ_METHODS[number]) && !['feature.prepare', 'feature.eligibility.get'].includes(method)) throw new Error('UNSUPPORTED_VERSION');
+    if (options.limit !== undefined || options.after !== undefined || mutation && Object.hasOwn(params, 'requestId') || !mutation && options.requestId !== undefined) throw new Error('INVALID_REQUEST');
+    const requestId = mutation ? requireUuid(options.requestId ?? randomUUID()) : method === 'feature.operation.get' ? requireUuid(params.requestId) : null;
+    const command = mutation ? { ...params, requestId } : { ...params };
+    validateFeatureParams(method, command);
+    const original = JSON.parse(JSON.stringify(command)) as Readonly<Record<string, unknown>>;
+    if (!this.backend.feature) throw new Error('UNSUPPORTED_VERSION');
+    const timeout = options.timeoutMs ?? 2000;
+    if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 2000) throw new Error('INVALID_REQUEST');
+    const expires = performance.now() + timeout;
+    const unknown = (): PublicResult => ({ protocolVersion: 1, requestId, storeId: null, instanceId: null,
+      result: 'UNKNOWN_OUTCOME', outcome: null, freshness: 'LAST_KNOWN', liveness: 'UNKNOWN', data: {},
+      error: foundationError('UNKNOWN_OUTCOME', requestId ? { operationId: requestId } : {}) });
+    function checked(response: PublicResult) {
+      requireFeatureEnvelope(response);
+      if (response.requestId !== requestId) throw new Error('INVALID_REQUEST');
+      if (response.data.operation !== undefined) {
+        const operation = decodeFeatureOperationView(response.data.operation);
+        if (operation.requestId !== requestId || operation.outcome !== 'UNKNOWN' && operation.outcome !== response.outcome) throw new Error('INVALID_REQUEST');
+        if (mutation && (operation.action !== method.split('.').at(-1) || operation.namespace !== (method.startsWith('feature.artifact.') ? 'ARTIFACT' : 'FEATURE'))) throw new Error('INVALID_REQUEST');
+      }
+      if (Object.hasOwn(response.data, 'accepted')) {
+        const { storeId: _store, observabilityDegraded: _degraded, ...admission } = response.data;
+        validateFeatureAdmission(admission); if (admission.requestId !== requestId) throw new Error('INVALID_REQUEST');
+      }
+      if (mutation && (response.result === 'OK' || response.result === 'BUSY' && response.error === null) && !Object.hasOwn(response.data, 'accepted') && response.data.operation === undefined) throw new Error('INVALID_REQUEST');
+      if (method === 'feature.prepare' && response.result === 'OK') {
+        const data = response.data;
+        requireUuid(data.grantId);
+        if (typeof data.canonicalIntent !== 'string') throw new Error('INVALID_REQUEST');
+        const prepared = JSON.parse(data.canonicalIntent) as {action:unknown;projectId:unknown;targetId:unknown;payload:Record<string,unknown>};
+        if (prepared.action !== original.action || original.projectId !== undefined && prepared.projectId !== original.projectId || original.featureId !== undefined && prepared.targetId !== original.featureId || original.bundleArtifactId !== undefined && prepared.payload.bundleArtifactId !== original.bundleArtifactId) throw new Error('INVALID_REQUEST');
+        if (typeof data.canonicalIntent !== 'string' || data.canonicalIntent !== canonicalWorkflowIntent(JSON.parse(data.canonicalIntent))
+          || !Number.isSafeInteger(data.expiresAtMs) || Number(data.expiresAtMs) <= 0 || !data.summary || typeof data.summary !== 'object' || Array.isArray(data.summary)) throw new Error('INVALID_REQUEST');
+      }
+      return response;
+    }
+    const observe = async () => {
+      if (!mutation) return checked(await this.backend.feature!(directory, method, original, Math.max(1, expires - performance.now())));
+      try {
+        const response = checked(await this.backend.feature!(directory, method, original, Math.max(1, expires - performance.now())));
+        if (response.result !== 'UNKNOWN_OUTCOME' && !['UNKNOWN_OUTCOME', 'PERSISTENCE_UNAVAILABLE', 'DEADLINE_EXCEEDED'].includes(response.error?.code ?? '')) return response;
+      } catch { /* The command may already have committed; observe only its original UUID. */ }
+      if (performance.now() < expires) {
+        try {
+          const response = checked(await this.backend.feature!(directory, 'feature.operation.get', { requestId }, Math.max(1, expires - performance.now())));
+          if (response.data.operation !== undefined) return response;
+        } catch { /* NOT_FOUND/error cannot prove non-invio. */ }
+      }
+      return unknown();
+    };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const expired = new Promise<PublicResult>(resolve => { timer = setTimeout(() => resolve(mutation ? unknown() : { protocolVersion: 1, requestId,
+      storeId: null, instanceId: null, result: 'ERROR', outcome: null, freshness: 'LAST_KNOWN', liveness: 'UNKNOWN', data: {}, error: foundationError('DEADLINE_EXCEEDED') }), timeout); });
+    try {
+      return await Promise.race([observe(), expired]);
+    } finally { clearTimeout(timer); }
+  }
   async runDiscovery(method: string, params: Readonly<Record<string, unknown>>, options: CommandOptions = {}): Promise<PublicResult> {
     const directory = options.stateDirectory ?? this.backend.defaultDirectory;
     const mutation = (DISCOVERY_ADMISSION_METHODS as readonly string[]).includes(method);

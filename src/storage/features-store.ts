@@ -30,5 +30,7 @@ export function readFeatureState(db:Database.Database,q:FeatureQuery):FeatureRea
  const [table,key,map]:[string,string,(r:FeatureRow)=>unknown]=q.kind==='features'?['features_records','project_id',featureRecord]:q.kind==='revisions'?['features_revisions','feature_id',featureRevision]:q.kind==='approvals'?['features_approvals','feature_id',featureApproval]:['features_turns','feature_id',r=>({...r,metadata:JSON.parse(s(r,'metadata'))})];
  const rows=db.prepare(`SELECT * FROM ${table} WHERE ${key}=? ORDER BY rowid LIMIT ? OFFSET ?`).all(q.id,limit+1,offset) as FeatureRow[];
  const items=rows.slice(0,limit).map(map);if(Buffer.byteLength(JSON.stringify(items))>28000)throw new Error('CONTEXT_LIMIT');
- return{items,nextOffset:rows.length>limit?offset+limit:null};
+ const revisionRow=db.prepare(q.kind==='features'?'SELECT revision FROM store WHERE singleton=1':'SELECT state_revision AS revision FROM features_records WHERE feature_id=?').get(...(q.kind==='features'?[]:[q.id])) as FeatureRow|undefined;
+ if(!revisionRow)throw new Error('FEATURE_NOT_FOUND');
+ return{items,nextOffset:rows.length>limit?offset+limit:null,pageRevision:String(revisionRow.revision)};
 }

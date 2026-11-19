@@ -7,7 +7,7 @@
 | Entità | Campi, relazioni e validazione |
 |---|---|
 | Feature | featureId,projectId,title≤120caratteri,state,stateRevision,currentRevisionId,archivedAt; max1000/archivio |
-| FeatureRevision | revisionId,featureId,parentRevisionId,requestArtifactId,specArtifactId,planArtifactId,acceptanceCriteria,digest,discoveryApprovalId,contextDigest; immutabile,≤50revisioni |
+| FeatureRevision | revisionId,featureId,parentRevisionId,bundleArtifactId (richiesta/spec/piano/criteri nello stesso oggetto sigillato),digest,discoveryApprovalId,contextDigest; immutabile,≤50revisioni |
 | FeatureApproval | approvalId,revisionId,bundleDigest,discoveryApprovalId,contextDigest,ownerUid,approvedAt; storico append-only |
 | PlanningTurn | turnId,featureId,runId,generation,questionIds,answerRevision,inputDigest,resultArtifactId,outcome; max20turni/20domande |
 | ImplementationEnvelope | envelopeId,featureId,revisionId,approvalId,projectConfigRevision,contextDigest,digest; non è ancora un grant start009 |

@@ -18,7 +18,7 @@ Ogni metodo è sotto `feature.`; sottosezioni mantengono associazione esplicita 
 
 | Metodo / CLI equivalente | Intent canonico / input | Risultato dopo admission o lettura |
 |---|---|---|
-| `create` | projectId,expectedConfigRevision,requestArtifactId,grantId | featureId,stateRevision |
+| `create` | projectId,expectedConfigRevision,bundleArtifactId,grantId | featureId,stateRevision |
 | `revise` | featureId,expectedStateRevision,bundleArtifactId,grantId | revisionId,bundleDigest |
 | `archive` | featureId,expectedStateRevision,grantId | ARCHIVED o FEATURE_IN_USE |
 
@@ -63,3 +63,11 @@ Stati e campi delle prove: [data-model.md](../data-model.md). Dettagli di cap e 
 Main `apps/desktop/src/main/feature.ts` chiama CLI e salva ricevuta action/requestId/store/target prima dell’invio; shared DTO in `apps/desktop/src/shared/feature-contract.ts`, preload allowlist e renderer view senza accesso OS. Prepare/confirm mostra azione e ambito correnti; nessuna approvazione ricavata dal prompt. Disabilitare mutazioni offline; history disponibile con data. Epoch di archivio/target e revisioni scartano risultati tardivi.
 
 Eventi `feature.changed`, `feature.output.available` dove applicabile: solo IDs/stato/codice/revisione/watermark; payload testo/diff/documento recuperato via pagina. Estendere core e desktop allowlist nello stesso incremento. Replay/ACK e limiti journal invariati. Test contract API/CLI/bridge e integrazione locale dimostrano validazione, idempotenza cross-namespace, stale grant, output/quote pieni e privacy.
+
+## T010 — contratto concreto e disponibilità incrementale
+
+DTO/validatori, reader offline e dispatcher sono implementati; la capability live viene annunciata solo alla composizioneT011. Metodi di storia non ancora collegati restano non disponibili. `prepare` accetta campi chiusi per azione (projectId o featureId, revisioni attese, bundleArtifactId o revisionId/acceptedUnknownIds); il core costruisce e conserva l’intent canonico completo con i propri riferimenti Discovery, IDs e digest. Il client non sceglie dati di autorità.
+
+Create/revise usano un unico bundleArtifactId BUNDLE sigillato contenente richiesta, specifica, piano e criteri, coerente con la decisione R2; i corpi non vengono duplicati in tre file. Le conferme create/revise/approve/handoff/archive/generate/answer/cancel inviano requestId e grantId, con target facoltativo solo per confronto. L’intent autorevole rimane quello del grant.
+
+Le API upload comuni sono esposte come `feature.artifact.reserve/append/seal/discard`, con gli stessi campi e UUID globali dei contratti trasversali; il namespace del ledger è ARTIFACT. Metadata e pagine sono legati a revisione corrente dello store/feature; i chunk al digest del contenuto. Nessun reader produce una lista fittizia per funzionalità assistite non disponibili.

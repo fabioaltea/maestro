@@ -41,3 +41,7 @@ Added same-writer intent/grant admission with global UUID fencing, durable inten
 ## T009 — RED public/offline contracts
 
 Added closed request/chunk/envelope/public-operation cases and a native confined offline artifact/metadata read with immutable archive and denied mutation. build:test is RED for the missing protocol/feature module; no permissive transport fallback introduced.
+
+## T010 — wire/reader GREEN
+
+Closed feature/upload/prepare DTOs, bounded public operation decoder, authenticated dispatcher, current-revision paging, LocalClient/backend hooks and historical inspectFeature added. Core capability remains gated by composition. Reader never constructs provider/extractor; unsupported assisted reads return explicit unavailability. Build:test PASS; contract/offline3/3PASS including real confined native reader, base64 byte integrity and archive immutability. Concrete prepare/upload DTO and single immutable bundle layout clarified in contracts/model without relaxing approvals.
