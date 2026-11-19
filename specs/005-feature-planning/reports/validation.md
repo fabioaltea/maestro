@@ -107,3 +107,7 @@ Servizio composto approve/handoff con fresh eligibility004 diretta, validazione 
 ### T025 — CLI approvazione, handoff ed eligibility
 
 La CLI usa prepare da file/stdin e conferma con grant e UUID, legge approvazioni/envelope storici e interroga l’eligibility esplicita tramite check ID. Il LocalClient confronta store, azione, versione, revisione del piano e unknown accettati con il grant restituito. Build, build:test, lint e diff check PASS. Contract US2 e integrazioni CLI/US2: 4/4 PASS, inclusi rifiuto del grant di altra azione, replay del medesimo envelope e letture offline.
+
+### T026 — approvazione e handoff desktop
+
+Bridge e CLI condividono le chiamate nominate e le ricevute per approvazione/handoff. La conferma identifica revisione, digest e incognite accettate, mentre archivio e selezione proteggono la vista dalle risposte tardive. Typecheck e build desktop PASS, unit/contract 43/43 PASS, E2E Electron 1/1 PASS (28,2 s), inclusi Escape e ritorno del focus, revoca della selezione storica per nuove azioni, prova di eligibility, rilascio envelope e approvazione consultabile ad archivio offline.

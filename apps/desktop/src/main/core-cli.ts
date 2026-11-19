@@ -67,6 +67,13 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
     const data = c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
     if (c.namespace === 'discovery' && c.action === 'operation' && p.requestId !== c.params?.requestId) throw new Error();
     if (c.namespace === 'discovery' && c.action === 'eligibility' && (p.freshness !== 'LIVE' || p.liveness !== 'LIVE_VERIFIED') && data.eligible === true) throw new Error();
+    if (c.namespace === 'feature' && p.result === 'OK') {
+      if (c.action === 'approval' && record(data.approval).revisionId !== c.params?.revisionId) throw new Error();
+      if (c.action === 'envelope' && record(data.envelope).envelopeId !== c.params?.envelopeId) throw new Error();
+      if (c.action === 'eligibility' && (data.featureId !== c.params?.featureId || typeof data.eligible !== 'boolean'
+        || data.eligible && (p.liveness !== 'LIVE_VERIFIED' || data.freshness !== 'CURRENT' || data.reason !== null || typeof data.checkedAt !== 'string')
+        || c.params?.checkId !== undefined && p.freshness !== 'LAST_KNOWN' && data.checkId !== c.params.checkId)) throw new Error();
+    }
     let error = null;
     if (p.error !== null) { const code = record(p.error).code; if (typeof code !== 'string' || !Object.hasOwn(CORE_ERRORS, code)) throw new Error(); error = CORE_ERRORS[code as keyof typeof CORE_ERRORS]; }
     if (c.namespace === 'project' && c.action === 'list' && p.result === 'OK' && !Array.isArray(data.projects)) throw new Error();
