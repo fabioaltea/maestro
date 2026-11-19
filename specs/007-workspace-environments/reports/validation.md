@@ -39,3 +39,7 @@ Superficie chiusa per piano, autorizzazione, admission e storico. Il reader limi
 ## T011 — runtime e drain
 
 Il daemon espone solo le letture Environment già composte su schema 7. Fencing prima della recovery e prima dello shutdown. I piani interrotti mantengono il UUID originale. I job accettati appartengono al daemon e il drain è bounded. Gli import dei servizi restano nelle porte. Build, build:test, lint e **7 PASS** delle integrazioni runtime Environment, Feature e Workspace.
+
+## T012 — metadata e quote
+
+Il writer include gli eventi Environment nell’outbox atomica. Core e desktop accettano soltanto identità, stato e watermark. Dati privati e testo rimangono fuori dagli eventi. Il backlog bloccato preserva l’UUID accettato e rifiuta nuove ammissioni. Build:test, typecheck desktop, lint e **4 PASS** mirati di limiti, store e runtime.

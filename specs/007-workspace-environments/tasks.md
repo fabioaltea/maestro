@@ -25,7 +25,7 @@
 - [x] T009 [P] Scrivere contract API/CLI e reader offline in `tests/contract/environment-api.test.ts` e `tests/integration/environment-offline.test.ts`: DTO chiusi, envelope32KiB/chunk8KiB, cursori, offline immutabile e nessun effetto da lettura (FR-010/012).
 - [x] T010 Implementare DTO/validazione in `src/protocol/environment.ts`, dispatcher/read in `src/core/environments/dispatch.ts` e `src/core/environments/read.ts`, collegando `src/protocol/messages.ts`, `src/protocol/validation.ts`, `src/client/local-client.ts` e allowlist del reader confinato. Capability version1 solo per metodi composti.
 - [x] T011 Comporre admission/authorization/recovery con i servizi comuni in `src/core/environments/runtime.ts` e `src/core/runtime.ts`; coordinare drain, intent e risultati generazione-bound, estendendo `scripts/check-architecture.mjs` ai nuovi confini e `scripts/build-assets.mjs` solo se ci sono asset trusted.
-- [ ] T012 Collegare eventi metadata e budget in `src/protocol/events.ts` e `src/core/environments/events.ts`; provare correlazioni, segreti assenti, backpressure, quota piena con query/cancel/recovery possibili in `tests/integration/environment-limits.test.ts` (FR-010/011/012).
+- [x] T012 Collegare eventi metadata e budget in `src/protocol/events.ts` e `src/core/environments/events.ts`; provare correlazioni, segreti assenti, backpressure, quota piena con query/cancel/recovery possibili in `tests/integration/environment-limits.test.ts` (FR-010/011/012).
 
 **Checkpoint**: schema/store/contract/ownership testati senza UI o rete. T007→T008→T010→T011→T012 sequenziali; test T005/T006/T009 preparabili insieme dopo G0. Nessuna storia prima delle fondazioni.
 

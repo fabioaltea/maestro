@@ -1,3 +1,4 @@
+import {environmentEventDrafts} from '../core/environments/events.js';
 import {commitEnvironmentState,readEnvironmentState} from './environments-store.js';
 import type {EnvironmentChange,EnvironmentQuery} from '../ports/environment.js';
 import {ENVIRONMENT_TABLES} from './environments-schema.js';
@@ -202,7 +203,11 @@ export class SQLiteStore {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
-          if(op.namespace==='ENVIRONMENT')continue;
+          if(op.namespace==='ENVIRONMENT'){
+            const environment=op.targetId?readEnvironmentState(this.database!,{kind:'workspace',id:op.targetId}).environment:null;
+            drafts.push(...environmentEventDrafts(op,String(owner.owning_instance_id),environment));
+            continue;
+          }
           if(op.namespace==='WORKSPACE'){
             const workspace=op.targetId?readWorkspaceState(this.database!,{kind:'get',id:op.targetId}).workspace:null;
             if(workspace)drafts.push(...workspaceEvents(op,String(owner.owning_instance_id),workspace));

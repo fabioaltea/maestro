@@ -1,5 +1,70 @@
 // Public core v1 safe error catalog; no runtime dependency on core adapters.
 export const CORE_ERRORS = {
+  "ENVIRONMENT_NOT_INITIALIZED": {
+    "code": "ENVIRONMENT_NOT_INITIALIZED",
+    "message": "Archivio ambienti non inizializzato.",
+    "nextAction": "Avviare esplicitamente il servizio per aggiornare lo schema."
+  },
+  "ENVIRONMENT_NOT_FOUND": {
+    "code": "ENVIRONMENT_NOT_FOUND",
+    "message": "Ambiente non trovato.",
+    "nextAction": "Consultare il workspace nell’archivio corrente."
+  },
+  "ENVIRONMENT_STALE": {
+    "code": "ENVIRONMENT_STALE",
+    "message": "Gli input dell’ambiente sono cambiati.",
+    "nextAction": "Preparare un nuovo piano dagli input correnti."
+  },
+  "MANAGER_UNSUPPORTED": {
+    "code": "MANAGER_UNSUPPORTED",
+    "message": "Package manager o profilo non qualificato.",
+    "nextAction": "Consultare il piano e le opzioni manuali."
+  },
+  "MANAGER_MISMATCH": {
+    "code": "MANAGER_MISMATCH",
+    "message": "Versione o digest del package manager differente dal pin.",
+    "nextAction": "Rileggere il piano e la configurazione locale."
+  },
+  "LOCKFILE_CHANGED": {
+    "code": "LOCKFILE_CHANGED",
+    "message": "Il lockfile non consente un’installazione frozen.",
+    "nextAction": "Rivedere manifest e lockfile nel workspace."
+  },
+  "SCRIPT_APPROVAL_REQUIRED": {
+    "code": "SCRIPT_APPROVAL_REQUIRED",
+    "message": "L’esecuzione di script richiede un consenso distinto.",
+    "nextAction": "Rivedere gli script e il relativo piano."
+  },
+  "CONFIG_UNSAFE": {
+    "code": "CONFIG_UNSAFE",
+    "message": "Configurazione del package manager fuori dallo scope qualificato.",
+    "nextAction": "Rivedere la configurazione e i riferimenti ai file."
+  },
+  "DISK_BUDGET": {
+    "code": "DISK_BUDGET",
+    "message": "Quota disco dell’ambiente o spazio disponibile insufficiente.",
+    "nextAction": "Consultare quote e risorse conservate."
+  },
+  "JOB_RECONCILING": {
+    "code": "JOB_RECONCILING",
+    "message": "Esito del job o uscita del processo incerti.",
+    "nextAction": "Interrogare la richiesta originale e riconciliare la prova."
+  },
+  "INSTALL_FAILED": {
+    "code": "INSTALL_FAILED",
+    "message": "Preparazione dipendenze non riuscita.",
+    "nextAction": "Consultare stato e diagnostica redatta del job."
+  },
+  "VALIDATION_FAILED": {
+    "code": "VALIDATION_FAILED",
+    "message": "Comando di validazione non riuscito.",
+    "nextAction": "Consultare l’esito e l’output del job."
+  },
+  "CANCELLED": {
+    "code": "CANCELLED",
+    "message": "Job interrotto con uscita verificata.",
+    "nextAction": "Consultare lo stato delle risorse dell’ambiente."
+  },
   "WORKSPACE_LIMIT": {
     "code": "WORKSPACE_LIMIT",
     "message": "Limite di workspace raggiunto.",
