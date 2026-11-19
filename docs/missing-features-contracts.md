@@ -1,0 +1,60 @@
+# Contratti trasversali della roadmap 005–012
+
+**Data**: 2026-11-19 · **Stato**: design proposto, nessuna capability implementata da questi documenti.
+Queste regole sono parte dei piani 005–012 e subordinati alla Constitution. I contratti 001–004 rimangono l'autorità per funzionalità esistenti. Le restrizioni della Discovery non sono allentate da un profilo di esecuzione.
+
+## Architettura e ordine di installazione
+
+Stesso daemon, writer SQLite WAL/FULL e trasporto autenticato; Node.js 26.13.0 / TypeScript 6.0.3 / better-sqlite3 13.0.3 del checkout. Electron 45.3.0 / React 19.3.1 restano client. Questi sono pin del repository, non nuove raccomandazioni di versioni correnti. Nessun SDK, broker remoto, HTTP server o database aggiuntivo.
+
+Si pianificano schema 5 per 005, 6 per 006, 7 per 007, 8 per 008, 9 per 009, 10 per 010, 11 per 011, 12 per 012. Ogni incremento contiene i precedenti, modifica il controllo delle versioni nel writer/reader e nell'upgrade storico pertinente senza alterare gli SQL congelati 2→3 e 3→4. Solo daemon start esplicito con lease esclusivi esegue la catena, integrity/FK/store identity e commit atomico per passo. Letture storiche degli schemi supportati non migrano. Un binario vecchio rifiuta uno schema futuro; nessun downgrade automatico. Prima di codice, test con fixture schema precedente e crash pre/post commit.
+
+005 introduce `src/domain/workflow/{operation,authorization}.ts`, `src/ports/workflow.ts`, `src/core/workflow/{admission,authorization,recovery}.ts`, `src/storage/workflow-{schema,store,artifacts}.ts`. I moduli successivi compongono questi servizi. Il ledger `workflow_operations` comprende namespace FEATURE/WORKSPACE/ENVIRONMENT/PROFILE/EXECUTION/SCHEDULER/REVIEW/RELEASE, requestId UUID, canonicalIntentHash, target, expected revisions, phase, outcome e riferimenti alle prove. Un'intenzione esterna ha passaggi PREPARED → EFFECT_INTENT → EFFECT_OBSERVED → FINALIZED; incertezza produce RECONCILING, non un successo presunto. Per pura mutazione locale il commit porta direttamente all'esito.
+
+L'unicità requestId è globale anche contro `request_catalog` e `discovery_operations`: admission e trigger controllano entrambi i versi per tutti gli inserimenti. Vecchi metodi Foundation/Registry/Discovery devono rifiutare UUID già usati dal workflow. Writer, consumo grant, slot/lease logico, effetto-intent ed evento outbox condividono la transazione. Stesso UUID+hash restituisce l'esito originale, hash diverso è IDEMPOTENCY_CONFLICT. Anche dopo crash un NOT_FOUND non autorizza a ripetere un effetto esterno incerto.
+
+## API locali, CLI e desktop
+
+PublicResult/protocolVersion1 e semantica admission/completion esistenti. Ogni namespace espone capability versione1 solo quando realmente installato e composto; capability ignota/assente → UNSUPPORTED. Schema insufficiente → FEATURE_NOT_INITIALIZED. Le letture `list`, `get`, `operation.get`, `output.list`, `artifact.get` espongono metadata con revisione e freshness; offline LAST_KNOWN, nessuna valutazione di eligibility attuale positiva.
+
+Mutazioni: requestId, target UUID, expectedStateRevision, expectedConfigRevision dove pertinente, grantId per effetti autorizzati. CLI usa `--state-dir ABS --json`, `--request-id UUID`, `--grant UUID`; testi da stdin/file regolare bounded, nessun segreto o corpo grande in argv. `prepare` produce intent canonico conservato dal core e riepilogo; l'azione consuma il grant su quell'intent. File input massimo32KiB; per bundle più grandi upload a chunk8KiB con reservation, digest finale e seal esplicito prima dell'uso. Il client non fornisce path degli oggetti o comandi shell.
+
+Letture normali/admission target2s; lavoro lungo è operazione interrogabile, timeout dichiarato per azione. Frame64KiB, envelope32KiB, metadata≤20 per pagina, contenuti chunk8KiB raw/base64. Cursori opachi vincolati a store/target/revisione, overflow esplicito. Eventi `namespace.changed` e `namespace.output.available`: soli UUID, codice/stato/revisione/watermark; testi e diff tramite pagine. ACK/replay/retention esistenti, niente token in journal.
+
+Desktop: `src/shared/*-contract.ts` DTO chiusi, main invoca CLI Node esterno, preload allowlist, renderer senza fs/SQLite/process spawning. Ricevute private salvano requestId/store/action prima dell'invio; risposta persa si risolve tramite UUID originale. Cambiare archivio/target invalida risposte tardive e conferme. Niente mutazioni accodate offline. La chiusura del client preserva daemon e run; output reso come testo, mai HTML eseguibile. Tutte le UI includono stato, ambito/digest da approvare, errore sicuro e azione successiva; tastiera/focus e conferma implementazione, integrazione, pubblicazione, deployment distinti.
+
+## Autorizzazioni e freshness
+
+Grant monouso, TTL5min, massimo32 attivi per archivio; ownerUid/store/action/target e hash canonico, versioni di contesto/profilo/config/policy/provider, OID e artifact digest dove applicabili. L'approvazione di un documento è un record storico immutabile, l'eligibility attuale è ricalcolata. Nuove revisioni, target, permessi, contesto o provider rendono inapplicabile il vecchio grant. Retry della stessa richiesta può recuperare il grant già consumato dalla medesima richiesta.
+
+La verifica filesystem non è atomica con SQLite: acquisire observation bounded, confrontare revisioni in admission e ricontrollare anchor/digest subito prima dell'effetto. Se cambia, bloccare e richiedere nuova review; dopo un effetto controllare anche l'esito. Per riferimenti Git usare CAS su OID; un mutex Maestro coordina solo Maestro. Non dichiarare l'esclusione di processi Git esterni come proprietà del mutex.
+
+La 005 emette un approval bundle per l'implementazione, legato a feature revision, Discovery approval/context e criteri. La 009 emette un grant start separato per l'esatto execution envelope. La 011 richiede approvazione di integrazione su candidate+target+prove. La 012 usa grant distinti PUSH/PR/TAG/DEPLOY e policy automatiche revocabili. Nessun output agente, skill o checkbox è autorizzazione.
+
+## Risorse, artefatti e segreti
+
+Archive workflow privato0700, oggetti immutabili0600 con UUID, no link/special files; reservation → write bounded → fsync file+directory → hash → riferimento DB. Oggetti non pubblicati dopo crash restano conteggiati e conservati; riferimento mancante/corrotto blocca l'uso. Quota workflow complessiva128MiB/8192oggetti con8MiB riservati a finalizzazione/recovery, distinta da Discovery64MiB e diagnostica50MiB; WAL/budget Foundation invariati. Per modulo max1000 entità principali, revisioni≤50/entità e bundle≤256KiB; nessuna eviction di lavoro irrisolto/approvazioni. A quota piena rifiutare nuovi dati, consentire query/cancel/recovery; rimozione solo esplicita e senza riferimenti. Questi sono target/cap di progetto da qualificare, non misure.
+
+Output conservato≤4MiB/run/job, letto≤8MiB/run, linea≤1MiB; stderr catturato≤64KiB ma non pubblicato grezzo. Troncamento visibile non equivale a verifica riuscita. Documenti, prompt, diff e output sono privati; redazione best-effort di segreti non è prova di sanitizzazione semantica. Credenziali non entrano nei DTO, DB, log o argv; riferimenti opachi sono risolti dal provider/helper ufficiale. Qualifica fallita → PROVIDER_UNSAFE/BLOCKED, mai token copiati, API key implicita o profilo permissivo.
+
+006: max20worktree posseduti/archivio. 007: preparazione≤5min/job, workspace budget configurabile con default10GiB e totale20GiB, blocco su spazio disponibile<2GiB o superamento osservato; nessuna promessa di hard quota APFS, overrun rilevato cancella il processo posseduto e richiede intervento, mai pulizia globale. 009: inizialmente1run attivo, durata massima30min dichiarata prima dell'avvio; waiting-user nessun processo. 010: default4run totali (Discovery compresa, mantenendo il suo limite1), max2install/2validation,1writer/workspace,128job in coda. Attese non occupano slot CPU, processi incerti conservano i debit. Stop usa deadline Foundation esistente; mancata uscita provata mantiene BLOCKED.
+
+## Confini di esecuzione e Git
+
+Worktree separa file e branch, non la sicurezza. Checkout originale, archivio, credenziali, shared Git dir e altri workspace non sono scrivibili dall'agente. Runtime di esecuzione e comandi di progetto hanno profili OS distinti dalla Discovery/Foundation. Il provider deve poter usare soltanto capability effettivamente confinate; comando di progetto, hook, skill/tool e processo discendente non ottengono credenziali del provider o pubblicazione Git. Se l'adapter non può dimostrare il confine con il suo catalogo tool reale, write/exec resta non disponibile. Nessun bypass/auto-approve globale per aggirare questo gate.
+
+Agente non scrive `.git` né shared refs/hooks/config; commit/check Git controllati sono azioni core, con manifest delle modifiche e grant appropriato. Symlink o processi in fuga devono essere negati dal confine OS prima dell'effetto. Ambiente, tool config e istruzioni sono sigillati nel run envelope. Host con challenge/handle/generazione e lifeline separata: nessun segnale a un PID solo persistito. Perdita owner interrompe run locale con policy esplicita; restart riconcilia prima di consentire nuovo writer. Checkpoint contiene fatti core e patch/commit, non memoria conversazionale trasferibile.
+
+Per merge target già in checkout esterno → TARGET_IN_USE, preservando il checkout. Target libero può essere riservato con un guard worktree posseduto e normale checkout Git, senza --force; il caso main occupato richiede scelta esplicita di un altro target o azione manuale dell'utente. La prenotazione protegge dal normale checkout concorrente, non da `--force` o manipolazioni arbitrarie dello stesso UID. Queste ultime sono interferenza rilevata dove osservabile, non un attore isolato da Git; non sono ammesse nella finestra di integrazione. Sorgente fermata e candidate immutabile sono prerequisiti. Candidate creato in staging detached; approvazione lega candidate e vecchio target OID. Update-ref CAS pubblica il candidate, poi il guard viene riallineato solo se la prova dei file precedenti è ancora valida. Crash tra CAS e riallineamento conserva il guard e dichiara NEEDS_RECONCILE; nessun reset di file cambiati. Esito ambiguo → intervento, non remerge.
+
+## Verifica e fonti
+
+Tutti i piani richiedono test unitari di policy/transizioni, contract DTO/adapter e integrazioni locali per crash, retry, concorrenza, autorizzazione assente/stale. Fixture non certificano il provider reale. Qualifiche reali sono task separati opt-in; baseline BLOCKED 001–004 non si risolve con un test di un nuovo modulo. Nessun benchmark lungo o volume gate rinviato viene ricreato.
+
+Fonti primarie consultate il2026-11-19; la documentazione corrente non certifica i binari pin del checkout:
+
+- [Git worktree](https://git-scm.com/docs/git-worktree): le worktree condividono dati del repository; le protezioni di checkout/remove richiedono uso senza force. Decisione: ownership e controlli core aggiuntivi, niente prune globale.
+- [Git update-ref](https://git-scm.com/docs/git-update-ref): confronto old OID e aggiornamento di ref supportano la pubblicazione CAS del candidate. Non forniscono una transazione con filesystem o SQLite.
+- [pnpm install](https://pnpm.io/cli/install) e [settings](https://pnpm.io/settings): frozen lockfile/offline e configurazione dello store sono capacità da verificare sul pin selezionato. Decisione: store condiviso controllato, virtual store per workspace, clone-or-copy se qualificato; configurazione eseguibile e script richiedono gate distinti.
+- [Claude Code programmatico](https://code.claude.com/docs/en/headless): `--bare` disabilita discovery automatica ma non usa il login in abbonamento/Keychain. Decisione: nessuna adozione implicita di API key; adapter Claude rimane non disponibile finché un profilo con autenticazione autorizzata è qualificato.
+- [Codex noninteractive](https://developers.openai.com/codex/noninteractive): esecuzione non interattiva e output strutturato descrivono un'interfaccia, non il confine OS. Per pin0.167.0 e login fa fede il report004, attualmente BLOCKED.

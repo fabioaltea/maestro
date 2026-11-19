@@ -88,3 +88,10 @@ Le soglie della specifica sono target; soltanto i report dei checkpoint attestan
 worktree, gestione dipendenze di progetti ed Electron sono fuori scope della Foundation.
 
 <!-- MANUAL ADDITIONS END -->
+
+## Planned Features (design only)
+
+Pianificazione2026-11-19: 005-feature-planning.
+Brief e ordine: `docs/missing-features-brief.md`; contratti comuni: `docs/missing-features-contracts.md`.
+Schema5 e tutte le nuove capability sono PROPOSTI, non implementati. Nessun nuovo pacchetto installato.
+I pin della base e i gate001–004 riportati sopra restano invariati; i task dei nuovi pacchetti sono aperti.
