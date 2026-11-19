@@ -17,7 +17,7 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
   const feature = draft.payload.scope === 'feature', artifact = draft.payload.scope === 'artifact', workflow = feature || artifact || workspace;
   if (draft.type.startsWith('workspace.')&&!workspace || draft.type.startsWith('feature.') && !feature || draft.type.startsWith('artifact.') && !artifact) throw new Error('INVALID_REQUEST');
   if (draft.type.startsWith('discovery.') && !discovery) throw new Error('INVALID_REQUEST');
-  if ((project || discovery || workflow) && draft.operationId == null) throw new Error('INVALID_REQUEST');
+  if ((project || discovery || workflow) && draft.operationId == null && draft.type!=='workspace.changed') throw new Error('INVALID_REQUEST');
   const payload: Record<string, unknown> = {}; let redacted = 0;
   const enums: Record<string, readonly string[]> = {
     state: workspace ? WORKSPACE_STATES : feature ? FEATURE_STATES : artifact ? ['RESERVED','SEALED','REFERENCED','ORPHAN','CORRUPT','DISCARDED'] : discovery ? DISCOVERY_STATES : [],

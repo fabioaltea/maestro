@@ -25,11 +25,8 @@ export interface WorkspaceProvisionOptions extends WorkspaceRuntimeContext {
 
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 
-export function createWorkspaceProvisioning(options:WorkspaceProvisionOptions):WorkspaceRuntimeServices{
- const {storage,paths,instanceId,mutator,files}=options;
- const authorization=createWorkflowAuthorization({storage,paths,instanceId});
-
- async function prove(peer:AuthenticatedPeer,featureId:string,envelopeId:string){
+export async function proveWorkspaceHandoff(options:Pick<WorkspaceProvisionOptions,'storage'|'paths'|'currentEligibility'>,peer:AuthenticatedPeer,featureId:string,envelopeId:string){
+   const {storage,paths}=options;
    const query=storage.readFeatureState!.bind(storage);
    const [{feature},{envelope}]=await Promise.all([query({kind:'feature',id:featureId}),query({kind:'envelope',id:envelopeId})]);
    if(!feature||!envelope)throw new Error('APPROVAL_STALE');
@@ -54,9 +51,15 @@ export function createWorkspaceProvisioning(options:WorkspaceProvisionOptions):W
    return{project,baseBranch:project.baseBranch,feature,envelope,proof};
  }
 
+
+export function createWorkspaceProvisioning(options:WorkspaceProvisionOptions):WorkspaceRuntimeServices{
+ const {storage,paths,instanceId,mutator,files}=options;
+ const authorization=createWorkflowAuthorization({storage,paths,instanceId});
+
+
  async function prepare(params:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer){
    const {store}=await authorization.guard(peer);
-   const {feature,project,baseBranch,envelope,proof}=await prove(peer,String(params.featureId),String(params.envelopeId));
+   const {feature,project,baseBranch,envelope,proof}=await proveWorkspaceHandoff(options,peer,String(params.featureId),String(params.envelopeId));
    const workspaceId=randomUUID(),ownerGeneration=randomUUID();
    const ownedRoot=await files.root(store.storeId),pin=await mutator.qualification();
    const draft={workspaceId,featureId:feature.featureId,ownedRoot,reference:project.referenceCheckout.root,
@@ -83,7 +86,7 @@ export function createWorkspaceProvisioning(options:WorkspaceProvisionOptions):W
    let lease:Awaited<ReturnType<OwnedWorkspaceFilesPort['claim']>>|undefined,attempted=false;
    try{
      lease=await files.claim(claim);
-     const current=await prove(peer,workspace.featureId,workspace.envelopeId);
+     const current=await proveWorkspaceHandoff(options,peer,workspace.featureId,workspace.envelopeId);
      if(current.feature.stateRevision!==intent.expectedRevision||current.envelope.digest!==intent.payload.envelopeDigest)throw new Error('APPROVAL_STALE');
      const expected=intent.payload.pin as WorkspaceGitPin,actual=await mutator.qualification();
      if(expected.version!==actual.version||expected.sha256!==actual.sha256||expected.profileSha256!==actual.profileSha256)throw new Error('WORKSPACE_UNSAFE');
@@ -97,16 +100,21 @@ export function createWorkspaceProvisioning(options:WorkspaceProvisionOptions):W
      requireProvisioningObservation(target.baseOid,observation,'WORKTREE_ADDED');
      const markerDigest=await files.sealMarker(target.ownedRoot,{...claim,workspaceId:workspace.workspaceId,ownership:observation.worktree!});
      await commit({...operation,kind:'provision-step',observation,markerDigest});
-     const {proof}=await prove(peer,workspace.featureId,workspace.envelopeId);
+     const {proof}=await proveWorkspaceHandoff(options,peer,workspace.featureId,workspace.envelopeId);
      const observed=await mutator.observe(target,deadline),marker=await files.readMarker(target.ownedRoot,workspace.workspaceId);
      requireProvisioningObservation(target.baseOid,observed,'WORKTREE_ADDED');
      if(marker?.digest!==markerDigest||JSON.stringify(marker.marker.ownership)!==JSON.stringify(observed.worktree))throw new Error('OWNERSHIP_UNPROVEN');
      await commit({...operation,kind:'provision-ready',contextCheckedAt:proof.checkedAt});
      await lease.settle();
+     await storage.settleWorkspaceClaim!(claim);
    }catch(error){
      try{
        const result=await commit({...operation,kind:'provision-block',error:classifyError(error),uncertain:attempted});
-       if(result.operation.phase==='FINALIZED')await lease?.settle();
+       if(result.operation.phase==='FINALIZED'){
+         lease?.release();lease=undefined;
+         await files.settleClaim(claim);
+         await storage.settleWorkspaceClaim!(claim);
+       }
      }catch{/* The durable reservation remains queryable if finalization cannot be verified. */}
    }finally{lease?.release();}
  }
@@ -117,7 +125,7 @@ export function createWorkspaceProvisioning(options:WorkspaceProvisionOptions):W
    const original=await originalWorkflowGrant(storage,requestId,grantId,'create','WORKSPACE');
    if(original.operation)return{operation:publicWorkspaceOperation(original.operation)};
    const intent=original.intent;
-   const {proof}=await prove(peer,String(intent.payload.featureId),String(intent.payload.envelopeId));
+   const {proof}=await proveWorkspaceHandoff(options,peer,String(intent.payload.featureId),String(intent.payload.envelopeId));
    if(!options.accepting())throw new Error('BLOCKED');
    const admission=workflowAdmission({requestId,grantId,intent,instanceId,nowMs:Date.now()});
    const result=await storage.commitWorkspaceState!({kind:'reserve',admission,contextCheckedAt:proof.checkedAt});
@@ -134,6 +142,11 @@ export function createWorkspaceProvisioning(options:WorkspaceProvisionOptions):W
      for(const {requestId,workspace} of interrupted??[]){
        const {workspaceId,stateRevision,ownerGeneration}=workspace;
        await storage.commitWorkspaceState!({kind:'provision-interrupted',instanceId,requestId,fence:{workspaceId,stateRevision,ownerGeneration}});
+     }
+     const {claims}=await storage.readWorkspaceState!({kind:'pending-claim-settlements'});
+     for(const claim of claims??[]){
+       try{await files.settleClaim(claim);await storage.settleWorkspaceClaim!(claim);}
+       catch{/* Preserve the coordinator claim when the binding or exit is unknown. */}
      }
    },
  };

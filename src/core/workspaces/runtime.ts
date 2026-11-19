@@ -3,20 +3,25 @@ import type {Deadline} from '../../ports/clock.js';
 import type {AuthenticatedPeer} from '../../ports/platform.js';
 import {WORKSPACE_READ_METHODS} from '../../protocol/workspace.js';
 import {createWorkspaceDispatch} from './dispatch.js';
+import {createWorkspaceRecovery} from './recovery.js';
 import {createWorkspaceProvisioning,type WorkspaceProvisionOptions} from './provision.js';
 import {createWorkspaceMutator} from '../../platform/macos/git/workspace-mutator.js';
 import {createOwnedWorkspaceFiles} from '../../platform/macos/git/workspace-files.js';
 
 export function nativeWorkspaceServices(options:Omit<WorkspaceProvisionOptions,keyof WorkspaceRuntimeContext|'mutator'|'files'>&{files?:WorkspaceProvisionOptions['files']}){
- return (runtime:WorkspaceRuntimeContext)=>createWorkspaceProvisioning({
-   ...options,...runtime,mutator:createWorkspaceMutator(),files:options.files??createOwnedWorkspaceFiles(),
- });
+ return (runtime:WorkspaceRuntimeContext)=>{
+   const settings={...options,...runtime,mutator:createWorkspaceMutator(),files:options.files??createOwnedWorkspaceFiles()};
+   const provisioning=createWorkspaceProvisioning(settings),recovery=createWorkspaceRecovery(settings);
+   return{actions:{...provisioning.actions,...recovery.actions},leases:recovery.leases,
+     async recover(){await provisioning.recover();await recovery.recover();}};
+ };
 }
 
 type Action=(params:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer)=>Promise<Record<string,unknown>>;
 export interface WorkspaceRuntimeServices {
  readonly actions:Readonly<Record<string,Action>>;
  recover():Promise<void>;
+ readonly leases?:ReturnType<typeof createWorkspaceRecovery>['leases'];
 }
 export interface WorkspaceRuntimeContext {
  accepting():boolean;
@@ -44,6 +49,7 @@ export function createWorkspaceRuntime(storage:StoragePort,
  const methods=[...new Set([...WORKSPACE_READ_METHODS,...Object.keys(actions)])];
  return{
    methods,
+   leases:service?.leases,
    dispatch:createWorkspaceDispatch({storage,composed:actions}),
    fence(){accepting=false;},
    async recover(){

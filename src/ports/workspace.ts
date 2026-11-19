@@ -37,6 +37,7 @@ export interface WorkspacePort {
   qualification():Promise<WorkspaceGitPin>;
   resolveBase(target:Omit<WorkspaceMutationTarget,'baseOid'>,deadline:Deadline):Promise<string>;
   observe(target:WorkspaceMutationTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
+  inspect(target:WorkspaceMutationTarget,deadline:Deadline):Promise<{readonly disk:WorkspaceDiskObservation;readonly status:WorkspaceWorkingStatus|null}>;
   createBranch(target:WorkspaceMutationTarget,deadline:Deadline):Promise<void>;
   addWorktree(target:WorkspaceMutationTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
   removeWorktree(target:WorkspaceMutationTarget,expected:NonNullable<WorkspaceDiskObservation['worktree']>,
@@ -54,15 +55,22 @@ export interface WorkspaceRecord extends WorkspaceFence {
  readonly updatedAt:string;
  readonly ownership:NonNullable<WorkspaceDiskObservation['worktree']>|null;
  readonly markerDigest:string|null;
+ readonly observation:WorkspaceObservation|null;
  readonly safeError:string|null;
 }
 export interface WorkspaceSummary{
  readonly workspaceId:string;readonly featureId:string;readonly projectId:string;readonly envelopeId:string;
  readonly state:WorkspaceState;readonly stateRevision:string;readonly baseRef:string;readonly baseOid:string;
  readonly branchRef:string;readonly ownership:'RECORDED'|'UNKNOWN';readonly updatedAt:string;readonly createdAt:string;readonly safeError:string|null;
+ readonly observation:WorkspaceObservation|null;
 }
 export type WorkspaceQuery={readonly kind:'get'|'summary';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly limit?:number;readonly offset?:number}
+ |{readonly kind:'active-lease';readonly id:string}
+ |{readonly kind:'unresolved-effect';readonly id:string}
+ |{readonly kind:'interrupted-refresh'}
+ |{readonly kind:'pending-claim-settlements'}
+ |{readonly kind:'interrupted-leases'}
  |{readonly kind:'interrupted-provisioning'};
 export interface WorkspaceRead {
  readonly workspace?:WorkspaceRecord|null;
@@ -71,9 +79,16 @@ export interface WorkspaceRead {
  readonly nextOffset?:number|null;
  readonly pageRevision?:string;
  readonly interrupted?:readonly {readonly requestId:string;readonly workspace:WorkspaceRecord}[];
+ readonly lease?:WorkspaceLease|null;
+ readonly leases?:readonly WorkspaceLease[];
+ readonly effect?:WorkspaceEffect|null;
+ readonly operations?:readonly WorkflowOperationRecord[];
+ readonly claims?:readonly WorkspaceClaim[];
 }
 export interface WorkspaceStoragePort {
  commitWorkspaceState?(change:WorkspaceChange):Promise<WorkspaceWrite>;
+ commitWorkspaceLease?(change:WorkspaceLeaseChange):Promise<WorkspaceLease>;
+ settleWorkspaceClaim?(claim:WorkspaceClaim):Promise<void>;
  readWorkspaceState?(query:WorkspaceQuery):Promise<WorkspaceRead>;
 }
 
@@ -87,6 +102,7 @@ export interface WorkspaceMarker extends WorkspaceClaim{
 export interface OwnedWorkspaceFilesPort{
  root(storeId:string):Promise<FilesystemAnchor>;
  claim(claim:WorkspaceClaim):Promise<{settle():Promise<void>;release():void}>;
+ settleClaim(claim:WorkspaceClaim):Promise<void>;
  sealMarker(root:FilesystemAnchor,marker:WorkspaceMarker):Promise<string>;
  readMarker(root:FilesystemAnchor,id:string):Promise<{digest:string;marker:WorkspaceMarker}|null>;
 }
@@ -97,7 +113,12 @@ export type WorkspaceChange=
    readonly observation:WorkspaceDiskObservation;readonly markerDigest?:string}
  |{readonly kind:'provision-ready';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence;readonly contextCheckedAt:string}
  |{readonly kind:'provision-block';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence;readonly error:string;readonly uncertain:boolean}
- |{readonly kind:'provision-interrupted';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence};
+ |{readonly kind:'provision-interrupted';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence}
+ |{readonly kind:'refresh-admit';readonly admission:WorkflowAdmission}
+ |{readonly kind:'refresh-interrupted';readonly requestId:string;readonly instanceId:string}
+ |{readonly kind:'refresh-finish';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence;
+   readonly observation:WorkspaceObservation;readonly error:string|null;
+   readonly recovered?:{readonly originalRequestId:string;readonly contextCheckedAt:string}};
 export interface WorkspaceWrite{
  readonly workspace?:WorkspaceRecord;
  readonly operation:WorkflowOperationRecord;
@@ -127,3 +148,11 @@ export interface WorkspaceObservation{
  readonly ownership:'VERIFIED'|'UNKNOWN'|'ABSENT';
  readonly tracked:boolean|null;readonly untracked:boolean|null;readonly ignored:boolean|null;readonly conflicts:boolean|null;
 }
+export interface WorkspaceEffect{
+ readonly requestId:string;
+ readonly phase:'INTENT'|'BRANCH_INTENT'|'BRANCH_CREATED'|'WORKTREE_ADDED'|'WORKTREE_REMOVED'|'UNKNOWN';
+}
+export type WorkspaceLeaseChange=
+ |{readonly kind:'acquire';readonly lease:WorkspaceLease;readonly fence:WorkspaceFence;readonly worktree:NonNullable<WorkspaceDiskObservation['worktree']>}
+ |{readonly kind:'release';readonly lease:WorkspaceLease;readonly instanceId:string;readonly proof:WorkspaceReleaseProof;readonly worktree:WorkspaceDiskObservation['worktree']}
+ |{readonly kind:'owner-lost';readonly lease:WorkspaceLease;readonly instanceId:string};

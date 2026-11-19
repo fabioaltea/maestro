@@ -2,6 +2,12 @@ import type {EventDraft} from '../../protocol/messages.js';
 import type {WorkspaceRecord} from '../../ports/workspace.js';
 import type {WorkflowOperationRecord} from '../../ports/workflow.js';
 
+export function workspaceChanged(workspace:WorkspaceRecord,instanceId:string):EventDraft{
+ return{type:'workspace.changed',instanceId,payload:{scope:'workspace',workspaceId:workspace.workspaceId,
+   featureId:workspace.featureId,projectId:workspace.projectId,state:workspace.state,stateRevision:workspace.stateRevision,
+   ...(workspace.safeError?{code:workspace.safeError}:{})}};
+}
+
 /** Workspace events carry correlation and state only. Evidence stays with the writer. */
 export function workspaceEvents(op:WorkflowOperationRecord,instanceId:string,workspace:WorkspaceRecord):EventDraft[]{
  const payload={scope:'workspace',workspaceId:workspace.workspaceId,featureId:workspace.featureId,projectId:workspace.projectId,

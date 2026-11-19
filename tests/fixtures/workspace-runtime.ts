@@ -6,11 +6,16 @@ import {createWorkspaceMutator} from '../../src/platform/macos/git/workspace-mut
 import {createOwnedWorkspaceFiles} from '../../src/platform/macos/git/workspace-files.js';
 import {createWorkspaceProvisioning,type WorkspaceProvisionOptions} from '../../src/core/workspaces/provision.js';
 import type {StoragePort} from '../../src/ports/storage.js';
-import type {WorkspacePort} from '../../src/ports/workspace.js';
+import type {WorkspaceChange,WorkspacePort} from '../../src/ports/workspace.js';
 
-export async function workspaceRuntimeFixture(t:Parameters<typeof workspaceAuthoringFixture>[0],mutator:WorkspacePort=createWorkspaceMutator(),compose:(options:WorkspaceProvisionOptions)=>WorkspaceRuntimeServices=createWorkspaceProvisioning){
+export async function workspaceRuntimeFixture(t:Parameters<typeof workspaceAuthoringFixture>[0],mutator:WorkspacePort=createWorkspaceMutator(),compose:(options:WorkspaceProvisionOptions)=>WorkspaceRuntimeServices=createWorkspaceProvisioning,
+ beforeCommit?:(change:WorkspaceChange)=>void){
  const f=await workspaceAuthoringFixture(t);
- const storage=f.store as unknown as StoragePort;
+ const storage=new Proxy(f.store,{get(target,key){
+   if(key==='commitWorkspaceState')return (change:WorkspaceChange)=>{beforeCommit?.(change);return target.commitWorkspaceState(change);};
+   const value:unknown=Reflect.get(target,key);
+   return typeof value==='function'?value.bind(target):value;
+ }}) as unknown as StoragePort;
  const files=createOwnedWorkspaceFiles(f.root);
  const runtime=createWorkspaceRuntime(storage,context=>compose({...context,storage,paths:f.paths,instanceId:f.instanceId,
    mutator,files,currentEligibility:(peer:typeof f.peer,id:string)=>f.service.currentEligibility(peer,id)}));

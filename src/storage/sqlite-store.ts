@@ -1,7 +1,7 @@
-import {workspaceEvents} from '../core/workspaces/events.js';
+import {workspaceChanged,workspaceEvents} from '../core/workspaces/events.js';
 import {WORKSPACE_TABLES} from './workspaces-schema.js';
-import {commitWorkspaceState,readWorkspaceState} from './workspaces-store.js';
-import type {WorkspaceChange,WorkspaceQuery} from '../ports/workspace.js';
+import {commitWorkspaceLease,commitWorkspaceState,readWorkspaceState,settleWorkspaceClaim} from './workspaces-store.js';
+import type {WorkspaceChange,WorkspaceQuery,WorkspaceLeaseChange,WorkspaceClaim} from '../ports/workspace.js';
 import { workflowEventDrafts } from '../protocol/feature-events.js';
 import { createWorkflowArtifacts } from './workflow-artifacts.js';
 import { createWorkflowStore } from './workflow-store.js';
@@ -187,6 +187,11 @@ export class SQLiteStore {
       const drafts: EventDraft[] = [];
       return this.mutate(() => {
         const result = body();
+        for(const workspaceId of event?.workspaceIds??[]){
+          const workspace=readWorkspaceState(this.database!,{kind:'get',id:workspaceId}).workspace;
+          const instanceId=(this.database!.prepare('SELECT current_instance_id FROM store WHERE singleton=1').get() as Row).current_instance_id;
+          if(workspace)drafts.push(workspaceChanged(workspace,String(instanceId)));
+        }
         for (const requestId of event?.requestIds ?? []) {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
@@ -211,6 +216,8 @@ export class SQLiteStore {
       try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
     });
   }
+  settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
+  commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
   readWorkspaceState(query:WorkspaceQuery) {
     if(!this.database)throw new Error('STATE_ABSENT');
     return this.database.transaction(()=>readWorkspaceState(this.database!,query)).deferred();

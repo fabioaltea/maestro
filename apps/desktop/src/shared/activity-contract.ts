@@ -44,7 +44,7 @@ export function decodeUiEvent(value: unknown, expectedStoreId: string): UiEvent 
   }
   const required: Record<string, string[]> = { 'workspace.changed':['workspaceId'], 'feature.changed':['featureId'], 'feature.output.available':['featureId','turnId','watermark'], 'feature.revision.changed':['featureId','revisionId'], 'feature.approval.changed':['featureId','revisionId'], 'artifact.changed':['artifactId'], 'discovery.output.available': ['discoveryId', 'runId', 'watermark'], 'discovery.question.available': ['discoveryId', 'runId'], 'discovery.document.changed': ['discoveryId', 'revisionId'], 'discovery.approval.changed': ['discoveryId', 'revisionId'] };
   if (required[String(p.type)]?.some(key => !Object.hasOwn(payload, key))) throw new Error('CLIENT_PROTOCOL_ERROR');
-  if (['project', 'discovery','feature','artifact','workspace'].includes(String(payload.scope)) && p.operationId === null) throw new Error('CLIENT_PROTOCOL_ERROR');
+  if (['project', 'discovery','feature','artifact','workspace'].includes(String(payload.scope)) && p.operationId === null&&p.type!=='workspace.changed') throw new Error('CLIENT_PROTOCOL_ERROR');
   return p as unknown as UiEvent;
 }
 export function decodeHistoryPage(value: unknown, storeId: string): HistoryPage {

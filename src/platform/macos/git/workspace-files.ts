@@ -5,7 +5,7 @@ import {homedir} from 'node:os';
 import {dirname,isAbsolute,join} from 'node:path';
 import {requireUuid} from '../../../domain/identifiers.js';
 import type {FilesystemAnchor} from '../../../ports/repository.js';
-import type {OwnedWorkspaceFilesPort,WorkspaceMarker} from '../../../ports/workspace.js';
+import type {OwnedWorkspaceFilesPort,WorkspaceClaim,WorkspaceMarker} from '../../../ports/workspace.js';
 import {createFilesystemIdentity} from './filesystem-identity.js';
 import {createOwnershipLease} from '../lease.js';
 
@@ -72,29 +72,45 @@ export function createOwnedWorkspaceFiles(base=join(homedir(),'Library','Applica
    }
    return safeDirectory(base,true);
  }
+ async function claimLocation(intent:WorkspaceClaim){
+   if(!/^[a-f0-9]{64}$/.test(intent.repositoryKey))throw new Error('INVALID_REQUEST');
+   requireUuid(intent.storeId);requireUuid(intent.requestId);requireUuid(intent.ownerGeneration);
+   const parent=await baseDirectory(),root=await safeDirectory(join(parent.canonicalPath,'repository-locks'),true);
+   return{root,lock:join(root.canonicalPath,intent.repositoryKey+'.sqlite'),
+     path:join(root.canonicalPath,intent.repositoryKey+'.claim'),bytes:Buffer.from(JSON.stringify(intent))};
+ }
+ async function settle(root:FilesystemAnchor,path:string,bytes:Buffer,allowMissing=false){
+   await anchored(root);
+   const existing=await read(path);
+   if(!existing&&allowMissing)return;
+   if(!existing?.equals(bytes))throw new Error('OWNERSHIP_UNPROVEN');
+   await unlink(path);await syncDirectory(root.canonicalPath);
+ }
  return{
    async root(storeId){
      const parent=await baseDirectory();await anchored(parent);
      return safeDirectory(join(parent.canonicalPath,requireUuid(storeId)),true);
    },
    async claim(intent){
-     if(!/^[a-f0-9]{64}$/.test(intent.repositoryKey))throw new Error('INVALID_REQUEST');
-     requireUuid(intent.storeId);requireUuid(intent.requestId);requireUuid(intent.ownerGeneration);
-     const parent=await baseDirectory(),root=await safeDirectory(join(parent.canonicalPath,'repository-locks'),true);
-     const lease=leases.tryAcquire(join(root.canonicalPath,intent.repositoryKey+'.sqlite'),'daemon');
+     const {root,lock,path,bytes}=await claimLocation(intent);
+     const lease=leases.tryAcquire(lock,'daemon');
      if(lease.status!=='HELD')throw new Error(lease.status==='BUSY'?'WORKSPACE_IN_USE':'OWNERSHIP_UNPROVEN');
-     const path=join(root.canonicalPath,intent.repositoryKey+'.claim'),bytes=Buffer.from(JSON.stringify(intent));
      try{await seal(root,path,bytes);}catch(error){lease.handle.release();throw error;}
      let released=false;
      return{
        async settle(){
          if(released)throw new Error('OWNERSHIP_UNPROVEN');
-         await anchored(root);
-         if(!(await read(path))?.equals(bytes))throw new Error('OWNERSHIP_UNPROVEN');
-         await unlink(path);await syncDirectory(root.canonicalPath);
+         await settle(root,path,bytes);
        },
        release(){if(!released){released=true;lease.handle.release();}},
      };
+   },
+   async settleClaim(intent){
+     const {root,lock,path,bytes}=await claimLocation(intent);
+     if(!(await read(path))?.equals(bytes))return;
+     const lease=leases.tryAcquireExisting(lock,'daemon');
+     if(lease.status!=='HELD')throw new Error('WORKSPACE_IN_USE');
+     try{await settle(root,path,bytes,true);}finally{lease.handle.release();}
    },
    async sealMarker(root,marker){
      const id=requireUuid(marker.workspaceId),bytes=Buffer.from(JSON.stringify(marker));

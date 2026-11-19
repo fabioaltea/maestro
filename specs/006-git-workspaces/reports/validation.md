@@ -91,3 +91,7 @@ Fixture Git con due holder concorrenti, prova di uscita legata alla generazione,
 ## T023 — modello della proprietà
 
 Gli anchor e il marker vincolano l’identità del worktree. Il commit può avanzare senza cambiare proprietà. La lease richiede prova di uscita dell’albero o checkpoint durabile quiescente su holder e generazione esatti. **2 PASS** mirati.
+
+## T024 — lease interne e riconciliazione
+
+Lock writer persistente e generazioni per consumer core. Il successore mantiene il blocco dopo perdita dell’istanza fino a prova di quiescenza dello stesso holder. Refresh data Git status e proprietà, mantiene i file quando l’anchor cambia e riconcilia il provisioning interrotto solo con worktree, marker e approvazione concordanti senza ripetere Git. Le claim residue verificabili sono recuperate sotto lease. Build, build:test e lint PASS, **14 PASS** mirati e **3 PASS** integrazione US2 dopo la prova di successor.

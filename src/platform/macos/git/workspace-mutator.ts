@@ -1,4 +1,5 @@
 import {workspaceBranchRef} from '../../../domain/workspaces/provision.js';
+import {requireMatchingWorktree} from '../../../domain/workspaces/ownership.js';
 import {execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {constants} from 'node:fs';
@@ -249,6 +250,28 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       const result=await disk(scope,deadline);
       await verify(input,scope,fingerprint,deadline);
       return result;
+    },
+    async inspect(input,deadline){
+      const {scope,fingerprint}=await prepare(input,deadline);
+      const observed=await disk(scope,deadline);
+      if(!observed.worktree)return{disk:observed,status:null};
+      const result=await git(scope,deadline,['-C',scope.checkout,'status','--porcelain=v2','-z','--untracked-files=all','--ignored=matching']);
+      if(result.code||result.stderr)throw new Error('OWNERSHIP_UNPROVEN');
+      const status={tracked:false,untracked:false,ignored:false,conflicts:false};
+      const entries=result.stdout.split('\0');
+      for(let i=0;i<entries.length-1;i++){
+        const kind=entries[i]!.slice(0,2);
+        if(kind==='1 '||kind==='2 '||kind==='u '){status.tracked=true;if(kind==='2 ')i++;}
+        else if(kind==='? ')status.untracked=true;
+        else if(kind==='! ')status.ignored=true;
+        else throw new Error('OWNERSHIP_UNPROVEN');
+        if(kind==='u ')status.conflicts=true;
+      }
+      const after=await disk(scope,deadline);
+      requireMatchingWorktree(observed.worktree,after.worktree);
+      if(observed.branchOid!==after.branchOid||observed.baseOid!==after.baseOid)throw new Error('REPOSITORY_UNSTABLE');
+      await verify(input,scope,fingerprint,deadline);
+      return{disk:after,status};
     },
     async createBranch(input,deadline){
       const {scope,fingerprint}=await prepare(input,deadline);

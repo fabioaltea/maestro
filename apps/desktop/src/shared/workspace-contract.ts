@@ -57,10 +57,19 @@ function sanitizedError(value:unknown){return CORE_ERRORS[safeCode(record(value)
 function workspace(value:unknown){
  const p=record(value);
  requireFields(p,['workspaceId','featureId','projectId','envelopeId','state','stateRevision','baseRef','baseOid','branchRef',
-   'ownership','updatedAt','createdAt','safeError']);
+   'ownership','updatedAt','createdAt','safeError'],['observation']);
  uuid(p.projectId);uuid(p.envelopeId);revision(p.stateRevision);gitScope(p);
  enumValue(p.state,states);enumValue(p.ownership,['RECORDED','UNKNOWN']);time(p.updatedAt);time(p.createdAt);
  if(p.safeError!==null)safeCode(p.safeError);
+ if(p.observation!==undefined&&p.observation!==null){
+   const observation=record(p.observation);
+   requireFields(observation,['observationId','checkedAt','headOid','branchRef','ownership','tracked','untracked','ignored','conflicts']);
+   uuid(observation.observationId);time(observation.checkedAt);enumValue(observation.ownership,['VERIFIED','UNKNOWN','ABSENT']);
+   if(observation.ownership==='VERIFIED'){
+     if(observation.branchRef!==p.branchRef||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(text(observation.headOid,64)))throw new Error('INVALID_INPUT');
+   }else if(observation.branchRef!==null||observation.headOid!==null)throw new Error('INVALID_INPUT');
+   for(const key of ['tracked','untracked','ignored','conflicts'])if(observation.ownership==='VERIFIED'?typeof observation[key]!=='boolean':observation[key]!==null)throw new Error('INVALID_INPUT');
+ }
  return p;
 }
 function operation(value:unknown){

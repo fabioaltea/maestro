@@ -16,6 +16,7 @@ CREATE TABLE workspaces_records (
  target TEXT NOT NULL CHECK(json_valid(target) AND length(CAST(target AS BLOB))<=65536),
  ownership TEXT CHECK(ownership IS NULL OR (json_valid(ownership) AND length(CAST(ownership AS BLOB))<=65536)),
  marker_digest TEXT CHECK(marker_digest IS NULL OR length(marker_digest)=64),
+ observation TEXT CHECK(observation IS NULL OR (json_valid(observation) AND length(CAST(observation AS BLOB))<=4096)),
  safe_error TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,
  CHECK((ownership IS NULL)=(marker_digest IS NULL))
 ) STRICT;
@@ -26,6 +27,7 @@ CREATE TABLE workspaces_effects (
  repository_key TEXT NOT NULL,
  owner_generation TEXT NOT NULL CHECK(length(owner_generation)=36),
  phase TEXT NOT NULL CHECK(phase IN ('INTENT','BRANCH_INTENT','BRANCH_CREATED','WORKTREE_ADDED','WORKTREE_REMOVED','UNKNOWN','RESOLVED')),
+ claim_settled INTEGER NOT NULL DEFAULT 0 CHECK(claim_settled IN (0,1) AND (claim_settled=0 OR phase='RESOLVED')),
  evidence TEXT CHECK(evidence IS NULL OR (json_valid(evidence) AND length(CAST(evidence AS BLOB))<=65536))
 ) STRICT;
 CREATE UNIQUE INDEX workspace_repository_writer ON workspaces_effects(repository_key) WHERE phase<>'RESOLVED';
@@ -35,10 +37,12 @@ CREATE TABLE workspaces_leases (
  holder_type TEXT NOT NULL CHECK(holder_type IN ('ENVIRONMENT','RUN','INTEGRATION')),
  holder_id TEXT NOT NULL CHECK(length(holder_id)=36),
  generation TEXT NOT NULL CHECK(length(generation)=36),
+ instance_id TEXT NOT NULL REFERENCES instances(instance_id),
  created_at TEXT NOT NULL,released_at TEXT,release_proof TEXT CHECK(release_proof IS NULL OR json_valid(release_proof)),
  CHECK((released_at IS NULL)=(release_proof IS NULL))
 ) STRICT;
 CREATE UNIQUE INDEX workspace_writer ON workspaces_leases(workspace_id) WHERE released_at IS NULL;
+CREATE UNIQUE INDEX workspace_holder_generation ON workspaces_leases(workspace_id,holder_type,holder_id,generation);
 CREATE TRIGGER workspace_identity_immutable BEFORE UPDATE ON workspaces_records
 WHEN OLD.workspace_id<>NEW.workspace_id OR OLD.feature_id<>NEW.feature_id OR OLD.project_id<>NEW.project_id OR OLD.envelope_id<>NEW.envelope_id
  OR OLD.repository_key<>NEW.repository_key OR OLD.target<>NEW.target OR OLD.created_at<>NEW.created_at
