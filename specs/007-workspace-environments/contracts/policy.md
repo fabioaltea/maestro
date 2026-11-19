@@ -18,6 +18,10 @@ I job non ereditano credenziali provider o variabili ambientali generiche. Regis
 
 CommandSpec: ID, executableRef risolto dal core e hash/versione, argv array validato, relativeCwd confinato, env allowlist senza segreti, networkScope, timeout≤5min, expectedInputDigest, output cap. Non è una stringa shell. Comandi che necessitano shell devono avere un interprete/script esplicitamente approvato nel manifest e il medesimo confine OS; il client non fornisce script libero.
 
+L’implementazione iniziale legge fino a otto descrittori `{id,entry,argv,timeoutMs}` in `package.json.maestro.validation`. Ogni entrypoint è un file ESM regolare alla radice del worktree. Il piano sigilla il digest del file, il pin Node e il digest del profilo read-only. La copia approvata gira con cwd nella radice del worktree: uno script può leggere file da lì, mentre gli import relativi all’entrypoint risolvono dalla copia privata. Rete, scritture sul worktree e processi figli sono negati. Stdout e stderr sono limitati durante l’esecuzione e confluiscono in diagnostica strutturata con conteggi e troncamento.
+
+Con pnpm 9.4.0 il percorso senza dipendenze usa MANUAL_REQUIRED: il binario tenta una scrittura sul lockfile anche in modalità frozen con un lock vuoto. Il profilo mantiene la protezione del lockfile.
+
 READY = job install con uscita verificata0, lock/manifests/config ancora identici, store isolation qualificata, workspace anchor corrente, nessun processo incerto. Attestazione manuale mostra MANUAL_VERIFIED con limitazioni, non QUALIFIED_READY:009 può usarla solo se execution grant accetta esplicitamente la manualità.
 
 Quota disco osservata non è hard enforcement APFS. Controllo prima/spawn e campionamento bounded durante job; overrun cancella il solo albero posseduto e marca blocco. Non eliminare cache globali o node_modules altrui. Cleanup ambiente elimina solo una generazione di artefatti posseduti, senza job/lease e riferimenti; il contenuto progetto resta intatto.

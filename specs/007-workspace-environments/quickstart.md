@@ -1,40 +1,71 @@
 # Quickstart — Workspace Environments & Dependencies
 
-Questa è una procedura di futura verifica, non prova già eseguita. Usare copia di archivio/checkout temporanei e fixture sintetiche; non usare il repository utente come banco di mutazione. Prima leggere [plan.md](plan.md), [contracts/api.md](contracts/api.md) e [gate precedenti](../../docs/missing-features-brief.md).
+Usare un archivio temporaneo e un worktree posseduto da Maestro. Lo start esplicito migra lo schema 6 a 7. Le letture offline conservano lo schema esistente e presentano l’ultimo stato noto.
 
-## Prerequisiti
-
-Schema precedente6 con feature cumulative e test fixture controllate; Node e tool pin del repository. Lo start esplicito deve migrare a7; una lettura offline prima dello start deve lasciare l’archivio invariato. Nessuna installazione o login implicito. Port/provider fake nella suite ordinaria; binari reali solo per il gate qualificato.
-
-## Verifica mirata prevista
+## Verifiche locali
 
 ```sh
+npm run typecheck
+npm run typecheck:desktop
+npm run lint
 npm run build
 npm run build:test
-node --test dist-tests/tests/unit/environment-state.test.js
-node --test dist-tests/tests/contract/environment-api.test.js
-node --test dist-tests/tests/integration/environment-schema.test.js
-npm run typecheck:desktop
 npm run build:desktop
+node --test --test-concurrency=1 dist-tests/tests/{unit,contract,integration}/environment-*.test.js
+npm run test:desktop:unit
+npm exec -- playwright test -c apps/desktop/playwright.config.ts environment-flow.spec.ts
 ```
 
-I file sono proposti nei task; non dichiarare disponibili prima della loro creazione. Gli altri casi `tests/integration/environment-usN.test.ts` sono eseguiti compilati con lo stesso runner; Playwright seleziona `apps/desktop/tests/e2e/environment-flow.spec.ts`. Usare invocazioni mirate, non acceptance/bench lunghi. `npm run lint` e typecheck core fanno parte del checkpoint.
+La suite avvia fixture pnpm su macOS arm64/APFS con Node 26.13.0, pnpm 9.4.0 e registry HTTP loopback. Il test `environment-boundary.test.js` isola la prova del binario e del profilo nativo. [Qualifica](reports/qualification.md)
 
-## Scenari
+## Piano e attestazione
 
-1. **US1**: Su repository pnpm/npm/ambiguo leggere manifest e produrre PLANNED o MANUAL_REQUIRED senza spawn né modifica.
-2. **US2**: Registry locale e due workspace: installare, modificare un pacchetto in uno, verificare l’altro e store invariati; poi cambiare lock e controllare STALE.
-3. **US3**: Con CommandSpec fixture eseguire check con esito0/nonzero/timeout; restart a metà non ripete il comando e conserva output e prova input.
+Nel desktop aprire **Workspace**, selezionare **Apri ambiente** e confermare **Prepara piano d’ambiente**. La CLI espone le stesse operazioni. Eseguire i comandi dalla radice del repository con `ARCHIVE`, `WORKSPACE` e `WORKSPACE_REVISION` valorizzati per la fixture.
 
-4. Ripetere una mutazione con stesso UUID/intento; cambiarne il corpo e verificare conflitto. Simulare reply loss, crash pre/post effetto, grant stale, input concorrenti e quota piena: esito interrogabile, nessun duplicato, dati preservati.
-5. Chiudere il desktop durante lavoro accettato, riaprire e cambiare archivio con richieste pendenti; verificare ricevute, parity CLI, output come testo e focus/tastiera.
+```sh
+node dist/cli/main.js environment plan "$WORKSPACE" --expected-revision "$WORKSPACE_REVISION" \
+  --request-id "$PLAN_REQUEST" --state-dir "$ARCHIVE" --json
+node dist/cli/main.js environment operation "$PLAN_REQUEST" --state-dir "$ARCHIVE" --json
+node dist/cli/main.js environment show "$WORKSPACE" --state-dir "$ARCHIVE" --json
+```
 
-## Qualifica e criteri di arresto
+Usare un UUID nuovo per `PLAN_REQUEST`. Se il piano è MANUAL_REQUIRED, registrare le limitazioni osservate dopo il setup manuale con **Prepara attestazione manuale**. L’esito è MANUAL_VERIFIED. In headless il corpo di autorizzazione è JSON da file o stdin e contiene `action: "attest"`, `intent` con `workspaceId`, `inputDigest` e `limitations`, ed `expectedRevisions.stateRevision`.
 
-G0 pnpm binario reale con registry locale di fixture, zero rete esterna/account: lockfile frozen, hook/config ostili, store mutation isolation e cancel descendant tree. Versione/flag esatti fissati nel report prima di dati reali.
+## Installazione isolata
 
-Atteso locale: tutte le verifiche degli invarianti pertinenti PASS, oppure blocco documentato che impedisce la capability dipendente. Una prova reale assente è NOT_RUN; un gate fallito è BLOCKED/FAIL. Quota, limiti e latenza sono registrati con condizioni, non promesse generali. Non eseguire login/inferenza/remoto reale senza il consenso specifico previsto dal flusso prodotto.
+Usare un manifest con una dipendenza pnpm e un lockfile coerente nella fixture. I test offrono due lockfile distinti tramite registry loopback e verificano l’indipendenza delle copie. Confermare **Prepara installazione** per un piano PLANNED. In CLI inviare `action: "prepare"`, `intent` con `planId` e `planDigest`, ed `expectedRevisions.stateRevision` a `environment prepare --input-file FILE`. Consumare il grant con `environment prepare --grant UUID --request-id UUID`. La risposta indica `jobId`. L’operazione originale resta interrogabile dopo la chiusura del client.
 
-## Evidenze
+## Controllo registrato e recovery
 
-`reports/validation.md`: comandi/versioni/esiti e matrice FR/SC. `reports/qualification.md`: pin/hash/policy/capability e differenza fixture/reale. `reports/release-readiness.md`: review e tutti i gate esterni ancora aperti. Questi report verranno creati dai task; non sono attestazioni nel planning.
+Aggiungere al manifest pnpm una definizione di esempio e includere `check.mjs` nella radice del worktree prima di pianificare.
+
+```json
+{
+  "maestro": {
+    "validation": [
+      {
+        "id": "fe17efd7-ecae-470f-9444-7a49ed67b617",
+        "entry": "check.mjs",
+        "argv": ["fixture ; |"],
+        "timeoutMs": 5000
+      }
+    ]
+  }
+}
+```
+
+```js
+process.exit(process.argv[2] === 'fixture ; |' ? 0 : 2);
+```
+
+Dopo l’installazione, scegliere **Prepara controllo check.mjs** e confermare. In CLI preparare `action: "validate"`, `intent` con `environmentId`, `commandSpecId` e `inputDigest`, ed `expectedRevisions.stateRevision`. Usare il grant con `environment validate --grant UUID --request-id UUID`. Il supervisore esegue una copia sigillata dell’entrypoint con cwd nella radice del worktree, argomenti letterali, rete e scrittura sul worktree bloccate. I risultati contengono diagnostica strutturata con codice di uscita, digest, byte osservati e troncamento. I flussi grezzi del subprocess restano privati.
+
+```sh
+node dist/cli/main.js environment job "$JOB" --state-dir "$ARCHIVE" --json
+node dist/cli/main.js environment output "$JOB" --state-dir "$ARCHIVE" --json
+node dist/cli/main.js environment artifact "$ARTIFACT" --state-dir "$ARCHIVE" --json
+node dist/cli/main.js environment reconcile "$JOB" --expected-revision "$JOB_REVISION" \
+  --request-id "$OBSERVATION_REQUEST" --state-dir "$ARCHIVE" --json
+```
+
+Usare l’UUID del job originale per letture e riconciliazione. Il tentativo di riconciliazione ha un proprio UUID, così un’eventuale risposta persa resta interrogabile. RECONCILING conserva la lease finché manca la prova d’uscita. Un cambio di manifest, lock o entrypoint richiede un nuovo piano. [Contratto API](contracts/api.md) · [Validazione](reports/validation.md) · [Readiness](reports/release-readiness.md)

@@ -86,7 +86,7 @@
 ## Phase 6: Polish & Cross-Cutting Review
 
 - [x] T034 Eseguire build/typecheck/lint e suite mirate core/desktop per i file modificati, aggiornando `specs/007-workspace-environments/reports/validation.md` con matrice FR/SC, comandi/esiti e limiti; non rilanciare acceptance/bench lunghi né promuovere skip a PASS.
-- [ ] T035 Verificare le tre storie di `specs/007-workspace-environments/quickstart.md` e i cap del piano; registrare in `specs/007-workspace-environments/reports/qualification.md` prove reali solo se autorizzate e capability effettive, altrimenti NOT_RUN/BLOCKED. Preservare separati gli esiti fixture, provider/login/hosting reali e review umana.
+- [x] T035 Verificare le tre storie di `specs/007-workspace-environments/quickstart.md` e i cap del piano; registrare in `specs/007-workspace-environments/reports/qualification.md` prove reali solo se autorizzate e capability effettive, altrimenti NOT_RUN/BLOCKED. Preservare separati gli esiti fixture, provider/login/hosting reali e review umana.
 - [ ] T036 Concludere review degli otto principi, permessi e gate precedenti in `specs/007-workspace-environments/reports/release-readiness.md`, aggiornando `specs/007-workspace-environments/tasks.md` solo per lavoro provato; annotare dipendenze ancora bloccate e nessuna integrazione/pubblicazione implicita.
 
 ## Dependencies & Execution Order
