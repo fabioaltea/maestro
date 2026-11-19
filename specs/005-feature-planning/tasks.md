@@ -10,7 +10,7 @@
 ## Phase 1: Setup & G0
 
 - [X] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema4 in `specs/005-feature-planning/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
-- [ ] T002 Scrivere prove negative di capability/confine in `tests/integration/feature-boundary.test.ts` e fixture in `tests/fixtures/feature-boundary.ts`: G0: test di confine readonly e schema FeaturePlanningResult con provider sintetico. G1 assistito reale solo dopo004/T028/T050; registrare NOT_RUN/BLOCKED senza impedire la verifica del percorso manuale con fixture. Nessun consenso reale assunto.
+- [X] T002 Scrivere prove negative di capability/confine in `tests/integration/feature-boundary.test.ts` e fixture in `tests/fixtures/feature-boundary.ts`: G0: test di confine readonly e schema FeaturePlanningResult con provider sintetico. G1 assistito reale solo dopo004/T028/T050; registrare NOT_RUN/BLOCKED senza impedire la verifica del percorso manuale con fixture. Nessun consenso reale assunto.
 - [ ] T003 Implementare la primitiva reale minima di confine in `src/providers/codex/feature-planning-parser.ts` e la porta in `src/ports/feature.ts`, con fixture `tests/fixtures/feature-adapter.ts`; validare su questa primitiva i confini indicati in `specs/005-feature-planning/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
 - [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/005-feature-planning/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
 
