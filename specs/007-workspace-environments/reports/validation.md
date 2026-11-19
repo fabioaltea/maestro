@@ -27,3 +27,7 @@ Lo start esplicito migra 6→7 sotto le lease esistenti. Il rebuild del parent w
 ## T008 — reservation e artefatti
 
 Piano prenotato nel ledger comune e pubblicato solo dopo verifica del file sigillato, dei digest e della revisione workspace. Quota condivisa, replay con UUID identico e file mancante verificati. Build:test e **6 PASS** tra store ambiente e workflow. Gli eventi del namespace sono completati da T012.
+
+## T009 — superficie API e storico (RED)
+
+Due RED prima di parser e reader. DTO chiusi, envelope bounded, prepare distinto dall’admission e interrogazione immutabile dell’UUID originale.
