@@ -11,6 +11,7 @@ const help=`maestro workspace prepare FEATURE_UUID ENVELOPE_UUID
 maestro workspace create --grant UUID --request-id UUID
 maestro workspace list PROJECT_UUID [--limit 1..20 --cursor CURSOR]
 maestro workspace show WORKSPACE_UUID
+maestro workspace refresh WORKSPACE_UUID --expected-revision N --request-id UUID
 maestro workspace operation REQUEST_UUID
 --state-dir ABS --json --timeout-ms 1..2000
 Controllare il riepilogo di prepare prima di inviare create. Consultare operation con l’UUID originale.
@@ -21,7 +22,7 @@ export async function runWorkspaceCli(args:readonly string[]):Promise<number>{
  try{
    const {values,positionals}=parseArgs({args:[...args],allowPositionals:true,strict:true,options:{
      json:{type:'boolean'},help:{type:'boolean',short:'h'},'state-dir':{type:'string'},'timeout-ms':{type:'string'},
-     grant:{type:'string'},'request-id':{type:'string'},limit:{type:'string'},cursor:{type:'string'},
+     grant:{type:'string'},'request-id':{type:'string'},'expected-revision':{type:'string'},limit:{type:'string'},cursor:{type:'string'},
    }});
    json=values.json??false;
    if(values.help){process.stdout.write(help);return 0;}
@@ -44,6 +45,10 @@ export async function runWorkspaceCli(args:readonly string[]):Promise<number>{
      if(values.cursor!==undefined)params.cursor=values.cursor;
    }else if(action==='show'&&positionals.length===2){
      method='workspace.get';params={workspaceId:target};
+   }else if(action==='refresh'&&positionals.length===2){
+     method='workspace.refresh';params={workspaceId:target,expectedStateRevision:values['expected-revision']};
+     allowed.add('expected-revision');allowed.add('request-id');
+     requestId=workspaceUuid(values['request-id']);
    }else if(action==='operation'&&positionals.length===2){
      method='workspace.operation.get';requestId=workspaceUuid(target);params={requestId};
    }else throw new Error('INVALID_REQUEST');
@@ -52,7 +57,7 @@ export async function runWorkspaceCli(args:readonly string[]):Promise<number>{
    if(directory!==undefined&&!isAbsolute(directory)||timeout!==undefined&&!/^[1-9][0-9]{0,3}$/.test(timeout))throw new Error('INVALID_REQUEST');
    const client=new LocalClient(createClientBackend());
    result=await client.runWorkspace(method,params,{...(directory?{stateDirectory:directory}:{}),...(timeout?{timeoutMs:Number(timeout)}:{}),
-     ...(method==='workspace.create'?{requestId:requestId!}:{})});
+     ...(['workspace.create','workspace.refresh'].includes(method)?{requestId:requestId!}:{})});
  }catch(error){
    const parseError=error instanceof Error&&'code' in error&&String(error.code).startsWith('ERR_PARSE_ARGS');
    result=failureResult(parseError?'INVALID_REQUEST':classifyError(error),requestId);

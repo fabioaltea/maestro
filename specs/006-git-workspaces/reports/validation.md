@@ -95,3 +95,7 @@ Gli anchor e il marker vincolano l’identità del worktree. Il commit può avan
 ## T024 — lease interne e riconciliazione
 
 Lock writer persistente e generazioni per consumer core. Il successore mantiene il blocco dopo perdita dell’istanza fino a prova di quiescenza dello stesso holder. Refresh data Git status e proprietà, mantiene i file quando l’anchor cambia e riconcilia il provisioning interrotto solo con worktree, marker e approvazione concordanti senza ripetere Git. Le claim residue verificabili sono recuperate sotto lease. Build, build:test e lint PASS, **14 PASS** mirati e **3 PASS** integrazione US2 dopo la prova di successor.
+
+## T025 — CLI refresh
+
+L’osservazione esplicita usa workspace, revisione e UUID originali. CLI e RPC rifiutano grant, holder o generazioni aggiunti dal chiamante. Build e build:test PASS, **2 PASS** di contratto.

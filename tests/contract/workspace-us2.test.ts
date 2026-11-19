@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {createWorkspaceDispatch} from '../../src/core/workspaces/dispatch.js';
 import {workspaceCapabilities,validateWorkspaceParams} from '../../src/protocol/workspace.js';
 import {createRegistryStore} from '../fixtures/registry-store.js';
@@ -20,4 +22,18 @@ test('workspace refresh requires composed live capability and accepts only the w
  }
  assert.throws(()=>validateWorkspaceParams('workspace.lease.acquire',params),/UNSUPPORTED_VERSION/);
  assert.throws(()=>workspaceCapabilities({workspaceVersion:1,workspaceMethods:['workspace.get']},request.method),/UNSUPPORTED_VERSION/);
+});
+
+test('workspace CLI refresh carries its revision and original UUID, and rejects a lease claim',async t=>{
+ const f=await createRegistryStore(t),workspaceId=randomUUID(),requestId=randomUUID();
+ const entry=fileURLToPath(new URL('../../../dist/cli/main.js',import.meta.url));
+ const call=(...scope:string[])=>spawnSync(process.execPath,[entry,'workspace','refresh',workspaceId,'--request-id',requestId,
+   '--state-dir',f.directory,'--json',...scope],{encoding:'utf8'});
+ const failed=call('--expected-revision','2');
+ const response=JSON.parse(failed.stdout);
+ assert.equal(response.error.code,'DAEMON_UNAVAILABLE');
+ assert.equal(response.requestId,requestId);
+ for(const result of [call('--expected-revision','0'),call('--expected-revision','2','--grant',randomUUID()),call('--holder',randomUUID())]){
+   assert.equal(result.status,2);assert.equal(JSON.parse(result.stdout).error.code,'INVALID_REQUEST');
+ }
 });
