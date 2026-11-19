@@ -19,3 +19,7 @@ Porta Workspace e adapter macOS dietro un profilo dedicato. Git risolve l’OID 
 ## T005 — stato e grant (RED)
 
 Tre unit test RED prima del modello e del namespace WORKSPACE. Coprono transizioni e stati terminali, fence su versione/generazione, cap a 20, scope, scadenza e replay sul solo UUID consumato.
+
+## T006 — schema cumulativo (RED)
+
+Quattro integrazioni RED prima del migratore. La fixture costruisce lo schema 5 dal SQL congelato e verifica lettura storica senza scritture, preservazione dei riferimenti, fault pre/post commit e UUID cross-namespace in entrambi i versi.
