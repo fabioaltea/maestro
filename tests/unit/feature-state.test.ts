@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { canonicalWorkflowIntent, validateWorkflowGrant } from '../../src/domain/workflow/authorization.js';
+import { transitionFeature, nextFeatureRevision } from '../../src/domain/features/model.js';
+import { requireApprovableBundle } from '../../src/domain/features/bundle.js';
+import { featureDraft } from '../fixtures/feature-boundary.js';
+const intent = () => ({ version: 1, storeId: randomUUID(), ownerUid: 501, namespace: 'FEATURE', action: 'create', targetId: randomUUID(), projectId: randomUUID(), expectedRevision: null, configRevision: '1', payload: { title: 'Local draft' } });
+test('feature grants bind action, scope, versions, expiry and a single original request', () => {
+ const i = intent(), canonical = canonicalWorkflowIntent(i), requestId = randomUUID();
+ const grant = { grantId: randomUUID(), canonicalIntent: canonical, createdAtMs: 1000, expiresAtMs: 301000, consumedByRequestId: null };
+ assert.equal(validateWorkflowGrant(grant, canonical, requestId, 1001), 'CONSUME');
+ for (const other of [{ ...i, action: 'approve' }, { ...i, expectedRevision: '2' }, { ...i, storeId: randomUUID() }]) assert.throws(() => validateWorkflowGrant(grant, canonicalWorkflowIntent(other), requestId, 1001), /APPROVAL/);
+ assert.throws(() => validateWorkflowGrant(grant, canonical, requestId, 301001), /APPROVAL_STALE/);
+ assert.throws(() => validateWorkflowGrant(grant, canonical, requestId, 999), /APPROVAL_STALE/);
+ assert.equal(validateWorkflowGrant({ ...grant, consumedByRequestId: requestId }, canonical, requestId, 400000), 'REPLAY');
+ assert.throws(() => validateWorkflowGrant({ ...grant, consumedByRequestId: randomUUID() }, canonical, requestId, 1001), /APPROVAL/);
+ assert.equal(canonicalWorkflowIntent({ ...i, payload: { b: 2, a: 1 } }), canonicalWorkflowIntent({ ...i, payload: { a: 1, b: 2 } }));
+ assert.throws(() => canonicalWorkflowIntent({ ...i, forgedPermission: true }));
+ assert.throws(() => canonicalWorkflowIntent({ ...i, payload: JSON.parse('{"__proto__":{"allow":true}}') }));
+});
+test('feature lifecycle is explicit and revisions cannot overflow or revive an archive', () => {
+ assert.equal(transitionFeature('DRAFT', 'approve'), 'APPROVED');
+ assert.equal(transitionFeature('APPROVED', 'revise'), 'NEEDS_REVIEW');
+ assert.equal(transitionFeature('APPROVED', 'stale'), 'NEEDS_REVIEW');
+ assert.equal(transitionFeature('PLANNING', 'question'), 'WAITING_USER');
+ assert.equal(transitionFeature('WAITING_USER', 'interrupt'), 'INTERRUPTED');
+ assert.throws(() => transitionFeature('ARCHIVED','revise'));
+ assert.throws(() => transitionFeature('PLANNING','approve'));
+ assert.equal(nextFeatureRevision('1'), '2');
+ for (const r of ['0','-1','9223372036854775807']) assert.throws(() => nextFeatureRevision(r));
+});
+test('approval requires complete criteria and exactly the explicitly accepted nonblocking unknowns', () => {
+ const b = featureDraft(); requireApprovableBundle(b, []);
+ assert.throws(() => requireApprovableBundle({ ...b, acceptanceCriteria: [] }, []), /APPROVAL_REQUIRED/);
+ const unknown = { unknownId: 'U1', text: 'Not established', impact: 'NON_BLOCKING' as const, decision: 'OPEN' as const };
+ assert.throws(() => requireApprovableBundle({ ...b, unknowns: [unknown] }, []), /APPROVAL_REQUIRED/);
+ requireApprovableBundle({ ...b, unknowns: [unknown] }, ['U1']);
+ assert.throws(() => requireApprovableBundle({ ...b, unknowns: [{ ...unknown, impact: 'BLOCKING' }] }, ['U1']), /APPROVAL_REQUIRED/);
+ assert.throws(() => requireApprovableBundle(b, ['invented']), /APPROVAL_REQUIRED/);
+});

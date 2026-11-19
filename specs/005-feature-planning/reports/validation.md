@@ -21,3 +21,7 @@ Implemented the provider-neutral bundle and question data types, closed schema/p
 ## T004 — synthetic G0
 
 12/12PASS with the actual pinned CLI, local synthetic backend and unchanged readonly profile. Feature result and inherited OS negative cases pass. Official login/model path remains BLOCKED, separately documented in qualification.md.
+
+## T005 — RED policy/state
+
+Grant action/store/revision binding, expiry/clock rollback, replay-only consumption, canonical ordering/prototype rejection, lifecycle/revision overflow and exact unknown acceptance cases written. build:test fails only for missing workflow authorization and feature model modules, as expected before implementation.
