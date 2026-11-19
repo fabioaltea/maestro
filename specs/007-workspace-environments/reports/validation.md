@@ -83,3 +83,7 @@ Due RED per piano manuale, mismatch, input stale, exit verificato e generazione 
 ## T022 — install e cancel su fixture (RED)
 
 Due RED prima di host e servizio. Due worktree, copie indipendenti, lock cambiato, cancel e rilascio dopo exit.
+
+## T023 — policy job e prova d’uscita
+
+Un install richiede piano PLANNED, pin esatto e input correnti. La decisione terminale richiede prova d’uscita legata a job, generazione e lease. L’uscita zero con input variati porta a esito stale. Build:test e **2 PASS** mirati.

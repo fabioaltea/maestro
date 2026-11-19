@@ -101,3 +101,21 @@ export interface EnvironmentWrite {
 export interface EnvironmentInspectPort{
  inspect(root:FilesystemAnchor,deadline:Deadline,selectedVersion?:string):Promise<EnvironmentInspection>;
 }
+
+export interface EnvironmentJobIdentity{
+ readonly jobId:string;readonly generation:string;readonly leaseId:string;
+}
+export interface EnvironmentExitEvidence extends EnvironmentJobIdentity{
+ readonly verified:true;readonly exitCode:number|null;
+ readonly outcome:'SUCCEEDED'|'FAILED'|'CANCELLED';
+ readonly error:string|null;
+ readonly truncated?:boolean;
+}
+export interface EnvironmentLeasePort{
+ acquire(request:import('./workspace.js').WorkspaceLeaseRequest):Promise<import('./workspace.js').WorkspaceLease>;
+ release(lease:import('./workspace.js').WorkspaceLease,proof:import('./workspace.js').WorkspaceReleaseProof):Promise<import('./workspace.js').WorkspaceLease>;
+}
+export interface EnvironmentJobHostPort{
+ install(identity:EnvironmentJobIdentity,scope:Omit<EnvironmentInstallScope,'store'|'scratch'>,deadline:Deadline,signal:AbortSignal):Promise<EnvironmentExitEvidence|null>;
+ recover(identity:EnvironmentJobIdentity):Promise<EnvironmentExitEvidence|null>;
+}
