@@ -51,3 +51,7 @@ Il writer pubblica reservation e metadata workspace nello stesso commit/outbox. 
 ## T013 — unitario ref e base esatta (RED)
 
 Un caso RED prima del modello di provisioning. Verifica ref generato, base mutata, branch occupato ed evidenza attesa per il passo seguente.
+
+## T014 — contratto di ammissione
+
+1 PASS sul dispatcher iniziale. Nega capability assente, controller, schema storico e campi di comando extra.
