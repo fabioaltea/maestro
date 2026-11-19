@@ -37,3 +37,7 @@ Explicit start migration4→5, fresh schema5, strict tables/FK, cross-ledger gua
 ## T008 — workflow ledger/artifacts
 
 Added same-writer intent/grant admission with global UUID fencing, durable intent before file effects, replay and monouse grants, cancellation reserve, private no-follow/hash-verified chunk upload/seal/discard, quota128MiB/8192objects with8MiB terminal reserve and conservative metadata accounting. Interrupted fsync keeps bytes and an interrogable original intent; orphan/corrupt data preserved. Native reader denies writes and transports bytes in bounded base64. Initial writer tests RED on missing method; GREEN12/12 for workflow/state/schema plus lint/build:test. Quota test uses one synthetic accounting record, not a volume/disk-fill campaign. Feature CRUD remains unadvertised until its story implementation.
+
+## T009 — RED public/offline contracts
+
+Added closed request/chunk/envelope/public-operation cases and a native confined offline artifact/metadata read with immutable archive and denied mutation. build:test is RED for the missing protocol/feature module; no permissive transport fallback introduced.
