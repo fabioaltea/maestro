@@ -47,3 +47,7 @@ Il writer include gli eventi Environment nell’outbox atomica. Core e desktop a
 ## T013 — prove US1
 
 Due RED per lock concorrenti, pin, hook, fonti esterne e attestation stale.
+
+## T014 — prove US1
+
+1 PASS su capability, confine di ruolo e attestation chiusa.
