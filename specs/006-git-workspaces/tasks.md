@@ -37,7 +37,7 @@
 
 **Coverage**: FR-001–FR-003; FR-010/011/012 trasversali.
 
-- [ ] T013 [P] [US1] Scrivere policy/transizioni US1 in `tests/unit/workspace-us1.test.ts`: Hook e config Git ostili, branch/path collision, base race, retry, crash fra branch e worktree e checkout originale dirty; testare grant/revisioni e comportamento sicuro (FR-001–FR-003).
+- [X] T013 [P] [US1] Scrivere policy/transizioni US1 in `tests/unit/workspace-us1.test.ts`: Hook e config Git ostili, branch/path collision, base race, retry, crash fra branch e worktree e checkout originale dirty; testare grant/revisioni e comportamento sicuro (FR-001–FR-003).
 - [ ] T014 [P] [US1] Scrivere contract US1 in `tests/contract/workspace-us1.test.ts`: metodi della storia in `specs/006-git-workspaces/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-001–FR-003, FR-011).
 - [ ] T015 [P] [US1] Scrivere integrazione locale US1 in `tests/integration/workspace-us1.test.ts` con fixture di repository/processi/clock pertinenti: In repository temporaneo creare due workspace per due feature, verificare OID di partenza e snapshot del checkout originale invariato. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-001–FR-003, FR-011/012).
 - [ ] T016 [US1] Implementare tipi/invarianti della storia in `src/domain/workspaces/model.ts` e aggiornare `src/ports/workspace.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-001–FR-003).

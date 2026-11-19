@@ -47,3 +47,7 @@ Il daemon instrada workspace sullo schema 6 e pubblica soltanto metodi composti.
 ## T012 — eventi e budget
 
 Il writer pubblica reservation e metadata workspace nello stesso commit/outbox. Il decoder desktop verifica correlazione e payload chiusi. Un backlog bloccato impedisce nuove admission e conserva letture e replay originali. Typecheck core/desktop, lint e build:test PASS. Suite mirata di eventi, limiti e ledger **8 PASS**.
+
+## T013 — unitario ref e base esatta (RED)
+
+Un caso RED prima del modello di provisioning. Verifica ref generato, base mutata, branch occupato ed evidenza attesa per il passo seguente.
