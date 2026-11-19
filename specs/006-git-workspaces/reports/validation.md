@@ -107,3 +107,7 @@ Refresh richiede conferma dalla vista Workspace e conserva la ricevuta originale
 ## T027 — invarianti cleanup (RED)
 
 Due test per modifiche tracked/untracked/ignored, conflitti, holder, target variato, ancestry e prova di assenza a passi.
+
+## T028 — contratto cleanup
+
+1 PASS per target locale e OID, grant/revisione chiusi, capability mancante e niente path o force nel DTO.
