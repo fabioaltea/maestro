@@ -70,8 +70,10 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  db.prepare('INSERT INTO workflow_grants VALUES(?,?,?,?,NULL)').run(g.grantId,g.canonicalIntent,g.createdAtMs,g.expiresAtMs);return{};},i.action==='cancel');}
  if(c.kind==='admit')return admit(c.admission);
  if(c.kind==='complete')return transaction(()=>({operation:complete(c.requestId,c.result,c.error,c.outcome)}),true);
- if(c.kind==='reconcile')return transaction(()=>{requireUuid(c.instanceId);for(const row of db.prepare("SELECT * FROM workflow_operations WHERE phase<>'FINALIZED'").all() as FeatureRow[]){const op=workflowOperation(row);complete(op.requestId,null,'INTERRUPTED','INTERRUPTED');}
- db.prepare("UPDATE features_turns SET phase='INTERRUPTED' WHERE phase IN ('ACCEPTED','RUNNING')").run();return{};},true);
+ if(c.kind==='reconcile')return transaction(()=>{requireUuid(c.instanceId);for(const row of db.prepare("SELECT * FROM workflow_operations WHERE phase<>'FINALIZED'").all() as FeatureRow[]){const op=workflowOperation(row);
+ if(op.namespace==='FEATURE'&&['generate','answer','cancel'].includes(op.action))complete(op.requestId,null,'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
+ else { complete(op.requestId,null,'INTERRUPTED','INTERRUPTED');if(op.namespace==='ARTIFACT'){const i=JSON.parse(op.canonicalIntent) as WorkflowIntent;const id=i.action==='reserve'?op.requestId:i.payload.artifactId;if(typeof id==='string')db.prepare("UPDATE workflow_artifacts SET state='ORPHAN' WHERE artifact_id=? AND state='RESERVED' AND ref_count=0").run(id);}}}
+ db.prepare("UPDATE features_records SET state='RECONCILING',state_revision=state_revision+1 WHERE feature_id IN (SELECT feature_id FROM features_turns WHERE phase IN ('ACCEPTED','RUNNING','RECONCILING'))").run();db.prepare("UPDATE features_turns SET phase='RECONCILING' WHERE phase IN ('ACCEPTED','RUNNING')").run();return{};},true);
  if(['reserve','append','seal','discard'].includes(c.kind))return executeUpload(c as UploadChange);
  throw new Error('UNSUPPORTED_VERSION');
  },

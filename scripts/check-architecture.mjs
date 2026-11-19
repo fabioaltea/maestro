@@ -15,7 +15,9 @@ async function walk(directory) {
 async function inspect(path) {
   const local = relative(root, path).replaceAll('\\', '/');
   const zone = local.split('/')[0];
-  if (!['domain', 'client', 'providers'].includes(zone)) return;
+  const workflow = local.startsWith('core/features/') || local.startsWith('core/workflow/');
+  if (!['domain', 'client', 'providers'].includes(zone) && !workflow) return;
+  // Feature/workflow policies remain inside the existing neutral domain zone.
   const ast = ts.createSourceFile(path, await readFile(path, 'utf8'), ts.ScriptTarget.Latest, true);
   function validate(node) {
     if (!ts.isStringLiteralLike(node)) {
@@ -26,12 +28,12 @@ async function inspect(path) {
     let forbidden;
     if (specifier.startsWith('.')) {
       const target = relative(root, resolve(dirname(path), specifier)).replaceAll('\\', '/');
-      const allowed = zone === 'domain' ? ['domain/', 'ports/']
+      const allowed = workflow ? ['domain/', 'ports/', 'protocol/', 'core/', ...(local === 'core/features/runtime.ts' ? ['providers/', 'platform/'] : [])] : zone === 'domain' ? ['domain/', 'ports/']
         : zone === 'providers' ? ['providers/', 'domain/', 'ports/']
         : ['client/', 'domain/', 'ports/', 'protocol/'];
       forbidden = !allowed.some(prefix => target.startsWith(prefix));
     } else {
-      forbidden = zone === 'providers'
+      forbidden = workflow ? !['node:crypto', 'node:path', 'node:buffer'].includes(specifier) : zone === 'providers'
       ? !specifier.startsWith('node:') || specifier === 'node:sqlite' || specifier.startsWith('node:sqlite/')
       : zone === 'domain' || !specifier.startsWith('node:') || specifier === 'better-sqlite3'
         || specifier === 'node:sqlite' || ['node:fs', 'node:os', 'node:process', 'node:child_process', 'node:worker_threads', 'node:cluster', 'node:net', 'node:tls', 'node:http', 'node:https', 'node:http2', 'node:dgram'].some(prefix => specifier === prefix || specifier.startsWith(prefix + '/'));

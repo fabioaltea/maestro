@@ -1,3 +1,4 @@
+import {createFeatureRuntime} from './features/runtime.js';
 import { createDiscoveryRuntime } from './discovery/runtime.js';
 import { EventStreamError } from '../protocol/event-cursor.js';
 import { createLiveEvents } from './live-events.js';
@@ -57,8 +58,9 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     let lastSnapshot: StoreSnapshot | null = null;
     let streams: ReturnType<typeof createLiveEvents> | undefined;
     let projects: ReturnType<typeof createProjectOperations> | undefined;
+    let features: ReturnType<typeof createFeatureRuntime> | undefined;
     let discovery: ReturnType<typeof createDiscoveryRuntime> | undefined;
-    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); void projects?.shutdown(); discovery?.fence(); });
+    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); void projects?.shutdown(); discovery?.fence(); features?.fence(); });
     const ticket = await storage.getTicket(intent.ticketId);
     if (!ticket || ticket.instanceId !== intent.instanceId || ticket.generation !== intent.generation
       || !await createOperations(storage, paths.ownerUid).claimLaunch(intent.ticketId, intent.generation, process.pid)) {
@@ -82,7 +84,8 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       } });
     const inspection = await createGitRunner().capabilities();
     discovery = createDiscoveryRuntime(storage, paths, intent.instanceId, dependencies.discovery);
-    const capabilities = { discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
+    features = createFeatureRuntime(storage, paths, intent.instanceId);
+    const capabilities = { ...(lastSnapshot?.store.schemaVersion === 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });
     let draining = false;
@@ -111,6 +114,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     }, async (request, peer) => {
       if (volatileError) {
         const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
+        if (request.method === 'feature.operation.get' && lastSnapshot) return features!.dispatch(request, peer, lastSnapshot);
         if (request.method === 'discovery.operation.get' && lastSnapshot) return discoveryDispatch(request, peer, lastSnapshot);
         if (request.method === 'projects.operation.get' && lastSnapshot) return projectDispatch(request, peer, lastSnapshot);
         if (request.method !== 'status.get') return { ...base, result: 'BLOCKED', data: { code: 'PERSISTENCE_UNAVAILABLE' } };
@@ -135,6 +139,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
           .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
             kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState })) : [],
       } };
+      if (request.method.startsWith('feature.')) return features!.dispatch(request, peer, snapshot);
       if (request.method.startsWith('discovery.')) return discoveryDispatch(request, peer, snapshot);
       if (request.method.startsWith('projects.')) return projectDispatch(request, peer, snapshot);
       if (request.method === 'diagnostics.get' || request.method === 'events.list') {
@@ -178,13 +183,13 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
         const drainDeadline = makeDeadline(systemClock, 8_000);
         // Fence synchronously before publishing STOPPING; accepted work is independent of the RPC.
         void projects!.shutdown();
-        discovery!.fence();
+        discovery!.fence(); features!.fence();
         try { await storage.transitionInstance(intent.instanceId, 'STOPPING'); }
         catch (error) { draining = false; throw error; }
         setImmediate(() => {
           void (async () => {
             await drainProjectOperations(projects!, drainDeadline);
-            await discovery!.stop(drainDeadline);
+            await Promise.all([discovery!.stop(drainDeadline), features!.stop(drainDeadline)]);
             await drainFoundationAuxiliaries({ store: storage, instanceId: intent.instanceId, paths,
               identity: createProcessIdentity(), transport: createLocalTransport(), platformPaths: adapter,
               deadline: drainDeadline, excludedPids: [process.pid, attempt!.pid],
@@ -219,6 +224,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     await interruptProjectOperations(storage, new Date().toISOString());
     await checkpoint('daemon.projectsRecovered');
     await discovery.recover();
+    await features.recover();
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
     lastSnapshot = await storage.readSnapshot();
     await checkpoint('daemon.running');

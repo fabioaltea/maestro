@@ -1,7 +1,7 @@
 import { featureFields, featureIdentifier, featureObject, featureText, validateFeatureBundle } from '../../domain/features/bundle.js';
 import type { FeaturePlanningResult, FeatureProvenanceScope, PlanningQuestion } from '../../ports/feature.js';
 /** Data decoder availability never certifies the provider's runtime/authentication. */
-export const FEATURE_PLANNING_CAPABILITIES = Object.freeze({ readonlyPlanning: false, qualified: false });
+export { UNAVAILABLE_FEATURE_PLANNING_CAPABILITIES as FEATURE_PLANNING_CAPABILITIES } from '../../ports/feature.js';
 export function parseFeaturePlanningResult(value: unknown, scope: FeatureProvenanceScope = { sourceIds: [], answerIds: [] }): FeaturePlanningResult {
   const p = featureObject(value);
   if (p.kind === 'DRAFT') { featureFields(p, ['kind','bundle']); return { kind: 'DRAFT', bundle: validateFeatureBundle(p.bundle, scope) }; }

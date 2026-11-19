@@ -1,7 +1,7 @@
 import type {StoragePort} from '../../ports/storage.js';
 import type {FeatureQuery} from '../../ports/workflow.js';
 import {publicFeatureOperation,requireFeatureEnvelope,validateFeatureParams} from '../../protocol/feature.js';
-import {FEATURE_PLANNING_CAPABILITIES} from '../../providers/codex/feature-planning-parser.js';
+import {UNAVAILABLE_FEATURE_PLANNING_CAPABILITIES as FEATURE_PLANNING_CAPABILITIES} from '../../ports/feature.js';
 import {featureObject,featureFields} from '../../domain/features/bundle.js';
 /** Historical reader: never constructs a provider, extractor, writer or implicit check. */
 export function createFeatureReader(options:{readonly storage:Pick<StoragePort,'readFeatureState'|'readWorkflowArtifact'>;readonly storeId:string;readonly offline:boolean}){

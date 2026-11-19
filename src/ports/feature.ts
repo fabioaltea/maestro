@@ -11,3 +11,5 @@ export interface PlanningQuestion { readonly questionId: string; readonly text: 
 export type FeaturePlanningResult = { readonly kind: 'DRAFT'; readonly bundle: FeatureBundle }
   | { readonly kind: 'QUESTIONS'; readonly questions: readonly PlanningQuestion[] };
 export interface FeatureProvenanceScope { readonly sourceIds: readonly string[]; readonly answerIds: readonly string[] }
+
+export const UNAVAILABLE_FEATURE_PLANNING_CAPABILITIES = Object.freeze({ readonlyPlanning: false, qualified: false });

@@ -45,3 +45,7 @@ Added closed request/chunk/envelope/public-operation cases and a native confined
 ## T010 — wire/reader GREEN
 
 Closed feature/upload/prepare DTOs, bounded public operation decoder, authenticated dispatcher, current-revision paging, LocalClient/backend hooks and historical inspectFeature added. Core capability remains gated by composition. Reader never constructs provider/extractor; unsupported assisted reads return explicit unavailability. Build:test PASS; contract/offline3/3PASS including real confined native reader, base64 byte integrity and archive immutability. Concrete prepare/upload DTO and single immutable bundle layout clarified in contracts/model without relaxing approvals.
+
+## T011 — daemon composition and recovery
+
+Shared authorization/admission/recovery helpers and feature runtime composed in the same daemon, writer and native reader. Only implemented reads/uploads advertised; assisted generation remains absent/unqualified. Startup reconciles local intents without replay and preserves uncertain planning ownership as UNKNOWN/RECONCILING. Drain fences admission and shares the existing deadline with Discovery; no new daemon. AST guards now reject direct OS effects from feature/workflow orchestration outside composition. RED missing runtime → GREEN runtime/architecture4/4PASS including actual daemon/client live→offline; build core/test and lint PASS.
