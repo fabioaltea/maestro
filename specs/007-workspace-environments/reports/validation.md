@@ -111,3 +111,7 @@ Un PASS e un RED prima della policy registrazione CommandSpec. Copertura per usc
 ## T029 — fixture US3
 
 Scenari su worktree posseduto per argv letterale, esiti 0/14/timeout, perdita della risposta dopo il completamento nativo e riconciliazione da successore. Prima dell’implementazione manca il metodo di esecuzione nel runtime.
+
+## T030 — CommandSpec
+
+Registrazione limitata a script Node ESM alla radice, argv letterale, tempo massimo e prove del job legate alla lease. Cleanup ammesso soltanto con uscita verificata e senza lease o riferimenti. **2 PASS** unit.

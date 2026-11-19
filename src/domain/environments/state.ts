@@ -4,7 +4,7 @@ export const ENVIRONMENT_STATES=['UNCONFIGURED','PLANNED','MANUAL_REQUIRED','MAN
 export const ENVIRONMENT_GRANTED_ACTIONS:readonly string[]=['attest','prepare','cancel','validate'];
 export const ENVIRONMENT_OBSERVATION_ACTIONS:readonly string[]=['plan','reconcile'];
 export type EnvironmentState=typeof ENVIRONMENT_STATES[number];
-type Action='plan'|'manual'|'attest'|'prepare'|'prepared'|'stale'|'block'|'uncertain';
+type Action='plan'|'manual'|'attest'|'validate'|'prepare'|'prepared'|'stale'|'block'|'uncertain';
 const available={plan:'PLANNED',manual:'MANUAL_REQUIRED',stale:'STALE'} as const;
 const transitions:Readonly<Record<EnvironmentState,Readonly<Partial<Record<Action,EnvironmentState>>>>>={
  UNCONFIGURED:available,
@@ -12,7 +12,7 @@ const transitions:Readonly<Record<EnvironmentState,Readonly<Partial<Record<Actio
  MANUAL_REQUIRED:{...available,attest:'MANUAL_VERIFIED'},
  MANUAL_VERIFIED:available,
  PREPARING:{prepared:'READY',block:'BLOCKED',stale:'STALE',uncertain:'RECONCILING'},
- READY:{...available,block:'BLOCKED'},
+ READY:{...available,validate:'PREPARING',block:'BLOCKED'},
  STALE:available,
  BLOCKED:available,
  RECONCILING:{block:'BLOCKED',stale:'STALE',prepared:'READY'},

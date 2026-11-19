@@ -31,6 +31,13 @@ export interface EnvironmentInstallPort {
 export interface EnvironmentInputEntry {
  readonly path:string;readonly sha256:string;readonly bytes:number;
 }
+export interface EnvironmentCommandSpec {
+ readonly id:string;readonly entry:string;readonly argv:readonly string[];readonly timeoutMs:number;readonly sha256:string;
+}
+export interface EnvironmentValidationScope {
+ readonly workspace:FilesystemAnchor;readonly scratch:FilesystemAnchor;
+ readonly command:EnvironmentCommandSpec;readonly nodeDigest:string;
+}
 export interface EnvironmentInspection {
  readonly manager:'pnpm'|'npm'|'yarn'|'bun'|'UNKNOWN';
  readonly managerVersion:string|null;
@@ -41,6 +48,7 @@ export interface EnvironmentInspection {
  readonly inputs:readonly EnvironmentInputEntry[];
  readonly inputDigest:string;
  readonly registryOrigin:string|null;
+ readonly commands?:readonly EnvironmentCommandSpec[];
 }
 export interface EnvironmentPlan {
  readonly planId:string;readonly environmentId:string;readonly workspaceGeneration:string;
@@ -67,7 +75,7 @@ export type EnvironmentQuery=
  |{readonly kind:'workspace'|'environment'|'plan'|'job'|'artifact'|'latest-job';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number}
  |{readonly kind:'output';readonly id:string;readonly after?:string;readonly limit?:number}
- |{readonly kind:'active'|'pending-plans'|'retained-leases'};
+ |{readonly kind:'active'|'pending-plans'|'pending-reconciles'|'retained-leases'};
 export interface EnvironmentRead {
  readonly environment?:EnvironmentRecord|null;
  readonly plan?:EnvironmentPlan|null;
@@ -93,9 +101,12 @@ export type EnvironmentChange=
  |{readonly kind:'plan-block';readonly instanceId:string;readonly requestId:string;readonly error:string;readonly interrupted?:boolean}
  |{readonly kind:'job-admit';readonly admission:WorkflowAdmission}
  |{readonly kind:'job-cancel';readonly admission:WorkflowAdmission}
+ |{readonly kind:'job-observe';readonly admission:WorkflowAdmission}
+ |{readonly kind:'job-observed';readonly instanceId:string;readonly requestId:string;readonly recovering?:boolean}
+ |{readonly kind:'inspection-stale';readonly instanceId:string;readonly environmentId:string;readonly expectedStateRevision:string}
  |{readonly kind:'job-start';readonly jobId:string;readonly instanceId:string;readonly identity:EnvironmentJobIdentity}
  |{readonly kind:'job-finish';readonly jobId:string;readonly instanceId:string;readonly generation:string;readonly proof:EnvironmentExitEvidence|null;
-   readonly inputsCurrent:boolean;readonly noLaunchError?:string;readonly outputArtifactId?:string;readonly recovering?:boolean};
+   readonly inputsCurrent:boolean;readonly noLaunchError?:string;readonly outputArtifactId?:string;readonly recovering?:boolean;readonly reconcileId?:string};
 
 export interface EnvironmentWrite {
  readonly operation:WorkflowOperationRecord;
@@ -124,5 +135,7 @@ export interface EnvironmentLeasePort{
 }
 export interface EnvironmentJobHostPort{
  install(identity:EnvironmentJobIdentity,scope:Omit<EnvironmentInstallScope,'store'|'scratch'>,deadline:Deadline,signal:AbortSignal):Promise<EnvironmentExitEvidence|null>;
+ validate(identity:EnvironmentJobIdentity,scope:Omit<EnvironmentValidationScope,'scratch'>,deadline:Deadline,signal:AbortSignal):Promise<EnvironmentExitEvidence|null>;
  recover(identity:EnvironmentJobIdentity):Promise<EnvironmentExitEvidence|null>;
+ cleanup?(identity:EnvironmentJobIdentity):Promise<void>;
 }
