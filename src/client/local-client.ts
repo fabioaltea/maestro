@@ -1,5 +1,5 @@
 import { FEATURE_READ_METHODS, FEATURE_ADMISSION_METHODS,validateFeatureParams,validateFeatureAdmission,decodeFeatureOperationView,requireFeatureEnvelope } from '../protocol/feature.js';
-import {canonicalWorkflowIntent} from '../domain/workflow/authorization.js';
+import {canonicalWorkflowIntent,type WorkflowIntent} from '../domain/workflow/authorization.js';
 import { DISCOVERY_READ_METHODS, DISCOVERY_ADMISSION_METHODS, validateDiscoveryParams, validateDiscoveryAdmission, decodeDiscoveryOperationView, requireDiscoveryEnvelope } from '../protocol/discovery.js';
 import { canonicalDiscoveryIntent } from '../domain/discovery/intent.js';
 import { randomUUID } from 'node:crypto';
@@ -53,10 +53,23 @@ export class LocalClient {
         const data = response.data;
         requireUuid(data.grantId);
         if (typeof data.canonicalIntent !== 'string') throw new Error('INVALID_REQUEST');
-        const prepared = JSON.parse(data.canonicalIntent) as {action:unknown;projectId:unknown;targetId:unknown;payload:Record<string,unknown>};
-        if (prepared.action !== original.action || original.projectId !== undefined && prepared.projectId !== original.projectId || original.featureId !== undefined && prepared.targetId !== original.featureId || original.bundleArtifactId !== undefined && prepared.payload.bundleArtifactId !== original.bundleArtifactId) throw new Error('INVALID_REQUEST');
-        if (typeof data.canonicalIntent !== 'string' || data.canonicalIntent !== canonicalWorkflowIntent(JSON.parse(data.canonicalIntent))
+        const prepared = JSON.parse(data.canonicalIntent) as WorkflowIntent;
+        if (data.canonicalIntent !== canonicalWorkflowIntent(prepared) || prepared.namespace !== 'FEATURE' || prepared.storeId !== response.storeId
+          || prepared.action !== original.action || original.projectId !== undefined && prepared.projectId !== original.projectId
+          || original.featureId !== undefined && prepared.targetId !== original.featureId
+          || original.expectedStateRevision !== undefined && prepared.expectedRevision !== original.expectedStateRevision
+          || original.expectedConfigRevision !== undefined && prepared.configRevision !== original.expectedConfigRevision
+          || original.bundleArtifactId !== undefined && prepared.payload.bundleArtifactId !== original.bundleArtifactId
+          || original.revisionId !== undefined && prepared.payload.revisionId !== original.revisionId
+          || Array.isArray(original.acceptedUnknownIds) && JSON.stringify(prepared.payload.acceptedUnknownIds) !== JSON.stringify([...original.acceptedUnknownIds].sort())
           || !Number.isSafeInteger(data.expiresAtMs) || Number(data.expiresAtMs) <= 0 || !data.summary || typeof data.summary !== 'object' || Array.isArray(data.summary)) throw new Error('INVALID_REQUEST');
+      }
+      if (method === 'feature.eligibility.get' && response.result === 'OK') {
+        const data = response.data;
+        if (data.featureId !== original.featureId || typeof data.eligible !== 'boolean'
+          || original.checkId !== undefined && data.checkId !== original.checkId && response.freshness !== 'LAST_KNOWN'
+          || data.eligible && (data.reason !== null || data.freshness !== 'CURRENT' || typeof data.checkedAt !== 'string')
+          || response.freshness === 'LAST_KNOWN' && data.eligible) throw new Error('INVALID_REQUEST');
       }
       return response;
     }

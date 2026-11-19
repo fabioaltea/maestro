@@ -10,11 +10,14 @@ import {projectExitCode} from './projects.js';
 import {jsonFile,jsonStdin} from './json-input.js';
 import type {PublicResult} from '../protocol/messages.js';
 const HELP=`maestro feature prepare --input-file FILE | --input-stdin
-maestro feature create|revise|archive --grant UUID --request-id UUID
+maestro feature create|revise|archive|approve|handoff --grant UUID --request-id UUID
 maestro feature list PROJECT [--limit 1..20 --cursor CURSOR]
 maestro feature show FEATURE
 maestro feature revisions FEATURE [--limit 1..20 --cursor CURSOR]
 maestro feature revision REVISION
+maestro feature approval REVISION
+maestro feature envelope ENVELOPE
+maestro feature eligibility FEATURE [--check-id UUID]
 maestro feature operation REQUEST
 maestro feature artifact import --bundle-file FILE | --bundle-stdin --request-id UUID
 maestro feature artifact get ARTIFACT [--cursor CURSOR]
@@ -37,15 +40,19 @@ export async function runFeatureCli(args:readonly string[]):Promise<number>{
  const allowed=new Set(['json','help','state-dir','timeout-ms']);let method:string,params:Record<string,unknown>={},mutation=false,importing=false;
  const body=()=>{allowed.add('input-file');allowed.add('input-stdin');};
  if(p[0]==='prepare'&&p.length===1){method='feature.prepare';body();}
- else if(['create','revise','archive'].includes(p[0]??'')&&p.length===1){method=`feature.${p[0]}`;params={grantId:v.grant};allowed.add('grant');mutation=true;}
+ else if(['create','revise','archive','approve','handoff'].includes(p[0]??'')&&p.length===1){method=`feature.${p[0]}`;params={grantId:v.grant};allowed.add('grant');mutation=true;}
  else if(p[0]==='artifact'&&p[1]==='import'&&p.length===2){method='feature.artifact.seal';importing=true;mutation=true;allowed.add('bundle-file');allowed.add('bundle-stdin');}
  else if(p[0]==='artifact'&&['reserve','append','seal','discard'].includes(p[1]??'')&&p.length===2){method=`feature.artifact.${p[1]}`;body();mutation=true;}
  else if(p[0]==='artifact'&&p[1]==='budget'&&p.length===2){method='feature.artifact.budget';}
  else if(p[0]==='artifact'&&p[1]==='get'&&p.length===3){method='feature.artifact.get';params={artifactId:p[2]};allowed.add('cursor');}
  else if(p[0]==='provider'&&p[1]==='get'&&p.length===2){method='feature.provider.get';}
  else{
- const queries:Record<string,[string,string]>={list:['list','projectId'],show:['get','featureId'],revisions:['revisions.list','featureId'],revision:['revision.get','revisionId'],operation:['operation.get','requestId']};
- const q=p[0]&&queries[p[0]];if(!q||p.length!==2)throw new Error('INVALID_REQUEST');method=`feature.${q[0]}`;params={[q[1]]:p[1]};if(['list','revisions'].includes(p[0]!)){allowed.add('limit');allowed.add('cursor');}
+ const queries:Record<string,[string,string]>={list:['list','projectId'],show:['get','featureId'],revisions:['revisions.list','featureId'],revision:['revision.get','revisionId'],approval:['approval.get','revisionId'],envelope:['envelope.get','envelopeId'],eligibility:['eligibility.get','featureId'],operation:['operation.get','requestId']};
+ const verb=p[0];
+ if(!verb||!Object.hasOwn(queries,verb)||p.length!==2)throw new Error('INVALID_REQUEST');
+ const [route,target]=queries[verb]!;method=`feature.${route}`;params={[target]:p[1]};
+ if(['list','revisions'].includes(verb)){allowed.add('limit');allowed.add('cursor');}
+ if(verb==='eligibility'){allowed.add('check-id');if(v['check-id']!==undefined)params.checkId=v['check-id'];}
  }
  if(mutation){allowed.add('request-id');requestId=requireUuid(v['request-id']??randomUUID());}
  for(const [k,value]of Object.entries(v))if(value!==undefined&&!allowed.has(k))throw new Error('INVALID_REQUEST');

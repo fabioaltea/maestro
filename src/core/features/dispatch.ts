@@ -10,7 +10,7 @@ export function createFeatureDispatch(options:{readonly storage:StoragePort;read
  try{if(peer.role!=='client')throw new Error('UNAUTHORIZED');if(snapshot.store.schemaVersion!==5)throw new Error('FEATURE_NOT_INITIALIZED');validateFeatureParams(request.method,request.params);
  let data:Record<string,unknown>;
  if(options.mutations?.methods.includes(request.method))data=await options.mutations.run(request.method,request.params,peer);
- else if((FEATURE_READ_METHODS as readonly string[]).includes(request.method))data=await createFeatureReader({storage:options.storage,storeId:snapshot.store.storeId,offline:false})(request.method,request.params);
+ else if(request.method!=='feature.eligibility.get'&&(FEATURE_READ_METHODS as readonly string[]).includes(request.method))data=await createFeatureReader({storage:options.storage,storeId:snapshot.store.storeId,offline:false})(request.method,request.params);
  else throw new Error('UNSUPPORTED_VERSION');
  const operation=data.operation as {outcome?:string}|undefined;const result:RpcResponse['result']=operation?.outcome==='IN_PROGRESS'?'BUSY':operation?.outcome==='UNKNOWN'?'UNKNOWN_OUTCOME':operation?.outcome==='BLOCKED'?'BLOCKED':operation&&operation.outcome!=='SUCCEEDED'?'ERROR':'OK';
  const response={...base,result,data:{storeId:snapshot.store.storeId,...data}};requireFeatureEnvelope(response);return response;

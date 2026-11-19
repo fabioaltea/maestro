@@ -103,3 +103,7 @@ Dominio neutro `requireCurrentFeatureApproval` e contenuto envelope legano featu
 ### T024 — approvazione e handoff core
 
 Servizio composto approve/handoff con fresh eligibility004 diretta, validazione artefatto/provenance/unknown, grant monouso, CAS e controllo writer di owner/istanza/Discovery. Approvazione ed envelope immutabili; errore di freshness marca NEEDS_REVIEW solo sulla versione attesa insieme al risultato/evento terminale. Query eligibility esplicita asincrona bounded32 check, senza riutilizzo come autorità. Nessun processo/provider o permesso runtime acquisito dall’handoff. Build:test/lint PASS; unit+contract+integration US2 5/5PASS (25,83s), incluso reply loss dopo commit recuperato senza duplicare decisioni.
+
+### T025 — CLI approvazione, handoff ed eligibility
+
+La CLI usa prepare da file/stdin e conferma con grant e UUID, legge approvazioni/envelope storici e interroga l’eligibility esplicita tramite check ID. Il LocalClient confronta store, azione, versione, revisione del piano e unknown accettati con il grant restituito. Build, build:test, lint e diff check PASS. Contract US2 e integrazioni CLI/US2: 4/4 PASS, inclusi rifiuto del grant di altra azione, replay del medesimo envelope e letture offline.
