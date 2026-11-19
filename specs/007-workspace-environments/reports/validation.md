@@ -75,3 +75,7 @@ Dalla vista Workspace si apre il piano d’ambiente. Conferma e ricevuta con dig
 ## T020 — policy install (RED)
 
 Due RED per piano manuale, mismatch, input stale, exit verificato e generazione errata.
+
+## T021 — contratto install
+
+1 PASS per prepare separato da grant, cancel e output bounded.
