@@ -16,7 +16,7 @@ test('two feature workspaces branch from the current approved base, with reply l
  const one=await f.submit(first.data.grantId);
  assert.equal(one.operation?.outcome,'SUCCEEDED',JSON.stringify(one.r));
  const revision=f.store.readSnapshot()!.store.revision;
- assert.deepEqual((await f.submit(first.data.grantId,one.requestId)).operation,one.operation);
+ for(let retry=0;retry<10;retry++)assert.deepEqual((await f.submit(first.data.grantId,one.requestId)).operation,one.operation);
  assert.equal(f.store.readSnapshot()!.store.revision,revision);
  const second=await f.prepare(),two=await f.submit(second.data.grantId);
  assert.equal(two.operation?.outcome,'SUCCEEDED',JSON.stringify(two.r));
@@ -25,6 +25,12 @@ test('two feature workspaces branch from the current approved base, with reply l
    assert.equal(workspace.state,'READY');assert.equal(workspace.ownership?.headOid,f.baseOid);assert.ok(workspace.markerDigest);
    assert.equal((await f.repositories.git(f.repo,['rev-parse',receipt.data.summary.branchRef])).trim(),f.baseOid);
  }
+ const [firstRecord,secondRecord]=[first,second].map(x=>f.store.readWorkspaceState({kind:'get',id:x.data.summary.workspaceId}).workspace!);
+ const privateFile='worktree-local.txt';
+ await writeFile(join(firstRecord!.ownership!.root.canonicalPath,privateFile),'only in first workspace');
+ await assert.rejects(lstat(join(secondRecord!.ownership!.root.canonicalPath,privateFile)),{code:'ENOENT'});
+ const refs=(await f.repositories.git(f.repo,['for-each-ref','--format=%(refname)','refs/heads/maestro/feature'])).trim().split('\n');
+ assert.deepEqual(refs.sort(),[first.data.summary.branchRef,second.data.summary.branchRef].sort());
  assert.equal(await readFile(join(f.repo,'tracked.txt'),'utf8'),initial);
  assert.equal(await readFile(join(f.repo,'untracked.txt'),'utf8'),'my local file');
 });

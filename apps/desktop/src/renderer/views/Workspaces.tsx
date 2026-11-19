@@ -10,6 +10,7 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
  const {core,invoke}=desktop;
  const [projectId,setProjectId]=useState(source?.projectId??'');
  const [projects,setProjects]=useState<Params[]>([]);
+ const [projectCursor,setProjectCursor]=useState<string|null>(null);
  const [items,setItems]=useState<Params[]>([]);
  const [cursor,setCursor]=useState<string|null>(null);
  const [loaded,setLoaded]=useState(false);
@@ -28,15 +29,20 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
    active.current=true;
    const generation=++current.current;
    async function load(){
-     const result=await core('listProjects',{limit:20});
+     await loadProjects();
      if(!active.current||generation!==current.current)return;
-     if(result?.result==='OK')setProjects(result.data.projects as Params[]);
      if(project.current)await refresh(project.current);
    }
    void load();
    return()=>{active.current=false;current.current++;};
  },[core]);
 
+ async function loadProjects(next?:string){
+   const result=await core('listProjects',{limit:25,...(next?{cursor:next}:{})});
+   if(!active.current||result?.result!=='OK')return;
+   setProjects(old=>next?[...old,...result.data.projects as Params[]]:result.data.projects as Params[]);
+   setProjectCursor(result.data.nextCursor as string|null);
+ }
  async function refresh(id:string,next?:string){
    const generation=++current.current;
    const pending=latestReceipt.current;
@@ -112,6 +118,7 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
        {source&&!projects.some(item=>item.projectId===source.projectId)&&<option value={source.projectId}>{source.projectId}</option>}
        {projects.map(item=><option key={String(item.projectId)} value={String(item.projectId)}>{String(item.displayName)}</option>)}
      </select></label>
+     {projectCursor&&<button className="button subtle" disabled={busy||!!prepared} onClick={()=>void loadProjects(projectCursor)}>Altri progetti</button>}
      <button className="button subtle" disabled={!projectId||busy||!!prepared} onClick={()=>void refresh(projectId)}>Aggiorna elenco</button>
    </div>
    {loaded&&!live&&<p role="status">Ultimo stato noto. La creazione richiede il servizio attivo.</p>}

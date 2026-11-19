@@ -131,3 +131,24 @@ La prova del target viaggia in JSON bounded da file o stdin. Remove richiede gra
 ## T033 — desktop cleanup
 
 La vista espone ref/OID del target, conferma, ricevuta e stato aggiornato. Il test Electron rifiuta il file non tracciato, mantiene il focus dopo Escape e completa la rimozione solo dopo aver ripulito la fixture. Typecheck PASS, **48 PASS** unit/contract e **1 PASS** E2E su tre storie.
+
+## T034 — validazione mirata
+
+| Verifica | Esito |
+| --- | --- |
+| Build, build:test, typecheck core e lint architettura | PASS |
+| Unit, contract e integrazioni 006, regression workflow-store e feature-runtime | 50 PASS, 0 FAIL, 0 SKIP |
+| Typecheck desktop, build desktop, unit/contract | 48 PASS, 0 FAIL, 0 SKIP |
+| Integrazioni desktop mirate di dispatch, storico, ricevute, recovery e registry | 13 PASS, 0 FAIL, 0 SKIP |
+| Playwright Electron, workspace-flow.spec.ts | 1 PASS, 0 FAIL, 0 SKIP in 30,2 s |
+
+La prima esecuzione mirata desktop ha rilevato un ciclo di import ESM nel contratto workspace. Le primitive di validazione sono ora importate da un modulo indipendente e la suite che riproduceva il ciclo passa. Il selettore Workspace usa la pagina da 25 progetti prevista dal bridge.
+
+| Requisiti | Evidenza su fixture |
+| --- | --- |
+| FR-001–003, SC-001 e SC-003 | Due feature creano branch e directory distinti. Una scrittura in una directory resta locale. Dieci retry dello stesso UUID lasciano un solo risultato e nessuna nuova revisione o ref. |
+| FR-004–006, SC-004 | Refresh datato, lease concorrenti, holder perso, anchor spostato, SIGKILL prima e dopo worktree add e ricevute persistenti con recovery senza replay. |
+| FR-007–009, SC-002 | Conservazione nei casi coperti di sporco, file ignorato arrivato tardi, lease attiva, target mosso, ref packed, commit non integrato e proprietà incerta. CAS riuscito su ref loose e verifica dopo risposta persa. |
+| FR-010–012 | CLI/desktop, archivio cambiato, storico offline, UUID cross-namespace, quote, backpressure ed eventi senza informazioni private. |
+
+Le integrazioni hanno usato repository e archivi temporanei. Non sono state ripetute acceptance/bench o campagne di durata.

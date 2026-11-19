@@ -1,6 +1,6 @@
 import type {Params} from './bridge-contract.ts';
 import {CORE_ERRORS} from './core-errors.ts';
-import {keys,record,revision,text,uuid} from './validation.ts';
+import {keys,record,revision,text,uuid} from './input.ts';
 
 export const WORKSPACE_MUTATIONS=['create','refresh','remove'] as const;
 export const WORKSPACE_QUERIES={
