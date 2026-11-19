@@ -1,8 +1,9 @@
+import {sameWorkspaceAnchor} from '../domain/workspaces/ownership.js';
 import {workspaceBranchRef,requireWorkspaceHandoff,requireProvisioningObservation} from '../domain/workspaces/provision.js';
 import type Database from 'better-sqlite3';
 import {requireUuid} from '../domain/identifiers.js';
 import type {WorkspaceChange,WorkspaceMutationTarget,WorkspaceQuery,WorkspaceRead,WorkspaceRecord,WorkspaceSummary,WorkspaceWrite} from '../ports/workspace.js';
-import type {FilesystemAnchor,ReferenceCheckout,RepositoryIdentity} from '../ports/repository.js';
+import type {ReferenceCheckout,RepositoryIdentity} from '../ports/repository.js';
 import {nextWorkspaceRevision,requireWorkspaceCapacity,requireWorkspaceFence,transitionWorkspace, type WorkspaceState} from '../domain/workspaces/model.js';
 import {currentDiscovery,type FeatureLedger} from './features-authoring.js';
 import {readFeatureState} from './features-store.js';
@@ -50,11 +51,6 @@ export function readWorkspaceState(database:Database.Database,query:WorkspaceQue
  return{items:rows.slice(0,limit).map(summary),nextOffset:rows.length>limit?offset+limit:null,pageRevision:String(revision.revision)};
 }
 
-function sameAnchor(left:FilesystemAnchor,right:FilesystemAnchor){
- return left.version===right.version&&left.kind===right.kind&&left.canonicalPath===right.canonicalPath
-   &&left.device===right.device&&left.inode===right.inode&&left.birthtimeNs===right.birthtimeNs;
-}
-
 function validateScope(database:Database.Database,intent:WorkflowIntent,checkedAt:string,verifyArtifact:(id:string)=>void){
  const workspaceId=requireUuid(intent.targetId),projectId=requireUuid(intent.projectId),p=intent.payload;
  const featureId=requireUuid(p.featureId),envelopeId=requireUuid(p.envelopeId),ownerGeneration=requireUuid(p.ownerGeneration),target=p.target as WorkspaceMutationTarget;
@@ -79,8 +75,8 @@ function validateScope(database:Database.Database,intent:WorkflowIntent,checkedA
    const identity=JSON.parse(String(project.repository_identity)) as RepositoryIdentity;
    const reference=JSON.parse(String(project.reference_checkout)) as ReferenceCheckout;
    if(project.repository_key!==p.repositoryKey||typeof project.base_branch!=='string'||target.baseRef!==`refs/heads/${project.base_branch}`
-     ||!sameAnchor(identity.commonDirectory,target.commonDirectory)||!sameAnchor(reference.root,target.reference)
-     ||!sameAnchor(reference.adminDirectory,target.adminDirectory))throw new Error('REPOSITORY_CHANGED');
+     ||!sameWorkspaceAnchor(identity.commonDirectory,target.commonDirectory)||!sameWorkspaceAnchor(reference.root,target.reference)
+     ||!sameWorkspaceAnchor(reference.adminDirectory,target.adminDirectory))throw new Error('REPOSITORY_CHANGED');
  return{featureId,envelopeId,ownerGeneration,target,project};
 }
 

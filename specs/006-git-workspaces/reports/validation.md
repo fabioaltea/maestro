@@ -87,3 +87,7 @@ Il contratto rifiuta capability assente e input con grant, holder, generazione, 
 ## T022 — lease e refresh locale (RED)
 
 Fixture Git con due holder concorrenti, prova di uscita legata alla generazione, refresh datato, replay UUID e spostamento reale del worktree senza perdita dei file. I fault della primitiva Git restano coperti da T002–T004 e T017.
+
+## T023 — modello della proprietà
+
+Gli anchor e il marker vincolano l’identità del worktree. Il commit può avanzare senza cambiare proprietà. La lease richiede prova di uscita dell’albero o checkpoint durabile quiescente su holder e generazione esatti. **2 PASS** mirati.

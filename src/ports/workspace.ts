@@ -103,3 +103,27 @@ export interface WorkspaceWrite{
  readonly operation:WorkflowOperationRecord;
  readonly inserted?:boolean;
 }
+
+/** Privileged core consumers bind writer authority to a job identity, never a PID. */
+export interface WorkspaceLease {
+ readonly leaseId:string;
+ readonly workspaceId:string;
+ readonly holderType:import('../domain/workspaces/ownership.js').WorkspaceHolder;
+ readonly holderId:string;
+ readonly generation:string;
+ readonly instanceId:string;
+}
+export type WorkspaceReleaseProof=WorkspaceLease&(
+ |{readonly kind:'EXIT';readonly hostExited:true;readonly descendantsExited:true}
+ |{readonly kind:'CHECKPOINT';readonly durable:true;readonly quiescent:true});
+export interface WorkspaceLeaseRequest{
+ readonly workspaceId:string;readonly stateRevision:string;readonly holderId:string;readonly generation:string;
+}
+export interface WorkspaceWorkingStatus {
+ readonly tracked:boolean;readonly untracked:boolean;readonly ignored:boolean;readonly conflicts:boolean;
+}
+export interface WorkspaceObservation{
+ readonly observationId:string;readonly checkedAt:string;readonly headOid:string|null;readonly branchRef:string|null;
+ readonly ownership:'VERIFIED'|'UNKNOWN'|'ABSENT';
+ readonly tracked:boolean|null;readonly untracked:boolean|null;readonly ignored:boolean|null;readonly conflicts:boolean|null;
+}
