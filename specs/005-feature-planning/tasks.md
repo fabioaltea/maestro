@@ -1,7 +1,7 @@
 # Tasks: Feature Planning & Versioned Approval
 
 **Input**: [spec.md](spec.md), [plan.md](plan.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/api.md](contracts/api.md), [contracts/policy.md](contracts/policy.md), [quickstart.md](quickstart.md).
-**Branch**: `005-feature-planning` · **Date**: 2026-11-19 · **Stato**: 0 task eseguiti, implementazione non autorizzata da questo documento.
+**Branch**: `005-feature-planning` · **Date**: 2026-11-19 · **Stato**: implementazione autorizzata2026-11-19; avanzamento nelle checkbox e in reports/validation.md.
 
 **Tests**: richiesti esplicitamente dalla specifica per invarianti costituzionali. Scrivere i casi prima dell’implementazione pertinente; provider/clock/risorse sostituibili, integrazioni locali senza account. Ogni task concluso richiede un commit locale con ID ed evidenza; nessun push implicito.
 
@@ -9,7 +9,7 @@
 
 ## Phase 1: Setup & G0
 
-- [ ] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema4 in `specs/005-feature-planning/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
+- [X] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema4 in `specs/005-feature-planning/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
 - [ ] T002 Scrivere prove negative di capability/confine in `tests/integration/feature-boundary.test.ts` e fixture in `tests/fixtures/feature-boundary.ts`: G0: test di confine readonly e schema FeaturePlanningResult con provider sintetico. G1 assistito reale solo dopo004/T028/T050; registrare NOT_RUN/BLOCKED senza impedire la verifica del percorso manuale con fixture. Nessun consenso reale assunto.
 - [ ] T003 Implementare la primitiva reale minima di confine in `src/providers/codex/feature-planning-parser.ts` e la porta in `src/ports/feature.ts`, con fixture `tests/fixtures/feature-adapter.ts`; validare su questa primitiva i confini indicati in `specs/005-feature-planning/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
 - [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/005-feature-planning/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.

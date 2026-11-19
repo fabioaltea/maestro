@@ -88,3 +88,7 @@ Le soglie della specifica sono target; soltanto i report dei checkpoint attestan
 worktree, gestione dipendenze di progetti ed Electron sono fuori scope della Foundation.
 
 <!-- MANUAL ADDITIONS END -->
+
+## Current implementation
+
+005-feature-planning-implementation avviata2026-11-19 dalla004 d798a94. Feature attiva: specs/005-feature-planning/. Consultare plan.md, data-model.md, contracts e reports della005; Constitution e gate001–004 invariati. Baseline005:576PASS/1FAIL/6SKIP, UPDATE replay revision61 vs60; isolatoPASS, causa aperta. Nessun nuovo pin/package. Un commit per task; preservare apps/desktop/package-lock.json non tracciato.
