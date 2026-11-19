@@ -61,3 +61,7 @@ US1 tests cover required current Discovery identity/config/digest, detached boun
 ## T014 — RED US1 public authority
 
 Alternative client/fake grant, controller role, client approval flag and schema4 gate tested. Closed-input/role/schema cases PASS; the intended authoring endpoint is RED (still UNSUPPORTED instead of its required grant check) before story composition. No unqualified capability advertised.
+
+## T015 — RED US1 integration
+
+Real temporary Git+readonly Discovery fixture prepares manual authoring tests for create/revise,10original-UUID retries, source change after consent, concurrent revision CAS, archive retention and a lost writer reply after commit. The fixture is not a production approval. Tests are RED at the not-yet-composed feature.prepare endpoint; repository snapshots and original completion-event cardinality are asserted.
