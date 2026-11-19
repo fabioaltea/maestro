@@ -1,5 +1,6 @@
 export const FEATURE_STATES = ['DRAFT','PLANNING','WAITING_USER','READY_FOR_APPROVAL','APPROVED','NEEDS_REVIEW','ARCHIVED','INTERRUPTED','RECONCILING'] as const;
-import { requireDecimal } from '../identifiers.js';
+import type {FeatureContextProof} from '../../ports/feature.js';
+import { requireUuid,requireDecimal } from '../identifiers.js';
 export type FeatureState = 'DRAFT'|'PLANNING'|'WAITING_USER'|'READY_FOR_APPROVAL'|'APPROVED'|'NEEDS_REVIEW'|'ARCHIVED'|'INTERRUPTED'|'RECONCILING';
 export interface FeatureRecord {
  readonly featureId:string;readonly projectId:string;readonly title:string;readonly state:FeatureState;readonly stateRevision:string;
@@ -33,4 +34,12 @@ export function transitionFeature(from:FeatureState,action:'revise'|'approve'|'s
  if(action==='interrupt'&&['PLANNING','WAITING_USER'].includes(from))return 'INTERRUPTED';
  if(action==='uncertain')return 'RECONCILING';
  throw new Error('INVALID_TRANSITION');
+}
+
+export function requireFeatureContext(proof:FeatureContextProof|null,projectId:string,configRevision:string):void {
+ if(!proof)throw new Error('DISCOVERY_REQUIRED');
+ if(proof.projectId!==projectId||proof.configRevision!==configRevision)throw new Error('APPROVAL_STALE');
+ try{requireUuid(proof.projectId);requireUuid(proof.discoveryApprovalId);requireUuid(proof.discoveryRevisionId);requireDecimal(proof.configRevision);
+ if(proof.configRevision==='0'||!/^[a-f0-9]{64}$/.test(proof.contextDigest)||new Date(proof.checkedAt).toISOString()!==proof.checkedAt)throw new Error();
+ }catch{throw new Error('INVALID_REQUEST');}
 }

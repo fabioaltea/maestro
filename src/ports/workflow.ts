@@ -20,7 +20,7 @@ export type WorkflowChange=
  |{readonly kind:'reserve';readonly admission:WorkflowAdmission;readonly artifact:WorkflowArtifact}
  |{readonly kind:'append';readonly admission:WorkflowAdmission;readonly artifactId:string;readonly offset:number;readonly sha256:string;readonly bytes:Uint8Array}
  |{readonly kind:'seal'|'discard';readonly admission:WorkflowAdmission;readonly artifactId:string}
- |{readonly kind:'create'|'revise';readonly admission:WorkflowAdmission;readonly feature:FeatureRecord;readonly revision:FeatureRevision}
+ |{readonly kind:'create'|'revise';readonly admission:WorkflowAdmission;readonly feature:FeatureRecord;readonly revision:FeatureRevision;readonly contextCheckedAt:string}
  |{readonly kind:'approve';readonly admission:WorkflowAdmission;readonly approval:FeatureApproval;readonly expectedRevision:string;readonly acceptedUnknownIds:readonly string[]}
  |{readonly kind:'handoff';readonly admission:WorkflowAdmission;readonly envelope:ImplementationEnvelope;readonly expectedRevision:string}
  |{readonly kind:'archive';readonly admission:WorkflowAdmission;readonly featureId:string;readonly expectedRevision:string}

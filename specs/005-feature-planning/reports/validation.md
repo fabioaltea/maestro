@@ -65,3 +65,7 @@ Alternative client/fake grant, controller role, client approval flag and schema4
 ## T015 — RED US1 integration
 
 Real temporary Git+readonly Discovery fixture prepares manual authoring tests for create/revise,10original-UUID retries, source change after consent, concurrent revision CAS, archive retention and a lost writer reply after commit. The fixture is not a production approval. Tests are RED at the not-yet-composed feature.prepare endpoint; repository snapshots and original completion-event cardinality are asserted.
+
+## T016 — US1 model GREEN
+
+Added neutral internal FeatureContextProof with strict project/config/approval/revision/digest/time validation; it is not accepted by any public DTO. Create/revise storage input includes the observation timestamp. US1/state5/5PASS and lint/build:test PASS; no OS/SQLite dependency in domain.

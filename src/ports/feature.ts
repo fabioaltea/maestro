@@ -13,3 +13,9 @@ export type FeaturePlanningResult = { readonly kind: 'DRAFT'; readonly bundle: F
 export interface FeatureProvenanceScope { readonly sourceIds: readonly string[]; readonly answerIds: readonly string[] }
 
 export const UNAVAILABLE_FEATURE_PLANNING_CAPABILITIES = Object.freeze({ readonlyPlanning: false, qualified: false });
+
+/** Produced only by an authoritative core revalidation, never accepted from a public DTO. */
+export interface FeatureContextProof {
+ readonly projectId:string;readonly configRevision:string;readonly discoveryApprovalId:string;readonly discoveryRevisionId:string;
+ readonly contextDigest:string;readonly checkedAt:string;
+}
