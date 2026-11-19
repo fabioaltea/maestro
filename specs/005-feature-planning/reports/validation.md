@@ -25,3 +25,7 @@ Implemented the provider-neutral bundle and question data types, closed schema/p
 ## T005 — RED policy/state
 
 Grant action/store/revision binding, expiry/clock rollback, replay-only consumption, canonical ordering/prototype rejection, lifecycle/revision overflow and exact unknown acceptance cases written. build:test fails only for missing workflow authorization and feature model modules, as expected before implementation.
+
+## T006 — RED schema and UUID guards
+
+Frozen schema4 fixture captured from004 before changing current schema. Tests cover read-only immutability, explicit4→5, fault pre/post commit, integrity/FK/store identity and UUID collision against lifecycle/project/Discovery in both directions. Compilation is RED for the absent features-upgrade module and the previously pending state/authorization modules.
