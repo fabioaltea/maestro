@@ -199,6 +199,12 @@ export class SQLiteStore {
           const instanceId=(this.database!.prepare('SELECT current_instance_id FROM store WHERE singleton=1').get() as Row).current_instance_id;
           if(workspace)drafts.push(workspaceChanged(workspace,String(instanceId)));
         }
+        for(const environmentId of event?.environmentIds??[]){
+          const {environment}=readEnvironmentState(this.database!,{kind:'environment',id:environmentId});
+          const instanceId=(this.database!.prepare('SELECT current_instance_id FROM store WHERE singleton=1').get() as Row).current_instance_id;
+          if(environment?.currentPlanId)drafts.push({type:'environment.changed',instanceId:String(instanceId),operationId:environment.currentPlanId,payload:{scope:'environment',environmentId,
+            workspaceId:environment.workspaceId,state:environment.state,stateRevision:environment.stateRevision,code:'ENVIRONMENT_STALE'}});
+        }
         for (const requestId of event?.requestIds ?? []) {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;

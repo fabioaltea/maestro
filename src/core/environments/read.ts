@@ -1,5 +1,5 @@
 import type {StoragePort} from '../../ports/storage.js';
-import type {EnvironmentJob,EnvironmentPlan,EnvironmentRecord} from '../../ports/environment.js';
+import type {EnvironmentJob,EnvironmentJobPort,EnvironmentPlan,EnvironmentRecord} from '../../ports/environment.js';
 import {featureObject} from '../../domain/features/bundle.js';
 import {publicEnvironmentOperation,requireEnvironmentEnvelope,validateEnvironmentParams} from '../../protocol/environment.js';
 
@@ -17,14 +17,29 @@ function planSummary(plan:EnvironmentPlan){
  const {planId,digest,inputDigest,artifactId,createdAt}=plan;
  const {manager,managerVersion,pin,disposition,reason,scriptNames,inputs,registryOrigin}=plan.metadata;
  return{planId,digest,inputDigest,artifactId,createdAt,manager,managerVersion,pin,disposition,reason,scriptNames,
-   inputFiles:inputs.length,networkScope:registryOrigin===null?'OFFLINE':'LOOPBACK'};
+   inputFiles:inputs.length,...(plan.metadata.commands?.length?{commands:plan.metadata.commands.map(({id,entry,timeoutMs,argv})=>({id,entry,timeoutMs,argCount:argv.length}))}:{}),
+   networkScope:registryOrigin===null?'OFFLINE':'LOOPBACK'};
 }
 function jobSummary(job:EnvironmentJob){
  const {leaseId:_lease,generation:_generation,cancelRequestId:_cancel,...summary}=job;
  return summary;
 }
+export function createEnvironmentJobPort(storage:StoragePort):EnvironmentJobPort{
+ return{
+   async get(jobId){
+     if(!storage.readEnvironmentState)throw new Error('ENVIRONMENT_NOT_INITIALIZED');
+     const {job}=await storage.readEnvironmentState({kind:'job',id:jobId});
+     if(!job)throw new Error('OPERATION_NOT_FOUND');
+     return job;
+   },
+   async output(jobId,after,limit){
+     if(!storage.readEnvironmentState)throw new Error('ENVIRONMENT_NOT_INITIALIZED');
+     return (await storage.readEnvironmentState({kind:'output',id:jobId,limit,after})).chunks??[];
+   },
+ };
+}
 export function createEnvironmentReader(options:{storage:StoragePort;storeId:string;offline:boolean}){
- const {storage,storeId,offline}=options,freshness=offline?'LAST_KNOWN':'CURRENT';
+ const {storage,storeId,offline}=options,jobs=createEnvironmentJobPort(storage),freshness=offline?'LAST_KNOWN':'CURRENT';
  return async(method:string,params:Readonly<Record<string,unknown>>):Promise<Record<string,unknown>>=>{
    validateEnvironmentParams(method,params);
    if(!storage.readEnvironmentState||!storage.readFeatureState||!storage.readWorkspaceState)throw new Error('ENVIRONMENT_NOT_INITIALIZED');
@@ -68,14 +83,13 @@ export function createEnvironmentReader(options:{storage:StoragePort;storeId:str
      data={artifactId,sha256:chunk.sha256,totalBytes:chunk.totalBytes,offset,base64:Buffer.from(chunk.bytes).toString('base64'),
        nextCursor:next<chunk.totalBytes?encode({kind:'artifact',storeId,artifactId,sha256:artifact.sha256,offset:next}):null};
    }else if(method==='environment.job.get'||method==='environment.output.list'){
-     const jobId=String(params.jobId),{job}=await storage.readEnvironmentState({kind:'job',id:jobId});
-     if(!job)throw new Error('OPERATION_NOT_FOUND');
+     const jobId=String(params.jobId),job=await jobs.get(jobId);
      if(method==='environment.job.get'){
        data={job:jobSummary(job)};
      }else{
        if(c&&(c.kind!=='output'||c.jobId!==jobId||c.revision!==job.stateRevision||Object.keys(c).length!==5))throw new Error('REVISION_CONFLICT');
        const after=String(c?.after??'0');
-       const {chunks=[]}=await storage.readEnvironmentState({kind:'output',id:jobId,limit,after});
+       const chunks=await jobs.output(jobId,after,limit);
        const last=chunks.at(-1)?.seq;
        data={jobId,chunks,watermark:job.outputWatermark,truncated:job.truncated,nextCursor:last&&BigInt(last)<BigInt(job.outputWatermark)?
          encode({kind:'output',storeId,jobId,revision:job.stateRevision,after:last}):null};

@@ -1,5 +1,8 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {featureObject} from '../../domain/features/bundle.js';
+import {mayCleanEnvironmentJob} from '../../domain/environments/validation.js';
+import {createEnvironmentValidation} from './validate.js';
+import {createEnvironmentRecovery,environmentJobIdentity as jobIdentity} from './recovery.js';
 import {requireEnvironmentInstall} from '../../domain/environments/jobs.js';
 import {makeDeadline,systemClock} from '../../ports/clock.js';
 import type {AuthenticatedPeer} from '../../ports/platform.js';
@@ -18,7 +21,6 @@ export interface EnvironmentInstallationOptions extends EnvironmentPlanningOptio
 }
 type Params=Readonly<Record<string,unknown>>;
 const digest=(value:unknown)=>value===null?null:createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const jobIdentity=(job:EnvironmentJob,leaseId=job.leaseId!)=>({jobId:job.jobId,generation:job.generation,leaseId});
 
 export function createEnvironmentInstallation(options:EnvironmentInstallationOptions){
  const {storage,paths,instanceId,host,lease:leases}=options,authorization=createWorkflowAuthorization(options);
@@ -30,10 +32,17 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
    if(!environment||environment.currentPlanId!==planId)throw new Error('ENVIRONMENT_STALE');
    return{environment,plan};
  }
+ async function loadEnvironment(id:string){
+   const {environment}=await storage.readEnvironmentState!({kind:'environment',id});
+   if(!environment?.currentPlanId)throw new Error('ENVIRONMENT_NOT_FOUND');
+   return loadPlan(environment.currentPlanId);
+ }
  async function loadJob(jobId:string){
    const {job}=await storage.readEnvironmentState!({kind:'job',id:jobId});
    if(!job)throw new Error('OPERATION_NOT_FOUND');
-   const {environment,plan}=await loadPlan(job.planId);
+   const [{environment},{plan}]=await Promise.all([storage.readEnvironmentState!({kind:'environment',id:job.environmentId}),
+     storage.readEnvironmentState!({kind:'plan',id:job.planId})]);
+   if(!environment||!plan)throw new Error('STATE_CORRUPT');
    return{job,environment,plan};
  }
  async function check(current:EnvironmentRecord,plan:EnvironmentPlan,state:EnvironmentRecord['state']='PLANNED'){
@@ -42,6 +51,7 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
    const {plan:currentPlan}=await currentEnvironmentPlan(storage,workspace.workspaceId);
    if(currentPlan.planId!==plan.planId||currentPlan.digest!==plan.digest)throw new Error('ENVIRONMENT_STALE');
    const observed=await inspectEnvironmentWorkspace(options,workspace,plan.metadata.managerVersion??undefined);
+   if(observed.validationProfileDigest!==plan.metadata.validationProfileDigest)throw new Error('ENVIRONMENT_STALE');
    requireEnvironmentInstall({state,disposition:observed.disposition,pinDigest:digest(plan.metadata.pin),observedPinDigest:digest(observed.pin),
      inputDigest:plan.inputDigest,observedInputDigest:observed.inputDigest});
    return{workspace,project};
@@ -73,25 +83,33 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
      projectId:project.projectId,expectedRevision:revision,configRevision:project.configRevision,payload:{jobId:job.jobId,jobGeneration:job.generation}};
    return grant(peer,intent,{action:'cancel',workspaceId:workspace.workspaceId,jobId:job.jobId,stateRevision:revision});
  }
- async function boundLease(job:EnvironmentJob,workspaceId:string){
-   const {lease}=await storage.readWorkspaceState!({kind:'active-lease',id:workspaceId});
-   return lease?.holderType==='ENVIRONMENT'&&lease.holderId===job.jobId&&lease.generation===job.generation&&(!job.leaseId||job.leaseId===lease.leaseId)?lease:null;
- }
  async function release(lease:WorkspaceLease|null){
    if(lease)await leases.release(lease,{...lease,kind:'CHECKPOINT',durable:true,quiescent:true});
  }
- async function finish(job:EnvironmentJob,environment:EnvironmentRecord,proof:EnvironmentExitEvidence|null,inputsCurrent:boolean,noLaunchError?:string,recovering=false){
+ async function cleanup(job:EnvironmentJob,workspaceId:string){
+   if(job.kind!=='VALIDATE'||!job.leaseId||!host.cleanup)return;
+   const {lease}=await storage.readWorkspaceState!({kind:'active-lease',id:workspaceId});
+   if(mayCleanEnvironmentJob({verified:job.exitProof?.verified===true,quiescent:job.completedAt!==null,
+     hasLease:lease?.leaseId===job.leaseId,referenced:false}))await host.cleanup(jobIdentity(job));
+ }
+ async function settleLease(job:EnvironmentJob,workspaceId:string,bound:WorkspaceLease|null){
+   await release(bound).catch(()=>{});
+   await cleanup(job,workspaceId).catch(()=>{});
+ }
+ async function finish(job:EnvironmentJob,environment:EnvironmentRecord,proof:EnvironmentExitEvidence|null,inputsCurrent:boolean,
+   settlement:{noLaunchError?:string;recovering?:boolean;reconcileId?:string}={}){
    let artifactId:string|undefined;
-   if(proof&&!recovering){
+   if(proof){
      try{
        const {store}=(await storage.readSnapshot())!;
        const artifact=await publishPlanningArtifact({storage,storeId:store.storeId,ownerUid:paths.ownerUid,instanceId,targetId:environment.workspaceId},'OUTPUT',
-         {jobId:job.jobId,outcome:proof.outcome,exitCode:proof.exitCode,code:proof.error});
+         {jobId:job.jobId,outcome:proof.outcome,exitCode:proof.exitCode,code:proof.error,inputDigest:job.inputDigest,
+           commandSpecId:job.commandSpecId,capturedBytes:proof.capturedBytes??0,truncated:proof.truncated===true});
        artifactId=artifact.artifactId;
      }catch{/* The terminal reservation remains available when ordinary output allocation is full. */}
    }
    const args={kind:'job-finish' as const,jobId:job.jobId,instanceId,generation:job.generation,proof,inputsCurrent,
-     ...(noLaunchError?{noLaunchError}:{}),...(artifactId?{outputArtifactId:artifactId}:{}),...(recovering?{recovering:true}:{})};
+     ...settlement,...(artifactId?{outputArtifactId:artifactId}:{})};
    return storage.commitEnvironmentState!(args);
  }
  async function checkAfter(environment:EnvironmentRecord,plan:EnvironmentPlan){
@@ -111,31 +129,39 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
        proof={...identity,verified:true,exitCode:null,outcome:'CANCELLED',error:'CANCELLED'};
      }else{
        const current=await check(environment,plan),root=(await options.owned(current.workspace)).root;
-       const manifest=plan.metadata.inputs.find(entry=>entry.path==='package.json'),lock=plan.metadata.inputs.find(entry=>entry.path==='pnpm-lock.yaml');
-       if(!manifest||!lock)throw new Error('ENVIRONMENT_STALE');
-       hostInvoked=true;
-       proof=await host.install(identity,{workspace:root,registryOrigin:plan.metadata.registryOrigin,manifestDigest:manifest.sha256,lockDigest:lock.sha256,
-         ...(plan.metadata.managerVersion?{selectedVersion:plan.metadata.managerVersion}:{})},makeDeadline(systemClock,300000),controller.signal);
+       if(job.kind==='VALIDATE'){
+         const command=plan.metadata.commands?.find(spec=>spec.id===job.commandSpecId),pin=plan.metadata.pin,profileDigest=plan.metadata.validationProfileDigest;
+         if(!command||!pin||!profileDigest)throw new Error('ENVIRONMENT_STALE');
+         hostInvoked=true;
+         proof=await host.validate(identity,{workspace:root,command,nodeDigest:pin.nodeDigest,profileDigest},makeDeadline(systemClock,300000),controller.signal);
+       }else{
+         const manifest=plan.metadata.inputs.find(entry=>entry.path==='package.json'),lock=plan.metadata.inputs.find(entry=>entry.path==='pnpm-lock.yaml');
+         if(!manifest||!lock)throw new Error('ENVIRONMENT_STALE');
+         hostInvoked=true;
+         proof=await host.install(identity,{workspace:root,registryOrigin:plan.metadata.registryOrigin,manifestDigest:manifest.sha256,lockDigest:lock.sha256,
+           ...(plan.metadata.managerVersion?{selectedVersion:plan.metadata.managerVersion}:{})},makeDeadline(systemClock,300000),controller.signal);
+       }
      }
-     const current=proof?.outcome==='SUCCEEDED'&&await checkAfter(environment,plan);
+     const current=!!proof&&(job.kind==='VALIDATE'||proof.outcome==='SUCCEEDED')&&await checkAfter(environment,plan);
      const result=await finish(job,environment,proof,current);
-     if(result.operation.phase==='FINALIZED'&&proof)await release(bound).catch(()=>{});
+     if(result.operation.phase==='FINALIZED'&&proof)await settleLease(result.job??job,environment.workspaceId,bound);
    }catch(error){
      try{
-       const {job:currentJob,environment}=await loadJob(job.jobId);
+       const {job:currentJob,environment,plan}=await loadJob(job.jobId);
        if(currentJob.leaseId)started=true;
        const code=classifyError(error);
        if(started&&!hostInvoked&&currentJob.leaseId&&!proof)
          proof={...jobIdentity(currentJob),verified:true,exitCode:null,outcome:'FAILED',error:code};
-       const result=await finish(currentJob,environment,proof,false,started?undefined:code);
-       if(result.operation.phase==='FINALIZED'&&(!started||proof))await release(bound);
+       const current=currentJob.kind==='VALIDATE'&&(!started||!!proof)&&await checkAfter(environment,plan);
+       const result=await finish(currentJob,environment,proof,current,started?{}:{noLaunchError:code});
+       if(result.operation.phase==='FINALIZED'&&(!started||proof))await settleLease(result.job??currentJob,environment.workspaceId,bound);
      }catch{/* A lost proof preserves the durable lease and original job. */}
    }finally{running.delete(job.jobId);}
  }
- async function install(params:Params,peer:AuthenticatedPeer){
+ async function submit(params:Params,peer:AuthenticatedPeer,action:'prepare'|'validate'){
    await authorization.guard(peer);
    const requestId=String(params.requestId),grantId=String(params.grantId);
-   const original=await originalWorkflowGrant(storage,requestId,grantId,'prepare','ENVIRONMENT');
+   const original=await originalWorkflowGrant(storage,requestId,grantId,action,'ENVIRONMENT');
    if(original.operation)return{operation:publicEnvironmentOperation(original.operation)};
    if(!options.accepting())throw new Error('BLOCKED');
    const {intent}=original,result=await storage.commitEnvironmentState!({kind:'job-admit',
@@ -158,26 +184,15 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
    control.controller.abort();
    return{accepted:true,requestId,workspaceId:intent.targetId,jobId,stateRevision:result.job!.stateRevision};
  }
+ const validation=createEnvironmentValidation(options,{guard:authorization.guard,loadEnvironment,check,grant});
+ const recovery=createEnvironmentRecovery(options,{guard:authorization.guard,loadJob,active:id=>running.has(id),current:checkAfter,finish,release,cleanup});
  return{
    actions:{'environment.prepare':(params:Params,peer:AuthenticatedPeer)=>params.action==='prepare'?authorizeInstall(params,peer):
-     params.action==='cancel'?authorizeCancel(params,peer):params.action===undefined?install(params,peer):Promise.reject(new Error('UNSUPPORTED_VERSION')),
-     'environment.cancel':cancel},
+     params.action==='cancel'?authorizeCancel(params,peer):params.action==='validate'?validation(params,peer):
+     params.action===undefined?submit(params,peer,'prepare'):Promise.reject(new Error('UNSUPPORTED_VERSION')),
+     'environment.cancel':cancel,'environment.validate':(params:Params,peer:AuthenticatedPeer)=>submit(params,peer,'validate'),
+     'environment.reconcile':recovery.observe},
    stop(){for(const {controller} of running.values())controller.abort();},
-   async recover(){
-     const active=(await storage.readEnvironmentState!({kind:'active'})).jobs??[];
-     const retained=(await storage.readEnvironmentState!({kind:'retained-leases'})).jobs??[];
-     for(const job of retained){
-       const {environment}=await loadJob(job.jobId);
-       if(job.exitProof?.verified)await release(await boundLease(job,environment.workspaceId)).catch(()=>{});
-     }
-     for(const job of active){
-       const {environment,plan}=await loadJob(job.jobId),bound=await boundLease(job,environment.workspaceId);
-       const proof=job.leaseId?await host.recover(jobIdentity(job)):null;
-       if(job.phase==='RECONCILING'&&!proof)continue;
-       const current=proof?.outcome==='SUCCEEDED'&&await checkAfter(environment,plan);
-       const result=await finish(job,environment,proof,current,job.leaseId?undefined:'INTERRUPTED',true);
-       if(result.operation.phase==='FINALIZED'&&(proof||!job.leaseId))await release(bound).catch(()=>{});
-     }
-   },
+   recover:recovery.recover,
  };
 }

@@ -8,10 +8,11 @@ const pin:EnvironmentManagerPin={manager:'pnpm',version:'9.4.0',nodeVersion:'26.
  distributionDigest:'b'.repeat(64),nodeDigest:'c'.repeat(64),profileDigest:'d'.repeat(64),descendants:'DENIED',importMethod:'clone-or-copy'};
 
 test('static environment policy recognizes the exact lock/version and rejects unsafe alternatives',()=>{
- const config=(extra:Record<string,unknown>={})=>JSON.stringify({name:'fixture',packageManager:'pnpm@9.4.0',...extra});
+ const config=(extra:Record<string,unknown>={})=>JSON.stringify({name:'fixture',packageManager:'pnpm@9.4.0',dependencies:{example:'1.0.0'},...extra});
  const lock={path:'pnpm-lock.yaml',text:"lockfileVersion: '9.0'\n"};
  const input=[{path:'package.json',text:config()},lock];
  assert.equal(analyzeEnvironmentPlan(input,pin).disposition,'PLANNED');
+ assert.equal(analyzeEnvironmentPlan([{path:'package.json',text:config({dependencies:{}})},lock],pin).disposition,'MANUAL_REQUIRED');
  assert.equal(analyzeEnvironmentPlan([...input,{path:'package-lock.json',text:'{}'}],pin).disposition,'MANUAL_REQUIRED');
  assert.equal(analyzeEnvironmentPlan([{path:'package.json',text:config({packageManager:'pnpm@10.1.0'})},lock],pin).reason,'MANAGER_MISMATCH');
  for(const file of [{path:'.pnpmfile.cjs',text:'do not execute'},{path:'.npmrc',text:null},{path:'pnpm-workspace.yaml',text:'packages: []'}]){

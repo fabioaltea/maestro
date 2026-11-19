@@ -13,12 +13,12 @@ import {createEnvironmentInstallation} from '../../src/core/environments/prepare
 
 import type {EnvironmentJobHostPort} from '../../src/ports/environment.js';
 
-export async function environmentRuntimeFixture(t:Parameters<typeof workspaceRuntimeFixture>[0],hold=false,customize?:(host:EnvironmentJobHostPort)=>EnvironmentJobHostPort){
+export async function environmentRuntimeFixture(t:Parameters<typeof workspaceRuntimeFixture>[0],hold=false,customize?:(host:EnvironmentJobHostPort)=>EnvironmentJobHostPort,holdWork?:()=>boolean){
  const g0=await environmentBoundaryFixture(t,hold),seed=await g0.workspace('seed');
  const f=await workspaceRuntimeFixture(t),owned=(workspace:Parameters<typeof verifyOwnedWorktree>[2])=>verifyOwnedWorktree(f,f.storeId,workspace);
  const leases=createWorkspaceLeases({storage:f.storage,instanceId:f.instanceId,files:f.files,mutator:f.mutator,accepting:()=>true}).forConsumer('ENVIRONMENT');
  const runtime=createEnvironmentRuntime({storage:f.storage,instanceId:f.instanceId,compose:context=>{
-   const options={...context,storage:f.storage,instanceId:f.instanceId,paths:f.paths,inspector:createEnvironmentInspector(),owned};
+   const options={...context,schedule:(work:()=>Promise<void>)=>{if(!holdWork?.())context.schedule(work);},storage:f.storage,instanceId:f.instanceId,paths:f.paths,inspector:createEnvironmentInspector(),owned};
    const host=createEnvironmentJobHost(f.paths);
    const planning=createEnvironmentPlanning(options),installation=createEnvironmentInstallation({...options,lease:leases,
      host:customize?.(host)??host});
@@ -28,13 +28,13 @@ export async function environmentRuntimeFixture(t:Parameters<typeof workspaceRun
  }});
  await runtime.recover();
  const send=(method:string,params:Record<string,unknown>)=>runtime.dispatch({method,params,correlationId:randomUUID(),protocolVersion:1},f.peer,f.store.readSnapshot()!);
- async function plan(configure?:(path:string,manifest:Record<string,unknown>)=>Promise<void>){
+ async function plan(configure?:(path:string,manifest:Record<string,unknown>)=>Promise<void>,lock?:string){
    const ready=await f.prepare();assert.equal((await f.submit(ready.data.grantId)).operation?.outcome,'SUCCEEDED');
    const workspaceId=ready.data.summary.workspaceId,workspace=f.store.readWorkspaceState({kind:'get',id:workspaceId}).workspace!;
    const path=workspace.ownership!.root.canonicalPath;
    const manifest=JSON.parse(await readFile(seed.manifestPath,'utf8'));delete manifest.scripts;
    await configure?.(path,manifest);
-   await writeFile(join(path,'package.json'),JSON.stringify(manifest));await writeFile(join(path,'pnpm-lock.yaml'),await readFile(seed.lockPath));
+   await writeFile(join(path,'package.json'),JSON.stringify(manifest));await writeFile(join(path,'pnpm-lock.yaml'),lock??await readFile(seed.lockPath));
    const started=await send('environment.plan',{requestId:randomUUID(),workspaceId,expectedStateRevision:workspace.stateRevision});
    assert.equal(started.result,'OK',JSON.stringify(started));await runtime.idle();
    const environment=f.store.readEnvironmentState({kind:'workspace',id:workspaceId}).environment!;

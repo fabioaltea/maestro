@@ -2,10 +2,11 @@ import {createHash} from 'node:crypto';
 import {lstat} from 'node:fs/promises';
 import {join} from 'node:path';
 import {analyzeEnvironmentPlan,ENVIRONMENT_INPUT_FILES,type EnvironmentStaticInput} from '../../../domain/environments/plan.js';
+import {readValidationCommands} from '../../../domain/environments/validation.js';
 import {ENVIRONMENT_LIMITS} from '../../../domain/environments/state.js';
 import type {EnvironmentInputEntry,EnvironmentInspectPort,EnvironmentManagerPin} from '../../../ports/environment.js';
 import {createFilesystemIdentity} from '../git/filesystem-identity.js';
-import {createPnpmEnvironment,stableEnvironmentFile} from './pnpm.js';
+import {createPnpmEnvironment,stableEnvironmentFile,validationProfileDigest} from './pnpm.js';
 
 const hash=(value:string|Uint8Array)=>createHash('sha256').update(value).digest('hex');
 const filesystem=createFilesystemIdentity();
@@ -46,9 +47,32 @@ export function createEnvironmentInspector(configuredPin:()=>Promise<Environment
    }
    let pin=null;
    if(files.some(file=>file.path==='pnpm-lock.yaml'))try{pin=await configuredPin();}catch{/* An unqualified manager requires explicit manual handling. */}
+   let assessment=analyzeEnvironmentPlan(files,pin,selectedVersion);
+   const commands=[];
+   if(assessment.disposition==='PLANNED'){
+     try{
+       const manifest=JSON.parse(files.find(input=>input.path==='package.json')!.text!);
+       for(const descriptor of readValidationCommands(manifest)){
+         let entry=inputs.find(input=>input.path===descriptor.entry);
+         if(!entry){
+           const file=join(path,descriptor.entry),version=await fileVersion(file);
+           if(!version?.regular)throw new Error('CONFIG_UNSAFE');
+           used+=version.bytes;
+           if(used>ENVIRONMENT_LIMITS.inputBytes||inputs.length>=ENVIRONMENT_LIMITS.inputFiles)throw new Error('RESOURCE_LIMIT');
+           const content=await stableEnvironmentFile(file,version.bytes);
+           versions.set(descriptor.entry,version.fingerprint);
+           entry={path:descriptor.entry,sha256:hash(content),bytes:content.length};inputs.push(entry);
+         }
+         commands.push({...descriptor,sha256:entry.sha256});
+       }
+     }catch(error){
+       if((error as Error).message==='RESOURCE_LIMIT')throw error;
+       commands.length=0;
+       assessment={...assessment,disposition:'MANUAL_REQUIRED',reason:'CONFIG_UNSAFE',pin:null,registryOrigin:null};
+     }
+   }
    for(const [name,expected] of versions)if(((await fileVersion(join(path,name)))?.fingerprint??null)!==expected)throw new Error('ENVIRONMENT_STALE');
    await check();
-   const assessment=analyzeEnvironmentPlan(files,pin,selectedVersion);
-   return{...assessment,inputs,inputDigest:hash(JSON.stringify(inputs))};
+   return{...assessment,inputs,inputDigest:hash(JSON.stringify(inputs)),...(commands.length?{commands,validationProfileDigest}:{})};
  }};
 }

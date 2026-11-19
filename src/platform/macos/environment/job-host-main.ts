@@ -1,12 +1,13 @@
-import {createPnpmEnvironment} from './pnpm.js';
+import {createPnpmEnvironment,runEnvironmentValidation} from './pnpm.js';
 import {checkEnvironmentDisk,sealJobEvidence} from './job-files.js';
 import {makeDeadline,systemClock} from '../../../ports/clock.js';
 import {foundationError,type ErrorCode} from '../../../domain/errors.js';
 import {requireUuid} from '../../../domain/identifiers.js';
-import type {EnvironmentExitEvidence,EnvironmentInstallScope,EnvironmentJobIdentity} from '../../../ports/environment.js';
+import type {EnvironmentExitEvidence,EnvironmentInstallScope,EnvironmentJobIdentity,EnvironmentValidationScope} from '../../../ports/environment.js';
 
-interface Start {readonly identity:EnvironmentJobIdentity;readonly scope:EnvironmentInstallScope;readonly timeoutMs:number;
- readonly proofRoot:EnvironmentInstallScope['scratch']}
+type Start={readonly identity:EnvironmentJobIdentity;readonly timeoutMs:number;readonly proofRoot:EnvironmentInstallScope['scratch']} & (
+ {readonly mode:'INSTALL';readonly scope:EnvironmentInstallScope} |
+ {readonly mode:'VALIDATE';readonly scope:EnvironmentValidationScope&Pick<EnvironmentInstallScope,'store'>});
 const abort=new AbortController();
 let running=false,pending=Buffer.alloc(0),budgetError:string|null=null;
 const cancel=()=>abort.abort();
@@ -33,12 +34,13 @@ async function execute(input:Start){
  try{
    await checkEnvironmentDisk(scope,deadline);
    timer=setTimeout(monitor,750);
-   const result=await createPnpmEnvironment().install(scope,deadline,abort.signal);
+   const result=input.mode==='VALIDATE'?await runEnvironmentValidation(input.scope,deadline,abort.signal):
+     await createPnpmEnvironment().install(input.scope,deadline,abort.signal);
    finished=true;clearTimeout(timer);await sample;
    if(result.outcome==='RECONCILING'||!result.exitVerified)throw new Error('JOB_RECONCILING');
    if(budgetError)throw new Error(budgetError);
    if(result.outcome==='SUCCEEDED')await checkEnvironmentDisk(scope,deadline);
-   proof={...identity,verified:true,exitCode:result.exitCode,outcome:result.outcome,error:result.error,...(result.error==='OUTPUT_LIMIT'?{truncated:true}:{})};
+   proof={...identity,verified:true,exitCode:result.exitCode,outcome:result.outcome,error:result.error,capturedBytes:result.bytes,...(result.error==='OUTPUT_LIMIT'?{truncated:true}:{})};
  }catch(error){
    const code=safeCode(error);
    if(code==='JOB_RECONCILING')throw error;

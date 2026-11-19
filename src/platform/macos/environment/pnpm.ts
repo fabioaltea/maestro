@@ -1,14 +1,14 @@
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {constants} from 'node:fs';
-import {lstat,open,readdir,realpath,statfs} from 'node:fs/promises';
+import {lstat,open,readdir,realpath,statfs,writeFile} from 'node:fs/promises';
 import {isAbsolute,join,relative} from 'node:path';
 import type {Deadline} from '../../../ports/clock.js';
 import {makeDeadline,systemClock} from '../../../ports/clock.js';
-import type {EnvironmentInstallPort,EnvironmentInstallScope,EnvironmentManagerPin} from '../../../ports/environment.js';
+import type {EnvironmentInstallPort,EnvironmentInstallScope,EnvironmentManagerPin,EnvironmentInstallResult,EnvironmentValidationScope} from '../../../ports/environment.js';
 import type {FilesystemAnchor} from '../../../ports/repository.js';
 import {createFilesystemIdentity} from '../git/filesystem-identity.js';
-import {environmentProfile,loopbackRule,sandboxEnvironmentArgs} from './profile.js';
+import {environmentProfile,loopbackRule,sandboxEnvironmentArgs,sandboxValidationArgs,validationProfile} from './profile.js';
 
 const distribution='/usr/local/lib/node_modules/pnpm';
 const entry=join(distribution,'bin','pnpm.cjs');
@@ -19,6 +19,7 @@ const nodeDigest='533bd644c5ae0e0ea3a80e433aad16b817447ccba1e1eea701875eac80cb75
 const filesystem=createFilesystemIdentity();
 const digest=(value:string|Uint8Array)=>createHash('sha256').update(value).digest('hex');
 const profileDigest=digest(environmentProfile+'\0'+loopbackRule);
+export const validationProfileDigest=digest(validationProfile);
 const sandbox='/usr/bin/sandbox-exec';
 const outputCap=65536;
 const configFiles=['.npmrc','.pnpmfile.cjs','.pnpmfile.js','.pnpmfile.mjs','pnpm-workspace.yaml','pnpm-workspace.yml',
@@ -143,21 +144,40 @@ async function verifyInputs(scope:EnvironmentInstallScope){
  return{workspace,store,scratch,modules,remote};
 }
 
+async function selectedNode(verifyDistribution=true){
+ if(process.platform!=='darwin'||process.arch!=='arm64'||process.versions.node!==nodeVersion)throw new Error('MANAGER_UNSUPPORTED');
+ try{
+   const node=await realpath(process.execPath);
+   if(await hashNode(node)!==nodeDigest)throw new Error('MANAGER_MISMATCH');
+   if(verifyDistribution)await pinDistribution();
+   return node;
+ }catch(error){if(isMissing(error))throw new Error('MANAGER_UNSUPPORTED');throw error;}
+}
+
+export async function runEnvironmentValidation(scope:EnvironmentValidationScope,deadline:Deadline,signal:AbortSignal):Promise<EnvironmentInstallResult>{
+ if(signal.aborted)return{outcome:'CANCELLED',exitVerified:true,exitCode:null,error:'CANCELLED',bytes:0};
+ const {command}=scope,workspace=scope.workspace.canonicalPath,scratch=scope.scratch.canonicalPath;
+ if(!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,74}\.mjs$/.test(command.entry)||command.entry.includes('..'))throw new Error('CONFIG_UNSAFE');
+ await Promise.all([anchor(scope.workspace,false),anchor(scope.scratch,true)]);
+ if(contained(workspace,scratch)||contained(scratch,workspace))throw new Error('OWNERSHIP_UNPROVEN');
+ if(scope.nodeDigest!==nodeDigest||scope.profileDigest!==validationProfileDigest)throw new Error('MANAGER_MISMATCH');
+ const node=await selectedNode(false),source=await stableEnvironmentFile(join(workspace,command.entry),1048576);
+ if(digest(source)!==command.sha256)throw new Error('ENVIRONMENT_STALE');
+ const script=join(scratch,'input.mjs');
+ await writeFile(script,source,{flag:'wx',mode:0o400});
+ if(deadline.expired())throw new Error('DEADLINE_EXCEEDED');
+ const args=sandboxValidationArgs(node,workspace,script);
+ const result=await run([...args,'--',script,...command.argv],workspace,scratch,
+   makeDeadline(systemClock,Math.max(1,Math.min(command.timeoutMs,deadline.remainingMs()))),signal);
+ const error=result.reason??(result.code===0?null:'VALIDATION_FAILED');
+ return{outcome:error==='CANCELLED'?'CANCELLED':error?'FAILED':'SUCCEEDED',exitVerified:true,exitCode:result.code,error,bytes:result.bytes};
+}
+
 export function createPnpmEnvironment():EnvironmentInstallPort{
  const pin:EnvironmentManagerPin={manager:'pnpm',version:pnpmVersion,nodeVersion,entryDigest,distributionDigest,nodeDigest,profileDigest,
    descendants:'DENIED',importMethod:'clone-or-copy'};
- async function selected(){
-   if(process.platform!=='darwin'||process.arch!=='arm64'||process.versions.node!==nodeVersion)throw new Error('MANAGER_UNSUPPORTED');
-   try{
-     const node=await realpath(process.execPath);
-     const hash=await hashNode(node);
-     if(hash!==nodeDigest)throw new Error('MANAGER_MISMATCH');
-     await pinDistribution();
-     return node;
-   }catch(error){if(isMissing(error))throw new Error('MANAGER_UNSUPPORTED');throw error;}
- }
  async function qualification():Promise<EnvironmentManagerPin>{
-   const node=await selected(),deadline=makeDeadline(systemClock,10000),empty='/var/empty';
+   const node=await selectedNode(),deadline=makeDeadline(systemClock,10000),empty='/var/empty';
    const args=sandboxEnvironmentArgs({node,distribution,workspace:empty,store:empty,scratch:empty,modules:join(empty,'node_modules')});
    const version=await run([...args,entry,'--version'],'/',empty,deadline);
    if(version.code!==0||version.stdout.trim()!==pnpmVersion||version.stderr)throw new Error('MANAGER_MISMATCH');
@@ -167,9 +187,9 @@ export function createPnpmEnvironment():EnvironmentInstallPort{
    if(child.code!==0||child.stderr)throw new Error('MANAGER_UNSUPPORTED');
    return pin;
  }
- return{async configuredPin(){await selected();return pin;},qualification,async install(scope,deadline,signal){
+ return{async configuredPin(){await selectedNode();return pin;},qualification,async install(scope,deadline,signal){
    if(signal?.aborted)return{outcome:'CANCELLED',exitVerified:true,exitCode:null,error:'CANCELLED',bytes:0};
-   const paths=await verifyInputs(scope),node=await selected();
+   const paths=await verifyInputs(scope),node=await selectedNode();
    for(const root of [paths.workspace,paths.store]){
      const fs=await statfs(root,{bigint:true});
      if(fs.bavail*fs.bsize<2147483648n)throw new Error('DISK_BUDGET');

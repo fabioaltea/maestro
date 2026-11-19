@@ -7,10 +7,11 @@ const configFiles=['.npmrc','.pnpmfile.cjs','.pnpmfile.js','.pnpmfile.mjs','pnpm
 export const ENVIRONMENT_INPUT_FILES=['package.json',...Object.keys(locks),...configFiles];
 export interface EnvironmentStaticInput{readonly path:string;readonly text:string|null}
 type Assessment=Omit<EnvironmentInspection,'inputs'|'inputDigest'>;
+const dependencyFields=['dependencies','devDependencies','optionalDependencies','peerDependencies'];
 const lifecycle=new Set(['preinstall','install','postinstall','prepublish','preprepare','prepare','postprepare']);
 
 function dependencyConfigSafe(manifest:Record<string,unknown>){
- for(const key of ['dependencies','devDependencies','optionalDependencies','peerDependencies']){
+ for(const key of dependencyFields){
    const raw=manifest[key];
    if(raw===undefined)continue;
    const dependencies=featureObject(raw);
@@ -53,6 +54,8 @@ export function analyzeEnvironmentPlan(inputs:readonly EnvironmentStaticInput[],
  try{
    if(!dependencyConfigSafe(manifest))return manual('CONFIG_UNSAFE');
    if(scriptNames.some(name=>lifecycle.has(name)))return manual('SCRIPT_APPROVAL_REQUIRED');
+   // pnpm 9.4 rewrites the wanted lock when there are no dependencies, even in frozen mode.
+   if(!dependencyFields.some(key=>manifest[key]!==undefined&&Object.keys(featureObject(manifest[key])).length>0))return manual('MANAGER_UNSUPPORTED');
    const registryOrigin=registryScope(lock);
    return{...common,pin,disposition:'PLANNED',reason:null,registryOrigin};
  }catch{return manual('CONFIG_UNSAFE');}

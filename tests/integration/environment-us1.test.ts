@@ -29,8 +29,8 @@ async function fixture(t:Parameters<typeof workspaceRuntimeFixture>[0]){
 }
 test('plans pnpm from static inputs without changing the worktree and preserves original reply',async t=>{
  const f=await fixture(t),manifest=join(f.path,'package.json');
- await writeFile(manifest,JSON.stringify({name:'fixture',packageManager:'pnpm@9.4.0'}));
- await writeFile(join(f.path,'pnpm-lock.yaml'),"lockfileVersion: '9.0'\nimporters:\n  .: {}\n");
+ await writeFile(manifest,JSON.stringify({name:'fixture',packageManager:'pnpm@9.4.0',dependencies:{'fixture-package':'1.0.0'}}));
+ await writeFile(join(f.path,'pnpm-lock.yaml'),"lockfileVersion: '9.0'\nimporters:\n  .:\n    dependencies:\n      fixture-package:\n        specifier: 1.0.0\n        version: 1.0.0\n");
  const bytes=await readFile(manifest),names=(await readdir(f.path)).sort(),planned=await f.plan();
  assert.equal(planned.operation?.outcome,'SUCCEEDED',JSON.stringify(planned.response));
  assert.equal(planned.state?.state,'PLANNED');

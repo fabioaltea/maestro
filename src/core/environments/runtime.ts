@@ -6,6 +6,7 @@ import {createEnvironmentPlanning,type EnvironmentPlanningOptions} from './plan.
 import type {StoragePort} from '../../ports/storage.js';
 import type {Deadline} from '../../ports/clock.js';
 import {ENVIRONMENT_READ_METHODS} from '../../protocol/environment.js';
+import {createEnvironmentJobPort} from './read.js';
 import {createEnvironmentDispatch,type EnvironmentRpcAction} from './dispatch.js';
 
 export interface EnvironmentRuntimeContext {
@@ -46,6 +47,7 @@ export function createEnvironmentRuntime(options:{storage:StoragePort;instanceId
    };
  }
  return{
+   jobs:createEnvironmentJobPort(storage),
    methods:[...new Set([...ENVIRONMENT_READ_METHODS,...Object.keys(actions)])],
    dispatch:createEnvironmentDispatch({storage,actions}),
    fence(){accepting=false;},

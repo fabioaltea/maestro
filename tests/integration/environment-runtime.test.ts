@@ -15,7 +15,11 @@ test('daemon advertises existing environment methods only and preserves read-onl
  const state=JSON.parse((await f.call('status')).stdout);
  assert.equal(state.data.capabilities.environmentVersion,1);
  assert.ok(state.data.capabilities.environmentMethods.includes('environment.list'));
- assert.ok(!state.data.capabilities.environmentMethods.includes('environment.validate'));
+ for(const method of ['environment.prepare','environment.cancel','environment.validate','environment.reconcile'])
+   assert.ok(state.data.capabilities.environmentMethods.includes(method));
+ const readOnly=createEnvironmentRuntime({storage:{} as StoragePort,instanceId:randomUUID()});
+ assert.ok(readOnly.methods.includes('environment.job.get'));
+ assert.ok(!readOnly.methods.includes('environment.validate'));
  const client=new LocalClient(createClientBackend()),args={projectId:randomUUID()},options={stateDirectory:f.archive};
  assert.deepEqual((await client.runEnvironment('environment.list',args,options)).data.items,[]);
  assert.equal((await f.call('stop')).code,0);

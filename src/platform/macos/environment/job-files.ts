@@ -47,7 +47,7 @@ export async function readEnvironmentExit(paths:ArchivePaths,identity:Environmen
  }catch{return null;}
 }
 
-export async function checkEnvironmentDisk(scope:EnvironmentInstallScope,deadline:Deadline){
+export async function checkEnvironmentDisk(scope:Pick<EnvironmentInstallScope,'workspace'|'store'>,deadline:Deadline){
  const workspace=scope.workspace.canonicalPath,ownedRoot=dirname(workspace),store=scope.store.canonicalPath;
  const volume=await statfs(workspace,{bigint:true});
  if(volume.bavail*volume.bsize<BigInt(ENVIRONMENT_LIMITS.freeBytes))throw new Error('DISK_BUDGET');

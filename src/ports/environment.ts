@@ -36,7 +36,7 @@ export interface EnvironmentCommandSpec {
 }
 export interface EnvironmentValidationScope {
  readonly workspace:FilesystemAnchor;readonly scratch:FilesystemAnchor;
- readonly command:EnvironmentCommandSpec;readonly nodeDigest:string;
+ readonly command:EnvironmentCommandSpec;readonly nodeDigest:string;readonly profileDigest:string;
 }
 export interface EnvironmentInspection {
  readonly manager:'pnpm'|'npm'|'yarn'|'bun'|'UNKNOWN';
@@ -49,6 +49,7 @@ export interface EnvironmentInspection {
  readonly inputDigest:string;
  readonly registryOrigin:string|null;
  readonly commands?:readonly EnvironmentCommandSpec[];
+ readonly validationProfileDigest?:string;
 }
 export interface EnvironmentPlan {
  readonly planId:string;readonly environmentId:string;readonly workspaceGeneration:string;
@@ -70,6 +71,10 @@ export interface EnvironmentJob {
 }
 export interface EnvironmentOutput {
  readonly seq:string;readonly artifactId:string;readonly sha256:string;readonly bytes:number;
+}
+export interface EnvironmentJobPort {
+ get(jobId:string):Promise<EnvironmentJob>;
+ output(jobId:string,after:string,limit:number):Promise<readonly EnvironmentOutput[]>;
 }
 export type EnvironmentQuery=
  |{readonly kind:'workspace'|'environment'|'plan'|'job'|'artifact'|'latest-job';readonly id:string}
@@ -128,6 +133,7 @@ export interface EnvironmentExitEvidence extends EnvironmentJobIdentity{
  readonly outcome:'SUCCEEDED'|'FAILED'|'CANCELLED';
  readonly error:string|null;
  readonly truncated?:boolean;
+ readonly capturedBytes?:number;
 }
 export interface EnvironmentLeasePort{
  acquire(request:import('./workspace.js').WorkspaceLeaseRequest):Promise<import('./workspace.js').WorkspaceLease>;

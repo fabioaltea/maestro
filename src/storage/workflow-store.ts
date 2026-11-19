@@ -15,7 +15,7 @@ import type {createWorkflowArtifacts} from './workflow-artifacts.js';
 import {foundationError,type ErrorCode} from '../domain/errors.js';
 const digest=(text:string)=>createHash('sha256').update(text).digest('hex');
 type UploadChange=Extract<WorkflowChange,{kind:'reserve'|'append'|'seal'|'discard'}>;
-export interface WorkflowEventContext {readonly requestIds?:readonly string[];readonly workspaceIds?:readonly string[]}
+export interface WorkflowEventContext {readonly requestIds?:readonly string[];readonly workspaceIds?:readonly string[];readonly environmentIds?:readonly string[]}
 export interface WorkflowMutation {<T>(body:()=>T,terminal?:boolean,event?:WorkflowEventContext):T}
 export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation,artifacts:ReturnType<typeof createWorkflowArtifacts>,options:{readonly nowMs?:()=>number}={}){
  requireFeatureSchema(db);const now=options.nowMs??Date.now;

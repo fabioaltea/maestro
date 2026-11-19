@@ -115,3 +115,7 @@ Scenari su worktree posseduto per argv letterale, esiti 0/14/timeout, perdita de
 ## T030 — CommandSpec
 
 Registrazione limitata a script Node ESM alla radice, argv letterale, tempo massimo e prove del job legate alla lease. Cleanup ammesso soltanto con uscita verificata e senza lease o riferimenti. **2 PASS** unit.
+
+## T031 — esecuzione e riconciliazione US3
+
+Il piano sigilla entrypoint, argv, pin Node e profilo. Il supervisore confina le scritture, la rete e i figli. Il writer distingue esiti 0, 14, timeout, cap di output e uscita incerta. La riconciliazione osserva l’identità originale, completa la prova e libera la lease. Il cleanup rimuove la sola copia di esecuzione privata dopo uscita e rilascio; output, prova e worktree restano disponibili. Il controllo corrente invalida READY quando cambia un input. **7 PASS** nelle prove mirate US1/US3 aggiornate, inclusi perdita esito post-effetto, interruzione prima del lancio e admission concorrenti. Typecheck in build:test e lint PASS.
