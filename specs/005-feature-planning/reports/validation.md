@@ -119,3 +119,7 @@ Due casi unitari coprono schema/provenance e correlazione esatta tra generazione
 ### T028 — contratti assistiti (RED)
 
 Due casi di contratto verificano prepare con snapshot e artefatto risposta, rifiuto di autorità/testo aggiunti e indisponibilità della capability sul core locale. 2/2 RED sui DTO della fase precedente.
+
+### T029 — scenari assistiti con fixture (RED)
+
+Tre integrazioni locali coprono due turni espliciti con provenance, grant di altro ambito, reply loss/fault al confine writer, retry originale e cancel con risultato tardivo. Build:test PASS e 3/3 RED in prepare, in attesa di DTO e servizio.
