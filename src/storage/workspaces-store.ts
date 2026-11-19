@@ -231,10 +231,10 @@ export function commitWorkspaceState(database:Database.Database,change:Workspace
  return {...admitted,...(workspace?{workspace}:{})};
 }
 
-function requireWorkspaceInstance(database:Database.Database,instanceId:string,lifecycle:'RUNNING'|'RECOVERING'){
+function requireWorkspaceInstance(database:Database.Database,instanceId:string,lifecycle:'RUNNING'|'RECOVERING'|readonly ('RUNNING'|'RECOVERING'|'STOPPING')[]){
  const owner=database.prepare('SELECT i.lifecycle FROM instances i JOIN store s ON i.instance_id=s.current_instance_id WHERE i.instance_id=?')
    .get(requireUuid(instanceId)) as Row|undefined;
- if(owner?.lifecycle!==lifecycle)throw new Error('STALE_TARGET');
+ if(!owner||!(typeof lifecycle==='string'?owner.lifecycle===lifecycle:lifecycle.some(value=>value===owner.lifecycle)))throw new Error('STALE_TARGET');
 }
 
 type RefreshChange=Extract<WorkspaceChange,{kind:`refresh-${string}`}>;
@@ -328,7 +328,7 @@ export function commitWorkspaceLease(database:Database.Database,change:Workspace
      writeState(database,workspace,transitionWorkspace(workspace.state,'acquire'),null);
      return requested;
    }
-   requireWorkspaceInstance(database,change.instanceId,change.kind==='owner-lost'?'RECOVERING':'RUNNING');
+   requireWorkspaceInstance(database,change.instanceId,change.kind==='owner-lost'?'RECOVERING':['RUNNING','RECOVERING','STOPPING']);
    if(!held||Object.entries(held).some(([key,value])=>requested[key as keyof WorkspaceLease]!==value))throw new Error('STALE_TARGET');
    if(change.kind==='owner-lost'){
      if(held.instanceId===change.instanceId)throw new Error('STALE_TARGET');

@@ -1,4 +1,4 @@
-import {environmentEventDrafts} from '../core/environments/events.js';
+import {environmentEventDrafts,environmentOutputEvent} from '../core/environments/events.js';
 import {commitEnvironmentState,readEnvironmentState} from './environments-store.js';
 import type {EnvironmentChange,EnvironmentQuery} from '../ports/environment.js';
 import {ENVIRONMENT_TABLES} from './environments-schema.js';
@@ -205,7 +205,12 @@ export class SQLiteStore {
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
           if(op.namespace==='ENVIRONMENT'){
             const environment=op.targetId?readEnvironmentState(this.database!,{kind:'workspace',id:op.targetId}).environment:null;
-            drafts.push(...environmentEventDrafts(op,String(owner.owning_instance_id),environment));
+            const instanceId=String(owner.owning_instance_id);
+            drafts.push(...environmentEventDrafts(op,instanceId,environment));
+            if(op.phase==='FINALIZED'&&['prepare','validate'].includes(op.action)&&typeof op.result?.jobId==='string'&&op.targetId){
+              const {job}=readEnvironmentState(this.database!,{kind:'job',id:op.result.jobId});
+              if(job&&job.outputWatermark!=='0')drafts.push(environmentOutputEvent(job,op.targetId,instanceId));
+            }
             continue;
           }
           if(op.namespace==='WORKSPACE'){

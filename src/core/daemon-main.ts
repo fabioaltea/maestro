@@ -95,7 +95,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       ...(dependencies.workspaceFiles?{files:dependencies.workspaceFiles}:{}),
     }));
     const environmentCompose=dependencies.environments??(workspaces.leases?nativeEnvironmentServices({
-      storage,instanceId:intent.instanceId,paths,owned:workspaces.leases.owned,
+      storage,instanceId:intent.instanceId,paths,owned:workspaces.leases.owned,lease:workspaces.leases.forConsumer('ENVIRONMENT'),
     }):undefined);
     environments=createEnvironmentRuntime({storage,instanceId:intent.instanceId,...(environmentCompose?{compose:environmentCompose}:{})});
     const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=7?{environmentVersion:1,environmentMethods:environments.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };

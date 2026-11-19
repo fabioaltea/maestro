@@ -64,10 +64,10 @@ export interface EnvironmentOutput {
  readonly seq:string;readonly artifactId:string;readonly sha256:string;readonly bytes:number;
 }
 export type EnvironmentQuery=
- |{readonly kind:'workspace'|'environment'|'plan'|'job'|'artifact';readonly id:string}
+ |{readonly kind:'workspace'|'environment'|'plan'|'job'|'artifact'|'latest-job';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number}
  |{readonly kind:'output';readonly id:string;readonly after?:string;readonly limit?:number}
- |{readonly kind:'active'|'pending-plans'};
+ |{readonly kind:'active'|'pending-plans'|'retained-leases'};
 export interface EnvironmentRead {
  readonly environment?:EnvironmentRecord|null;
  readonly plan?:EnvironmentPlan|null;
@@ -90,10 +90,17 @@ export type EnvironmentChange=
  |{readonly kind:'attest';readonly admission:WorkflowAdmission;readonly observedInputDigest:string;readonly checkedAt:string}
  |{readonly kind:'plan-finish';readonly instanceId:string;readonly requestId:string;
    readonly fence:WorkspaceFence;readonly plan:EnvironmentPlan}
- |{readonly kind:'plan-block';readonly instanceId:string;readonly requestId:string;readonly error:string;readonly interrupted?:boolean};
+ |{readonly kind:'plan-block';readonly instanceId:string;readonly requestId:string;readonly error:string;readonly interrupted?:boolean}
+ |{readonly kind:'job-admit';readonly admission:WorkflowAdmission}
+ |{readonly kind:'job-cancel';readonly admission:WorkflowAdmission}
+ |{readonly kind:'job-start';readonly jobId:string;readonly instanceId:string;readonly identity:EnvironmentJobIdentity}
+ |{readonly kind:'job-finish';readonly jobId:string;readonly instanceId:string;readonly generation:string;readonly proof:EnvironmentExitEvidence|null;
+   readonly inputsCurrent:boolean;readonly noLaunchError?:string;readonly outputArtifactId?:string;readonly recovering?:boolean};
+
 export interface EnvironmentWrite {
  readonly operation:WorkflowOperationRecord;
  readonly environment?:EnvironmentRecord;
+ readonly job?:EnvironmentJob;
  readonly plan?:EnvironmentPlan;
  readonly inserted?:boolean;
 }

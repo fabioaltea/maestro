@@ -1,0 +1,183 @@
+import {createHash,randomUUID} from 'node:crypto';
+import {featureObject} from '../../domain/features/bundle.js';
+import {requireEnvironmentInstall} from '../../domain/environments/jobs.js';
+import {makeDeadline,systemClock} from '../../ports/clock.js';
+import type {AuthenticatedPeer} from '../../ports/platform.js';
+import type {EnvironmentExitEvidence,EnvironmentJob,EnvironmentJobHostPort,EnvironmentLeasePort,EnvironmentPlan,EnvironmentRecord} from '../../ports/environment.js';
+import type {WorkspaceLease} from '../../ports/workspace.js';
+import type {WorkflowIntent} from '../../domain/workflow/authorization.js';
+import {publicEnvironmentOperation} from '../../protocol/environment.js';
+import {classifyError} from '../control-main.js';
+import {publishPlanningArtifact} from '../features/artifacts.js';
+import {originalWorkflowGrant,workflowAdmission} from '../workflow/admission.js';
+import {createWorkflowAuthorization} from '../workflow/authorization.js';
+import {currentEnvironmentPlan,environmentWorkspace,inspectEnvironmentWorkspace,type EnvironmentPlanningOptions} from './plan.js';
+
+export interface EnvironmentInstallationOptions extends EnvironmentPlanningOptions{
+ readonly lease:EnvironmentLeasePort;readonly host:EnvironmentJobHostPort;
+}
+type Params=Readonly<Record<string,unknown>>;
+const digest=(value:unknown)=>value===null?null:createHash('sha256').update(JSON.stringify(value)).digest('hex');
+const jobIdentity=(job:EnvironmentJob,leaseId=job.leaseId!)=>({jobId:job.jobId,generation:job.generation,leaseId});
+
+export function createEnvironmentInstallation(options:EnvironmentInstallationOptions){
+ const {storage,paths,instanceId,host,lease:leases}=options,authorization=createWorkflowAuthorization(options);
+ const running=new Map<string,{generation:string;controller:AbortController}>();
+ async function loadPlan(planId:string){
+   const {plan}=await storage.readEnvironmentState!({kind:'plan',id:planId});
+   if(!plan)throw new Error('ENVIRONMENT_NOT_FOUND');
+   const {environment}=await storage.readEnvironmentState!({kind:'environment',id:plan.environmentId});
+   if(!environment||environment.currentPlanId!==planId)throw new Error('ENVIRONMENT_STALE');
+   return{environment,plan};
+ }
+ async function loadJob(jobId:string){
+   const {job}=await storage.readEnvironmentState!({kind:'job',id:jobId});
+   if(!job)throw new Error('OPERATION_NOT_FOUND');
+   const {environment,plan}=await loadPlan(job.planId);
+   return{job,environment,plan};
+ }
+ async function check(current:EnvironmentRecord,plan:EnvironmentPlan,state:EnvironmentRecord['state']='PLANNED'){
+   const {workspace,project}=await environmentWorkspace(storage,current.workspaceId);
+   if(workspace.ownerGeneration!==plan.workspaceGeneration||project.configRevision!==plan.configRevision)throw new Error('ENVIRONMENT_STALE');
+   const {plan:currentPlan}=await currentEnvironmentPlan(storage,workspace.workspaceId);
+   if(currentPlan.planId!==plan.planId||currentPlan.digest!==plan.digest)throw new Error('ENVIRONMENT_STALE');
+   const observed=await inspectEnvironmentWorkspace(options,workspace,plan.metadata.managerVersion??undefined);
+   requireEnvironmentInstall({state,disposition:observed.disposition,pinDigest:digest(plan.metadata.pin),observedPinDigest:digest(observed.pin),
+     inputDigest:plan.inputDigest,observedInputDigest:observed.inputDigest});
+   return{workspace,project};
+ }
+ async function grant(peer:AuthenticatedPeer,intent:WorkflowIntent,summary:Record<string,unknown>){
+   const result=await authorization.prepare(peer,intent);
+   return{grantId:result.grantId,expiresAtMs:result.expiresAtMs,canonicalIntentHash:createHash('sha256').update(result.canonicalIntent).digest('hex'),summary};
+ }
+ async function authorizeInstall(params:Params,peer:AuthenticatedPeer){
+   const {store}=await authorization.guard(peer),payload=featureObject(params.intent),revision=String(featureObject(params.expectedRevisions).stateRevision);
+   const {environment,plan}=await loadPlan(String(payload.planId));
+   if(environment.stateRevision!==revision||plan.digest!==payload.planDigest)throw new Error('ENVIRONMENT_STALE');
+   const {workspace,project}=await check(environment,plan,environment.state);
+   const intent:WorkflowIntent={version:1,namespace:'ENVIRONMENT',action:'prepare',storeId:store.storeId,ownerUid:store.ownerUid,targetId:workspace.workspaceId,
+     projectId:workspace.projectId,expectedRevision:revision,configRevision:project.configRevision,
+     payload:{planId:plan.planId,planDigest:plan.digest,inputDigest:plan.inputDigest,workspaceRevision:workspace.stateRevision,jobGeneration:randomUUID()}};
+   return grant(peer,intent,{action:'prepare',workspaceId:workspace.workspaceId,planId:plan.planId,planDigest:plan.digest,inputDigest:plan.inputDigest,
+     stateRevision:revision,managerVersion:plan.metadata.managerVersion,networkScope:plan.metadata.registryOrigin?'LOOPBACK':'OFFLINE',
+     scriptPolicy:'DISABLED',importMethod:'clone-or-copy'});
+ }
+ async function authorizeCancel(params:Params,peer:AuthenticatedPeer){
+   const {store}=await authorization.guard(peer),payload=featureObject(params.intent),revision=String(featureObject(params.expectedRevisions).stateRevision);
+   const {job,environment}=await loadJob(String(payload.jobId));
+   if(job.stateRevision!==revision||!['QUEUED','RUNNING'].includes(job.phase))throw new Error('REVISION_CONFLICT');
+   const active=running.get(job.jobId);
+   if(!active||active.generation!==job.generation)throw new Error('JOB_RECONCILING');
+   const {workspace,project}=await environmentWorkspace(storage,environment.workspaceId);
+   const intent:WorkflowIntent={version:1,namespace:'ENVIRONMENT',action:'cancel',storeId:store.storeId,ownerUid:store.ownerUid,targetId:workspace.workspaceId,
+     projectId:project.projectId,expectedRevision:revision,configRevision:project.configRevision,payload:{jobId:job.jobId,jobGeneration:job.generation}};
+   return grant(peer,intent,{action:'cancel',workspaceId:workspace.workspaceId,jobId:job.jobId,stateRevision:revision});
+ }
+ async function boundLease(job:EnvironmentJob,workspaceId:string){
+   const {lease}=await storage.readWorkspaceState!({kind:'active-lease',id:workspaceId});
+   return lease?.holderType==='ENVIRONMENT'&&lease.holderId===job.jobId&&lease.generation===job.generation&&(!job.leaseId||job.leaseId===lease.leaseId)?lease:null;
+ }
+ async function release(lease:WorkspaceLease|null){
+   if(lease)await leases.release(lease,{...lease,kind:'CHECKPOINT',durable:true,quiescent:true});
+ }
+ async function finish(job:EnvironmentJob,environment:EnvironmentRecord,proof:EnvironmentExitEvidence|null,inputsCurrent:boolean,noLaunchError?:string,recovering=false){
+   let artifactId:string|undefined;
+   if(proof&&!recovering){
+     try{
+       const {store}=(await storage.readSnapshot())!;
+       const artifact=await publishPlanningArtifact({storage,storeId:store.storeId,ownerUid:paths.ownerUid,instanceId,targetId:environment.workspaceId},'OUTPUT',
+         {jobId:job.jobId,outcome:proof.outcome,exitCode:proof.exitCode,code:proof.error});
+       artifactId=artifact.artifactId;
+     }catch{/* The terminal reservation remains available when ordinary output allocation is full. */}
+   }
+   const args={kind:'job-finish' as const,jobId:job.jobId,instanceId,generation:job.generation,proof,inputsCurrent,
+     ...(noLaunchError?{noLaunchError}:{}),...(artifactId?{outputArtifactId:artifactId}:{}),...(recovering?{recovering:true}:{})};
+   return storage.commitEnvironmentState!(args);
+ }
+ async function checkAfter(environment:EnvironmentRecord,plan:EnvironmentPlan){
+   try{await check(environment,plan);return true;}catch{return false;}
+ }
+ async function work(job:EnvironmentJob,intent:WorkflowIntent,controller:AbortController){
+   let bound:WorkspaceLease|null=null,started=false,hostInvoked=false,proof:EnvironmentExitEvidence|null=null;
+   try{
+     const {environment,plan}=await loadJob(job.jobId),{workspace}=await check(environment,plan);
+     if(controller.signal.aborted)throw new Error('CANCELLED');
+     if(workspace.stateRevision!==intent.payload.workspaceRevision)throw new Error('REVISION_CONFLICT');
+     bound=await leases.acquire({workspaceId:workspace.workspaceId,stateRevision:workspace.stateRevision,holderId:job.jobId,generation:job.generation});
+     const identity=jobIdentity(job,bound.leaseId);
+     const {job:attached}=await storage.commitEnvironmentState!({kind:'job-start',jobId:job.jobId,instanceId,identity});
+     started=true;job=attached??job;
+     if(controller.signal.aborted){
+       proof={...identity,verified:true,exitCode:null,outcome:'CANCELLED',error:'CANCELLED'};
+     }else{
+       const current=await check(environment,plan),root=(await options.owned(current.workspace)).root;
+       const manifest=plan.metadata.inputs.find(entry=>entry.path==='package.json'),lock=plan.metadata.inputs.find(entry=>entry.path==='pnpm-lock.yaml');
+       if(!manifest||!lock)throw new Error('ENVIRONMENT_STALE');
+       hostInvoked=true;
+       proof=await host.install(identity,{workspace:root,registryOrigin:plan.metadata.registryOrigin,manifestDigest:manifest.sha256,lockDigest:lock.sha256,
+         ...(plan.metadata.managerVersion?{selectedVersion:plan.metadata.managerVersion}:{})},makeDeadline(systemClock,300000),controller.signal);
+     }
+     const current=proof?.outcome==='SUCCEEDED'&&await checkAfter(environment,plan);
+     const result=await finish(job,environment,proof,current);
+     if(result.operation.phase==='FINALIZED'&&proof)await release(bound).catch(()=>{});
+   }catch(error){
+     try{
+       const {job:currentJob,environment}=await loadJob(job.jobId);
+       if(currentJob.leaseId)started=true;
+       const code=classifyError(error);
+       if(started&&!hostInvoked&&currentJob.leaseId&&!proof)
+         proof={...jobIdentity(currentJob),verified:true,exitCode:null,outcome:'FAILED',error:code};
+       const result=await finish(currentJob,environment,proof,false,started?undefined:code);
+       if(result.operation.phase==='FINALIZED'&&(!started||proof))await release(bound);
+     }catch{/* A lost proof preserves the durable lease and original job. */}
+   }finally{running.delete(job.jobId);}
+ }
+ async function install(params:Params,peer:AuthenticatedPeer){
+   await authorization.guard(peer);
+   const requestId=String(params.requestId),grantId=String(params.grantId);
+   const original=await originalWorkflowGrant(storage,requestId,grantId,'prepare','ENVIRONMENT');
+   if(original.operation)return{operation:publicEnvironmentOperation(original.operation)};
+   if(!options.accepting())throw new Error('BLOCKED');
+   const {intent}=original,result=await storage.commitEnvironmentState!({kind:'job-admit',
+     admission:workflowAdmission({requestId,grantId,intent,instanceId,nowMs:Date.now()})});
+   if(!result.inserted)return{operation:publicEnvironmentOperation(result.operation)};
+   const job=result.job!,controller=new AbortController();
+   running.set(job.jobId,{generation:job.generation,controller});options.schedule(()=>work(job,intent,controller));
+   return{accepted:true,requestId,workspaceId:intent.targetId,jobId:job.jobId,stateRevision:job.stateRevision};
+ }
+ async function cancel(params:Params,peer:AuthenticatedPeer){
+   await authorization.guard(peer);
+   const requestId=String(params.requestId),grantId=String(params.grantId);
+   const original=await originalWorkflowGrant(storage,requestId,grantId,'cancel','ENVIRONMENT');
+   if(original.operation)return{operation:publicEnvironmentOperation(original.operation)};
+   const {intent}=original,jobId=String(intent.payload.jobId),control=running.get(jobId);
+   if(!control||control.generation!==intent.payload.jobGeneration)throw new Error('JOB_RECONCILING');
+   const result=await storage.commitEnvironmentState!({kind:'job-cancel',
+     admission:workflowAdmission({requestId,grantId,intent,instanceId,nowMs:Date.now()})});
+   if(!result.inserted)return{operation:publicEnvironmentOperation(result.operation)};
+   control.controller.abort();
+   return{accepted:true,requestId,workspaceId:intent.targetId,jobId,stateRevision:result.job!.stateRevision};
+ }
+ return{
+   actions:{'environment.prepare':(params:Params,peer:AuthenticatedPeer)=>params.action==='prepare'?authorizeInstall(params,peer):
+     params.action==='cancel'?authorizeCancel(params,peer):params.action===undefined?install(params,peer):Promise.reject(new Error('UNSUPPORTED_VERSION')),
+     'environment.cancel':cancel},
+   stop(){for(const {controller} of running.values())controller.abort();},
+   async recover(){
+     const active=(await storage.readEnvironmentState!({kind:'active'})).jobs??[];
+     const retained=(await storage.readEnvironmentState!({kind:'retained-leases'})).jobs??[];
+     for(const job of retained){
+       const {environment}=await loadJob(job.jobId);
+       if(job.exitProof?.verified)await release(await boundLease(job,environment.workspaceId)).catch(()=>{});
+     }
+     for(const job of active){
+       const {environment,plan}=await loadJob(job.jobId),bound=await boundLease(job,environment.workspaceId);
+       const proof=job.leaseId?await host.recover(jobIdentity(job)):null;
+       if(job.phase==='RECONCILING'&&!proof)continue;
+       const current=proof?.outcome==='SUCCEEDED'&&await checkAfter(environment,plan);
+       const result=await finish(job,environment,proof,current,job.leaseId?undefined:'INTERRUPTED',true);
+       if(result.operation.phase==='FINALIZED'&&(proof||!job.leaseId))await release(bound).catch(()=>{});
+     }
+   },
+ };
+}

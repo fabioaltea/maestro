@@ -3,22 +3,24 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
-import {workspaceRuntimeFixture} from '../fixtures/workspace-runtime.js';
+import {startSuccessor,workspaceRuntimeFixture} from '../fixtures/workspace-runtime.js';
 import {environmentBoundaryFixture,fixturePackage} from '../fixtures/environment-boundary.js';
 import {createEnvironmentRuntime} from '../../src/core/environments/runtime.js';
 import {createEnvironmentPlanning} from '../../src/core/environments/plan.js';
 import {createWorkspaceLeases,verifyOwnedWorktree} from '../../src/core/workspaces/leases.js';
 import {createEnvironmentInspector} from '../../src/platform/macos/environment/inspect.js';
+import {createEnvironmentJobHost} from '../../src/platform/macos/environment/job-host.js';
+import {createEnvironmentInstallation} from '../../src/core/environments/prepare.js';
 
-const installModule='../../src/core/environments/prepare.js',hostModule='../../src/platform/macos/environment/job-host.js';
-async function fixture(t:Parameters<typeof workspaceRuntimeFixture>[0],hold=false){
- const {createEnvironmentInstallation}=await import(installModule),{createEnvironmentJobHost}=await import(hostModule);
+async function fixture(t:Parameters<typeof workspaceRuntimeFixture>[0],hold=false,loseExit=false){
  const g0=await environmentBoundaryFixture(t,hold),seed=await g0.workspace('seed');
  const f=await workspaceRuntimeFixture(t),owned=(workspace:Parameters<typeof verifyOwnedWorktree>[2])=>verifyOwnedWorktree(f,f.storeId,workspace);
  const leases=createWorkspaceLeases({storage:f.storage,instanceId:f.instanceId,files:f.files,mutator:f.mutator,accepting:()=>true}).forConsumer('ENVIRONMENT');
  const runtime=createEnvironmentRuntime({storage:f.storage,instanceId:f.instanceId,compose:context=>{
    const options={...context,storage:f.storage,instanceId:f.instanceId,paths:f.paths,inspector:createEnvironmentInspector(),owned};
-   const planning=createEnvironmentPlanning(options),installation=createEnvironmentInstallation({...options,lease:leases,host:createEnvironmentJobHost(f.paths)});
+   const host=createEnvironmentJobHost(f.paths);
+   const planning=createEnvironmentPlanning(options),installation=createEnvironmentInstallation({...options,lease:leases,
+     host:loseExit?{...host,async install(...args){assert.ok(await host.install(...args));return null;}}:host});
    const authorize=planning.actions['environment.prepare'];
    return{...installation,actions:{...planning.actions,...installation.actions,
      'environment.prepare':(p,peer)=>p.action==='attest'?authorize(p,peer):installation.actions['environment.prepare'](p,peer)}};
@@ -72,4 +74,24 @@ test('cancel a real install on loopback and release the workspace only after own
  const terminal=f.store.readEnvironmentState({kind:'job',id:job.jobId}).job!;
  assert.equal(terminal.phase,'CANCELLED');assert.equal(terminal.exitProof?.verified,true);
  assert.equal(f.store.readWorkspaceState({kind:'active-lease',id:plan.workspaceId}).lease,null);
+});
+
+test('a successor resolves the original install from sealed exit evidence without launching pnpm again',async t=>{
+ const f=await fixture(t,false,true),plan=await f.plan(),requestId=randomUUID();
+ const result=await f.send('environment.prepare',{grantId:plan.grantId,requestId});
+ assert.equal(result.result,'OK',JSON.stringify(result));
+ await f.runtime.idle();
+ assert.equal(f.store.readEnvironmentState({kind:'job',id:requestId}).job?.phase,'RECONCILING');
+ assert.ok(f.store.readWorkspaceState({kind:'active-lease',id:plan.workspaceId}).lease);
+ const requests=f.g0.registry.requests(),instanceId=startSuccessor(f);
+ const workspaceLeases=createWorkspaceLeases({storage:f.storage,instanceId,files:f.files,mutator:f.mutator,accepting:()=>false});
+ await workspaceLeases.recover();
+ const recovery=createEnvironmentInstallation({storage:f.storage,paths:f.paths,instanceId,owned:workspaceLeases.owned,
+   inspector:createEnvironmentInspector(),lease:workspaceLeases.forConsumer('ENVIRONMENT'),host:createEnvironmentJobHost(f.paths),
+   accepting:()=>false,schedule:()=>assert.fail('recovery must not launch a job')});
+ await recovery.recover();
+ assert.equal(f.store.readFeatureState({kind:'operation',id:requestId}).operation?.outcome,'SUCCEEDED');
+ assert.equal(f.store.readEnvironmentState({kind:'workspace',id:plan.workspaceId}).environment?.state,'READY');
+ assert.equal(f.store.readWorkspaceState({kind:'active-lease',id:plan.workspaceId}).lease,null);
+ assert.equal(f.g0.registry.requests(),requests);
 });

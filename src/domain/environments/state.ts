@@ -15,7 +15,7 @@ const transitions:Readonly<Record<EnvironmentState,Readonly<Partial<Record<Actio
  READY:{...available,block:'BLOCKED'},
  STALE:available,
  BLOCKED:available,
- RECONCILING:{block:'BLOCKED',stale:'STALE'},
+ RECONCILING:{block:'BLOCKED',stale:'STALE',prepared:'READY'},
 };
 export function transitionEnvironment(current:EnvironmentState,action:Action){
  const state=transitions[current]?.[action];

@@ -1,3 +1,6 @@
+import {createEnvironmentInstallation} from './prepare.js';
+import {createEnvironmentJobHost} from '../../platform/macos/environment/job-host.js';
+import type {EnvironmentLeasePort} from '../../ports/environment.js';
 import {createEnvironmentInspector} from '../../platform/macos/environment/inspect.js';
 import {createEnvironmentPlanning,type EnvironmentPlanningOptions} from './plan.js';
 import type {StoragePort} from '../../ports/storage.js';
@@ -15,8 +18,13 @@ export interface EnvironmentRuntimeServices {
  stop?():void;
 }
 
-export function nativeEnvironmentServices(options:Omit<EnvironmentPlanningOptions,keyof EnvironmentRuntimeContext|'inspector'>){
- return (context:EnvironmentRuntimeContext)=>createEnvironmentPlanning({...options,...context,inspector:createEnvironmentInspector()});
+export function nativeEnvironmentServices(options:Omit<EnvironmentPlanningOptions,keyof EnvironmentRuntimeContext|'inspector'>&{lease:EnvironmentLeasePort}){
+ return (context:EnvironmentRuntimeContext):EnvironmentRuntimeServices=>{
+   const settings={...options,...context,inspector:createEnvironmentInspector()};
+   const planning=createEnvironmentPlanning(settings),installation=createEnvironmentInstallation({...settings,host:createEnvironmentJobHost(options.paths)});
+   return{...installation,actions:{...planning.actions,...installation.actions,
+     'environment.prepare':(params,peer)=>params.action==='attest'?planning.authorizeAttest(params,peer):installation.actions['environment.prepare'](params,peer)}};
+ };
 }
 
 export function createEnvironmentRuntime(options:{storage:StoragePort;instanceId:string;

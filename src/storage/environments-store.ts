@@ -1,3 +1,4 @@
+import {evaluateEnvironmentExit} from '../domain/environments/jobs.js';
 import {createHash} from 'node:crypto';
 import {requireCurrentEnvironmentPlan} from '../domain/environments/plan.js';
 import {transitionEnvironment} from '../domain/environments/state.js';
@@ -49,6 +50,11 @@ export function readEnvironmentState(db:Database.Database,query:EnvironmentQuery
    const r=db.prepare('SELECT * FROM environments_jobs WHERE job_id=?').get(requireUuid(query.id)) as Row|undefined;
    return{job:r?job(r):null};
  }
+ if(query.kind==='latest-job'){
+   const r=db.prepare('SELECT * FROM environments_jobs WHERE environment_id=? ORDER BY created_at DESC,job_id DESC LIMIT 1')
+     .get(requireUuid(query.id)) as Row|undefined;
+   return{job:r?job(r):null};
+ }
  if(query.kind==='artifact'){
    const id=requireUuid(query.id);
    const r=db.prepare(`SELECT sha256,expected_bytes FROM workflow_artifacts a WHERE artifact_id=? AND state='REFERENCED'
@@ -59,6 +65,11 @@ export function readEnvironmentState(db:Database.Database,query:EnvironmentQuery
  if(query.kind==='pending-plans'){
    const rows=db.prepare("SELECT * FROM workflow_operations WHERE namespace='ENVIRONMENT' AND action='plan' AND phase<>'FINALIZED' LIMIT 32").all() as Row[];
    return{operations:rows.map(workflowOperation)};
+ }
+ if(query.kind==='retained-leases'){
+   const rows=db.prepare(`SELECT j.* FROM environments_jobs j JOIN workspaces_leases l ON l.lease_id=j.lease_id
+     WHERE l.released_at IS NULL AND j.phase IN ('SUCCEEDED','FAILED','CANCELLED')`).all() as Row[];
+   return{jobs:rows.map(job)};
  }
  if(query.kind==='active'){
    const rows=db.prepare("SELECT * FROM environments_jobs WHERE phase IN ('QUEUED','RUNNING','CANCELLING','RECONCILING')").all() as Row[];
@@ -79,10 +90,10 @@ export function readEnvironmentState(db:Database.Database,query:EnvironmentQuery
  return{items:rows.slice(0,limit).map(record),nextOffset:rows.length>limit?offset+limit:null,pageRevision:String(revision.revision)};
 }
 
-function environmentInstance(db:Database.Database,instanceId:string,lifecycle:'RUNNING'|'RECOVERING'){
+function environmentInstance(db:Database.Database,instanceId:string,lifecycle:'RUNNING'|'RECOVERING'|readonly ('RUNNING'|'RECOVERING'|'STOPPING')[]){
  const row=db.prepare('SELECT i.lifecycle FROM instances i JOIN store s ON i.instance_id=s.current_instance_id WHERE i.instance_id=?')
    .get(requireUuid(instanceId)) as Row|undefined;
- if(row?.lifecycle!==lifecycle)throw new Error('STALE_TARGET');
+ if(!row||!(typeof lifecycle==='string'?row.lifecycle===lifecycle:lifecycle.some(value=>value===row.lifecycle)))throw new Error('STALE_TARGET');
 }
 function planWorkspace(db:Database.Database,intent:WorkflowIntent){
  const workspace=readWorkspaceState(db,{kind:'get',id:requireUuid(intent.targetId)}).workspace;
@@ -110,6 +121,8 @@ export function commitEnvironmentState(db:Database.Database,change:EnvironmentCh
    });
  }
  if(change.kind==='attest')return attest(db,change,ledger,verifyArtifact);
+ if(change.kind==='job-admit'||change.kind==='job-cancel')return admitJob(db,change,ledger,verifyArtifact);
+ if(change.kind==='job-start'||change.kind==='job-finish')return progressJob(db,change,ledger,verifyArtifact);
  return ledger.transaction(()=>{
    const operation=readFeatureState(db,{kind:'operation',id:change.requestId}).operation;
    if(!operation||operation.namespace!=='ENVIRONMENT'||operation.action!=='plan')throw new Error('OPERATION_NOT_FOUND');
@@ -186,4 +199,122 @@ function attest(db:Database.Database,change:Extract<EnvironmentChange,{kind:'att
    ledger.complete(admission.requestId,{workspaceId,environmentId:environment.environmentId,planId:plan.planId,attestationId,stateRevision});
  });
  return admitted;
+}
+
+function scopedJob(db:Database.Database,jobId:string){
+ const {job}=readEnvironmentState(db,{kind:'job',id:jobId});
+ if(!job)throw new Error('OPERATION_NOT_FOUND');
+ const [{environment},{plan},{operation}]=[
+   readEnvironmentState(db,{kind:'environment',id:job.environmentId}),readEnvironmentState(db,{kind:'plan',id:job.planId}),
+   readFeatureState(db,{kind:'operation',id:job.requestId}),
+ ];
+ if(!environment||!plan||!operation||operation.namespace!=='ENVIRONMENT'||operation.targetId!==environment.workspaceId)
+   throw new Error('STATE_CORRUPT');
+ return{job,environment,plan,operation};
+}
+function updateEnvironment(db:Database.Database,environment:EnvironmentRecord,state:EnvironmentRecord['state'],error:string|null,preparedDigest:string|null){
+ const revision=nextWorkspaceRevision(environment.stateRevision),at=new Date().toISOString();
+ db.prepare('UPDATE environments_records SET state=?,state_revision=?,prepared_digest=?,safe_error=?,checked_at=?,updated_at=? WHERE environment_id=? AND state_revision=?')
+   .run(state,BigInt(revision),preparedDigest,error,at,at,environment.environmentId,BigInt(environment.stateRevision));
+ return revision;
+}
+
+type JobAdmission=Extract<EnvironmentChange,{kind:'job-admit'|'job-cancel'}>;
+function admitJob(db:Database.Database,change:JobAdmission,ledger:FeatureLedger,verifyArtifact:(id:string)=>void):EnvironmentWrite{
+ const {admission}=change,intent=ledger.intent(admission.canonicalIntent),workspaceId=requireUuid(intent.targetId);
+ const cancelling=change.kind==='job-cancel';
+ if(intent.namespace!=='ENVIRONMENT'||intent.action!==(cancelling?'cancel':'prepare'))throw new Error('APPROVAL_REQUIRED');
+ const admitted=ledger.admit(admission,()=>{
+   environmentInstance(db,admission.instanceId,'RUNNING');
+   if(cancelling){
+     const {job,environment}=scopedJob(db,requireUuid(intent.payload.jobId));
+     if(environment.workspaceId!==workspaceId||job.generation!==intent.payload.jobGeneration||job.stateRevision!==intent.expectedRevision
+       ||!['QUEUED','RUNNING'].includes(job.phase))throw new Error('REVISION_CONFLICT');
+     db.prepare("UPDATE environments_jobs SET phase='CANCELLING',state_revision=state_revision+1,cancel_request_id=? WHERE job_id=?")
+       .run(admission.requestId,job.jobId);
+     db.prepare('UPDATE workflow_operations SET result=? WHERE request_id=?').run(JSON.stringify({workspaceId,jobId:job.jobId}),admission.requestId);
+     return;
+   }
+   const workspace=planWorkspace(db,{...intent,expectedRevision:String(intent.payload.workspaceRevision)});
+   const {environment}=readEnvironmentState(db,{kind:'workspace',id:workspaceId});
+   const {plan}=readEnvironmentState(db,{kind:'plan',id:requireUuid(intent.payload.planId)});
+   if(!environment||!plan||environment.state!=='PLANNED'||environment.currentPlanId!==plan.planId||plan.digest!==intent.payload.planDigest||
+     plan.inputDigest!==intent.payload.inputDigest||plan.configRevision!==intent.configRevision||plan.workspaceGeneration!==workspace.ownerGeneration||
+     environment.stateRevision!==intent.expectedRevision||plan.metadata.disposition!=='PLANNED'||!plan.metadata.pin)throw new Error('ENVIRONMENT_STALE');
+   if(readEnvironmentState(db,{kind:'active'}).jobs!.length)throw new Error('BUSY');
+   verifyArtifact(plan.artifactId);
+   const stateRevision=updateEnvironment(db,environment,transitionEnvironment(environment.state,'prepare'),null,null);
+   const jobId=admission.requestId,generation=requireUuid(intent.payload.jobGeneration);
+   const result={workspaceId,environmentId:environment.environmentId,planId:plan.planId,jobId,stateRevision};
+   db.prepare(`INSERT INTO environments_jobs(job_id,environment_id,plan_id,request_id,kind,generation,phase,state_revision,input_digest,created_at)
+     VALUES(?,?,?,?,'INSTALL',?,'QUEUED',1,?,?)`).run(jobId,environment.environmentId,plan.planId,jobId,generation,plan.inputDigest,new Date().toISOString());
+   db.prepare('UPDATE workflow_operations SET result=? WHERE request_id=?').run(JSON.stringify(result),jobId);
+ });
+ const jobId=cancelling?requireUuid(intent.payload.jobId):admission.requestId;
+ const {job}=readEnvironmentState(db,{kind:'job',id:jobId});
+ return{...admitted,...(job?{job}:{})};
+}
+type JobProgress=Extract<EnvironmentChange,{kind:'job-start'|'job-finish'}>;
+function progressJob(db:Database.Database,change:JobProgress,ledger:FeatureLedger,verifyArtifact:(id:string)=>void):EnvironmentWrite{
+ const snapshot=scopedJob(db,change.jobId);
+ if(snapshot.operation.phase==='FINALIZED')return{operation:snapshot.operation,job:snapshot.job};
+ const requestIds=[snapshot.job.requestId,...(snapshot.job.cancelRequestId?[snapshot.job.cancelRequestId]:[])];
+ return ledger.transaction(()=>{
+   const {job,environment,plan,operation}=scopedJob(db,change.jobId);
+   const owner=db.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(job.requestId) as Row;
+   const recovering=change.kind==='job-finish'&&change.recovering===true;
+   environmentInstance(db,change.instanceId,recovering?'RECOVERING':['RUNNING','STOPPING']);
+   if((owner.owning_instance_id===change.instanceId)===recovering)throw new Error('STALE_TARGET');
+   const {workspaceId}=environment;
+   if(change.kind==='job-start'){
+     if(!['QUEUED','CANCELLING'].includes(job.phase)||job.leaseId||change.identity.jobId!==job.jobId||change.identity.generation!==job.generation)
+       throw new Error('STALE_TARGET');
+     const {lease}=readWorkspaceState(db,{kind:'active-lease',id:workspaceId});
+     if(!lease||lease.leaseId!==change.identity.leaseId||lease.generation!==job.generation||lease.holderId!==job.jobId||
+       lease.holderType!=='ENVIRONMENT'||lease.instanceId!==change.instanceId)throw new Error('WORKSPACE_IN_USE');
+     db.prepare('UPDATE environments_jobs SET phase=?,state_revision=state_revision+1,lease_id=? WHERE job_id=?')
+       .run(job.phase==='CANCELLING'?'CANCELLING':'RUNNING',lease.leaseId,job.jobId);
+     db.prepare("UPDATE workflow_operations SET phase='WORKING' WHERE request_id=?").run(job.requestId);
+     return{operation:readFeatureState(db,{kind:'operation',id:job.requestId}).operation!,job:readEnvironmentState(db,{kind:'job',id:job.jobId}).job!};
+   }
+   if(change.generation!==job.generation)throw new Error('STALE_TARGET');
+   const identity={jobId:job.jobId,generation:job.generation,leaseId:job.leaseId??job.jobId};
+   const noLaunch=change.noLaunchError!==undefined;
+   if(noLaunch&&(job.leaseId||!['QUEUED','CANCELLING'].includes(job.phase)))throw new Error('STALE_TARGET');
+   const evaluation=noLaunch?
+     {phase:job.cancelRequestId?'CANCELLED' as const:'FAILED' as const,error:environmentError(change.noLaunchError!)}:
+     evaluateEnvironmentExit(identity,change.proof,change.inputsCurrent);
+   const {phase,error}=evaluation,uncertain=phase==='RECONCILING';
+   if(error!==null)environmentError(error);
+   const ready=phase==='SUCCEEDED';
+   if(ready){
+     const {workspace}=readWorkspaceState(db,{kind:'get',id:workspaceId});
+     const project=workspace?db.prepare('SELECT config_revision,removed_at FROM projects WHERE project_id=?').get(workspace.projectId) as Row|undefined:undefined;
+     if(!workspace||workspace.ownerGeneration!==plan.workspaceGeneration||!project||project.removed_at!==null||String(project.config_revision)!==plan.configRevision)
+       throw new Error('ENVIRONMENT_STALE');
+     verifyArtifact(plan.artifactId);
+   }
+   const state=transitionEnvironment(environment.state,uncertain?'uncertain':ready?'prepared':error==='ENVIRONMENT_STALE'?'stale':'block');
+   const at=new Date().toISOString();
+   let watermark='0';
+   const truncated=change.proof?.truncated===true||!!change.proof&&!change.outputArtifactId;
+   if(change.outputArtifactId){
+     const {artifact}=readFeatureState(db,{kind:'artifact',id:change.outputArtifactId});
+     if(!artifact||artifact.kind!=='OUTPUT'||artifact.targetId!==workspaceId||artifact.expectedBytes>8192||
+       !['SEALED','REFERENCED'].includes(artifact.state))throw new Error('ARTIFACT_CORRUPT');
+     verifyArtifact(artifact.artifactId);
+     db.prepare('INSERT INTO environments_output(job_id,seq,artifact_id,sha256,bytes) VALUES(?,1,?,?,?)')
+       .run(job.jobId,artifact.artifactId,artifact.sha256,artifact.expectedBytes);
+     db.prepare("UPDATE workflow_artifacts SET state='REFERENCED',ref_count=ref_count+1 WHERE artifact_id=?").run(artifact.artifactId);
+     watermark='1';
+   }
+   const proof=change.proof?{verified:true,code:change.proof.exitCode,reason:change.proof.error}:null;
+   db.prepare(`UPDATE environments_jobs SET phase=?,state_revision=state_revision+1,output_watermark=?,truncated=?,exit_proof=?,safe_error=?,completed_at=?
+     WHERE job_id=?`).run(phase,BigInt(watermark),Number(truncated),proof?JSON.stringify(proof):null,error,uncertain?null:at,job.jobId);
+   const revision=updateEnvironment(db,environment,state,error,ready?plan.inputDigest:null);
+   const result={workspaceId,environmentId:environment.environmentId,jobId:job.jobId,planId:plan.planId,stateRevision:revision};
+   if(job.cancelRequestId)ledger.complete(job.cancelRequestId,result,uncertain?error:null,uncertain?'UNKNOWN':'SUCCEEDED');
+   return{operation:ledger.complete(operation.requestId,result,error,uncertain?'UNKNOWN':ready?'SUCCEEDED':phase==='CANCELLED'?'INTERRUPTED':'BLOCKED'),
+     job:readEnvironmentState(db,{kind:'job',id:job.jobId}).job!};
+ },true,{requestIds});
 }

@@ -1,5 +1,5 @@
 import type {StoragePort} from '../../ports/storage.js';
-import type {EnvironmentPlan,EnvironmentRecord} from '../../ports/environment.js';
+import type {EnvironmentJob,EnvironmentPlan,EnvironmentRecord} from '../../ports/environment.js';
 import {featureObject} from '../../domain/features/bundle.js';
 import {publicEnvironmentOperation,requireEnvironmentEnvelope,validateEnvironmentParams} from '../../protocol/environment.js';
 
@@ -19,6 +19,10 @@ function planSummary(plan:EnvironmentPlan){
  return{planId,digest,inputDigest,artifactId,createdAt,manager,managerVersion,pin,disposition,reason,scriptNames,
    inputFiles:inputs.length,networkScope:registryOrigin===null?'OFFLINE':'LOOPBACK'};
 }
+function jobSummary(job:EnvironmentJob){
+ const {leaseId:_lease,generation:_generation,cancelRequestId:_cancel,...summary}=job;
+ return summary;
+}
 export function createEnvironmentReader(options:{storage:StoragePort;storeId:string;offline:boolean}){
  const {storage,storeId,offline}=options,freshness=offline?'LAST_KNOWN':'CURRENT';
  return async(method:string,params:Readonly<Record<string,unknown>>):Promise<Record<string,unknown>>=>{
@@ -34,7 +38,8 @@ export function createEnvironmentReader(options:{storage:StoragePort;storeId:str
        data={environment:{workspaceId,state:'UNCONFIGURED',stateRevision:null},plan:null,currentness:'UNKNOWN',qualificationKind:'NONE'};
      }else{
        const {plan}=environment.currentPlanId?await storage.readEnvironmentState({kind:'plan',id:environment.currentPlanId}):{plan:null};
-       data={environment:environmentSummary(environment),plan:plan?planSummary(plan):null,
+       const {job}=await storage.readEnvironmentState({kind:'latest-job',id:environment.environmentId});
+       data={environment:environmentSummary(environment),plan:plan?planSummary(plan):null,job:job?jobSummary(job):null,
          currentness:offline?'UNKNOWN':environment.state==='STALE'?'STALE':environment.checkedAt?'LAST_CHECKED':'UNKNOWN',
          qualificationKind:environment.state==='READY'?'QUALIFIED':environment.state==='MANUAL_VERIFIED'?'MANUAL':'NONE'};
      }
@@ -66,8 +71,7 @@ export function createEnvironmentReader(options:{storage:StoragePort;storeId:str
      const jobId=String(params.jobId),{job}=await storage.readEnvironmentState({kind:'job',id:jobId});
      if(!job)throw new Error('OPERATION_NOT_FOUND');
      if(method==='environment.job.get'){
-       const {leaseId:_lease,generation:_generation,cancelRequestId:_cancel,...summary}=job;
-       data={job:summary};
+       data={job:jobSummary(job)};
      }else{
        if(c&&(c.kind!=='output'||c.jobId!==jobId||c.revision!==job.stateRevision||Object.keys(c).length!==5))throw new Error('REVISION_CONFLICT');
        const after=String(c?.after??'0');
