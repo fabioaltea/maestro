@@ -67,3 +67,7 @@ Il dominio deriva il ref da UUID, verifica la tupla dell’handoff e distingue b
 ## T017 — provisioning con Git locale
 
 Il servizio risolve la base locale al prepare e ricontrolla approvazione, pin e OID prima dell’effetto. La reservation persistente e la lease repository precedono ogni scrittura Git. Marker e anchor concordanti precedono READY. La perdita della risposta dopo la creazione del branch conserva branch e reservation con esito UNKNOWN. La recovery porta i provisioning interrotti a RECONCILING senza ripetere i comandi. Build, build:test e lint PASS. Suite mirata **12 PASS**, inclusi due worktree, replay UUID, base mutata e conservazione del checkout e del branch parziale.
+
+## T018 — CLI e parità API
+
+La CLI espone prepare/create/list/show/operation, con UUID esplicito per create, opzioni chiuse e output JSON bounded. Parità CLI/API per pagine storiche, input estraneo respinto prima del trasporto e UUID originale conservato per la mutazione offline. Build e build:test PASS, **4 PASS** tra contratti e reader offline.
