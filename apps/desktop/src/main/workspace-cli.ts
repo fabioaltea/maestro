@@ -1,4 +1,4 @@
-import {keys,text,uuid} from '../shared/validation.ts';
+import {keys,text,uuid,revision} from '../shared/validation.ts';
 import type {CliCommand} from './ports.ts';
 
 export function buildWorkspaceCliArgs(command:CliCommand){
@@ -9,6 +9,9 @@ export function buildWorkspaceCliArgs(command:CliCommand){
      keys(p,['featureId','envelopeId']);positional.push(uuid(p.featureId),uuid(p.envelopeId));break;
    case 'create':
      keys(p,['grantId']);args.push(`--grant=${uuid(p.grantId)}`);break;
+   case 'refresh':
+     keys(p,['workspaceId','expectedStateRevision']);positional.push(uuid(p.workspaceId));
+     args.push(`--expected-revision=${revision(p.expectedStateRevision)}`);break;
    case 'operation':
      keys(p,['requestId']);positional.push(uuid(p.requestId));break;
    case 'get':
@@ -24,7 +27,7 @@ export function buildWorkspaceCliArgs(command:CliCommand){
    default:throw new Error('INVALID_INPUT');
  }
  args.splice(1,0,command.action==='get'?'show':command.action);
- if(command.action==='create')args.push(`--request-id=${uuid(command.requestId)}`);
+ if(['create','refresh'].includes(command.action))args.push(`--request-id=${uuid(command.requestId)}`);
  else if(command.requestId!==undefined)throw new Error('INVALID_INPUT');
  args.push(`--state-dir=${command.archive}`,'--json');
  if(positional.length)args.push('--',...positional);

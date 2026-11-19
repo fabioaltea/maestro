@@ -2,7 +2,7 @@ import type {Params} from './bridge-contract.ts';
 import {CORE_ERRORS} from './core-errors.ts';
 import {keys,record,revision,text,uuid} from './validation.ts';
 
-export const WORKSPACE_MUTATIONS=['create'] as const;
+export const WORKSPACE_MUTATIONS=['create','refresh'] as const;
 export const WORKSPACE_QUERIES={
  listWorkspaces:{action:'list',key:'projectId'},
  getWorkspace:{action:'get',key:'workspaceId'},
@@ -18,14 +18,23 @@ function requireFields(p:Params,required:readonly string[],optional:readonly str
  if(required.some(key=>!Object.hasOwn(p,key)))throw new Error('INVALID_INPUT');
 }
 export function validateWorkspaceAction(action:string,p:Params){
- if(action!=='workspace.create')throw new Error('INVALID_INPUT');
- requireFields(p,['featureId','envelopeId']);
- uuid(p.featureId);uuid(p.envelopeId);
+ if(action==='workspace.create'){
+   requireFields(p,['featureId','envelopeId']);uuid(p.featureId);uuid(p.envelopeId);
+ }else if(action==='workspace.refresh'){
+   requireFields(p,['workspaceId','expectedStateRevision']);uuid(p.workspaceId);revision(p.expectedStateRevision);
+ }else throw new Error('INVALID_INPUT');
+}
+export function workspaceBridgeAction(raw:unknown){
+ const {action='create',...params}=record(raw);
+ if(typeof action!=='string')throw new Error('INVALID_INPUT');
+ const method=`workspace.${action}`;
+ validateWorkspaceAction(method,params);
+ return{method,params};
 }
 export function validateWorkspaceBridge(method:string,p:Params){
  const {bridgeVersion:_version,callId:_id,selectionEpoch:_epoch,...body}=p;
  if(method==='prepareWorkspaceAction'){
-   requireFields(body,['params']);validateWorkspaceAction('workspace.create',record(body.params));
+   requireFields(body,['params']);workspaceBridgeAction(body.params);
  }else if(method==='confirmWorkspaceAction'||method==='cancelWorkspaceAction'){
    requireFields(body,['confirmationId']);uuid(body.confirmationId);
  }else{
@@ -97,6 +106,7 @@ export function validateWorkspaceData(action:string,raw:unknown):Params{
    const expected:Readonly<Record<string,readonly string[]>>={
      prepare:['grantId','canonicalIntentHash','expiresAtMs','summary'],list:['items','nextCursor'],get:['workspace'],
      operation:['operation'],create:['accepted','requestId','workspaceId','stateRevision','operation'],
+     refresh:['accepted','requestId','workspaceId','stateRevision','operation'],
    };
    if(!Object.hasOwn(expected,action))throw new Error('INVALID_INPUT');
    keys(p,[...expected[action]!,'freshness','storeId','observabilityDegraded','code','error']);

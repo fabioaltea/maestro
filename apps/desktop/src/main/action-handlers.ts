@@ -25,7 +25,7 @@ export async function settleReceipt(store: ReceiptStore, receipt: Receipt, resul
       if(data.accepted===true&&data.requestId===receipt.requestId&&data.workspaceId===receipt.workspaceId)
         return store.update(receipt.requestId,{phase:'RECONCILING',outcome:'IN_PROGRESS'});
       if(result.liveness==='LIVE_VERIFIED'&&['APPROVAL_REQUIRED','APPROVAL_STALE','BASE_CHANGED','CONTEXT_UNSTABLE','DISCOVERY_REQUIRED',
-        'WORKSPACE_UNSAFE','WORKSPACE_IN_USE','WORKSPACE_LIMIT','REVISION_CONFLICT','INVALID_REQUEST','RESOURCE_LIMIT'].includes(result.error?.code??''))
+        'WORKSPACE_UNSAFE','WORKSPACE_IN_USE','WORKSPACE_NOT_FOUND','WORKSPACE_LIMIT','REVISION_CONFLICT','INVALID_REQUEST','RESOURCE_LIMIT'].includes(result.error?.code??''))
         return store.update(receipt.requestId,{phase:'TERMINAL',outcome:'BLOCKED',errorCode:result.error!.code});
       return unknown();
     }catch{return unknown();}
@@ -76,6 +76,10 @@ export class ActionService {
         const feature=await this.options.core.call({namespace:'feature',action:'get',archive:c.path,params:{featureId:command.featureId}});
         this.options.context.apply(c,feature);
         if(feature.result!=='OK'||record(feature.data.feature).stateRevision!==command.expectedStateRevision)throw new Error('REVISION_CONFLICT');
+      }else{
+        const workspace=await this.options.core.call({namespace:'workspace',action:'get',archive:c.path,params:{workspaceId:command.workspaceId}});
+        this.options.context.apply(c,workspace);
+        if(workspace.result!=='OK'||record(workspace.data.workspace).stateRevision!==command.expectedStateRevision)throw new Error('REVISION_CONFLICT');
       }
     }
     if (command.namespace === 'discovery') {

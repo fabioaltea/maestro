@@ -99,3 +99,7 @@ Lock writer persistente e generazioni per consumer core. Il successore mantiene 
 ## T025 — CLI refresh
 
 L’osservazione esplicita usa workspace, revisione e UUID originali. CLI e RPC rifiutano grant, holder o generazioni aggiunti dal chiamante. Build e build:test PASS, **2 PASS** di contratto.
+
+## T026 — desktop refresh
+
+Refresh richiede conferma dalla vista Workspace e conserva la ricevuta originale. Mostra l’ora, l’HEAD e le categorie dei file anche offline, con refresh disabilitato. Il recupero osservativo è disponibile anche quando una mutazione precedente è incerta. **47 PASS** unit/contract, **1 PASS** E2E mirato con file non tracciato, focus e storico.

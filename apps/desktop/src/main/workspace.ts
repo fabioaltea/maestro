@@ -3,7 +3,7 @@ import type {ArchiveContext} from './archive-context.ts';
 import type {BridgeRouter} from './bridge.ts';
 import {publicReceipt} from './lifecycle.ts';
 import {record,uuid,revision} from '../shared/validation.ts';
-import {validateWorkspaceAction,validateWorkspaceData,WORKSPACE_QUERIES} from '../shared/workspace-contract.ts';
+import {validateWorkspaceAction,validateWorkspaceData,WORKSPACE_QUERIES,workspaceBridgeAction} from '../shared/workspace-contract.ts';
 
 export function installWorkspace(router:BridgeRouter,context:ArchiveContext,actions:ActionService|null){
  const core=router.services.core;
@@ -12,6 +12,16 @@ export function installWorkspace(router:BridgeRouter,context:ArchiveContext,acti
  if(actions)actions.resolveWorkspace=async(action,params)=>{
    validateWorkspaceAction(action,params);
    const c=context.capture();
+   if(action==='workspace.refresh'){
+     const workspaceId=uuid(params.workspaceId),expectedStateRevision=revision(params.expectedStateRevision);
+     const result=await core.call({namespace:'workspace',action:'get',archive:c.path,params:{workspaceId}});
+     context.apply(c,result);
+     if(result.result!=='OK'||result.liveness!=='LIVE_VERIFIED')throw new Error(result.error?.code??'DAEMON_UNAVAILABLE');
+     const workspace=record(validateWorkspaceData('get',result.data).workspace);
+     if(workspace.stateRevision!==expectedStateRevision)throw new Error('REVISION_CONFLICT');
+     return{command:{namespace:'workspace',action:'refresh',archive:c.path,workspaceId,projectId:uuid(workspace.projectId),expectedStateRevision,params},
+       summary:['Aggiorna l’osservazione locale del worktree',`Workspace ${workspaceId}`,`Revisione ${expectedStateRevision}`]};
+   }
    const result=await core.call({namespace:'workspace',action:'prepare',archive:c.path,params});
    context.apply(c,result);
    if(result.result!=='OK'||result.liveness!=='LIVE_VERIFIED')throw new Error(result.error?.code??'DAEMON_UNAVAILABLE');
@@ -34,7 +44,8 @@ export function installWorkspace(router:BridgeRouter,context:ArchiveContext,acti
  }
  router.register('prepareWorkspaceAction',request=>sync(()=>{
    if(!actions)throw new Error('RUNTIME_UNAVAILABLE');
-   return actions.prepare('workspace.create',record(request.params));
+   const {method,params}=workspaceBridgeAction(request.params);
+   return actions.prepare(method,params);
  }));
  router.register('confirmWorkspaceAction',request=>sync(async()=>{
    if(!actions)throw new Error('RUNTIME_UNAVAILABLE');
