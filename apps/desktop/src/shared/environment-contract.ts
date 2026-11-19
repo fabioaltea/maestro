@@ -2,7 +2,7 @@ import type {Params} from './bridge-contract.ts';
 import {record,keys,text,uuid,revision} from './input.ts';
 import {CORE_ERRORS} from './core-errors.ts';
 
-export const ENVIRONMENT_MUTATIONS=['plan','attest','prepare','cancel'] as const;
+export const ENVIRONMENT_MUTATIONS=['plan','attest','prepare','cancel','validate','reconcile'] as const;
 export const ENVIRONMENT_QUERIES={
  getEnvironment:{action:'get',key:'workspaceId'},
  listEnvironments:{action:'list',key:'projectId'},
@@ -33,8 +33,11 @@ export function environmentBridgeAction(raw:unknown){
    uuid(params.workspaceId);revision(params.stateRevision);sha(params.inputDigest);limitations(params.limitations);
  }else if(action==='prepare'){
    fields(params,['workspaceId','stateRevision','planId','planDigest']);uuid(params.workspaceId);uuid(params.planId);revision(params.stateRevision);sha(params.planDigest);
- }else if(action==='cancel'){
+ }else if(action==='cancel'||action==='reconcile'){
    fields(params,['workspaceId','stateRevision','jobId']);uuid(params.workspaceId);uuid(params.jobId);revision(params.stateRevision);
+ }else if(action==='validate'){
+   fields(params,['workspaceId','environmentId','commandSpecId','inputDigest','stateRevision']);uuid(params.workspaceId);uuid(params.environmentId);
+   uuid(params.commandSpecId);sha(params.inputDigest);revision(params.stateRevision);
  }else throw new Error('INVALID_INPUT');
  return{action,params};
 }
@@ -70,9 +73,16 @@ function environment(value:unknown){
  date(p.createdAt);date(p.updatedAt);
  return p;
 }
+function commandSpec(value:unknown,withId:boolean){
+ const p=record(value);
+ if(withId){fields(p,['id','entry','argCount','timeoutMs']);uuid(p.id);}
+ if(!/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,74}\.mjs$/.test(text(p.entry,80))||String(p.entry).includes('..')||
+   !Number.isInteger(p.argCount)||Number(p.argCount)<0||Number(p.argCount)>8||
+   !Number.isInteger(p.timeoutMs)||Number(p.timeoutMs)<1||Number(p.timeoutMs)>300000)throw new Error('INVALID_INPUT');
+}
 function plan(value:unknown){
  const p=record(value);
- fields(p,['planId','digest','inputDigest','artifactId','createdAt','manager','managerVersion','pin','disposition','reason','scriptNames','inputFiles','networkScope']);
+ fields(p,['planId','digest','inputDigest','artifactId','createdAt','manager','managerVersion','pin','disposition','reason','scriptNames','inputFiles','networkScope'],['commands']);
  uuid(p.planId);uuid(p.artifactId);sha(p.digest);sha(p.inputDigest);date(p.createdAt);
  valueIn(p.manager,['pnpm','npm','yarn','bun','UNKNOWN']);
  if(p.managerVersion!==null)version(p.managerVersion);
@@ -81,6 +91,10 @@ function plan(value:unknown){
  if(p.reason!==null)safeCode(p.reason);
  if(!Array.isArray(p.scriptNames)||p.scriptNames.length>64||p.scriptNames.some(x=>typeof x!=='string'||!/^[a-zA-Z0-9:_-]{1,64}$/.test(x))||
    !Number.isSafeInteger(p.inputFiles)||Number(p.inputFiles)<0||Number(p.inputFiles)>200)throw new Error('INVALID_INPUT');
+ if(p.commands!==undefined){
+   if(!Array.isArray(p.commands)||p.commands.length>8)throw new Error('INVALID_INPUT');
+   for(const command of p.commands)commandSpec(command,true);
+ }
  if(p.pin!==null){
    const pin=record(p.pin);fields(pin,['manager','version','nodeVersion','entryDigest','distributionDigest','nodeDigest','profileDigest','descendants','importMethod']);
    if(pin.manager!=='pnpm'||pin.descendants!=='DENIED'||pin.importMethod!=='clone-or-copy')throw new Error('INVALID_INPUT');
@@ -126,7 +140,7 @@ export function validateEnvironmentData(action:string,raw:unknown):Params{
    const p=record(raw),out={...p};
    const accepted=['accepted','requestId','workspaceId','stateRevision','jobId','operation'];
    const extra:Record<string,readonly string[]>={get:['environment','plan','job','currentness','qualificationKind'],list:['items','nextCursor'],operation:['operation'],
-     authorize:['grantId','expiresAtMs','canonicalIntentHash','summary'],plan:accepted,attest:['operation'],prepare:accepted,cancel:accepted,job:['job'],
+     authorize:['grantId','expiresAtMs','canonicalIntentHash','summary'],plan:accepted,attest:['operation'],prepare:accepted,cancel:accepted,validate:accepted,reconcile:accepted,job:['job'],
      output:['jobId','chunks','watermark','truncated','nextCursor'],artifact:['artifactId','sha256','totalBytes','offset','base64','nextCursor']};
    if(!Object.hasOwn(extra,action)||new TextEncoder().encode(JSON.stringify(p)).length>32768)throw new Error('INVALID_INPUT');
    keys(p,[...extra[action]!,'storeId','freshness','code','error']);
@@ -160,6 +174,10 @@ export function validateEnvironmentData(action:string,raw:unknown):Params{
        fields(summary,['action','workspaceId','planId','planDigest','stateRevision','inputDigest','managerVersion','networkScope','scriptPolicy','importMethod']);
        uuid(summary.planId);sha(summary.planDigest);sha(summary.inputDigest);version(summary.managerVersion);valueIn(summary.networkScope,['OFFLINE','LOOPBACK']);
        if(summary.scriptPolicy!=='DISABLED'||summary.importMethod!=='clone-or-copy')throw new Error('INVALID_INPUT');
+     }else if(summary.action==='validate'){
+       fields(summary,['action','workspaceId','environmentId','commandSpecId','stateRevision','inputDigest','entry','argCount','timeoutMs','networkScope','writePolicy']);
+       uuid(summary.environmentId);uuid(summary.commandSpecId);sha(summary.inputDigest);commandSpec(summary,false);
+       if(summary.networkScope!=='OFFLINE'||summary.writePolicy!=='DENIED')throw new Error('INVALID_INPUT');
      }else if(summary.action==='cancel'){
        fields(summary,['action','workspaceId','jobId','stateRevision']);uuid(summary.jobId);
      }else throw new Error('INVALID_INPUT');

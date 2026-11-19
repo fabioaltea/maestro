@@ -72,6 +72,8 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
     if (c.requestId && p.requestId !== c.requestId) throw new Error();
     const data = c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
     if(c.namespace==='environment'){
+      if(data.accepted===true&&c.workspaceId&&data.workspaceId!==c.workspaceId)throw new Error();
+      if(data.accepted===true&&c.jobId&&data.jobId!==c.jobId)throw new Error();
       if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
       if(c.action==='get'&&p.result==='OK'&&record(data.environment).workspaceId!==c.params?.workspaceId)throw new Error();
       if(c.action==='job'&&p.result==='OK'&&record(data.job).jobId!==c.params?.jobId)throw new Error();

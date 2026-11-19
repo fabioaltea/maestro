@@ -22,8 +22,19 @@ export function installEnvironment(router:BridgeRouter,context:ArchiveContext,ac
        `Workspace ${workspaceId}`,`Revisione ${expectedStateRevision}`,...(params.managerVersion?[`Versione pnpm ${params.managerVersion}`]:[])]};
    }
    const expectedStateRevision=revision(params.stateRevision);
+   if(action==='reconcile'){
+     const jobId=uuid(params.jobId);
+     const current=await core.call({namespace:'environment',action:'get',archive:c.path,params:{workspaceId}});
+     context.apply(c,current);
+     if(current.result!=='OK'||current.liveness!=='LIVE_VERIFIED')throw new Error(current.error?.code??'DAEMON_UNAVAILABLE');
+     const job=record(current.data.job);
+     if(job.jobId!==jobId||job.phase!=='RECONCILING'||job.stateRevision!==expectedStateRevision)throw new Error('REVISION_CONFLICT');
+     return{command:{...command,expectedStateRevision,jobId,params:{jobId,expectedStateRevision}},
+       summary:['Verifica la prova d’uscita registrata',`Workspace ${workspaceId}`,`Job ${jobId}`]};
+   }
    const intent=action==='attest'?{workspaceId,inputDigest:params.inputDigest,limitations:params.limitations}:
-     action==='prepare'?{planId:params.planId,planDigest:params.planDigest}:{jobId:params.jobId};
+     action==='prepare'?{planId:params.planId,planDigest:params.planDigest}:action==='validate'?{
+       environmentId:params.environmentId,commandSpecId:params.commandSpecId,inputDigest:params.inputDigest}:{jobId:params.jobId};
    const result=await core.call({namespace:'environment',action:'authorize',archive:c.path,params:{action,intent,
      expectedRevisions:{stateRevision:expectedStateRevision}}});
    context.apply(c,result);
@@ -35,6 +46,8 @@ export function installEnvironment(router:BridgeRouter,context:ArchiveContext,ac
    if(action==='cancel')return{command:{...grantCommand,jobId:uuid(summary.jobId)},summary:['Annulla il job',scope,`Job ${summary.jobId}`]};
    if(action==='prepare')return{command:grantCommand,summary:['Installa le dipendenze isolate',scope,`Piano ${summary.planDigest}`,
      `pnpm ${summary.managerVersion}`,summary.networkScope==='LOOPBACK'?'Registry locale':'Offline','Script di installazione disabilitati']};
+   if(action==='validate')return{command:grantCommand,summary:['Esegui il controllo registrato',scope,`File ${summary.entry}`,
+     `Argomenti ${summary.argCount}`,`Tempo massimo ${summary.timeoutMs} ms`,`Input ${summary.inputDigest}`,'Offline, worktree in sola lettura']};
    return{command:grantCommand,summary:['Registra attestazione manuale',scope,`Input ${summary.inputDigest}`,...summary.limitations as string[]]};
  };
  for(const method of Object.keys(ENVIRONMENT_QUERIES) as (keyof typeof ENVIRONMENT_QUERIES)[]){

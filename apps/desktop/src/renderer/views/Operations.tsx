@@ -19,7 +19,7 @@ export function Operations({ desktop }: { desktop: Desktop }) {
   const labels: Record<string, string> = { start: 'Avvio servizio', stop: 'Arresto servizio', restart: 'Riavvio servizio', register: 'Importazione progetto', verify: 'Verifica repository', update: 'Modifica configurazione', remove: 'Rimozione dal registro' };
   const outcomes: Record<string, string> = { SUCCEEDED: 'Completata', FAILED: 'Non riuscita', BLOCKED: 'Bloccata', INTERRUPTED: 'Interrotta', IN_PROGRESS: 'In corso' };
   const discoveryLabels: Record<string, string> = { start: 'Avvio Discovery', configure: 'Configurazione provider', check: 'Verifica provider', preview: 'Anteprima Discovery', discard: 'Scarto anteprima', answer: 'Risposta e continuazione', cancel: 'Annullamento Discovery' };
-  const environmentLabels:Record<string,string>={plan:'Piano d’ambiente',attest:'Attestazione manuale',prepare:'Installazione dipendenze',cancel:'Annullamento job'};
+  const environmentLabels:Record<string,string>={plan:'Piano d’ambiente',attest:'Attestazione manuale',prepare:'Installazione dipendenze',cancel:'Annullamento job',validate:'Controllo ambiente',reconcile:'Riconciliazione job'};
   const workspaceLabels:Record<string,string>={create:'Creazione workspace',refresh:'Osservazione workspace',remove:'Rimozione workspace'};
   return <section aria-label="Operazioni locali"><div className="section-heading"><div><h3>Operazioni ed esiti</h3><p className="muted">Identità conservate per ritrovare l’esito originale, anche dopo una riapertura.</p></div><button className="button subtle" disabled={loading} onClick={() => void refresh()}>Aggiorna operazioni</button></div>
     {loading && <p role="status" className="hint">Lettura operazioni…</p>}

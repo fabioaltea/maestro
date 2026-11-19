@@ -37,11 +37,14 @@ export function buildEnvironmentCliArgs(command:CliCommand){
      args.push('artifact');keys(p,['artifactId','cursor']);positional.push(uuid(p.artifactId));
      if(p.cursor!==undefined)args.push(`--cursor=${text(p.cursor,4096)}`);
      break;
-   case 'attest':case 'prepare':case 'cancel':
+   case 'reconcile':
+     keys(p,['jobId','expectedStateRevision']);positional.push(uuid(p.jobId));
+     args.push('reconcile',`--expected-revision=${revision(p.expectedStateRevision)}`,`--request-id=${uuid(command.requestId)}`);break;
+   case 'attest':case 'prepare':case 'cancel':case 'validate':
      keys(p,['grantId']);args.push(command.action,`--grant=${uuid(p.grantId)}`,`--request-id=${uuid(command.requestId)}`);break;
    default:throw new Error('INVALID_INPUT');
  }
- if(!['plan','attest','prepare','cancel'].includes(command.action)&&command.requestId!==undefined)throw new Error('INVALID_INPUT');
+ if(!['plan','attest','prepare','cancel','validate','reconcile'].includes(command.action)&&command.requestId!==undefined)throw new Error('INVALID_INPUT');
  args.push(`--state-dir=${command.archive}`,'--json');if(positional.length)args.push('--',...positional);
  return args;
 }

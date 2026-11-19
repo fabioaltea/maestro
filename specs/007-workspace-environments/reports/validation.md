@@ -123,3 +123,7 @@ Il piano sigilla entrypoint, argv, pin Node e profilo. Il supervisore confina le
 ## T032 — CLI US3
 
 Validate consuma un grant di controllo e reconcile accetta solo UUID del job e revisione. Entrambi mantengono l’UUID della richiesta in caso di risposta persa. **2 PASS** di contratto API/CLI.
+
+## T033 — desktop US3
+
+Electron espone gli entrypoint dichiarati, conferma la policy, mostra prova ed esito e rende disponibile la riconciliazione per job incerti. Bridge chiuso, focus da tastiera, ricevute e risultato leggibile offline. **51 PASS** desktop unit/contract, **2 PASS** E2E ambiente (27,7 s e 34,6 s).

@@ -12,6 +12,7 @@ export function Environments({desktop,workspaceId,onWorkspaces,onOperations}:{de
  const [output,setOutput]=useState<string|null>(null);
  const [manual,setManual]=useState(''),[managerVersion,setManagerVersion]=useState('');
  const active=useRef(false),generation=useRef(0),trigger=useRef<HTMLButtonElement|null>(null),lastReceipt=useRef<Params|null>(null);
+ useEffect(()=>{lastReceipt.current=null;setReceipt(null);setPrepared(null);setManual('');setManagerVersion('');setBusy(false);},[workspaceId]);
  useEffect(()=>{
    active.current=true;setView(null);setWorkspace(null);setOutput(null);void load();
    return()=>{active.current=false;generation.current++;};
@@ -114,15 +115,26 @@ export function Environments({desktop,workspaceId,onWorkspaces,onOperations}:{de
      onClick={event=>void prepare({action:'prepare',workspaceId,stateRevision:environment.stateRevision,planId:plan.planId,planDigest:plan.digest},event.currentTarget)}>
      Prepara installazione
    </button>}
+   {environment?.state==='READY'&&plan&&Array.isArray(plan.commands)&&plan.commands.length>0&&<div className="row-actions">
+     {plan.commands.map(value=>{
+       const spec=record(value);
+       return <button key={String(spec.id)} className="button subtle" disabled={!available('validate')||busy||!!prepared}
+         onClick={event=>void prepare({action:'validate',workspaceId,environmentId:environment.environmentId,stateRevision:environment.stateRevision,
+           commandSpecId:spec.id,inputDigest:plan.inputDigest},event.currentTarget)}>Prepara controllo {String(spec.entry)}</button>;
+     })}
+   </div>}
    {job&&<section aria-label="Ultimo job d’ambiente">
      <dl><div><dt>Job</dt><dd className="mono">{String(job.jobId)}</dd></div>
        <div><dt>Fase</dt><dd>{String(job.phase)}</dd></div>
+       {job.exitProof!==null&&<div><dt>Uscita verificata</dt><dd>{String(record(job.exitProof).code??'Senza codice')}</dd></div>}
        {job.safeError!==null&&<div><dt>Esito</dt><dd>{String(job.safeError)}</dd></div>}
        {job.truncated===true&&<div><dt>Output</dt><dd>Parziale</dd></div>}
      </dl>
      <div className="row-actions">
        {['QUEUED','RUNNING'].includes(String(job.phase))&&<button className="button subtle" disabled={!available('cancel')||busy||!!prepared}
          onClick={event=>void prepare({action:'cancel',workspaceId,jobId:job.jobId,stateRevision:job.stateRevision},event.currentTarget)}>Prepara annullamento job</button>}
+       {job.phase==='RECONCILING'&&<button className="button subtle" disabled={!available('reconcile')||busy||!!prepared}
+         onClick={event=>void prepare({action:'reconcile',workspaceId,jobId:job.jobId,stateRevision:job.stateRevision},event.currentTarget)}>Riconcilia job</button>}
        {job.outputWatermark!=='0'&&<button className="button subtle" onClick={()=>void showOutput(String(job.jobId))}>Leggi risultato del job</button>}
      </div>
      {output!==null&&<pre aria-label="Risultato del job">{output}</pre>}
