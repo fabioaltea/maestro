@@ -1,3 +1,5 @@
+import type {Clock} from '../../src/ports/clock.js';
+import type {FeaturePlanningPort} from '../../src/ports/feature-planning.js';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
 import type {TestContext} from 'node:test';
@@ -14,15 +16,15 @@ interface Runtime {
  dispatch(r:RpcRequest,p:AuthenticatedPeer,s:NonNullable<Awaited<ReturnType<StoragePort['readSnapshot']>>>):Promise<RpcResponse>;
  idle():Promise<void>;fence():void;recover():Promise<void>;stop(d:Deadline):Promise<void>;
 }
-export async function featureAuthoringFixture(t:TestContext,settings:{loseCreateReply?:boolean;loseApprovalReply?:boolean;planning?:unknown;planningFault?:(kind:string,point:'before'|'after')=>void}={}){
+export async function featureAuthoringFixture(t:TestContext,settings:{loseCreateReply?:boolean;loseApprovalReply?:boolean;planning?:FeaturePlanningPort;clock?:Clock;planningFault?:(kind:string,point:'before'|'after')=>void}={}){
  const f=await reviewFixture(t);await f.service.publishDocument(await f.exit(),reviewDraft());
  const revision=value(f.store.readDiscoveryMetadata({kind:'revision',id:f.discovery().latestDocumentRevisionId!})).data!;
  const c=await f.command('approve',{revisionId:revision.revisionId,bundleDigest:revision.bundleDigest,acceptedUnknownIds:reviewDraft().sections.map(s=>`${s.id}:0`)});
  value(await f.service.approve(f.peer,c));await f.service.idle();
- const make=createFeatureRuntime as unknown as (s:StoragePort,p:typeof f.paths,id:string,dependencies:{currentEligibility(peer:AuthenticatedPeer,projectId:string):Promise<DiscoveryEligibility>;planning?:unknown})=>Runtime;
+ const make=createFeatureRuntime as unknown as (s:StoragePort,p:typeof f.paths,id:string,dependencies:{currentEligibility(peer:AuthenticatedPeer,projectId:string):Promise<DiscoveryEligibility>;planning?:FeaturePlanningPort;clock?:Clock})=>Runtime;
  let loseReply=settings.loseCreateReply===true,loseApproval=settings.loseApprovalReply===true;
  const storage=new Proxy(f.store,{get(target,key){const v=Reflect.get(target,key) as unknown;if(key==='commitFeatureState')return async(change:import('../../src/ports/workflow.js').WorkflowChange)=>{settings.planningFault?.(change.kind,'before');const result=Reflect.apply(v as (...args:unknown[])=>unknown,target,[change]);if(loseReply&&change.kind==='create'||loseApproval&&change.kind==='approve'){loseReply=false;loseApproval=false;throw new Error('DEADLINE_EXCEEDED');}settings.planningFault?.(change.kind,'after');return result;};return typeof v==='function'?v.bind(target):v;}}) as unknown as StoragePort;
- const runtime=make(storage,f.paths,f.instanceId,{planning:settings.planning,currentEligibility:(peer,projectId)=>(f.service as unknown as {currentEligibility(peer:AuthenticatedPeer,projectId:string):Promise<DiscoveryEligibility>}).currentEligibility(peer,projectId)});
+ const runtime=make(storage,f.paths,f.instanceId,{...(settings.planning?{planning:settings.planning}:{}),...(settings.clock?{clock:settings.clock}:{}),currentEligibility:(peer,projectId)=>(f.service as unknown as {currentEligibility(peer:AuthenticatedPeer,projectId:string):Promise<DiscoveryEligibility>}).currentEligibility(peer,projectId)});
  await runtime.recover();
  const send=(method:string,params:Record<string,unknown>,peer=f.peer)=>runtime.dispatch({protocolVersion:1,correlationId:randomUUID(),method,params},peer,f.store.readSnapshot()!);
  const checked=(r:RpcResponse)=>{const data=r.data as Record<string,unknown>;assert.ok(r.result==='OK'||r.result==='BUSY',JSON.stringify(r));return data;};

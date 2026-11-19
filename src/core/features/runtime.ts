@@ -1,3 +1,7 @@
+import {createFeaturePlanning} from './planning.js';
+import {FEATURE_PLANNING_ACTIONS} from '../../domain/features/planning.js';
+import type {FeaturePlanningPort} from '../../ports/feature-planning.js';
+import type {Clock} from '../../ports/clock.js';
 import {createFeatureApproval} from './approval.js';
 import {createFeatureAuthoring, type FeatureAuthoringOptions} from './authoring.js';
 import {createHash} from 'node:crypto';
@@ -12,16 +16,24 @@ import {recoverWorkflow} from '../workflow/recovery.js';
 import type {WorkflowArtifact,WorkflowChange} from '../../ports/workflow.js';
 const artifactMethods=['feature.artifact.reserve','feature.artifact.append','feature.artifact.seal','feature.artifact.discard'];
 /** One daemon composition; no public test/provider substitution or second writer. */
-export function createFeatureRuntime(storage:StoragePort,paths:ArchivePaths,instanceId:string,dependencies:{currentEligibility?:FeatureAuthoringOptions['currentEligibility']}={}){
+export function createFeatureRuntime(storage:StoragePort,paths:ArchivePaths,instanceId:string,dependencies:{currentEligibility?:FeatureAuthoringOptions['currentEligibility'];planning?:FeaturePlanningPort;clock?:Clock}={}){
  let accepting=false,safe=false;const authorization=createWorkflowAuthorization({storage,paths,instanceId});
- const methods:string[]=[...FEATURE_READ_METHODS.filter(m=>!['feature.eligibility.get','feature.planning.get','feature.questions.list','feature.output.list'].includes(m)),...artifactMethods];
+ const methods:string[]=[...FEATURE_READ_METHODS.filter(m=>m!=='feature.eligibility.get'),...artifactMethods];
  const jobs=new Set<Promise<void>>();
  function schedule(work:()=>Promise<void>){const job=Promise.resolve().then(work);jobs.add(job);void job.finally(()=>jobs.delete(job)).catch(()=>{});}
- const authoring=createFeatureAuthoring({storage,paths,instanceId,schedule,accepting:()=>accepting&&safe,...(dependencies.currentEligibility?{currentEligibility:dependencies.currentEligibility}:{})});
- const approval=createFeatureApproval({storage,paths,instanceId,schedule,accepting:()=>accepting&&safe,...(dependencies.currentEligibility?{currentEligibility:dependencies.currentEligibility}:{})},authoring);
- methods.push(...authoring.methods,...approval.methods);
+ const options={storage,paths,instanceId,schedule,accepting:()=>accepting&&safe,...(dependencies.currentEligibility?{currentEligibility:dependencies.currentEligibility}:{})};
+ const authoring=createFeatureAuthoring(options),approval=createFeatureApproval(options,authoring);
+ const port=dependencies.planning;
+ const planning=port?.capabilities.qualified===true&&port.capabilities.readonlyPlanning===true?createFeaturePlanning(options,authoring,port,dependencies.clock):null;
+ const composedMethods=[...artifactMethods,...authoring.methods,...approval.methods,...(planning?[...planning.methods,'feature.provider.get']:[])];
+ methods.push(...authoring.methods,...approval.methods,...(planning?.methods??[]));
  async function run(method:string,p:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer):Promise<Record<string,unknown>>{
  if(!accepting||!safe)throw new Error('BLOCKED');
+ if(method==='feature.provider.get'&&planning)return{capabilities:planning.capabilities,reason:null};
+ if(method==='feature.prepare'&&(FEATURE_PLANNING_ACTIONS as readonly unknown[]).includes(p.action)){
+ if(!planning)throw new Error('PLANNING_UNAVAILABLE');return planning.prepare(peer,p);
+ }
+ if(planning?.methods.includes(method))return planning.run(method,p,peer);
  if(method==='feature.prepare'&&['approve','handoff'].includes(String(p.action)))return approval.prepare(peer,p);
  if(approval.methods.includes(method))return approval.run(method,p,peer);
  if(!artifactMethods.includes(method))return authoring.run(method,p,peer);
@@ -41,10 +53,10 @@ export function createFeatureRuntime(storage:StoragePort,paths:ArchivePaths,inst
  const result=await storage.commitFeatureState!(change);if(!result.operation)throw new Error('PERSISTENCE_UNAVAILABLE');
  return{operation:publicFeatureOperation(result.operation),...(result.artifact?{artifact:{artifactId:result.artifact.artifactId,sha256:result.artifact.sha256,expectedBytes:result.artifact.expectedBytes,offsetBytes:result.artifact.offsetBytes,state:result.artifact.state}}:{})};
  }
- return{methods,async idle(){while(jobs.size)await Promise.all([...jobs]);},dispatch:createFeatureDispatch({storage,mutations:{methods:[...artifactMethods,...authoring.methods,...approval.methods],run}}),
+ return{methods,async idle(){while(jobs.size)await Promise.all([...jobs]);},dispatch:createFeatureDispatch({storage,mutations:{methods:composedMethods,run}}),
  fence(){accepting=false;},
- async recover(){accepting=false;try{safe=await recoverWorkflow(storage,instanceId);}catch{safe=false;}accepting=true;},
- async stop(deadline:Deadline){accepting=false;if(!jobs.size)return;let timer:ReturnType<typeof setTimeout>|undefined;
+ async recover(){accepting=false;try{safe=await recoverWorkflow(storage,instanceId);if(safe)await planning?.recover();}catch{safe=false;}accepting=true;},
+ async stop(deadline:Deadline){accepting=false;await planning?.stop(deadline);if(!jobs.size)return;let timer:ReturnType<typeof setTimeout>|undefined;
  try{await Promise.race([Promise.all([...jobs]),new Promise<never>((_r,reject)=>{timer=setTimeout(()=>reject(new Error('RESOURCE_IDENTITY_UNKNOWN')),Math.max(1,deadline.remainingMs()));})]);}finally{clearTimeout(timer);}},
  };
 }

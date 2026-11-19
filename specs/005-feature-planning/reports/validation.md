@@ -127,3 +127,7 @@ Tre integrazioni locali coprono due turni espliciti con provenance, grant di alt
 ### T030 — modello neutro del turno e prova di uscita
 
 Limiti, riferimenti risposta, identity, transizioni osservabili, fencing di stato/generazione e validazione risultato condivisa tra dominio e decoder Codex. Build:test PASS, prove unitarie e boundary 5 PASS, 1 SKIP perché G0 esplicito fuori da questa invocazione.
+
+### T031 — turni assistiti, fencing e recupero
+
+Core e writer persistono il grant monouso, la generazione, la fase prima dell’avvio e i riferimenti agli artefatti. Il rilascio del debit richiede evidenza di uscita correlata. Lo stesso writer coordina i turni attivi con quelli di Discovery e conserva il risultato precedente se una reply arriva tardi. Typecheck, build, build:test e lint PASS. Suite mirata US3/runtime 12/12 PASS, poi US3 integrazione/limiti metadata 6/6 PASS. Le prove comprendono due turni con provenance, retry, fault ai confini di commit, deadline, exit proof errata e riconciliazione. La porta qualificata è composta nelle fixture. Il daemon di produzione continua a dichiarare la generazione indisponibile in assenza di G1.

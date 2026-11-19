@@ -13,5 +13,11 @@ export function workflowEventDrafts(op:WorkflowOperationRecord,instanceId:string
  if(op.error)payload.code=op.error;
  const type:EventDraft['type']=op.phase==='ACCEPTED'?'operation.accepted':op.outcome==='SUCCEEDED'?'operation.completed':op.outcome==='UNKNOWN'||op.outcome==='BLOCKED'?'operation.blocked':'operation.failed';
  const common={instanceId,operationId:op.requestId,payload};
- return[{type,...common},{type:scope==='feature'?'feature.changed':'artifact.changed',...common}];
+ const drafts:EventDraft[]=[{type:scope==='feature'?'feature.changed':'artifact.changed',...common}];
+ if(op.phase!=='WORKING'||op.outcome!=='IN_PROGRESS')drafts.unshift({type,...common});
+ if(feature&&op.outcome==='SUCCEEDED'&&['generate','answer'].includes(op.action)
+   &&typeof op.result?.turnId==='string'&&typeof op.result.artifactId==='string'){
+   drafts.push({type:'feature.output.available',...common,payload:{...payload,turnId:op.result.turnId,watermark:'1'}});
+ }
+ return drafts;
 }

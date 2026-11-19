@@ -16,6 +16,7 @@ export interface CoreDependencies {
     readonly files?: import('../ports/provider.js').DiscoveryRunFilesPort;
     readonly onResult?: (identity: import('../ports/agent-runtime.js').AgentProcessIdentity, result: import('../domain/discovery/documents.js').ArchitectResult) => Promise<void>;
   };
+  readonly featurePlanning?:import('../ports/feature-planning.js').FeaturePlanningPort;
   readonly projectExecute?: (context: import('./projects/operations.js').ProjectExecution) => Promise<import('../domain/projects/model.js').ProjectOperationResult>;
   readonly checkpoint?: (point: string) => Promise<void>;
   readonly report?: (accepted: boolean, errorCode?: string) => void;

@@ -1,4 +1,6 @@
-import {randomUUID,createHash} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
+import {readSealedFeatureArtifact} from './artifacts.js';
+import type {PlanningTurn} from '../../domain/features/planning.js';
 import type {StoragePort} from '../../ports/storage.js';
 import type {ArchivePaths,AuthenticatedPeer} from '../../ports/platform.js';
 import type {DiscoveryEligibility} from '../../domain/discovery/approval.js';
@@ -30,25 +32,27 @@ export function createFeatureAuthoring(options:FeatureAuthoringOptions){
  if(!approval||!revision||approval.projectId!==projectId||approval.storeId!==d.storeId||approval.revisionId!==revision.revisionId||approval.configRevision!==project.project.configRevision||approval.contextDigest!==revision.contextDigest||approval.bundleDigest!==revision.bundleDigest)throw new Error('APPROVAL_STALE');
  return{project:project.project,discovery:d,approval,revision};
  }
- async function provenance(d:DiscoveryRecord):Promise<FeatureProvenanceScope>{
+ async function provenance(d:DiscoveryRecord,featureId?:string):Promise<FeatureProvenanceScope>{
  const snapshot=await metadata({kind:'snapshot',id:d.snapshotId});if(!snapshot?.manifestArtifactId||!storage.readDiscoveryManifestPage)throw new Error('ARTIFACT_CORRUPT');
  const sourceIds:string[]=[];let offset=0;for(;;){const page=await storage.readDiscoveryManifestPage(snapshot.manifestArtifactId,offset,20);if(!page.ok)throw new Error(page.code);sourceIds.push(...page.value.items.map(s=>s.sourceId));if(sourceIds.length>200)throw new Error('CONTEXT_LIMIT');if(page.value.nextOffset===null)break;offset=page.value.nextOffset;}
  const answerIds:string[]=[];offset=0;for(;;){const page=await metadata({kind:'answers',id:d.discoveryId,offset,limit:20});answerIds.push(...page.items.map(a=>a.answerId));if(answerIds.length>20)throw new Error('CONTEXT_LIMIT');if(page.nextOffset===null)break;offset=page.nextOffset;}
+ if(featureId){
+ const turns=(await storage.readFeatureState!({kind:'turns',id:featureId,limit:20})).items as readonly PlanningTurn[];
+ for(const turn of turns)if(turn.contextSnapshotId===d.snapshotId&&turn.answer&&!answerIds.includes(turn.answer.artifactId))answerIds.push(turn.answer.artifactId);
+ }
  return{sourceIds,answerIds};
  }
  async function bundle(artifactId:string,scope:FeatureProvenanceScope,featureId?:string){
- const a=(await storage.readFeatureState!({kind:'artifact',id:artifactId})).artifact;if(!a||!['SEALED','REFERENCED'].includes(a.state)||a.kind!=='BUNDLE'||a.targetId!==null&&a.targetId!==featureId||a.expectedBytes>262144||!storage.readWorkflowArtifact)throw new Error('ARTIFACT_CORRUPT');
- const chunks:Buffer[]=[];let offset=0;while(offset<a.expectedBytes){const r=await storage.readWorkflowArtifact(artifactId,offset,8192);if(!r.bytes.length||r.sha256!==a.sha256||r.totalBytes!==a.expectedBytes)throw new Error('ARTIFACT_CORRUPT');chunks.push(Buffer.from(r.bytes));offset+=r.bytes.length;}
- const bytes=Buffer.concat(chunks);if(createHash('sha256').update(bytes).digest('hex')!==a.sha256)throw new Error('ARTIFACT_CORRUPT');
- let data:unknown;try{data=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new Error('INVALID_REQUEST');}
- return{artifact:a,bundle:validateFeatureBundle(data,scope)};
+ const {artifact,text}=await readSealedFeatureArtifact(storage,artifactId,'BUNDLE',262144,featureId);
+ let data:unknown;try{data=JSON.parse(text);}catch{throw new Error('INVALID_REQUEST');}
+ return{artifact,bundle:validateFeatureBundle(data,scope)};
  }
  async function feature(id:string,expected?:string){const f=(await storage.readFeatureState!({kind:'feature',id})).feature;if(!f)throw new Error('FEATURE_NOT_FOUND');if(f.state==='ARCHIVED')throw new Error('FEATURE_IN_USE');if(expected!==undefined&&f.stateRevision!==expected)throw new Error('REVISION_CONFLICT');if(['PLANNING','WAITING_USER','RECONCILING'].includes(f.state))throw new Error('FEATURE_IN_USE');return f;}
  async function prepare(peer:AuthenticatedPeer,p:Readonly<Record<string,unknown>>){
  const snapshot=await authorization.guard(peer),action=p.action as string;if(!['create','revise','archive'].includes(action))throw new Error('UNSUPPORTED_VERSION');
  const old=action==='create'?null:await feature(p.featureId as string,p.expectedStateRevision as string);const projectId=old?.projectId??p.projectId as string;
  if(action==='archive')return authorization.prepare(peer,{version:1,storeId:snapshot.store.storeId,ownerUid:paths.ownerUid,namespace:'FEATURE',action,targetId:old!.featureId,projectId,expectedRevision:old!.stateRevision,configRevision:null,payload:{}});
- const context=await currentContext(projectId,p.expectedConfigRevision as string|undefined),featureId=old?.featureId??randomUUID(),b=await bundle(p.bundleArtifactId as string,await provenance(context.discovery),featureId);
+ const context=await currentContext(projectId,p.expectedConfigRevision as string|undefined),featureId=old?.featureId??randomUUID(),b=await bundle(p.bundleArtifactId as string,await provenance(context.discovery,old?.featureId),featureId);
  const previous=old?(await storage.readFeatureState!({kind:'revision',id:old.currentRevisionId})).revision:null;if(old&&!previous)throw new Error('ARTIFACT_CORRUPT');
  return authorization.prepare(peer,{version:1,storeId:snapshot.store.storeId,ownerUid:paths.ownerUid,namespace:'FEATURE',action,targetId:featureId,projectId,expectedRevision:old?.stateRevision??null,configRevision:context.project.configRevision,payload:{bundleArtifactId:b.artifact.artifactId,bundleDigest:b.artifact.sha256,title:b.bundle.title,revisionId:randomUUID(),revisionNumber:previous?nextFeatureRevision(previous.revisionNumber):'1',parentRevisionId:previous?.revisionId??null,discoveryApprovalId:context.approval.approvalId,discoveryRevisionId:context.revision.revisionId,contextDigest:context.revision.contextDigest}});
  }
@@ -61,7 +65,7 @@ export function createFeatureAuthoring(options:FeatureAuthoringOptions){
  async function work(peer:AuthenticatedPeer,intent:WorkflowIntent,admission:ReturnType<typeof workflowAdmission>){
  try{
  if(intent.action==='archive'){await storage.commitFeatureState!({kind:'archive',admission,featureId:intent.targetId!,expectedRevision:intent.expectedRevision!});return;}
- const old=intent.action==='create'?null:await feature(intent.targetId!,intent.expectedRevision!),context=await currentContext(intent.projectId!,intent.configRevision!),b=await bundle(intent.payload.bundleArtifactId as string,await provenance(context.discovery),intent.targetId!);
+ const old=intent.action==='create'?null:await feature(intent.targetId!,intent.expectedRevision!),context=await currentContext(intent.projectId!,intent.configRevision!),b=await bundle(intent.payload.bundleArtifactId as string,await provenance(context.discovery,old?.featureId),intent.targetId!);
  if(b.artifact.sha256!==intent.payload.bundleDigest||b.bundle.title!==intent.payload.title)throw new Error('APPROVAL_STALE');
  const proof=await fresh(peer,intent),at=new Date().toISOString();
  const record:FeatureRecord={featureId:intent.targetId!,projectId:intent.projectId!,title:b.bundle.title,state:old?transitionFeature(old.state,'revise'):'DRAFT',stateRevision:old?nextFeatureRevision(old.stateRevision):'1',currentRevisionId:intent.payload.revisionId as string,createdAt:old?.createdAt??at,updatedAt:at,archivedAt:null};

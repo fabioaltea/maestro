@@ -6,7 +6,7 @@ import {nextFeatureRevision,transitionFeature} from '../domain/features/model.js
 import {readFeatureState,type FeatureRow} from './features-store.js';
 import type {WorkflowEventContext} from './workflow-store.js';
 export interface FeatureLedger {
- intent(canonical:string):WorkflowIntent;admit(a:WorkflowAdmission):{operation:WorkflowOperationRecord;inserted:boolean};
+ intent(canonical:string):WorkflowIntent;admit(a:WorkflowAdmission,setup?:()=>void):{operation:WorkflowOperationRecord;inserted:boolean};
  transaction<T>(body:()=>T,terminal?:boolean,event?:WorkflowEventContext):T;
  complete(id:string,result:Readonly<Record<string,unknown>>|null,error?:string|null,outcome?:'SUCCEEDED'|'FAILED'|'BLOCKED'|'INTERRUPTED'|'UNKNOWN'):WorkflowOperationRecord;
 }

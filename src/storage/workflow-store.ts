@@ -1,3 +1,4 @@
+import {commitFeaturePlanning,type PlanningChange} from './features-planning.js';
 import {commitFeatureApproval} from './features-approval.js';
 import {nextFeatureRevision} from '../domain/features/model.js';
 import {commitFeatureAuthoring} from './features-authoring.js';
@@ -75,10 +76,19 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  db.prepare('INSERT INTO workflow_grants VALUES(?,?,?,?,NULL)').run(g.grantId,g.canonicalIntent,g.createdAtMs,g.expiresAtMs);return{};},i.action==='cancel');}
  if(c.kind==='admit')return admit(c.admission);
  if(c.kind==='complete')return transaction(()=>{if(c.staleFeatureId&&c.expectedRevision){const f=readFeatureState(db,{kind:'feature',id:c.staleFeatureId}).feature;if(f?.stateRevision===c.expectedRevision&&!['ARCHIVED','PLANNING','RECONCILING'].includes(f.state))db.prepare("UPDATE features_records SET state='NEEDS_REVIEW',state_revision=?,updated_at=? WHERE feature_id=? AND state_revision=?").run(BigInt(nextFeatureRevision(f.stateRevision)),new Date(now()).toISOString(),f.featureId,BigInt(f.stateRevision));}return{operation:complete(c.requestId,c.result,c.error,c.outcome)};},true,{requestIds:[c.requestId]});
+ if(c.kind.startsWith('planning.'))return commitFeaturePlanning(db,c as PlanningChange,{admit,complete,transaction,intent});
  if(c.kind==='reconcile'){const requestIds=(db.prepare("SELECT request_id FROM workflow_operations WHERE phase<>'FINALIZED' LIMIT 32").all() as FeatureRow[]).map(r=>String(r.request_id));return transaction(()=>{requireUuid(c.instanceId);for(const row of db.prepare("SELECT * FROM workflow_operations WHERE phase<>'FINALIZED'").all() as FeatureRow[]){const op=workflowOperation(row);
- if(op.namespace==='FEATURE'&&['generate','answer','cancel'].includes(op.action))complete(op.requestId,null,'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
+ if(op.namespace==='FEATURE'&&['generate','answer','cancel'].includes(op.action)){
+ const turn=db.prepare("SELECT phase FROM features_turns WHERE request_id=? OR json_extract(metadata,'$.cancelRequestId')=?").get(op.requestId,op.requestId) as FeatureRow|undefined;
+ if(turn?.phase==='ACCEPTED'||!turn)complete(op.requestId,null,'INTERRUPTED','INTERRUPTED');
+ else complete(op.requestId,null,'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
+ }
  else { complete(op.requestId,null,'INTERRUPTED','INTERRUPTED');if(op.namespace==='ARTIFACT'){const i=JSON.parse(op.canonicalIntent) as WorkflowIntent;const id=i.action==='reserve'?op.requestId:i.payload.artifactId;if(typeof id==='string')db.prepare("UPDATE workflow_artifacts SET state='ORPHAN' WHERE artifact_id=? AND state='RESERVED' AND ref_count=0").run(id);}}}
- db.prepare("UPDATE features_records SET state='RECONCILING',state_revision=state_revision+1 WHERE feature_id IN (SELECT feature_id FROM features_turns WHERE phase IN ('ACCEPTED','RUNNING','RECONCILING'))").run();db.prepare("UPDATE features_turns SET phase='RECONCILING' WHERE phase IN ('ACCEPTED','RUNNING')").run();return{};},true,{requestIds});}
+ const at=new Date(now()).toISOString();
+ db.prepare("UPDATE features_records SET state='INTERRUPTED',state_revision=state_revision+1,updated_at=? WHERE feature_id IN (SELECT feature_id FROM features_turns WHERE phase='ACCEPTED')").run(at);
+ db.prepare("UPDATE features_turns SET phase='INTERRUPTED',metadata=json_set(metadata,'$.completedAt',?,'$.error','INTERRUPTED') WHERE phase='ACCEPTED'").run(at);
+ db.prepare("UPDATE features_records SET state='RECONCILING',state_revision=state_revision+1,updated_at=? WHERE feature_id IN (SELECT feature_id FROM features_turns WHERE phase='RUNNING')").run(at);
+ db.prepare("UPDATE features_turns SET phase='RECONCILING',metadata=json_set(metadata,'$.error','RESOURCE_IDENTITY_UNKNOWN') WHERE phase='RUNNING'").run();return{};},true,{requestIds});}
  if(c.kind==='approve'||c.kind==='handoff')return commitFeatureApproval(db,c,{admit,complete,transaction,intent});
  if(c.kind==='create'||c.kind==='revise'||c.kind==='archive')return commitFeatureAuthoring(db,c,{admit,complete,transaction,intent});
  if(['reserve','append','seal','discard'].includes(c.kind))return executeUpload(c as UploadChange);

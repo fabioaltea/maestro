@@ -15,12 +15,12 @@ function page(p:Record<string,unknown>){if(p.limit!==undefined&&(typeof p.limit!
 export function validateFeatureParams(method:string,input:unknown):void {
  const p=featureObject(input);requireFeatureEnvelope(p);
  if(method==='feature.prepare'){
- const a=p.action;const map:Record<string,readonly string[]>={create:['projectId','expectedConfigRevision','bundleArtifactId'],revise:['featureId','expectedStateRevision','bundleArtifactId'],approve:['featureId','expectedStateRevision','revisionId','acceptedUnknownIds'],handoff:['featureId','expectedStateRevision','revisionId'],archive:['featureId','expectedStateRevision'],generate:['featureId','expectedStateRevision'],answer:['featureId','expectedStateRevision','turnId','questionId','answerText'],cancel:['featureId','expectedStateRevision']};
+ const a=p.action;const map:Record<string,readonly string[]>={create:['projectId','expectedConfigRevision','bundleArtifactId'],revise:['featureId','expectedStateRevision','bundleArtifactId'],approve:['featureId','expectedStateRevision','revisionId','acceptedUnknownIds'],handoff:['featureId','expectedStateRevision','revisionId'],archive:['featureId','expectedStateRevision'],generate:['featureId','expectedStateRevision','contextSnapshotId'],answer:['featureId','expectedStateRevision','turnId','questionId','answerArtifactId'],cancel:['featureId','expectedStateRevision']};
  if(typeof a!=='string'||!Object.hasOwn(map,a))throw new Error('INVALID_REQUEST');featureFields(p,['action',...map[a]!]);
- for(const k of ['projectId','featureId','bundleArtifactId','revisionId','turnId'])if(p[k]!==undefined)uuid(p[k]);
- for(const k of ['expectedConfigRevision','expectedStateRevision'])if(p[k]!==undefined)revision(p[k]);
+ for(const k of ['projectId','featureId','bundleArtifactId','revisionId','turnId','contextSnapshotId','answerArtifactId'])if(Object.hasOwn(p,k))uuid(p[k]);
+ for(const k of ['expectedConfigRevision','expectedStateRevision'])if(Object.hasOwn(p,k))revision(p[k]);
  if(p.acceptedUnknownIds!==undefined){if(!Array.isArray(p.acceptedUnknownIds)||p.acceptedUnknownIds.length>200||new Set(p.acceptedUnknownIds).size!==p.acceptedUnknownIds.length)throw new Error('INVALID_REQUEST');for(const id of p.acceptedUnknownIds)featureText(id,64,true);}
- if(a==='answer'){featureText(p.questionId,64,true);featureText(p.answerText,4096,true);}return;
+ if(a==='answer')featureText(p.questionId,64,true);return;
  }
  if(FEATURE_ACTIONS.some(a=>method===`feature.${a}`)){
  featureFields(p,['requestId','grantId'],['featureId','projectId']);uuid(p.requestId);uuid(p.grantId);if(p.featureId!==undefined)uuid(p.featureId);if(p.projectId!==undefined)uuid(p.projectId);return;

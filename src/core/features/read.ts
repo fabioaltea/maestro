@@ -1,3 +1,5 @@
+import {FEATURE_PLANNING_LIMITS,validatePlanningResult} from '../../domain/features/planning.js';
+import {readSealedFeatureArtifact} from './artifacts.js';
 import type {StoragePort} from '../../ports/storage.js';
 import type {FeatureQuery} from '../../ports/workflow.js';
 import {publicFeatureOperation,requireFeatureEnvelope,validateFeatureParams} from '../../protocol/feature.js';
@@ -21,9 +23,31 @@ export function createFeatureReader(options:{readonly storage:Pick<StoragePort,'
  const kind=method==='feature.list'?'features':'revisions',id=(p.projectId??p.featureId) as string;
  const head=await query({kind,id,offset:0,limit:(p.limit as number|undefined)??20});const revision=head.pageRevision;if(!revision)throw new Error('STATE_CORRUPT');
  const at=offset(p.cursor,id,revision),page=at===0?head:await query({kind,id,offset:at,limit:(p.limit as number|undefined)??20});if(page.pageRevision!==revision)throw new Error('REVISION_CONFLICT');data={items:page.items,nextCursor:page.nextOffset===null?null:cursor(id,revision,page.nextOffset!)};
- }else if(method==='feature.questions.list'||method==='feature.output.list')throw new Error('PLANNING_UNAVAILABLE');
- else{
- const map:Record<string,[FeatureQuery['kind'],string,string]>={'feature.get':['feature','featureId','feature'],'feature.revision.get':['revision','revisionId','revision'],'feature.approval.get':['approval','revisionId','approval'],'feature.envelope.get':['envelope','envelopeId','envelope'],'feature.planning.get':['turn','turnId','turn']};const info=map[method];if(!info)throw new Error('UNSUPPORTED_VERSION');const [kind,key,resultKey]=info;const r=await query({kind,id:p[key] as string} as FeatureQuery);const value=r[resultKey as keyof typeof r];if(!value)throw new Error('FEATURE_NOT_FOUND');data={[resultKey]:value};
+ }else if(method==='feature.planning.get'||method==='feature.questions.list'||method==='feature.output.list'){
+ const turn=(await query(method==='feature.questions.list'?{kind:'latestTurn',id:p.featureId as string}:{kind:'turn',id:p.turnId as string})).turn;
+ if(!turn)throw new Error('FEATURE_NOT_FOUND');
+ if(method==='feature.planning.get'){
+ const {turnId,featureId,revisionId,contextSnapshotId,turnIndex,phase,questionIds,resultArtifactId,createdAt,completedAt,error}=turn;
+ data={turn:{turnId,featureId,revisionId,contextSnapshotId,turnIndex,phase,questionIds,resultArtifactId,createdAt,completedAt,error}};
+ }else{
+ const at=offset(p.cursor,turn.turnId,turn.phase),limit=(p.limit as number|undefined)??20;
+ let items:readonly unknown[]=[];
+ if(method==='feature.questions.list'&&turn.phase==='WAITING_USER'&&turn.resultArtifactId){
+ const {text}=await readSealedFeatureArtifact(storage,turn.resultArtifactId,'OUTPUT',FEATURE_PLANNING_LIMITS.resultBytes,turn.featureId);
+ const result=validatePlanningResult(JSON.parse(text),{sourceIds:[],answerIds:[]});
+ if(result.kind!=='QUESTIONS'||JSON.stringify(result.questions.map(q=>q.questionId))!==JSON.stringify(turn.questionIds))throw new Error('ARTIFACT_CORRUPT');
+ items=result.questions;
+ }else if(method==='feature.output.list'&&turn.resultArtifactId){
+ const a=(await query({kind:'artifact',id:turn.resultArtifactId})).artifact;
+ if(!a||a.state!=='REFERENCED'||a.targetId!==turn.featureId)throw new Error('ARTIFACT_CORRUPT');
+ items=[{artifactId:a.artifactId,sha256:a.sha256,expectedBytes:a.expectedBytes,kind:a.kind}];
+ }
+ let end=Math.min(at+limit,items.length);
+ while(end>at+1&&Buffer.byteLength(JSON.stringify(items.slice(at,end)))>27000)end--;
+ data={turnId:turn.turnId,items:items.slice(at,end),nextCursor:end<items.length?cursor(turn.turnId,turn.phase,end):null};
+ }
+ }else{
+ const map:Record<string,[FeatureQuery['kind'],string,string]>={'feature.get':['feature','featureId','feature'],'feature.revision.get':['revision','revisionId','revision'],'feature.approval.get':['approval','revisionId','approval'],'feature.envelope.get':['envelope','envelopeId','envelope']};const info=map[method];if(!info)throw new Error('UNSUPPORTED_VERSION');const [kind,key,resultKey]=info;const r=await query({kind,id:p[key] as string} as FeatureQuery);const value=r[resultKey as keyof typeof r];if(!value)throw new Error('FEATURE_NOT_FOUND');data={[resultKey]:value};
  }
  const result={...data,freshness:offline?'LAST_KNOWN':'CURRENT'};requireFeatureEnvelope(result);return result;
  };

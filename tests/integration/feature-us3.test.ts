@@ -7,7 +7,7 @@ import {featureDraft} from '../fixtures/feature-boundary.js';
 const questions={kind:'QUESTIONS',questions:[{questionId:'Q1',text:'Quale stato mostrare?',reason:'Ambito da confermare'}]};
 const capabilities={readonlyPlanning:true as const,qualified:true as const};
 type Identity={runId:string;generation:string;owningInstanceId:string};
-const exit=(identity:Identity)=>({...identity,hostExited:true,providerExited:true});
+const exit=(identity:Identity)=>({...identity,hostExited:true as const,providerExited:true as const});
 
 async function create(f:Awaited<ReturnType<typeof featureAuthoringFixture>>){
   const artifactId=await f.upload(featureDraft());
@@ -27,7 +27,7 @@ test('US3 two explicit turns retain question/answer provenance, deduplicate retr
       assert.equal(answer.text,'Mostra lo stato locale');
       return{exit:exit(input.identity),value:{kind:'DRAFT',bundle:{...featureDraft(),provenance:[{kind:'USER_CONFIRMED',text:'Stato locale',sourceId:null,answerId:answer.answerId}]}}};
     }};
-  const f=await featureAuthoringFixture(t,{planning} as Parameters<typeof featureAuthoringFixture>[1]);
+  const f=await featureAuthoringFixture(t,{planning});
   const featureId=await create(f),contextSnapshotId=f.discovery().snapshotId;
   const grant=await f.prepareFeature('generate',{featureId,expectedStateRevision:'1',contextSnapshotId});
   const first=await f.execute('generate',String(grant.grantId));
@@ -59,7 +59,7 @@ test('US3 cancellation requires exit evidence and discards results that arrive a
   const pending=new Promise<{exit:ReturnType<typeof exit>;value:unknown}>(resolve=>{finish=resolve;});
   const planning={capabilities,async check(){},async cancel(run:Identity){return exit(run);},async reconcile(){return null;},
     run(input:{identity:Identity}){identity=input.identity;started();return pending;}};
-  const f=await featureAuthoringFixture(t,{planning} as Parameters<typeof featureAuthoringFixture>[1]);
+  const f=await featureAuthoringFixture(t,{planning});
   const featureId=await create(f),contextSnapshotId=f.discovery().snapshotId;
   const generation=await f.prepareFeature('generate',{featureId,expectedStateRevision:'1',contextSnapshotId});
   const requestId=randomUUID();
@@ -98,4 +98,48 @@ test('US3 preserves original requests across pre-admission and post-completion i
   assert.equal(terminal.operation?.outcome,'SUCCEEDED');
   assert.deepEqual((await f.execute('generate',String(grant.grantId),requestId)).operation,terminal.operation);
   assert.equal(launches,1);
+});
+
+test('US3 deadline and unverified cancellation retain the lease until authenticated recovery',async t=>{
+  let elapsed=0,reconcile=false,attempts=0;
+  const clock={wallUtc:()=>new Date().toISOString(),monotonicNow:()=>elapsed};
+  const planning={capabilities,async check(){},async cancel(identity:Identity){return exit({...identity,generation:randomUUID()});},
+    async reconcile(identity:Identity){return reconcile?exit(identity):null;},
+    run(){attempts++;elapsed+=600001;return new Promise<never>(()=>{});}};
+  const f=await featureAuthoringFixture(t,{planning,clock});
+  const featureId=await create(f),contextSnapshotId=f.discovery().snapshotId;
+  const generation=await f.prepareFeature('generate',{featureId,expectedStateRevision:'1',contextSnapshotId});
+  const result=await f.execute('generate',String(generation.grantId));
+  assert.equal(attempts,1);
+  assert.equal(result.operation?.outcome,'UNKNOWN');
+  assert.equal(f.store.readFeatureState({kind:'feature',id:featureId}).feature?.state,'RECONCILING');
+  await f.runtime.recover();
+  assert.equal(f.store.readFeatureState({kind:'operation',id:result.requestId}).operation?.outcome,'UNKNOWN');
+  reconcile=true;
+  await f.runtime.recover();
+  assert.equal(f.store.readFeatureState({kind:'operation',id:result.requestId}).operation?.outcome,'INTERRUPTED');
+  assert.equal(f.store.readFeatureState({kind:'feature',id:featureId}).feature?.state,'INTERRUPTED');
+  assert.equal(attempts,1);
+});
+
+test('US3 preflight authentication, unsafe profile and quota failures preserve the manual bundle',async t=>{
+  let code='PROVIDER_UNSAFE',launches=0;
+  const planning={capabilities,async check(){throw new Error(code);},async cancel(){return null;},async reconcile(){return null;},
+    async run(){launches++;throw new Error('INVALID_TRANSITION');}};
+  const f=await featureAuthoringFixture(t,{planning});
+  const featureId=await create(f),contextSnapshotId=f.discovery().snapshotId;
+  const base=f.store.readFeatureState({kind:'feature',id:featureId}).feature!;
+  for(const failure of ['PROVIDER_UNSAFE','PROVIDER_AUTH_REQUIRED','PROVIDER_QUOTA']){
+    code=failure;
+    const current=f.store.readFeatureState({kind:'feature',id:featureId}).feature!;
+    const grant=await f.prepareFeature('generate',{featureId,expectedStateRevision:current.stateRevision,contextSnapshotId});
+    const result=await f.execute('generate',String(grant.grantId));
+    assert.equal(result.operation?.error,failure);
+    assert.equal(f.store.readFeatureState({kind:'feature',id:featureId}).feature?.currentRevisionId,base.currentRevisionId);
+  }
+  assert.equal(launches,0);
+  const current=f.store.readFeatureState({kind:'feature',id:featureId}).feature!;
+  const artifactId=await f.upload({...featureDraft(),request:'Versione manuale'});
+  const revise=await f.prepareFeature('revise',{featureId,expectedStateRevision:current.stateRevision,bundleArtifactId:artifactId});
+  assert.equal((await f.execute('revise',String(revise.grantId))).operation?.outcome,'SUCCEEDED');
 });

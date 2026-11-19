@@ -1,3 +1,4 @@
+import type {PlanningTurn} from '../domain/features/planning.js';
 import type Database from 'better-sqlite3';
 import type {FeatureQuery,FeatureRead,WorkflowArtifact,WorkflowOperationRecord} from '../ports/workflow.js';
 import type {FeatureRecord,FeatureRevision,FeatureApproval,ImplementationEnvelope} from '../domain/features/model.js';
@@ -11,6 +12,12 @@ export const featureApproval=(r:FeatureRow):FeatureApproval=>({approvalId:s(r,'a
 export const featureEnvelope=(r:FeatureRow):ImplementationEnvelope=>({envelopeId:s(r,'envelope_id'),featureId:s(r,'feature_id'),revisionId:s(r,'revision_id'),approvalId:s(r,'approval_id'),projectId:s(r,'project_id'),configRevision:s(r,'config_revision'),discoveryApprovalId:s(r,'discovery_approval_id'),contextDigest:s(r,'context_digest'),bundleDigest:s(r,'bundle_digest'),digest:s(r,'digest'),createdAt:s(r,'created_at')});
 export const workflowOperation=(r:FeatureRow):WorkflowOperationRecord=>({requestId:s(r,'request_id'),namespace:r.namespace as WorkflowOperationRecord['namespace'],action:s(r,'action'),canonicalIntent:s(r,'canonical_intent'),payloadHash:s(r,'payload_hash'),targetId:nullable(r,'target_id'),phase:r.phase as WorkflowOperationRecord['phase'],outcome:r.outcome as WorkflowOperationRecord['outcome'],acceptedAt:s(r,'accepted_at'),completedAt:nullable(r,'completed_at'),result:r.result===null?null:JSON.parse(s(r,'result')) as Record<string,unknown>,error:nullable(r,'error')});
 export const workflowArtifact=(r:FeatureRow):WorkflowArtifact=>({artifactId:s(r,'artifact_id'),kind:r.kind as WorkflowArtifact['kind'],targetId:nullable(r,'target_id'),expectedBytes:Number(r.expected_bytes),sha256:s(r,'sha256'),offsetBytes:Number(r.offset_bytes),allocatedBytes:Number(r.allocated_bytes),state:r.state as WorkflowArtifact['state'],referenceCount:Number(r.ref_count),createdAtMs:Number(r.created_at_ms),expiresAtMs:r.expires_at_ms===null?null:Number(r.expires_at_ms)});
+type TurnMetadata=Omit<PlanningTurn,'turnId'|'featureId'|'runId'|'generation'|'requestId'|'stateRevision'|'turnIndex'|'phase'>;
+export function featureTurn(r:FeatureRow):PlanningTurn{
+ const metadata=JSON.parse(s(r,'metadata')) as TurnMetadata;
+ return {...metadata,turnId:s(r,'turn_id'),featureId:s(r,'feature_id'),runId:s(r,'run_id'),generation:s(r,'generation'),
+   requestId:s(r,'request_id'),stateRevision:s(r,'expected_revision'),turnIndex:Number(r.turn_index),phase:r.phase as PlanningTurn['phase']};
+}
 export function requireFeatureSchema(db:Database.Database):void {if(Number(db.pragma('user_version',{simple:true}))!==5)throw new Error('FEATURE_NOT_INITIALIZED');}
 export function readFeatureState(db:Database.Database,q:FeatureQuery):FeatureRead {
  requireFeatureSchema(db);
@@ -20,14 +27,20 @@ export function readFeatureState(db:Database.Database,q:FeatureQuery):FeatureRea
  return{budget:{allocatedBytes:Number(row.allocated),reservedBytes:Number(row.reserved),allocatedFiles:Number(row.files),openUploads:Number(row.uploads),metadataBytes:metadata}};
  }
  if(q.kind==='pending')return{items:(db.prepare("SELECT * FROM workflow_operations WHERE phase<>'FINALIZED' ORDER BY accepted_at LIMIT 20").all() as FeatureRow[]).map(workflowOperation)};
+ if(q.kind==='activeTurns')return{items:(db.prepare("SELECT * FROM features_turns WHERE phase IN ('ACCEPTED','RUNNING','RECONCILING') ORDER BY rowid LIMIT 2").all() as FeatureRow[]).map(featureTurn)};
+ if(!('id' in q))throw new Error('INVALID_REQUEST');
  requireUuid(q.id);
+ if(q.kind==='latestTurn'){
+ const row=db.prepare('SELECT * FROM features_turns WHERE feature_id=? ORDER BY turn_index DESC LIMIT 1').get(q.id) as FeatureRow|undefined;
+ return{turn:row?featureTurn(row):null};
+ }
  const singles:Record<string,[string,string,(r:FeatureRow)=>unknown]>={feature:['features_records','feature_id',featureRecord],revision:['features_revisions','revision_id',featureRevision],approval:['features_approvals','revision_id',featureApproval],envelope:['features_envelopes','envelope_id',featureEnvelope],operation:['workflow_operations','request_id',workflowOperation],artifact:['workflow_artifacts','artifact_id',workflowArtifact],
- grant:['workflow_grants','grant_id',r=>({grantId:s(r,'grant_id'),canonicalIntent:s(r,'canonical_intent'),createdAtMs:Number(r.created_at_ms),expiresAtMs:Number(r.expires_at_ms),consumedByRequestId:nullable(r,'consumed_by_request_id')} satisfies WorkflowGrant)],turn:['features_turns','turn_id',r=>({...r,metadata:JSON.parse(s(r,'metadata'))})]};
+ grant:['workflow_grants','grant_id',r=>({grantId:s(r,'grant_id'),canonicalIntent:s(r,'canonical_intent'),createdAtMs:Number(r.created_at_ms),expiresAtMs:Number(r.expires_at_ms),consumedByRequestId:nullable(r,'consumed_by_request_id')} satisfies WorkflowGrant)],turn:['features_turns','turn_id',featureTurn]};
  const single=singles[q.kind];if(single){const [table,key,map]=single;const row=db.prepare(`SELECT * FROM ${table} WHERE ${key}=? ORDER BY rowid DESC LIMIT 1`).get(q.id) as FeatureRow|undefined;return{[q.kind]:row?map(row):null};}
  if(!['features','revisions','approvals','turns'].includes(q.kind))throw new Error('INVALID_REQUEST');
  const paged=q as Extract<FeatureQuery,{offset?:number}>;const offset=paged.offset??0,limit=paged.limit??20;
  if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>20)throw new Error('INVALID_REQUEST');
- const [table,key,map]:[string,string,(r:FeatureRow)=>unknown]=q.kind==='features'?['features_records','project_id',featureRecord]:q.kind==='revisions'?['features_revisions','feature_id',featureRevision]:q.kind==='approvals'?['features_approvals','feature_id',featureApproval]:['features_turns','feature_id',r=>({...r,metadata:JSON.parse(s(r,'metadata'))})];
+ const [table,key,map]:[string,string,(r:FeatureRow)=>unknown]=q.kind==='features'?['features_records','project_id',featureRecord]:q.kind==='revisions'?['features_revisions','feature_id',featureRevision]:q.kind==='approvals'?['features_approvals','feature_id',featureApproval]:['features_turns','feature_id',featureTurn];
  const rows=db.prepare(`SELECT * FROM ${table} WHERE ${key}=? ORDER BY rowid LIMIT ? OFFSET ?`).all(q.id,limit+1,offset) as FeatureRow[];
  const items=rows.slice(0,limit).map(map);if(Buffer.byteLength(JSON.stringify(items))>28000)throw new Error('CONTEXT_LIMIT');
  const revisionRow=db.prepare(q.kind==='features'?'SELECT revision FROM store WHERE singleton=1':'SELECT state_revision AS revision FROM features_records WHERE feature_id=?').get(...(q.kind==='features'?[]:[q.id])) as FeatureRow|undefined;
