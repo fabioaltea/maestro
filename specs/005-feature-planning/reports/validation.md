@@ -91,3 +91,7 @@ Prove policy esatta approvazione/owner/revisione/contesto, nessun permesso runti
 ### T021 — US2 RED
 
 DTO chiusi, revisione esatta, nessuna prova dal renderer né start grant; grant approve non utilizzabile per handoff. RED contro runtime compilato T018: prepare approve UNSUPPORTED_VERSION.
+
+### T022 — US2 RED
+
+Scenari locali approval/handoff, reply loss postcommit, UUID originale, mutazione contesto dopo consenso e revisione concorrente. RED contro runtime T018:3/3 casi contract+integration falliscono per UNSUPPORTED_VERSION; loader di test rimappa soltanto runtime alla build precedente, non altera codice/runtime di produzione.
