@@ -115,3 +115,7 @@ Bridge e CLI condividono le chiamate nominate e le ricevute per approvazione/han
 ### T027 — regole dei risultati assistiti (RED)
 
 Due casi unitari coprono schema/provenance e correlazione esatta tra generazione, revisione, stato e prova di uscita. Build:test compila; 2/2 RED per modulo di dominio ancora assente.
+
+### T028 — contratti assistiti (RED)
+
+Due casi di contratto verificano prepare con snapshot e artefatto risposta, rifiuto di autorità/testo aggiunti e indisponibilità della capability sul core locale. 2/2 RED sui DTO della fase precedente.
