@@ -127,3 +127,26 @@ Validate consuma un grant di controllo e reconcile accetta solo UUID del job e r
 ## T033 — desktop US3
 
 Electron espone gli entrypoint dichiarati, conferma la policy, mostra prova ed esito e rende disponibile la riconciliazione per job incerti. Bridge chiuso, focus da tastiera, ricevute e risultato leggibile offline. **51 PASS** desktop unit/contract, **2 PASS** E2E ambiente (27,7 s e 34,6 s).
+
+## T034 — verifica finale mirata
+
+20 novembre 2026, macOS 26.3.1 (a) arm64/APFS, Node 26.13.0, npm 11.20.0.
+
+| Verifica | Esito |
+| --- | --- |
+| `npm run typecheck`, `npm run typecheck:desktop`, `npm run lint`, `npm run build`, `npm run build:test`, `npm run build:desktop` | PASS |
+| `node --test --test-concurrency=1 dist-tests/tests/{unit,contract,integration}/environment-*.test.js dist-tests/tests/{unit,contract,integration}/workspace-*.test.js dist-tests/tests/contract/feature-api.test.js` | 80 PASS, 1 FAIL per l’asserzione rimasta alla capability di T011, 0 SKIP in 218,8 s |
+| `npm run build:test && node --test dist-tests/tests/integration/environment-runtime.test.js` dopo l’aggiornamento della prova | 2 PASS, 0 FAIL, 0 SKIP. Il daemon composto pubblica validate e reconcile. Il runtime senza composizione espone le letture. Complessivamente 81 casi core distinti verificati. |
+| `npm run test:desktop:unit` | 51 PASS, 0 FAIL, 0 SKIP |
+| `npm run test:desktop:integration` | 32 PASS, 0 FAIL, 0 SKIP |
+| `npm exec -- playwright test -c apps/desktop/playwright.config.ts environment-flow.spec.ts` | 2 PASS, 0 FAIL, 0 SKIP in 28,7 s e 35,7 s |
+
+| Requisiti | Evidenza locale |
+| --- | --- |
+| FR-001–003 | Piano statico, pin qualificato, configurazione manuale e attestazione legata al digest. |
+| FR-004–006 · SC-001/002 | Lockfile con digest distinti in due worktree, copie indipendenti e store isolato. Verifica frozen, cambio lock → STALE, cancel con release successiva alla prova. |
+| FR-007–009 · SC-004 | Solo CommandSpec approvato, argv letterale, uscita 0/nonzero/timeout, troncamento e rete/processi/scritture negati. Riconciliazione e cleanup della sola copia privata. |
+| FR-010/011 · SC-003 | Parità CLI/Electron e letture offline. Dieci retry mentre un unico install attende il registry. Fault pre/post effetto e originale recuperato da successore. |
+| FR-012 | Quota condivisa, output e cursor bounded, riserva terminale, outbox redatto, diagnostica strutturata. |
+
+Le prove hanno usato archivi, Git e registri di fixture. Le campagne di durata e acceptance restano fuori da questa verifica.
