@@ -95,3 +95,7 @@ DTO chiusi, revisione esatta, nessuna prova dal renderer né start grant; grant 
 ### T022 — US2 RED
 
 Scenari locali approval/handoff, reply loss postcommit, UUID originale, mutazione contesto dopo consenso e revisione concorrente. RED contro runtime T018:3/3 casi contract+integration falliscono per UNSUPPORTED_VERSION; loader di test rimappa soltanto runtime alla build precedente, non altera codice/runtime di produzione.
+
+### T023 — tuple di approvazione
+
+Dominio neutro `requireCurrentFeatureApproval` e contenuto envelope legano feature/revisione corrente, owner, config, Discovery approval/revision/context e bundleDigest. Envelope non contiene grant o comando. Unit US2 2/2PASS; il controllo completeness/unknown resta condiviso con bundle.
