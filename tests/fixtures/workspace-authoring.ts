@@ -9,7 +9,7 @@ import {createFilesystemIdentity} from '../../src/platform/macos/git/filesystem-
 import type {WorkspaceMutationTarget} from '../../src/ports/workspace.js';
 
 export async function workspaceAuthoringFixture(t:TestContext){
- const f=await featureAuthoringFixture(t,{baseBranch:'fixture-base'});
+ const f=await featureAuthoringFixture(t,{baseBranch:'fixture-workspace-base'});
  const root=join(f.repositories.directory,'maestro-owned');
  await mkdir(root,{mode:0o700});
  const ownedRoot=await createFilesystemIdentity().capture(root,'directory');

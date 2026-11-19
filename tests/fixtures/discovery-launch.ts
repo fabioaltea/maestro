@@ -40,6 +40,7 @@ export async function launchFixture(t: TestContext, settings: { baseBranch?:stri
   let service: DiscoveryOperations | undefined, runtimeDirectory: string | undefined;
   t.after(async () => { await service?.idle(); if (settings.cleanupAllowed && !settings.cleanupAllowed()) throw new Error('PRESERVE_UNVERIFIED_LAUNCH_FIXTURE'); if (runtimeDirectory) await rm(runtimeDirectory, { recursive: true }); });
   const repositories = await createProjectRepositories(t), repo = await repositories.createRepository('launch', { commit: settings.repository !== 'unborn' });
+  if (settings.baseBranch && settings.baseBranch !== 'fixture-base') await repositories.git(repo, ['branch', settings.baseBranch]);
   if (settings.repository === 'unborn') await writeFile(join(repo, 'tracked.txt'), 'unborn project\n');
   if (settings.repository === 'dirty') await writeFile(join(repo, 'tracked.txt'), 'dirty working input\n');
   if (settings.repository === 'conflict') {

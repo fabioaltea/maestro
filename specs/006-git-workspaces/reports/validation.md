@@ -63,3 +63,7 @@ Un caso RED prima del modello di provisioning. Verifica ref generato, base mutat
 ## T016 — modello di provisioning
 
 Il dominio deriva il ref da UUID, verifica la tupla dell’handoff e distingue base assente/variata, branch occupato ed evidenza per i passi di provisioning. Build:test e prove mirate di modello, store e boundary **10 PASS**.
+
+## T017 — provisioning con Git locale
+
+Il servizio risolve la base locale al prepare e ricontrolla approvazione, pin e OID prima dell’effetto. La reservation persistente e la lease repository precedono ogni scrittura Git. Marker e anchor concordanti precedono READY. La perdita della risposta dopo la creazione del branch conserva branch e reservation con esito UNKNOWN. La recovery porta i provisioning interrotti a RECONCILING senza ripetere i comandi. Build, build:test e lint PASS. Suite mirata **12 PASS**, inclusi due worktree, replay UUID, base mutata e conservazione del checkout e del branch parziale.

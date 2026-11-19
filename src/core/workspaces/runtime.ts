@@ -3,6 +3,15 @@ import type {Deadline} from '../../ports/clock.js';
 import type {AuthenticatedPeer} from '../../ports/platform.js';
 import {WORKSPACE_READ_METHODS} from '../../protocol/workspace.js';
 import {createWorkspaceDispatch} from './dispatch.js';
+import {createWorkspaceProvisioning,type WorkspaceProvisionOptions} from './provision.js';
+import {createWorkspaceMutator} from '../../platform/macos/git/workspace-mutator.js';
+import {createOwnedWorkspaceFiles} from '../../platform/macos/git/workspace-files.js';
+
+export function nativeWorkspaceServices(options:Omit<WorkspaceProvisionOptions,keyof WorkspaceRuntimeContext|'mutator'|'files'>){
+ return (runtime:WorkspaceRuntimeContext)=>createWorkspaceProvisioning({
+   ...options,...runtime,mutator:createWorkspaceMutator(),files:createOwnedWorkspaceFiles(),
+ });
+}
 
 type Action=(params:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer)=>Promise<Record<string,unknown>>;
 export interface WorkspaceRuntimeServices {

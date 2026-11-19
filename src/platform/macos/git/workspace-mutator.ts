@@ -69,10 +69,10 @@ async function stableFile(path:string,limit=16384){
   }finally{await handle.close();}
 }
 
-async function scopeFor(input:WorkspaceMutationTarget){
+async function scopeFor(input:Omit<WorkspaceMutationTarget,'baseOid'>&{baseOid?:string}){
   const workspaceId=requireUuid(input.workspaceId),featureId=requireUuid(input.featureId);
   if(workspaceId!==input.workspaceId||featureId!==input.featureId||!localRef(input.baseRef)||
-    !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(input.baseOid))throw new Error('INVALID_REQUEST');
+    input.baseOid!==undefined&&!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(input.baseOid))throw new Error('INVALID_REQUEST');
   const [owner]=await Promise.all([anchored(input.ownedRoot),anchored(input.reference),anchored(input.commonDirectory),anchored(input.adminDirectory)]);
   const root=input.ownedRoot.canonicalPath,reference=input.reference.canonicalPath;
   const common=input.commonDirectory.canonicalPath,admin=input.adminDirectory.canonicalPath;
@@ -164,7 +164,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     const result=await git(scope,deadline,['rev-parse','--quiet','--verify','--end-of-options',`${ref}^{commit}`]);
     if(result.code===1&&!result.stderr)return null;
     const value=result.stdout.trim();
-    if(result.code||result.stderr||value.length!==scope.baseOid.length||!/^[a-f0-9]+$/.test(value))throw new Error('OWNERSHIP_UNPROVEN');
+    if(result.code||result.stderr||scope.baseOid!==undefined&&value.length!==scope.baseOid.length||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value))throw new Error('OWNERSHIP_UNPROVEN');
     return value;
   }
 
@@ -235,6 +235,15 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
   }
   return{
     async qualification(){const {version,sha256,profileSha256}=await selected();return{version,sha256,profileSha256};},
+    async resolveBase(input,deadline){
+      const scope=await scopeFor(input),before=await config(scope,deadline);
+      if((await git(scope,deadline,['check-ref-format',scope.baseRef])).code)throw new Error('INVALID_BASE_BRANCH');
+      const value=await oid(scope,deadline,scope.baseRef);
+      if(value===null)throw new Error('INVALID_BASE_BRANCH');
+      await scopeFor(input);
+      if(await config(scope,deadline)!==before)throw new Error('WORKSPACE_UNSAFE');
+      return value;
+    },
     async observe(input,deadline){
       const {scope,fingerprint}=await prepare(input,deadline);
       const result=await disk(scope,deadline);

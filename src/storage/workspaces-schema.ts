@@ -25,7 +25,7 @@ CREATE TABLE workspaces_effects (
  workspace_id TEXT NOT NULL REFERENCES workspaces_records(workspace_id) DEFERRABLE INITIALLY DEFERRED,
  repository_key TEXT NOT NULL,
  owner_generation TEXT NOT NULL CHECK(length(owner_generation)=36),
- phase TEXT NOT NULL CHECK(phase IN ('INTENT','BRANCH_CREATED','WORKTREE_ADDED','WORKTREE_REMOVED','UNKNOWN','RESOLVED')),
+ phase TEXT NOT NULL CHECK(phase IN ('INTENT','BRANCH_INTENT','BRANCH_CREATED','WORKTREE_ADDED','WORKTREE_REMOVED','UNKNOWN','RESOLVED')),
  evidence TEXT CHECK(evidence IS NULL OR (json_valid(evidence) AND length(CAST(evidence AS BLOB))<=65536))
 ) STRICT;
 CREATE UNIQUE INDEX workspace_repository_writer ON workspaces_effects(repository_key) WHERE phase<>'RESOLVED';

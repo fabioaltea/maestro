@@ -1,4 +1,4 @@
-import {createWorkspaceRuntime} from './workspaces/runtime.js';
+import {createWorkspaceRuntime,nativeWorkspaceServices} from './workspaces/runtime.js';
 import {createFeatureRuntime} from './features/runtime.js';
 import { createDiscoveryRuntime } from './discovery/runtime.js';
 import { EventStreamError } from '../protocol/event-cursor.js';
@@ -88,7 +88,9 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     discovery = createDiscoveryRuntime(storage, paths, intent.instanceId, dependencies.discovery);
     features = createFeatureRuntime(storage, paths, intent.instanceId, { currentEligibility: (peer, projectId) => discovery!.operations.currentEligibility(peer, projectId),
       ...(dependencies.featurePlanning ? { planning: dependencies.featurePlanning } : {}) });
-    workspaces=createWorkspaceRuntime(storage,dependencies.workspaces);
+    workspaces=createWorkspaceRuntime(storage,dependencies.workspaces??nativeWorkspaceServices({
+      storage,paths,instanceId:intent.instanceId,currentEligibility:(peer,projectId)=>discovery!.operations.currentEligibility(peer,projectId),
+    }));
     const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });

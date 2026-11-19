@@ -1,11 +1,14 @@
-import {workspaceBranchRef,requireWorkspaceHandoff} from '../domain/workspaces/provision.js';
+import {workspaceBranchRef,requireWorkspaceHandoff,requireProvisioningObservation} from '../domain/workspaces/provision.js';
 import type Database from 'better-sqlite3';
 import {requireUuid} from '../domain/identifiers.js';
 import type {WorkspaceChange,WorkspaceMutationTarget,WorkspaceQuery,WorkspaceRead,WorkspaceRecord,WorkspaceSummary,WorkspaceWrite} from '../ports/workspace.js';
 import type {FilesystemAnchor,ReferenceCheckout,RepositoryIdentity} from '../ports/repository.js';
-import {requireWorkspaceCapacity} from '../domain/workspaces/model.js';
+import {nextWorkspaceRevision,requireWorkspaceCapacity,requireWorkspaceFence,transitionWorkspace, type WorkspaceState} from '../domain/workspaces/model.js';
 import {currentDiscovery,type FeatureLedger} from './features-authoring.js';
 import {readFeatureState} from './features-store.js';
+import type {WorkflowIntent} from '../domain/workflow/authorization.js';
+import {foundationError,type ErrorCode} from '../domain/errors.js';
+import {join} from 'node:path';
 import {WORKSPACE_SCHEMA_VERSION} from './workspaces-schema.js';
 
 type Row=Record<string,string|number|bigint|null>;
@@ -34,6 +37,11 @@ export function readWorkspaceState(database:Database.Database,query:WorkspaceQue
    const row=database.prepare('SELECT * FROM workspaces_records WHERE workspace_id=?').get(requireUuid(query.id)) as Row|undefined;
    return query.kind==='get'?{workspace:row?workspaceRecord(row):null}:{summary:row?summary(row):null};
  }
+ if(query.kind==='interrupted-provisioning'){
+   const rows=database.prepare(`SELECT w.*,e.request_id FROM workspaces_records w
+     JOIN workspaces_effects e ON e.workspace_id=w.workspace_id WHERE w.state='CREATING' AND e.phase<>'RESOLVED'`).all() as Row[];
+   return{interrupted:rows.map(row=>({requestId:String(row.request_id),workspace:workspaceRecord(row)}))};
+ }
  if(query.kind!=='list')throw new Error('INVALID_REQUEST');
  const projectId=requireUuid(query.projectId),offset=query.offset??0,limit=query.limit??20;
  if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>20)throw new Error('INVALID_REQUEST');
@@ -47,15 +55,9 @@ function sameAnchor(left:FilesystemAnchor,right:FilesystemAnchor){
    &&left.device===right.device&&left.inode===right.inode&&left.birthtimeNs===right.birthtimeNs;
 }
 
-export function commitWorkspaceState(database:Database.Database,change:WorkspaceChange,ledger:FeatureLedger,verifyArtifact:(id:string)=>void):WorkspaceWrite{
- requireWorkspaceSchema(database);
- const {admission}=change,intent=ledger.intent(admission.canonicalIntent);
- if(change.kind!=='reserve'||intent.namespace!=='WORKSPACE'||intent.action!=='create'||!intent.targetId||!intent.projectId)throw new Error('APPROVAL_REQUIRED');
+function validateScope(database:Database.Database,intent:WorkflowIntent,checkedAt:string,verifyArtifact:(id:string)=>void){
  const workspaceId=requireUuid(intent.targetId),projectId=requireUuid(intent.projectId),p=intent.payload;
- const admitted=ledger.admit(admission,()=>{
-   const owner=database.prepare('SELECT lifecycle FROM instances WHERE instance_id=?').get(admission.instanceId) as Row|undefined;
-   if(owner?.lifecycle!=='RUNNING')throw new Error('STALE_TARGET');
-   const featureId=requireUuid(p.featureId),envelopeId=requireUuid(p.envelopeId),ownerGeneration=requireUuid(p.ownerGeneration),target=p.target as WorkspaceMutationTarget;
+ const featureId=requireUuid(p.featureId),envelopeId=requireUuid(p.envelopeId),ownerGeneration=requireUuid(p.ownerGeneration),target=p.target as WorkspaceMutationTarget;
    const feature=readFeatureState(database,{kind:'feature',id:featureId}).feature;
    const envelope=readFeatureState(database,{kind:'envelope',id:envelopeId}).envelope;
    if(!feature||!envelope||workspaceId!==target?.workspaceId||featureId!==target.featureId||
@@ -68,8 +70,8 @@ export function commitWorkspaceState(database:Database.Database,change:Workspace
      throw new Error('APPROVAL_STALE');
    requireWorkspaceHandoff(feature,revision,approval,envelope,{projectId,configRevision:revision.configRevision,
      contextDigest:revision.contextDigest,discoveryApprovalId:revision.discoveryApprovalId,discoveryRevisionId:revision.discoveryRevisionId,
-     checkedAt:change.contextCheckedAt},intent.ownerUid);
-   currentDiscovery(database,revision,projectId,change.contextCheckedAt);
+     checkedAt:checkedAt},intent.ownerUid);
+   currentDiscovery(database,revision,projectId,checkedAt);
    const artifact=readFeatureState(database,{kind:'artifact',id:revision.artifactId}).artifact;
    if(artifact?.state!=='REFERENCED'||artifact.kind!=='BUNDLE'||artifact.sha256!==revision.bundleDigest)throw new Error('ARTIFACT_CORRUPT');
    verifyArtifact(revision.artifactId);
@@ -79,6 +81,90 @@ export function commitWorkspaceState(database:Database.Database,change:Workspace
    if(project.repository_key!==p.repositoryKey||typeof project.base_branch!=='string'||target.baseRef!==`refs/heads/${project.base_branch}`
      ||!sameAnchor(identity.commonDirectory,target.commonDirectory)||!sameAnchor(reference.root,target.reference)
      ||!sameAnchor(reference.adminDirectory,target.adminDirectory))throw new Error('REPOSITORY_CHANGED');
+ return{featureId,envelopeId,ownerGeneration,target,project};
+}
+
+function writeState(database:Database.Database,workspace:WorkspaceRecord,state:WorkspaceState,error:string|null){
+ const revision=nextWorkspaceRevision(workspace.stateRevision);
+ database.prepare('UPDATE workspaces_records SET state=?,state_revision=?,safe_error=?,updated_at=? WHERE workspace_id=? AND state_revision=?')
+   .run(state,BigInt(revision),error,new Date().toISOString(),workspace.workspaceId,BigInt(workspace.stateRevision));
+ return{workspaceId:workspace.workspaceId,stateRevision:revision};
+}
+
+function provision(database:Database.Database,change:Exclude<WorkspaceChange,{kind:'reserve'}>,ledger:FeatureLedger,verifyArtifact:(id:string)=>void):WorkspaceWrite{
+ return ledger.transaction(()=>{
+   const operation=readFeatureState(database,{kind:'operation',id:change.requestId}).operation;
+   if(!operation||operation.namespace!=='WORKSPACE'||operation.action!=='create'||operation.targetId!==change.fence.workspaceId)throw new Error('OPERATION_NOT_FOUND');
+   if(operation.phase==='FINALIZED')return{operation,inserted:false};
+   const workspace=readWorkspaceState(database,{kind:'get',id:operation.targetId}).workspace;
+   if(!workspace)throw new Error('WORKSPACE_NOT_FOUND');
+   requireWorkspaceFence(workspace,change.fence);
+   const effect=database.prepare('SELECT * FROM workspaces_effects WHERE request_id=? AND workspace_id=?').get(change.requestId,workspace.workspaceId) as Row|undefined;
+   const owner=database.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(change.requestId) as Row;
+   const identity=database.prepare('SELECT current_instance_id FROM store WHERE singleton=1').get() as Row;
+   if(workspace.state!=='CREATING'||effect?.owner_generation!==workspace.ownerGeneration||identity.current_instance_id!==change.instanceId)
+     throw new Error('STALE_TARGET');
+   if(change.kind==='provision-interrupted'){
+     const lifecycle=database.prepare('SELECT lifecycle FROM instances WHERE instance_id=?').get(change.instanceId) as Row;
+     if(lifecycle.lifecycle!=='RECOVERING'||owner.owning_instance_id===change.instanceId)throw new Error('STALE_TARGET');
+     const error='RESOURCE_IDENTITY_UNKNOWN';
+     const result=writeState(database,workspace,transitionWorkspace(workspace.state,'uncertain'),error);
+     database.prepare("UPDATE workspaces_effects SET phase='UNKNOWN' WHERE request_id=?").run(change.requestId);
+     return{operation:ledger.complete(change.requestId,result,error,'UNKNOWN')};
+   }
+   if(owner.owning_instance_id!==change.instanceId)throw new Error('STALE_TARGET');
+   if(change.kind==='provision-dispatch'){
+     if(effect.phase!=='INTENT')throw new Error('INVALID_TRANSITION');
+     validateScope(database,ledger.intent(operation.canonicalIntent),change.contextCheckedAt,verifyArtifact);
+     database.prepare("UPDATE workspaces_effects SET phase='BRANCH_INTENT' WHERE request_id=?").run(change.requestId);
+     database.prepare("UPDATE workflow_operations SET phase='WORKING' WHERE request_id=?").run(change.requestId);
+     return{operation:readFeatureState(database,{kind:'operation',id:change.requestId}).operation!};
+   }
+   if(change.kind==='provision-step'){
+     const observation=change.observation;
+     if(effect.phase==='BRANCH_INTENT'){
+       requireProvisioningObservation(workspace.target.baseOid,observation,'BRANCH_CREATED');
+       database.prepare("UPDATE workspaces_effects SET phase='BRANCH_CREATED' WHERE request_id=?").run(change.requestId);
+     }else if(effect.phase==='BRANCH_CREATED'){
+       requireProvisioningObservation(workspace.target.baseOid,observation,'WORKTREE_ADDED');
+       const proof=observation.worktree!;
+       if(!change.markerDigest||!/^[a-f0-9]{64}$/.test(change.markerDigest)
+         ||proof.branchRef!==workspaceBranchRef(workspace.featureId,workspace.workspaceId)
+         ||proof.root.canonicalPath!==join(workspace.target.ownedRoot.canonicalPath,workspace.workspaceId)
+         ||proof.adminDirectory.canonicalPath!==join(workspace.target.commonDirectory.canonicalPath,'worktrees',workspace.workspaceId))throw new Error('OWNERSHIP_UNPROVEN');
+       database.prepare('UPDATE workspaces_records SET ownership=?,marker_digest=? WHERE workspace_id=?')
+         .run(JSON.stringify(proof),change.markerDigest,workspace.workspaceId);
+       database.prepare("UPDATE workspaces_effects SET phase='WORKTREE_ADDED',evidence=? WHERE request_id=?")
+         .run(JSON.stringify({markerDigest:change.markerDigest,headOid:proof.headOid}),change.requestId);
+     }else throw new Error('INVALID_TRANSITION');
+     database.prepare("UPDATE workflow_operations SET phase='WORKING' WHERE request_id=?").run(change.requestId);
+     return{operation:readFeatureState(database,{kind:'operation',id:change.requestId}).operation!};
+   }
+   if(change.kind==='provision-ready'){
+     if(effect.phase!=='WORKTREE_ADDED'||!workspace.ownership||!workspace.markerDigest)throw new Error('OWNERSHIP_UNPROVEN');
+     validateScope(database,ledger.intent(operation.canonicalIntent),change.contextCheckedAt,verifyArtifact);
+     const result=writeState(database,workspace,transitionWorkspace(workspace.state,'ready'),null);
+     database.prepare("UPDATE workspaces_effects SET phase='RESOLVED' WHERE request_id=?").run(change.requestId);
+     return{operation:ledger.complete(change.requestId,result)};
+   }
+   if(!change.uncertain&&effect.phase!=='INTENT'&&effect.phase!=='BRANCH_INTENT')throw new Error('OWNERSHIP_UNPROVEN');
+   foundationError(change.error as ErrorCode);
+   const result=writeState(database,workspace,transitionWorkspace(workspace.state,change.uncertain?'uncertain':'block'),change.error);
+   database.prepare("UPDATE workspaces_effects SET phase=? WHERE request_id=?").run(change.uncertain?'UNKNOWN':'RESOLVED',change.requestId);
+   return{operation:ledger.complete(change.requestId,result,change.error,change.uncertain?'UNKNOWN':'BLOCKED')};
+ },change.kind!=='provision-step'&&change.kind!=='provision-dispatch',{requestIds:[change.requestId]});
+}
+
+export function commitWorkspaceState(database:Database.Database,change:WorkspaceChange,ledger:FeatureLedger,verifyArtifact:(id:string)=>void):WorkspaceWrite{
+ requireWorkspaceSchema(database);
+ if(change.kind!=='reserve')return provision(database,change,ledger,verifyArtifact);
+ const {admission}=change,intent=ledger.intent(admission.canonicalIntent);
+ if(intent.namespace!=='WORKSPACE'||intent.action!=='create'||!intent.targetId||!intent.projectId)throw new Error('APPROVAL_REQUIRED');
+ const workspaceId=requireUuid(intent.targetId),projectId=requireUuid(intent.projectId);
+ const admitted=ledger.admit(admission,()=>{
+   const owner=database.prepare('SELECT lifecycle FROM instances WHERE instance_id=?').get(admission.instanceId) as Row|undefined;
+   if(owner?.lifecycle!=='RUNNING')throw new Error('STALE_TARGET');
+   const {featureId,envelopeId,ownerGeneration,target,project}=validateScope(database,intent,change.contextCheckedAt,verifyArtifact);
    const count=database.prepare("SELECT count(*) AS count FROM workspaces_records WHERE state<>'REMOVED'").get() as Row;
    requireWorkspaceCapacity(Number(count.count));
    if(database.prepare("SELECT 1 FROM workspaces_effects WHERE repository_key=? AND phase<>'RESOLVED'").get(project.repository_key))throw new Error('WORKSPACE_IN_USE');
