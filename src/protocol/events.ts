@@ -1,3 +1,4 @@
+import {WORKSPACE_STATES} from '../domain/workspaces/model.js';
 import {FEATURE_ACTIONS} from './feature.js';
 import {FEATURE_STATES} from '../domain/features/model.js';
 import { DISCOVERY_STATES } from '../domain/discovery/state.js';
@@ -12,14 +13,15 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
   if (draft.operationId != null) requireUuid(draft.operationId);
   const project = draft.payload.scope === 'project';
   const discovery = draft.payload.scope === 'discovery';
-  const feature = draft.payload.scope === 'feature', artifact = draft.payload.scope === 'artifact', workflow = feature || artifact;
-  if (draft.type.startsWith('feature.') && !feature || draft.type.startsWith('artifact.') && !artifact) throw new Error('INVALID_REQUEST');
+  const workspace=draft.payload.scope==='workspace';
+  const feature = draft.payload.scope === 'feature', artifact = draft.payload.scope === 'artifact', workflow = feature || artifact || workspace;
+  if (draft.type.startsWith('workspace.')&&!workspace || draft.type.startsWith('feature.') && !feature || draft.type.startsWith('artifact.') && !artifact) throw new Error('INVALID_REQUEST');
   if (draft.type.startsWith('discovery.') && !discovery) throw new Error('INVALID_REQUEST');
   if ((project || discovery || workflow) && draft.operationId == null) throw new Error('INVALID_REQUEST');
   const payload: Record<string, unknown> = {}; let redacted = 0;
   const enums: Record<string, readonly string[]> = {
-    state: feature ? FEATURE_STATES : artifact ? ['RESERVED','SEALED','REFERENCED','ORPHAN','CORRUPT','DISCARDED'] : discovery ? DISCOVERY_STATES : [],
-    action: feature ? FEATURE_ACTIONS : artifact ? ['reserve','append','seal','discard'] : discovery ? ['configure', 'start', 'answer', 'correct', 'approve', 'cancel', 'preview', 'check', 'discard'] : project ? ['REGISTER', 'VERIFY', 'UPDATE', 'REMOVE'] : ['start', 'stop', 'restart'], outcome: workflow || discovery ? ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED', 'UNKNOWN'] : ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
+    state: workspace ? WORKSPACE_STATES : feature ? FEATURE_STATES : artifact ? ['RESERVED','SEALED','REFERENCED','ORPHAN','CORRUPT','DISCARDED'] : discovery ? DISCOVERY_STATES : [],
+    action: workspace ? ['create','refresh','remove'] : feature ? FEATURE_ACTIONS : artifact ? ['reserve','append','seal','discard'] : discovery ? ['configure', 'start', 'answer', 'correct', 'approve', 'cancel', 'preview', 'check', 'discard'] : project ? ['REGISTER', 'VERIFY', 'UPDATE', 'REMOVE'] : ['start', 'stop', 'restart'], outcome: workflow || discovery ? ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED', 'UNKNOWN'] : ['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'],
     from: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
     to: ['STARTING', 'RUNNING', 'RECOVERING', 'STOPPING', 'STOPPED', 'BLOCKED'],
     phase: [...(workflow ? ['WORKING'] : []), 'ACCEPTED', 'PRECHECK', 'SPAWN_INTENT', 'WAIT_READY', 'STOP_REQUESTED', 'DRAINING', 'WAIT_EXIT', 'FINALIZED'],
@@ -30,10 +32,10 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
       if (key === 'code' && typeof value === 'string') { foundationError(value as Parameters<typeof foundationError>[0]); allowed = true; }
       if (['resourceId', 'correlationId'].includes(key) && typeof value === 'string') { requireUuid(value); allowed = true; }
       if (key === 'generation' && typeof value === 'string') { requireDecimal(value); allowed = true; }
-      if (key === 'scope' && (value === 'project' || value === 'discovery' || value === 'feature' || value === 'artifact')) allowed = true;
+      if (key === 'scope' && (value === 'project' || value === 'discovery' || value === 'feature' || value === 'artifact' || value === 'workspace')) allowed = true;
       if (draft.type.startsWith('discovery.') && !discovery) throw new Error('INVALID_REQUEST');
   if ((project || discovery || workflow) && key === 'projectId' && typeof value === 'string') { requireUuid(value); allowed = true; }
-      if (workflow && ['featureId','artifactId','revisionId','approvalId','envelopeId','turnId','runId'].includes(key) && typeof value === 'string') { requireUuid(value); allowed = true; }
+      if (workflow && ['workspaceId','featureId','artifactId','revisionId','approvalId','envelopeId','turnId','runId'].includes(key) && typeof value === 'string') { requireUuid(value); allowed = true; }
       if (workflow && ['stateRevision','watermark'].includes(key) && typeof value === 'string') { requireDecimal(value); allowed = true; }
       if (discovery && ['discoveryId', 'sessionId', 'runId', 'revisionId'].includes(key) && typeof value === 'string') { requireUuid(value); allowed = true; }
       if (discovery && ['watermark', 'stateRevision'].includes(key) && typeof value === 'string') { requireDecimal(value); allowed = true; }
@@ -49,6 +51,7 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
     if (allowed) payload[key] = value; else redacted++;
   }
   const required: Readonly<Record<string, readonly string[]>> = {
+    'workspace.changed':['workspaceId'],
     'feature.changed': ['featureId'], 'feature.output.available': ['featureId','turnId','watermark'], 'feature.revision.changed': ['featureId','revisionId'], 'feature.approval.changed': ['featureId','revisionId'], 'artifact.changed': ['artifactId'],
     'discovery.output.available': ['discoveryId', 'runId', 'watermark'], 'discovery.question.available': ['discoveryId', 'runId'],
     'discovery.document.changed': ['discoveryId', 'revisionId'], 'discovery.approval.changed': ['discoveryId', 'revisionId'],

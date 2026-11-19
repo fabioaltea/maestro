@@ -1,3 +1,4 @@
+import {workspaceEvents} from '../core/workspaces/events.js';
 import {WORKSPACE_TABLES} from './workspaces-schema.js';
 import {commitWorkspaceState,readWorkspaceState} from './workspaces-store.js';
 import type {WorkspaceChange,WorkspaceQuery} from '../ports/workspace.js';
@@ -188,9 +189,14 @@ export class SQLiteStore {
         const result = body();
         for (const requestId of event?.requestIds ?? []) {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
-          if (!op||op.namespace==='WORKSPACE') continue;
-          const feature = op.namespace === 'FEATURE' && op.targetId ? readFeatureState(this.database!, {kind: 'feature', id: op.targetId}).feature : null;
+          if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
+          if(op.namespace==='WORKSPACE'){
+            const workspace=op.targetId?readWorkspaceState(this.database!,{kind:'get',id:op.targetId}).workspace:null;
+            if(workspace)drafts.push(...workspaceEvents(op,String(owner.owning_instance_id),workspace));
+            continue;
+          }
+          const feature = op.namespace === 'FEATURE' && op.targetId ? readFeatureState(this.database!, {kind: 'feature', id: op.targetId}).feature : null;
           drafts.push(...workflowEventDrafts(op, String(owner.owning_instance_id), feature));
         }
         return result;

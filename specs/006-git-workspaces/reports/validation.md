@@ -43,3 +43,7 @@ DTO chiusi per letture e ammissione, cursore legato a store/progetto/revisione, 
 ## T011 — composizione e drain
 
 Il daemon instrada workspace sullo schema 6 e pubblica soltanto metodi composti. Fence prima della recovery e in stop. Il drain attende lavori già accettati e mantiene un blocco interrogabile quando il termine è superato. Build, build:test, lint e integrazioni workspace/feature runtime **5 PASS**.
+
+## T012 — eventi e budget
+
+Il writer pubblica reservation e metadata workspace nello stesso commit/outbox. Il decoder desktop verifica correlazione e payload chiusi. Un backlog bloccato impedisce nuove admission e conserva letture e replay originali. Typecheck core/desktop, lint e build:test PASS. Suite mirata di eventi, limiti e ledger **8 PASS**.
