@@ -87,3 +87,7 @@ RED iniziale: modulo feature-cli assente. Typecheck desktop/lint PASS; contract+
 ### T020 — US2 RED
 
 Prove policy esatta approvazione/owner/revisione/contesto, nessun permesso runtime nell’envelope; unknown bloccanti e consenso esatto nonbloccanti. RED iniziale: modulo dominio approval assente (build:test).
+
+### T021 — US2 RED
+
+DTO chiusi, revisione esatta, nessuna prova dal renderer né start grant; grant approve non utilizzabile per handoff. RED contro runtime compilato T018: prepare approve UNSUPPORTED_VERSION.
