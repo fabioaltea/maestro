@@ -55,7 +55,7 @@
 
 **Coverage**: FR-004–FR-006; FR-010/011/012 trasversali.
 
-- [ ] T020 [P] [US2] Scrivere policy/transizioni US2 in `tests/unit/environment-us2.test.ts`: Frozen failure, isolamento store clone/copy, no hook inatteso, rete negata, descendant process, disk cap, crash pre/post spawn; testare grant/revisioni e comportamento sicuro (FR-004–FR-006).
+- [x] T020 [P] [US2] Scrivere policy/transizioni US2 in `tests/unit/environment-us2.test.ts`: Frozen failure, isolamento store clone/copy, no hook inatteso, rete negata, descendant process, disk cap, crash pre/post spawn; testare grant/revisioni e comportamento sicuro (FR-004–FR-006).
 - [ ] T021 [P] [US2] Scrivere contract US2 in `tests/contract/environment-us2.test.ts`: metodi della storia in `specs/007-workspace-environments/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-004–FR-006, FR-011).
 - [ ] T022 [P] [US2] Scrivere integrazione locale US2 in `tests/integration/environment-us2.test.ts` con fixture di repository/processi/clock pertinenti: Registry locale e due workspace: installare, modificare un pacchetto in uno, verificare l’altro e store invariati; poi cambiare lock e controllare STALE. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-004–FR-006, FR-011/012).
 - [ ] T023 [US2] Implementare tipi/invarianti della storia in `src/domain/environments/jobs.ts` e aggiornare `src/ports/environment.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-004–FR-006).
