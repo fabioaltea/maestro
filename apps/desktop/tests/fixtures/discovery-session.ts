@@ -4,9 +4,9 @@ import { repositoryRoot } from './desktop.ts';
 import type { createScratch } from './desktop.ts';
 /** Privileged fixture seed while the production writer/daemon is stopped.
  * No provider process or real login ever runs; the configured binary is absent. */
-export async function seedWaitingDiscovery(f: Awaited<ReturnType<typeof createScratch>>, document = false) {
+export async function seedWaitingDiscovery(f: Awaited<ReturnType<typeof createScratch>>, document = false,baseBranch?:string) {
   await f.cli(['daemon', 'start']); const repo = await f.repository();
-  const projectId = (await f.cli(['project', 'add', repo.path, '--name=Intervista UI'])).result.data.projectId as string;
+  const projectId = (await f.cli(['project', 'add', repo.path, '--name=Intervista UI',...(baseBranch?[`--base-branch=${baseBranch}`]:[])])).result.data.projectId as string;
   await f.cli(['daemon', 'stop']);
   const { openStorage } = await import(join(repositoryRoot, 'dist/storage/worker.js'));
   const { createPlatformPaths } = await import(join(repositoryRoot, 'dist/platform/macos/paths.js'));

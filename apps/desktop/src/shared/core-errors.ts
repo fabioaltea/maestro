@@ -1,5 +1,55 @@
 // Public core v1 safe error catalog; no runtime dependency on core adapters.
 export const CORE_ERRORS = {
+  "WORKSPACE_LIMIT": {
+    "code": "WORKSPACE_LIMIT",
+    "message": "Limite di workspace raggiunto.",
+    "nextAction": "Consultare i workspace già conservati."
+  },
+  "WORKSPACE_NOT_FOUND": {
+    "code": "WORKSPACE_NOT_FOUND",
+    "message": "Workspace non trovato.",
+    "nextAction": "Rileggere i workspace nell’archivio corrente."
+  },
+  "WORKSPACE_IN_USE": {
+    "code": "WORKSPACE_IN_USE",
+    "message": "Workspace o repository riservato.",
+    "nextAction": "Interrogare il lavoro attivo e il relativo esito."
+  },
+  "WORKSPACE_UNSAFE": {
+    "code": "WORKSPACE_UNSAFE",
+    "message": "Confine Git o configurazione non qualificati.",
+    "nextAction": "Verificare il pin, gli anchor e la configurazione locale."
+  },
+  "BASE_CHANGED": {
+    "code": "BASE_CHANGED",
+    "message": "La base Git è cambiata.",
+    "nextAction": "Rileggere la base e preparare un nuovo consenso."
+  },
+  "BRANCH_EXISTS": {
+    "code": "BRANCH_EXISTS",
+    "message": "Il branch riservato esiste già.",
+    "nextAction": "Verificare l’operazione originale e la proprietà."
+  },
+  "OWNERSHIP_UNPROVEN": {
+    "code": "OWNERSHIP_UNPROVEN",
+    "message": "Proprietà del workspace non provata.",
+    "nextAction": "Interrogare lo stato della risorsa prima di proseguire."
+  },
+  "UNINTEGRATED_WORK": {
+    "code": "UNINTEGRATED_WORK",
+    "message": "Lavoro locale o integrazione non dimostrata.",
+    "nextAction": "Verificare i file e la destinazione Git."
+  },
+  "GIT_CONFLICT": {
+    "code": "GIT_CONFLICT",
+    "message": "Operazione Git in conflitto.",
+    "nextAction": "Ispezionare il workspace e conservare il lavoro."
+  },
+  "WORKSPACE_NOT_INITIALIZED": {
+    "code": "WORKSPACE_NOT_INITIALIZED",
+    "message": "Archivio workspace non inizializzato.",
+    "nextAction": "Avviare esplicitamente il servizio per aggiornare l’archivio."
+  },
   "INVALID_REQUEST": {
     "code": "INVALID_REQUEST",
     "message": "Richiesta non valida.",

@@ -5,9 +5,10 @@ import { randomUUID } from 'node:crypto';
 import { record, keys, text, uuid, revision } from '../shared/validation.ts';
 import { CORE_ERRORS } from '../shared/core-errors.ts';
 import { FEATURE_MUTATIONS } from '../shared/feature-contract.ts';
+import { WORKSPACE_MUTATIONS } from '../shared/workspace-contract.ts';
 export interface ReceiptMeta {
-  requestId: string; namespace: 'foundation' | 'project' | 'discovery' | 'feature'; action: string; archivePath: string; storeId: string | null;
-  featureId?: string; projectId: string | null; expectedRevision: string | null; intentHash: string;
+  requestId: string; namespace: 'foundation' | 'project' | 'discovery' | 'feature' | 'workspace'; action: string; archivePath: string; storeId: string | null;
+  featureId?: string; workspaceId?: string; projectId: string | null; expectedRevision: string | null; intentHash: string;
 }
 export interface Receipt extends ReceiptMeta {
   receiptVersion: 1; createdAt: string; updatedAt: string; phase: 'PREPARED' | 'RECONCILING' | 'TERMINAL' | 'UNKNOWN';
@@ -15,11 +16,13 @@ export interface Receipt extends ReceiptMeta {
 }
 export function validateReceipt(value: unknown): Receipt {
   const p = record(value);
-  keys(p, ['requestId', 'namespace', 'action', 'archivePath', 'storeId', 'projectId', 'expectedRevision', 'intentHash', 'featureId', 'receiptVersion', 'createdAt', 'updatedAt', 'phase', 'outcome', 'errorCode']);
+  keys(p, ['requestId', 'namespace', 'action', 'archivePath', 'storeId', 'projectId', 'expectedRevision', 'intentHash', 'featureId', 'workspaceId', 'receiptVersion', 'createdAt', 'updatedAt', 'phase', 'outcome', 'errorCode']);
   uuid(p.requestId); if(p.featureId!==undefined)uuid(p.featureId); if (p.storeId !== null) uuid(p.storeId); if (p.projectId !== null) uuid(p.projectId); if (p.expectedRevision !== null) revision(p.expectedRevision);
   if (!isAbsolute(text(p.archivePath, 2048)) || !/^[a-f0-9]{64}$/.test(text(p.intentHash, 64)) || p.receiptVersion !== 1) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
-  if (!['foundation', 'project', 'discovery', 'feature'].includes(String(p.namespace))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
-  const actions: readonly string[] = p.namespace === 'foundation' ? ['start', 'stop', 'restart'] : p.namespace === 'project' ? ['register', 'verify', 'update', 'remove'] : p.namespace === 'feature' ? FEATURE_MUTATIONS : ['configure', 'check', 'preview', 'discard', 'start', 'answer', 'correct', 'approve', 'cancel'];
+  if (!['foundation', 'project', 'discovery', 'feature','workspace'].includes(String(p.namespace))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+  if(p.namespace==='workspace'){uuid(p.workspaceId);uuid(p.projectId);uuid(p.storeId);}
+  else if(p.workspaceId!==undefined)throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+  const actions: readonly string[] = p.namespace === 'foundation' ? ['start', 'stop', 'restart'] : p.namespace === 'project' ? ['register', 'verify', 'update', 'remove'] : p.namespace === 'feature' ? FEATURE_MUTATIONS : p.namespace==='workspace'?WORKSPACE_MUTATIONS:['configure', 'check', 'preview', 'discard', 'start', 'answer', 'correct', 'approve', 'cancel'];
   if (!actions.includes(String(p.action)) || !['PREPARED', 'RECONCILING', 'TERMINAL', 'UNKNOWN'].includes(String(p.phase))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if (p.errorCode !== null && (typeof p.errorCode !== 'string' || !Object.hasOwn(CORE_ERRORS, p.errorCode))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');

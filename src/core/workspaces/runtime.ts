@@ -7,9 +7,9 @@ import {createWorkspaceProvisioning,type WorkspaceProvisionOptions} from './prov
 import {createWorkspaceMutator} from '../../platform/macos/git/workspace-mutator.js';
 import {createOwnedWorkspaceFiles} from '../../platform/macos/git/workspace-files.js';
 
-export function nativeWorkspaceServices(options:Omit<WorkspaceProvisionOptions,keyof WorkspaceRuntimeContext|'mutator'|'files'>){
+export function nativeWorkspaceServices(options:Omit<WorkspaceProvisionOptions,keyof WorkspaceRuntimeContext|'mutator'|'files'>&{files?:WorkspaceProvisionOptions['files']}){
  return (runtime:WorkspaceRuntimeContext)=>createWorkspaceProvisioning({
-   ...options,...runtime,mutator:createWorkspaceMutator(),files:createOwnedWorkspaceFiles(),
+   ...options,...runtime,mutator:createWorkspaceMutator(),files:options.files??createOwnedWorkspaceFiles(),
  });
 }
 

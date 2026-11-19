@@ -7,7 +7,7 @@ import type { BridgeRouter } from './bridge.ts';
 import { ArchiveContext } from './archive-context.ts';
 import { record, text } from '../shared/validation.ts';
 export function publicReceipt(receipt: Receipt, context: ArchiveContext) {
-  return { requestId: receipt.requestId, namespace: receipt.namespace, ...(receipt.featureId?{featureId:receipt.featureId}:{}), action: receipt.action, projectId: receipt.projectId,
+  return { requestId: receipt.requestId, namespace: receipt.namespace, ...(receipt.featureId?{featureId:receipt.featureId}:{}), ...(receipt.workspaceId?{workspaceId:receipt.workspaceId}:{}), action: receipt.action, projectId: receipt.projectId,
     storeId: receipt.storeId, phase: receipt.phase, outcome: receipt.outcome, errorCode: receipt.errorCode, createdAt: receipt.createdAt,
     updatedAt: receipt.updatedAt, currentArchive: context.current?.path === receipt.archivePath };
 }

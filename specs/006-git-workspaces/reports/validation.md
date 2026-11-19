@@ -71,3 +71,7 @@ Il servizio risolve la base locale al prepare e ricontrolla approvazione, pin e 
 ## T018 — CLI e parità API
 
 La CLI espone prepare/create/list/show/operation, con UUID esplicito per create, opzioni chiuse e output JSON bounded. Parità CLI/API per pagine storiche, input estraneo respinto prima del trasporto e UUID originale conservato per la mutazione offline. Build e build:test PASS, **4 PASS** tra contratti e reader offline.
+
+## T019 — desktop da handoff
+
+L’handoff approvato apre il progetto nella sezione Workspace. Conferma con ref e OID esatti, ricevuta persistita prima dell’invio, focus dopo Escape, storico offline e archivio cambiato verificati su Electron con worktree Git in una root fixture. Epoch di archivio e generazione della vista scartano risposte tardive. Typecheck e build desktop PASS, **46 PASS** unit/contract e **1 PASS** E2E mirato.

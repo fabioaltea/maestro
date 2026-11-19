@@ -1,0 +1,74 @@
+import {test,expect} from '@playwright/test';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {fileURLToPath} from 'node:url';
+import {readFile} from 'node:fs/promises';
+import {join} from 'node:path';
+import {createScratch} from '../fixtures/desktop.ts';
+import {seedWaitingDiscovery} from '../fixtures/discovery-session.ts';
+import {launchDesktop,chooseDirectory} from '../fixtures/electron.ts';
+
+test('workspace confirms an exact handoff, keeps the original receipt and reads offline',async()=>{
+ test.setTimeout(100000);
+ const fixture=await createScratch(),other=await createScratch();
+ try{
+   const seed=await seedWaitingDiscovery(fixture,true,'main');
+   const original=(await seed.repo.git(['rev-parse','HEAD'])).stdout.trim();
+   expect((await fixture.cli(['daemon','stop'])).result.outcome).toBe('SUCCEEDED');
+   const actor=fileURLToPath(new URL('../fixtures/workspace-daemon.ts',import.meta.url));
+   await promisify(execFile)(process.execPath,[actor,fixture.archive],{timeout:35000,maxBuffer:16384});
+   const {app,page}=await launchDesktop(fixture);
+   try{
+     const open=page.getByRole('button',{name:'Apri archivio',exact:true});
+     await chooseDirectory(app,fixture.archive);await open.click();
+     await page.locator('.project-row').first().click();
+     await page.getByRole('button',{name:'Discovery',exact:true}).click();
+     const review=page.locator('.discovery-review');
+     await expect(review.getByRole('checkbox')).toHaveCount(3);
+     for(const checkbox of await review.getByRole('checkbox').all())await checkbox.check();
+     await page.getByRole('button',{name:'Approva questa revisione',exact:true}).click();
+     const confirm=page.getByRole('button',{name:'Conferma operazione',exact:true});
+     await confirm.click();
+     await expect(review).toContainText('Approvazione storica:',{timeout:15000});
+     await page.getByRole('button',{name:'Discovery',exact:true}).click();
+     await page.getByRole('button',{name:'Feature',exact:true}).click();
+     const panel=page.locator('.feature-planning'),editor=panel.getByLabel('Specifica e piano JSON');
+     const bundle=JSON.parse(await editor.inputValue());
+     bundle.title='Workspace fixture';
+     await editor.fill(JSON.stringify(bundle));
+     await panel.getByRole('button',{name:'Prepara creazione',exact:true}).click();
+     await confirm.click();
+     await panel.getByRole('button',{name:bundle.title,exact:true}).click({timeout:15000});
+     await panel.getByRole('button',{name:'Prepara approvazione',exact:true}).click();
+     await confirm.click();
+     await expect(panel).toContainText('Approvazione storica:',{timeout:15000});
+     await panel.getByRole('button',{name:'Prepara handoff',exact:true}).click();
+     await confirm.click();
+     await panel.getByRole('button',{name:'Apri workspace dell’handoff'}).click({timeout:15000});
+     const workspaces=page.getByRole('region',{name:'Worktree Git'}),prepare=workspaces.getByRole('button',{name:'Prepara creazione workspace'});
+     await prepare.click();
+     await expect(page.getByRole('dialog')).toContainText(original);
+     await page.keyboard.press('Escape');
+     await expect(prepare).toBeFocused();
+     await prepare.click();
+     await confirm.click();
+     const receipt=workspaces.getByText(/Operazione [a-f0-9-]{36} ·/);
+     await expect(receipt).toBeVisible();
+     const requestId=(await receipt.textContent())?.match(/[a-f0-9-]{36}/)?.[0];
+     expect(requestId).toBeTruthy();
+     await expect.poll(async()=> (await fixture.cli(['workspace','operation',requestId!])).result.outcome,{timeout:30000}).toBe('SUCCEEDED');
+     await workspaces.getByRole('button',{name:'Aggiorna elenco'}).click();
+     await expect(workspaces.getByText('READY',{exact:true})).toBeVisible();
+     expect((await seed.repo.git(['rev-parse','HEAD'])).stdout.trim()).toEqual(original);
+     expect(await readFile(join(seed.repo.path,'file.txt'),'utf8')).toBe('initial\n');
+     expect((await fixture.cli(['daemon','stop'])).result.outcome).toBe('SUCCEEDED');
+     await workspaces.getByRole('button',{name:'Aggiorna elenco'}).click();
+     await expect(workspaces.getByText(/Ultimo stato noto/)).toBeVisible();
+     await expect(prepare).toBeDisabled();
+     await expect(workspaces.getByText('READY',{exact:true})).toBeVisible();
+     await chooseDirectory(app,other.directory);await open.click();
+     await expect(page.getByText(other.directory,{exact:true})).toBeVisible();
+     await expect(workspaces.getByText('READY',{exact:true})).toHaveCount(0);
+   }finally{await app.close();}
+ }finally{await Promise.all([fixture.cleanup(),other.cleanup()]);}
+});

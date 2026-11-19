@@ -1,5 +1,7 @@
 import {buildFeatureCliArgs,featureCliInput} from './feature-cli.ts';
 import {FEATURE_MUTATIONS,validateFeatureData} from '../shared/feature-contract.ts';
+import {WORKSPACE_MUTATIONS,validateWorkspaceData} from '../shared/workspace-contract.ts';
+import {buildWorkspaceCliArgs} from './workspace-cli.ts';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
@@ -12,10 +14,11 @@ import type { Runtime } from './runtime.ts';
 import { buildDiscoveryCliArgs, discoveryCliInput } from './discovery-cli.ts';
 import { DISCOVERY_MUTATIONS, validateDiscoveryData } from '../shared/discovery-contract.ts';
 export type { CliCommand } from './ports.ts';
-export function isMutation(c: CliCommand) { return c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
+export function isMutation(c: CliCommand) { return c.namespace==='workspace'?(WORKSPACE_MUTATIONS as readonly string[]).includes(c.action):c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
 export function buildCliArgs(c: CliCommand): string[] {
   if (!isAbsolute(c.archive) || c.archive.includes('\0')) throw new Error('INVALID_INPUT');
   if (c.namespace === 'feature') return buildFeatureCliArgs(c);
+  if (c.namespace === 'workspace') return buildWorkspaceCliArgs(c);
   if (c.namespace === 'discovery') return buildDiscoveryCliArgs(c);
   const allowed = c.namespace === 'daemon' ? ['start', 'stop', 'restart', 'status', 'diagnostics', 'events', 'operation'] : c.namespace === 'project' ? ['register', 'list', 'get', 'verify', 'update', 'remove', 'operation'] : [];
   if (!allowed.includes(c.action)) throw new Error('INVALID_INPUT');
@@ -42,7 +45,7 @@ export function buildCliArgs(c: CliCommand): string[] {
   if (positional.length) args.push('--', ...positional);
   return args;
 }
-const safeFields = new Set(('protocolVersion capabilities featureVersion featureMethods discoveryVersion discoveryMethods projectRegistryVersion scope from to generation correlationId redactedFields resourceIssues resourceIssuesTruncated referencePath checkoutAvailability repositoryIdentityStatus hasCommits headKind currentBranch headOid objectFormat baseOid fileStatusScope limitations freshness observedInstanceId startedAt identityState checkoutState referenceState status lifecycle ready observedAt requestedAt completedAt accepted effect action requestId storeId instanceId operationId projectId displayName referenceCheckout baseBranch baseState configRevision expectedRevision observedConfigRevision observationRevision registryRevision createdAt updatedAt removedAt observation availability identity trackedChanges untrackedChanges conflicts error code category cause message nextAction retryable persisted operation result outcome phase projects project tombstone count nextCursor cursor versions package node protocol schema platform os arch health observability resources resourcesTruncated resourceId kind releaseState projectRegistry activeProjects tombstones operations queue active pending capacity oldestWaitMs maxQueueWaitMs fenced total busy blocked failures limits highWater firstAvailable nextAfter records truncated events eventId seq occurredAt type payload pendingBytes degraded errorCode usage journalBytes logBytes walBytes shmBytes outboxMetadataBytes totalBytes temporaryBytes logLimitBytes journalLimitBytes').split(' '));
+const safeFields = new Set(('protocolVersion capabilities workspaceVersion workspaceMethods featureVersion featureMethods discoveryVersion discoveryMethods projectRegistryVersion scope from to generation correlationId redactedFields resourceIssues resourceIssuesTruncated referencePath checkoutAvailability repositoryIdentityStatus hasCommits headKind currentBranch headOid objectFormat baseOid fileStatusScope limitations freshness observedInstanceId startedAt identityState checkoutState referenceState status lifecycle ready observedAt requestedAt completedAt accepted effect action requestId storeId instanceId operationId projectId displayName referenceCheckout baseBranch baseState configRevision expectedRevision observedConfigRevision observationRevision registryRevision createdAt updatedAt removedAt observation availability identity trackedChanges untrackedChanges conflicts error code category cause message nextAction retryable persisted operation result outcome phase projects project tombstone count nextCursor cursor versions package node protocol schema platform os arch health observability resources resourcesTruncated resourceId kind releaseState projectRegistry activeProjects tombstones operations queue active pending capacity oldestWaitMs maxQueueWaitMs fenced total busy blocked failures limits highWater firstAvailable nextAfter records truncated events eventId seq occurredAt type payload pendingBytes degraded errorCode usage journalBytes logBytes walBytes shmBytes outboxMetadataBytes totalBytes temporaryBytes logLimitBytes journalLimitBytes').split(' '));
 export function projectSafe(value: unknown, depth = 0): unknown {
   if (depth > 12) throw new Error('CLIENT_PROTOCOL_ERROR');
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
@@ -64,7 +67,12 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
       || (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome)))) throw new Error();
     for (const k of ['requestId', 'storeId', 'instanceId']) if (p[k] !== null) uuid(p[k]);
     if (c.requestId && p.requestId !== c.requestId) throw new Error();
-    const data = c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    const data = c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    if(c.namespace==='workspace'){
+      if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
+      if(c.action==='get'&&p.result==='OK'&&record(data.workspace).workspaceId!==c.params?.workspaceId)throw new Error();
+      if(c.action==='list'&&p.result==='OK'&&(!Array.isArray(data.items)||data.items.some(item=>record(item).projectId!==c.params?.projectId)))throw new Error();
+    }
     if (c.namespace === 'discovery' && c.action === 'operation' && p.requestId !== c.params?.requestId) throw new Error();
     if (c.namespace === 'discovery' && c.action === 'eligibility' && (p.freshness !== 'LIVE' || p.liveness !== 'LIVE_VERIFIED') && data.eligible === true) throw new Error();
     if (c.namespace === 'feature' && p.result === 'OK') {
@@ -101,7 +109,7 @@ export class CoreCli {
     if (mutation) this.mutations++; else this.reads++;
     const generation=this.viewGeneration,previous=this.readTail;let releaseRead:(()=>void)|undefined;
     if(!mutation)this.readTail=new Promise<void>(resolve=>{releaseRead=resolve;});
-    const timeout = command.namespace === 'feature' ? (command.action.startsWith('artifact.import')?30_000:3_000) : command.namespace === 'discovery' ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
+    const timeout = command.namespace === 'feature' ? (command.action.startsWith('artifact.import')?30_000:3_000) : ['discovery','workspace'].includes(command.namespace) ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
     try {
       if(!mutation){await previous;if(this.closed)throw new Error('CLIENT_READ_CANCELLED');if(command.scope==='view'&&generation!==this.viewGeneration)throw new Error('CLIENT_READ_CANCELLED');}
       const stdout = await new Promise<string>((resolve, reject) => {

@@ -1,3 +1,4 @@
+import type {WorkspaceSource} from './Workspaces.tsx';
 import {useEffect,useRef,useState} from 'react';
 import type {Desktop} from '../state/desktop.ts';
 import type {Project} from '../state/project-view.ts';
@@ -5,7 +6,7 @@ import type {Params,PublicResult} from '../../shared/bridge-contract.ts';
 import {record} from '../../shared/validation.ts';
 import {ConfirmationDialog,type PreparedAction} from '../components/ConfirmationDialog.tsx';
 const template={version:1,title:'Nuova feature',request:'Descrivi la richiesta',specification:{scope:'Definisci l’ambito',users:['Utente'],stories:[{storyId:'US1',text:'Come utente voglio…'}],exclusions:[]},implementationPlan:{approach:'Descrivi il piano',dependencies:[],risks:[]},acceptanceCriteria:[{criterionId:'AC1',storyId:'US1',text:'Risultato osservabile',verification:'Verifica da eseguire',required:true}],provenance:[{kind:'HYPOTHESIS',text:'Da confermare con l’utente',sourceId:null,answerId:null}],unknowns:[]};
-export function FeaturePlanning({desktop,project,live}:{desktop:Desktop;project:Project;live:boolean}){
+export function FeaturePlanning({desktop,project,live,onWorkspace}:{desktop:Desktop;project:Project;live:boolean;onWorkspace(source:WorkspaceSource):void}){
  const[items,setItems]=useState<Params[]>([]),[cursor,setCursor]=useState<string|null>(null),[selected,setSelected]=useState<Params|null>(null),[revisions,setRevisions]=useState<Params[]>([]),[revisionCursor,setRevisionCursor]=useState<string|null>(null),[bundle,setBundle]=useState(JSON.stringify(template,null,2)),[file,setFile]=useState<{bundleHandle:string;displayName:string}|null>(null),[prepared,setPrepared]=useState<PreparedAction|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[message,setMessage]=useState<string|null>(null),[request,setRequest]=useState<string|null>(null);
  const active=useRef(false),working=useRef(false),version=useRef(0),trigger=useRef<HTMLElement|null>(null),selectedRef=useRef<string|null>(null);
  const [documentInfo,setDocumentInfo]=useState<{revisionId:string;contextSnapshotId:string|null;text:string;unknowns:Params[]}|null>(null);
@@ -211,6 +212,7 @@ export function FeaturePlanning({desktop,project,live}:{desktop:Desktop;project:
      <button className="button subtle" disabled={!mutable||!savedRevision||selected.state!=='APPROVED'} onClick={()=>void prepare('handoff')}>Prepara handoff</button>
    </div>
    {live&&eligibility&&<p role="status">{eligibility.eligible?'Handoff idoneo al momento della verifica.':eligibility.reason==='CHECKING'?'Verifica in corso.':`Handoff non idoneo: ${String(eligibility.reason)}`}</p>}
+   {envelope&&selected.state==='APPROVED'&&<button className="button subtle" onClick={()=>onWorkspace({projectId:project.projectId,featureId:String(selected.featureId),envelopeId:String(envelope.envelopeId)})}>Apri workspace dell’handoff</button>}
    {envelope&&<p>Handoff <span className="mono">{String(envelope.envelopeId)}</span> · Digest <span className="mono">{String(envelope.digest)}</span></p>}
  </section>}
  {selected&&selected.state!=='ARCHIVED'&&<section aria-label="Pianificazione assistita">

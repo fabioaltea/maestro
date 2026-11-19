@@ -90,6 +90,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       ...(dependencies.featurePlanning ? { planning: dependencies.featurePlanning } : {}) });
     workspaces=createWorkspaceRuntime(storage,dependencies.workspaces??nativeWorkspaceServices({
       storage,paths,instanceId:intent.instanceId,currentEligibility:(peer,projectId)=>discovery!.operations.currentEligibility(peer,projectId),
+      ...(dependencies.workspaceFiles?{files:dependencies.workspaceFiles}:{}),
     }));
     const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;

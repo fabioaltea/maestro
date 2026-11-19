@@ -1,3 +1,4 @@
+import type {WorkspaceSource} from './Workspaces.tsx';
 import { useEffect, useState } from 'react';
 import { RemoveProjectDialog } from '../components/RemoveProjectDialog.tsx';
 import { EditProject } from './EditProject.tsx';
@@ -8,7 +9,7 @@ import { ProjectObservation } from '../components/ProjectObservation.tsx';
 import {FeaturePlanning} from './FeaturePlanning.tsx';
 import { Discovery } from './Discovery.tsx';
 import type { Desktop } from '../state/desktop.ts';
-export function ProjectDetail({ project, loading, desktop, live, onUpdated, onRemoved }: { project: Project | null; loading: boolean; desktop: Desktop; live: boolean; onUpdated(id: string): Promise<void>; onRemoved(id: string): Promise<void> }) {
+export function ProjectDetail({ project, loading, desktop, live, onUpdated, onRemoved,onWorkspace }: { project: Project | null; loading: boolean; desktop: Desktop; live: boolean; onUpdated(id: string): Promise<void>; onRemoved(id: string): Promise<void>;onWorkspace(source:WorkspaceSource):void }) {
   const [editing, setEditing] = useState(false);
   const [discovery, setDiscovery] = useState(false);
   const [features,setFeatures]=useState(false);
@@ -23,7 +24,7 @@ export function ProjectDetail({ project, loading, desktop, live, onUpdated, onRe
     {editing && <EditProject key={project.projectId} project={project} desktop={desktop} live={live} onUpdated={onUpdated} onClose={() => setEditing(false)} />}
     <div className="row-actions detail-actions"><button className="button subtle" aria-expanded={discovery} onClick={() => setDiscovery(value => !value)}>Discovery</button></div>
     <button className="button subtle" aria-expanded={features} onClick={()=>setFeatures(v=>!v)}>Feature</button>
-    {features&&<FeaturePlanning key={`${desktop.context?.selectionEpoch}:${project.projectId}:${project.configRevision}`} project={project} desktop={desktop} live={live}/>}
+    {features&&<FeaturePlanning key={`${desktop.context?.selectionEpoch}:${project.projectId}:${project.configRevision}`} project={project} desktop={desktop} live={live} onWorkspace={onWorkspace}/>}
     {discovery ? <Discovery key={`${desktop.context?.selectionEpoch}:${project.projectId}:${project.configRevision}`} project={project} desktop={desktop} live={live} /> : <ProjectObservation project={project} desktop={desktop} live={live} onUpdated={onUpdated} />}
   </article>;
 }
