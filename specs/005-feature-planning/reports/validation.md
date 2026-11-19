@@ -17,3 +17,7 @@ Added closed/bounded result, provenance/capability and no-effect boundary tests 
 ## T003 — GREEN data boundary
 
 Implemented the provider-neutral bundle and question data types, closed schema/provenance validation and pure Codex feature result parser. `npm run build:test` PASS; feature-boundary3/3PASS. Parser availability does not grant runtime availability: qualified/readonlyPlanning remain false. No provider execution or source access added.
+
+## T004 — synthetic G0
+
+12/12PASS with the actual pinned CLI, local synthetic backend and unchanged readonly profile. Feature result and inherited OS negative cases pass. Official login/model path remains BLOCKED, separately documented in qualification.md.
