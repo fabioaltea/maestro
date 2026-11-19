@@ -135,3 +135,7 @@ Core e writer persistono il grant monouso, la generazione, la fase prima dell’
 ### T032 — parità CLI per generazione e risposte
 
 I comandi assistiti riusano grant e recovery per UUID. La risposta usa un JSON string da file/stdin, con 4096 byte dopo decodifica, e resta in un artefatto sigillato circoscritto alla feature. Turni, domande ed output sono interrogabili con pagine e storico offline. Il client verifica snapshot, turno, domanda e artefatto nel grant. Typecheck, build e build:test PASS. Contract US3 e integrazioni CLI 4/4 PASS (15,5 s).
+
+### T033 — intervista e bozza assistita desktop
+
+Bridge nominato, testo della risposta via stdin verso artefatto sigillato, conferma esplicita per ogni turno e ricevute persistenti. Lo storico resta consultabile offline. Typecheck/build desktop e unit/contract 45/45 PASS. E2E US1/US2 PASS (27,0 s). Prima prova US3 ha esposto un conflitto tra letture concorrenti della vista; la verifica capability è ora serializzata dopo il caricamento del documento. E2E US3 ripetuto PASS (22,6 s), con fixture host e repository invariato.

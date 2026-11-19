@@ -8,11 +8,17 @@ const template={version:1,title:'Nuova feature',request:'Descrivi la richiesta',
 export function FeaturePlanning({desktop,project,live}:{desktop:Desktop;project:Project;live:boolean}){
  const[items,setItems]=useState<Params[]>([]),[cursor,setCursor]=useState<string|null>(null),[selected,setSelected]=useState<Params|null>(null),[revisions,setRevisions]=useState<Params[]>([]),[revisionCursor,setRevisionCursor]=useState<string|null>(null),[bundle,setBundle]=useState(JSON.stringify(template,null,2)),[file,setFile]=useState<{bundleHandle:string;displayName:string}|null>(null),[prepared,setPrepared]=useState<PreparedAction|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState<string|null>(null),[message,setMessage]=useState<string|null>(null),[request,setRequest]=useState<string|null>(null);
  const active=useRef(false),working=useRef(false),version=useRef(0),trigger=useRef<HTMLElement|null>(null),selectedRef=useRef<string|null>(null);
- const [documentInfo,setDocumentInfo]=useState<{revisionId:string;text:string;unknowns:Params[]}|null>(null);
+ const [documentInfo,setDocumentInfo]=useState<{revisionId:string;contextSnapshotId:string|null;text:string;unknowns:Params[]}|null>(null);
  const [acceptedUnknownIds,setAcceptedUnknownIds]=useState<string[]>([]);
  const [approval,setApproval]=useState<Params|null>(null);
  const [eligibility,setEligibility]=useState<Params|null>(null);
  const [envelope,setEnvelope]=useState<Params|null>(null);
+ const [qualified,setQualified]=useState(false);
+ const [turn,setTurn]=useState<Params|null>(null);
+ const [questions,setQuestions]=useState<Params[]>([]);
+ const [questionCursor,setQuestionCursor]=useState<string|null>(null);
+ const [questionId,setQuestionId]=useState('');
+ const [answerText,setAnswerText]=useState('');
  const{core,invoke}=desktop;
  useEffect(()=>{active.current=true;void refresh();return()=>{active.current=false;version.current++;void invoke('releaseViewReads');};},[project.projectId,project.configRevision,desktop.context?.selectionEpoch]);
  async function refresh(next?:string){const token=++version.current;const r=await core('listFeatures',{projectId:project.projectId,...(next?{cursor:next}:{})});if(!active.current||token!==version.current)return;if(r?.result==='OK'){setItems(next?old=>[...old,...r.data.items as Params[]]:r.data.items as Params[]);setCursor(r.data.nextCursor as string|null);}}
@@ -41,11 +47,50 @@ export function FeaturePlanning({desktop,project,live}:{desktop:Desktop;project:
    const text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
    const parsed=record(JSON.parse(text));
    if(!Array.isArray(parsed.unknowns))throw new Error('Documento non valido');
-   setBundle(text);setFile(null);setDocumentInfo({revisionId,text,unknowns:parsed.unknowns.map(record)});
+   setBundle(text);setFile(null);setDocumentInfo({revisionId,contextSnapshotId:typeof detail.data.contextSnapshotId==='string'?detail.data.contextSnapshotId:null,text,unknowns:parsed.unknowns.map(record)});
    const historical=await invoke('getFeatureApproval',{revisionId}) as PublicResult|null;
    if(active.current&&token===version.current&&historical?.result==='OK')setApproval(record(historical.data.approval));
  }
- async function open(f:Params){if(working.current)return;working.current=true;setBusy(true);version.current++;selectedRef.current=String(f.featureId);setSelected(f);setRevisions([]);setError(null);try{await history(f);await document(String(f.currentRevisionId));}catch(e){if(active.current)setError(e instanceof Error?e.message:'Documento non disponibile');}finally{working.current=false;if(active.current)setBusy(false);}}
+ function resetTurn(){
+   setTurn(null);setQuestions([]);setQuestionCursor(null);setQuestionId('');setAnswerText('');
+ }
+ async function readPlanning(f:Params,next?:string){
+   const token=version.current;
+   const current=()=>active.current&&version.current===token&&selectedRef.current===f.featureId;
+   const page=await invoke('getFeatureQuestions',{featureId:f.featureId,...(next?{cursor:next}:{})}) as PublicResult|null;
+   if(!current()||page?.result!=='OK')return;
+   const items=(page.data.items as Params[]).map(record),turnId=page.data.turnId;
+   const result=await core('getFeaturePlanningTurn',{turnId});
+   if(!current()||result?.result!=='OK')return;
+   const detail=record(result.data.turn);
+   if(detail.featureId!==f.featureId)return;
+   setTurn(detail);
+   setQuestions(previous=>next?[...previous,...items]:items);setQuestionCursor(page.data.nextCursor as string|null);
+   if(!next)setQuestionId(items.length?String(items[0]!.questionId):'');
+ }
+ async function open(f:Params){
+   if(working.current)return;
+   working.current=true;setBusy(true);version.current++;selectedRef.current=String(f.featureId);setSelected(f);setRevisions([]);setError(null);resetTurn();
+   try{
+     await history(f);
+     if(!active.current||selectedRef.current!==f.featureId)return;
+     await document(String(f.currentRevisionId));
+     if(live&&active.current&&selectedRef.current===f.featureId){
+       const token=version.current,result=await core('getFeatureProvider');
+       if(!active.current||token!==version.current||selectedRef.current!==f.featureId)return;
+       const capabilities=result?.result==='OK'?record(result.data.capabilities):null;
+       setQualified(capabilities?.qualified===true&&capabilities.readonlyPlanning===true);
+     }
+     if(active.current&&selectedRef.current===f.featureId)await readPlanning(f);
+   }catch(e){if(active.current)setError(e instanceof Error?e.message:'Documento non disponibile');}
+   finally{working.current=false;if(active.current)setBusy(false);}
+ }
+ async function refreshSelected(){
+   if(!selected||working.current)return;
+   const featureId=selected.featureId,token=version.current;
+   const result=await core('getFeature',{featureId});
+   if(active.current&&token===version.current&&selectedRef.current===featureId&&result?.result==='OK')await open(record(result.data.feature));
+ }
  async function checkEligibility(){
    if(working.current||!selected)return;
    const featureId=selected.featureId,token=version.current;
@@ -66,12 +111,46 @@ export function FeaturePlanning({desktop,project,live}:{desktop:Desktop;project:
  async function choose(){const r=await invoke('chooseFeatureBundle');if(active.current&&r)setFile(record(r).bundle as typeof file);}
  async function prepare(action:string){if(working.current)return;working.current=true;setBusy(true);setError(null);trigger.current=window.document.activeElement as HTMLElement|null;const token=version.current;try{
  await invoke('releaseViewReads');if(!active.current||token!==version.current)return;
- let artifactId:string|undefined;
+ let artifactId:string|undefined,answerArtifactId:string|undefined;
  if(['create','revise'].includes(action)){if(!file&&new TextEncoder().encode(bundle).length>24000)throw new Error('Per documenti oltre 24KiB scegli il file JSON (massimo 256KiB).');if(!file)JSON.parse(bundle);const value=await invoke('importFeatureBundle',file?{bundleHandle:file.bundleHandle}:{bundle});if(!active.current||token!==version.current||!value)return;const r=record(value).result as PublicResult;const op=r.data.operation?record(r.data.operation):null;if(r.result!=='OK'||op?.outcome!=='SUCCEEDED'){setRequest(r.requestId);throw new Error('Importazione incerta. Consulta la richiesta originale in Operazioni.');}artifactId=String(record(op.result).artifactId);}
- const params=action==='create'?{action,projectId:project.projectId,expectedConfigRevision:project.configRevision,bundleArtifactId:artifactId}:{action,featureId:selected?.featureId,expectedStateRevision:selected?.stateRevision,...(artifactId?{bundleArtifactId:artifactId}:{}),...(['approve','handoff'].includes(action)?{revisionId:documentInfo?.revisionId}:{}),...(action==='approve'?{acceptedUnknownIds}:{})};const r=await invoke('prepareFeatureAction',{params});if(active.current&&token===version.current&&r)setPrepared(r as PreparedAction);
+ if(action==='answer'){
+   const value=await invoke('importFeatureAnswer',{featureId:selected?.featureId,answerText});
+   if(!active.current||token!==version.current||!value)return;
+   const r=record(value).result as PublicResult,op=r.data.operation?record(r.data.operation):null;
+   if(r.result!=='OK'||op?.outcome!=='SUCCEEDED'){setRequest(r.requestId);throw new Error('Risposta da verificare. Consulta la richiesta originale in Operazioni.');}
+   answerArtifactId=String(record(op.result).artifactId);
+ }
+ const params=action==='create'
+   ?{action,projectId:project.projectId,expectedConfigRevision:project.configRevision,bundleArtifactId:artifactId}
+   :{action,featureId:selected?.featureId,expectedStateRevision:selected?.stateRevision,
+     ...(artifactId?{bundleArtifactId:artifactId}:{}),
+     ...(['approve','handoff'].includes(action)?{revisionId:documentInfo?.revisionId}:{}),
+     ...(action==='approve'?{acceptedUnknownIds}:{}),
+     ...(action==='generate'?{contextSnapshotId:documentInfo?.contextSnapshotId}:{}),
+     ...(action==='answer'?{turnId:turn?.turnId,questionId,answerArtifactId}:{})};
+ const r=await invoke('prepareFeatureAction',{params});if(active.current&&token===version.current&&r)setPrepared(r as PreparedAction);
  }catch(e){if(active.current)setError(e instanceof Error?e.message:'Preparazione fallita');}finally{working.current=false;if(active.current)setBusy(false);}}
  async function confirm(){if(!prepared||working.current)return;working.current=true;setBusy(true);const p=prepared,token=version.current;try{const value=await invoke('confirmFeatureAction',{confirmationId:p.confirmationId});if(!active.current||token!==version.current)return;setPrepared(null);setRequest(p.requestId);if(!value)return;const r=record(value).result as PublicResult;if(r.error||r.result==='UNKNOWN_OUTCOME'){setError(r.error?.message??'Esito incerto. Consulta Operazioni.');return;}let operation=r.data.operation?record(r.data.operation):null;for(let n=0;n<10&&operation?.phase!=='FINALIZED';n++){await new Promise(resolve=>setTimeout(resolve,250));if(!active.current||token!==version.current)return;const read=await core('getFeatureOperation',{requestId:p.requestId});if(!active.current||token!==version.current)return;if(!read?.data.operation)break;operation=record(read.data.operation);if(operation.outcome==='UNKNOWN')break;}
  await invoke('reconcileOperation',{receiptId:p.requestId});if(!active.current||token!==version.current)return;
+ if(selected&&['feature.generate','feature.answer','feature.cancel'].includes(p.action)){
+   const detail=await core('getFeature',{featureId:selected.featureId});
+   if(!active.current||token!==version.current)return;
+   if(detail?.result==='OK'){
+     const latest=record(detail.data.feature);
+     setSelected(latest);resetTurn();
+     await history(latest);
+     if(!active.current||token!==version.current)return;
+     if(latest.currentRevisionId!==selected.currentRevisionId)await document(String(latest.currentRevisionId));
+     if(!active.current||selectedRef.current!==latest.featureId)return;
+     await readPlanning(latest);
+     if(!active.current||selectedRef.current!==latest.featureId)return;
+   }
+   if(operation?.outcome==='SUCCEEDED')setMessage('Operazione completata.');
+   else if(operation?.phase==='FINALIZED')setError(String(operation.error?record(operation.error).message:'Turno interrotto.'));
+   else setMessage('Turno da verificare. Puoi aggiornare lo stato o consultare la richiesta originale.');
+   await refresh();
+   return;
+ }
  if(operation?.outcome!=='SUCCEEDED'){
    setEligibility(null);
    const failure=operation?.error?record(operation.error):null;
@@ -96,7 +175,7 @@ export function FeaturePlanning({desktop,project,live}:{desktop:Desktop;project:
    }
  }else{
    setSelected(null);selectedRef.current=null;setRevisions([]);setDocumentInfo(null);
-   setApproval(null);setEnvelope(null);setEligibility(null);
+   setApproval(null);setEnvelope(null);setEligibility(null);resetTurn();
  }
  await refresh();
  }finally{working.current=false;if(active.current)setBusy(false);}}
@@ -111,7 +190,7 @@ export function FeaturePlanning({desktop,project,live}:{desktop:Desktop;project:
  {!live&&<p role="status">Ultimo stato noto. Avvia il servizio per modificare le feature.</p>}
  <p className="hint">Specifica, piano e criteri di accettazione restano in un documento versionato. La creazione richiede una Discovery approvata e corrente.</p>
  <ul>{items.map(f=><li key={String(f.featureId)}><button className="text-button" disabled={busy} onClick={()=>void open(f)}>{String(f.title)}</button> · {String(f.state)}</li>)}</ul>{cursor&&<button disabled={busy} onClick={()=>void refresh(cursor)}>Altre feature</button>}
- <button className="button subtle" disabled={busy} onClick={()=>{version.current++;selectedRef.current=null;setSelected(null);setRevisions([]);setBundle(JSON.stringify(template,null,2));setFile(null);setDocumentInfo(null);setAcceptedUnknownIds([]);setApproval(null);setEligibility(null);setEnvelope(null);}}>Nuova feature</button>
+ <button className="button subtle" disabled={busy} onClick={()=>{version.current++;selectedRef.current=null;setSelected(null);setRevisions([]);setBundle(JSON.stringify(template,null,2));setFile(null);setDocumentInfo(null);setAcceptedUnknownIds([]);setApproval(null);setEligibility(null);setEnvelope(null);resetTurn();}}>Nuova feature</button>
  {selected&&<><h4>{String(selected.title)} · {String(selected.state)}</h4><p className="mono">Feature: {String(selected.featureId)} · Stato {String(selected.stateRevision)}</p><ul>{revisions.map(r=><li key={String(r.revisionId)}><button className="text-button" disabled={busy} onClick={()=>{setBusy(true);void document(String(r.revisionId)).catch(()=>setError('Documento non verificabile')).finally(()=>{if(active.current)setBusy(false);});}}>Revisione {String(r.revisionNumber)}</button></li>)}</ul>{revisionCursor&&<button disabled={busy} onClick={()=>void history(selected,revisionCursor)}>Altre revisioni</button>}</>}
  <label htmlFor="feature-document">Specifica e piano JSON</label><textarea id="feature-document" rows={18} value={bundle} readOnly={!live||selected?.state==='ARCHIVED'} disabled={busy} onChange={e=>{setBundle(e.target.value);setFile(null);}} aria-describedby="feature-document-help"/><p id="feature-document-help" className="hint">Modifica richiesta, ambito, utenti, storie, esclusioni, piano, criteri e provenienza. Le ipotesi restano visibili. Per documenti oltre 24KiB usa un file JSON, massimo 256KiB.</p>
  <button className="button subtle" disabled={!mutable} onClick={()=>void choose()}>Scegli documento JSON</button>{file&&<p>{file.displayName}</p>}
@@ -133,6 +212,25 @@ export function FeaturePlanning({desktop,project,live}:{desktop:Desktop;project:
    </div>
    {live&&eligibility&&<p role="status">{eligibility.eligible?'Handoff idoneo al momento della verifica.':eligibility.reason==='CHECKING'?'Verifica in corso.':`Handoff non idoneo: ${String(eligibility.reason)}`}</p>}
    {envelope&&<p>Handoff <span className="mono">{String(envelope.envelopeId)}</span> · Digest <span className="mono">{String(envelope.digest)}</span></p>}
+ </section>}
+ {selected&&selected.state!=='ARCHIVED'&&<section aria-label="Pianificazione assistita">
+   {!qualified&&live&&<p className="hint">Generazione assistita indisponibile. Puoi modificare il documento manualmente.</p>}
+   <div className="row-actions">
+     <button className="button subtle" disabled={!qualified||!mutable||!savedRevision||!documentInfo?.contextSnapshotId||!['DRAFT','READY_FOR_APPROVAL','NEEDS_REVIEW','INTERRUPTED'].includes(String(selected.state))} onClick={()=>void prepare('generate')}>Prepara bozza assistita</button>
+     {turn&&<button className="text-button" disabled={busy} onClick={()=>void refreshSelected()}>Aggiorna turno</button>}
+     {['PLANNING','WAITING_USER','RECONCILING'].includes(String(selected.state))&&<button className="button subtle" disabled={!live||!qualified||busy} onClick={()=>void prepare('cancel')}>Interrompi turno</button>}
+   </div>
+   {turn&&<p role="status">Turno {String(turn.turnIndex)} · {String(turn.phase)}</p>}
+   {!!questions.length&&<fieldset disabled={busy||!live||!qualified}>
+     <legend>Domande del turno</legend>
+     {questions.map(question=><div key={String(question.questionId)}>
+       <label><input type="radio" name="feature-question" value={String(question.questionId)} checked={questionId===question.questionId} onChange={()=>setQuestionId(String(question.questionId))}/> {String(question.text)}</label>
+       <p className="hint">{String(question.reason)}</p>
+     </div>)}
+     <label htmlFor="feature-answer">Risposta al turno</label><textarea id="feature-answer" rows={3} maxLength={4096} value={answerText} onChange={e=>setAnswerText(e.target.value)}/>
+     <button className="button subtle" disabled={!questionId||!answerText.trim()||new TextEncoder().encode(answerText).length>4096} onClick={()=>void prepare('answer')}>Prepara risposta</button>
+   </fieldset>}
+   {questionCursor&&<button disabled={busy} onClick={()=>void readPlanning(selected,questionCursor)}>Altre domande</button>}
  </section>}
  {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}{request&&<p className="mono">Richiesta originale: {request}. Consulta Operazioni per riconciliare l’esito.</p>}
  {prepared&&<ConfirmationDialog prepared={prepared} busy={busy} onConfirm={()=>void confirm()} onCancel={()=>void cancel()} returnFocus={()=>trigger.current}/>}

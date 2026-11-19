@@ -1,7 +1,7 @@
 import type {Params} from './bridge-contract.ts';
 import {CORE_ERRORS} from './core-errors.ts';
-export const FEATURE_ACTIONS=['create','revise','archive','approve','handoff'] as const;
-export const FEATURE_MUTATIONS=[...FEATURE_ACTIONS,'artifact.import'] as const;
+export const FEATURE_ACTIONS=['create','revise','archive','approve','handoff','generate','answer','cancel'] as const;
+export const FEATURE_MUTATIONS=[...FEATURE_ACTIONS,'artifact.import','artifact.import-answer'] as const;
 export const FEATURE_QUERIES={
  listFeatures:{action:'list',key:'projectId',page:true},
  getFeature:{action:'get',key:'featureId'},
@@ -13,9 +13,12 @@ export const FEATURE_QUERIES={
  getFeatureApproval:{action:'approval',key:'revisionId'},
  getFeatureEnvelope:{action:'envelope',key:'envelopeId'},
  getFeatureEligibility:{action:'eligibility',key:'featureId'},
+ getFeaturePlanningTurn:{action:'planning',key:'turnId'},
+ getFeatureQuestions:{action:'questions',key:'featureId',page:true},
+ getFeatureOutput:{action:'output',key:'turnId',page:true},
 } as const satisfies Record<string,{action:string;key?:string;page?:boolean}>;
 export const FEATURE_QUERY_MAP:Readonly<Record<string,{action:string;key?:string;page?:boolean}>>=FEATURE_QUERIES;
-export const FEATURE_BRIDGE_METHODS=['chooseFeatureBundle','importFeatureBundle','prepareFeatureAction','confirmFeatureAction','cancelFeatureAction',...Object.keys(FEATURE_QUERIES) as (keyof typeof FEATURE_QUERIES)[]] as const;
+export const FEATURE_BRIDGE_METHODS=['chooseFeatureBundle','importFeatureBundle','importFeatureAnswer','prepareFeatureAction','confirmFeatureAction','cancelFeatureAction',...Object.keys(FEATURE_QUERIES) as (keyof typeof FEATURE_QUERIES)[]] as const;
 function fail():never{throw new Error('INVALID_INPUT');}
 function obj(v:unknown):Params{if(!v||typeof v!=='object'||Array.isArray(v)||![Object.prototype,null].includes(Object.getPrototypeOf(v)))return fail();return v as Params;}
 function fields(p:Params,required:readonly string[],optional:readonly string[]=[]){if(required.some(k=>!Object.hasOwn(p,k))||Object.keys(p).some(k=>!required.includes(k)&&!optional.includes(k)))fail();}
@@ -25,37 +28,39 @@ function rev(v:unknown){if(!/^[1-9][0-9]*$/.test(str(v,19))||BigInt(v as string)
 export function validateFeatureAction(action:unknown,raw:unknown):Params{
  const p=obj(raw);
  if(action==='feature.artifact.import'){fields(p,[],['bundle','bundleHandle']);if(!!p.bundle===!!p.bundleHandle)fail();if(p.bundle!==undefined)str(p.bundle,24000);else id(p.bundleHandle);return p;}
+ if(action==='feature.artifact.import-answer'){fields(p,['featureId','answerText']);id(p.featureId);if(!str(p.answerText,4096).trim())fail();return p;}
  const a=String(action).replace(/^feature\./,'');if(!(FEATURE_ACTIONS as readonly string[]).includes(a))return fail();
- const map:Record<string,string[]>={create:['projectId','expectedConfigRevision','bundleArtifactId'],revise:['featureId','expectedStateRevision','bundleArtifactId'],archive:['featureId','expectedStateRevision'],approve:['featureId','expectedStateRevision','revisionId','acceptedUnknownIds'],handoff:['featureId','expectedStateRevision','revisionId']};fields(p,map[a]!);
+ const map:Record<string,string[]>={create:['projectId','expectedConfigRevision','bundleArtifactId'],revise:['featureId','expectedStateRevision','bundleArtifactId'],archive:['featureId','expectedStateRevision'],approve:['featureId','expectedStateRevision','revisionId','acceptedUnknownIds'],handoff:['featureId','expectedStateRevision','revisionId'],generate:['featureId','expectedStateRevision','contextSnapshotId'],answer:['featureId','expectedStateRevision','turnId','questionId','answerArtifactId'],cancel:['featureId','expectedStateRevision']};fields(p,map[a]!);
  for(const [k,v]of Object.entries(p)){
    if(k.endsWith('Revision'))rev(v);
    else if(k==='acceptedUnknownIds'){
      if(!Array.isArray(v)||v.length>200||new Set(v).size!==v.length)fail();
      for(const unknownId of v)if(!str(unknownId,64).trim())fail();
-   }else id(v);
+   }else if(k==='questionId'){if(!str(v,64).trim())fail();}
+   else id(v);
  }
  return p;
 }
 export function validateFeatureBridge(method:string,p:Params){
  const base=['bridgeVersion','callId','selectionEpoch'];
  if(method==='chooseFeatureBundle')fields(p,base);
- else if(method==='importFeatureBundle'){fields(p,base,['bundle','bundleHandle']);const{bridgeVersion:_v,callId:_c,selectionEpoch:_e,...body}=p;validateFeatureAction('feature.artifact.import',body);}
+ else if(method==='importFeatureBundle'||method==='importFeatureAnswer'){const{bridgeVersion:_v,callId:_c,selectionEpoch:_e,...body}=p;validateFeatureAction(method==='importFeatureBundle'?'feature.artifact.import':'feature.artifact.import-answer',body);}
  else if(method==='prepareFeatureAction'){fields(p,[...base,'params']);const params=obj(p.params),{action,...body}=params;validateFeatureAction(`feature.${action}`,body);}
  else if(method==='confirmFeatureAction'||method==='cancelFeatureAction'){fields(p,[...base,'confirmationId']);id(p.confirmationId);}
  else{const q=Object.hasOwn(FEATURE_QUERY_MAP,method)?FEATURE_QUERY_MAP[method]:undefined;if(!q)return fail();fields(p,[...base,...(q.key?[q.key]:[])],q.page?['cursor',...(q.action==='artifact.get'?[]:['limit'])]:q.action==='eligibility'?['checkId']:[]);if(q.key)id(p[q.key]);if(p.checkId!==undefined)id(p.checkId);if(p.cursor!==undefined)str(p.cursor);if(p.limit!==undefined&&(!Number.isInteger(p.limit)||Number(p.limit)<1||Number(p.limit)>20))fail();}
 }
-const safeKeys=new Set(('feature featureId projectId title state stateRevision currentRevisionId createdAt updatedAt archivedAt revision revisionId revisionNumber parentRevisionId artifactId bundleDigest discoveryApprovalId discoveryRevisionId contextDigest configRevision items nextCursor freshness storeId observabilityDegraded code error artifact operation requestId namespace action phase outcome targetId acceptedAt completedAt result offsetBytes sha256 expectedBytes base64 totalBytes offset accepted capabilities readonlyPlanning qualified reason approval approvalId approvedAt ownerUid acceptedUnknownIds envelope envelopeId digest eligible checkedAt checkId contextSnapshotId').split(' '));
+const safeKeys=new Set(('feature featureId projectId title state stateRevision currentRevisionId createdAt updatedAt archivedAt revision revisionId revisionNumber parentRevisionId artifactId bundleDigest discoveryApprovalId discoveryRevisionId contextDigest configRevision items nextCursor freshness storeId observabilityDegraded code error artifact operation requestId namespace action phase outcome targetId acceptedAt completedAt result offsetBytes sha256 expectedBytes base64 totalBytes offset accepted capabilities readonlyPlanning qualified reason approval approvalId approvedAt ownerUid acceptedUnknownIds envelope envelopeId digest eligible checkedAt checkId contextSnapshotId turn turnId turnIndex questionIds questionId resultArtifactId text kind').split(' '));
 function safe(v:unknown,key='',depth=0):unknown{
  if(depth>10)return fail();if(v===null||typeof v==='boolean')return v;
  if(typeof v==='number'){if(!Number.isSafeInteger(v)||v<0)fail();return v;}
- if(typeof v==='string'){str(v,key==='base64'?10924:8192);if(key.endsWith('Id')&&key!=='sourceId')id(v);if(key.endsWith('Revision')||key==='revisionNumber')rev(v);return v;}
+ if(typeof v==='string'){str(v,key==='base64'?10924:key==='questionId'?64:8192);if(key.endsWith('Id')&&key!=='questionId')id(v);if(key.endsWith('Revision')||key==='revisionNumber')rev(v);return v;}
  if(Array.isArray(v)){if(key==='acceptedUnknownIds'){if(v.length>200)fail();return v.map(x=>str(x,64));}if(v.length>20)fail();return v.map(x=>safe(x,'',depth+1));}
  const p=obj(v),out:Params={};for(const[k,x]of Object.entries(p)){if(!safeKeys.has(k))fail();if(k==='error'&&x!==null){const code=typeof x==='string'?x:obj(x).code;if(typeof code!=='string'||!Object.hasOwn(CORE_ERRORS,code))fail();out[k]=typeof x==='string'?code:CORE_ERRORS[code as keyof typeof CORE_ERRORS];}else out[k]=safe(x,k,depth+1);}return out;
 }
 export function validateFeatureData(action:string,raw:unknown):Params{
  try{const p=obj(raw);if(new TextEncoder().encode(JSON.stringify(p)).length>32768)fail();
  if(action==='prepare'){fields(p,['grantId','canonicalIntent','expiresAtMs','summary'],['storeId','observabilityDegraded']);id(p.grantId);str(p.canonicalIntent,32768);if(!Number.isSafeInteger(p.expiresAtMs))fail();obj(p.summary);return p;}
- const expected=action==='get'?['feature']:action==='revision'?['revision','contextSnapshotId']:['approval','envelope','operation'].includes(action)?[action]:action==='eligibility'?['featureId','eligible','reason','checkedAt','checkId']:action==='artifact.get'?['artifactId','sha256','totalBytes','offset','base64','nextCursor']:action==='provider.get'?['capabilities','reason']:['list','revisions'].includes(action)?['items','nextCursor']:['accepted','requestId','featureId','revisionId','turnId','stateRevision','operation','artifact'];
+ const expected=action==='get'?['feature']:action==='revision'?['revision','contextSnapshotId']:['approval','envelope','operation'].includes(action)?[action]:action==='eligibility'?['featureId','eligible','reason','checkedAt','checkId']:action==='artifact.get'?['artifactId','sha256','totalBytes','offset','base64','nextCursor']:action==='provider.get'?['capabilities','reason']:action==='planning'?['turn']:['questions','output'].includes(action)?['items','nextCursor','turnId']:['list','revisions'].includes(action)?['items','nextCursor']:['accepted','requestId','featureId','revisionId','turnId','stateRevision','operation','artifact'];
  fields(p,[],[...expected,'freshness','storeId','observabilityDegraded','code','error']);
  if(p.operation!==undefined){const o=obj(p.operation);fields(o,['requestId','namespace','action','phase','outcome','targetId','acceptedAt','completedAt','result','error']);id(o.requestId);if(!['FEATURE','ARTIFACT'].includes(String(o.namespace))||!['ACCEPTED','WORKING','FINALIZED'].includes(String(o.phase))||!['IN_PROGRESS','UNKNOWN','SUCCEEDED','FAILED','BLOCKED','INTERRUPTED'].includes(String(o.outcome))||(o.phase==='FINALIZED')!==(o.completedAt!==null)||o.phase==='FINALIZED'&&['IN_PROGRESS','UNKNOWN'].includes(String(o.outcome)))fail();}
  return safe(p) as Params;

@@ -70,6 +70,8 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
     if (c.namespace === 'feature' && p.result === 'OK') {
       if (c.action === 'approval' && record(data.approval).revisionId !== c.params?.revisionId) throw new Error();
       if (c.action === 'envelope' && record(data.envelope).envelopeId !== c.params?.envelopeId) throw new Error();
+      if (c.action === 'planning' && record(data.turn).turnId !== c.params?.turnId) throw new Error();
+      if (c.action === 'output' && data.turnId !== c.params?.turnId) throw new Error();
       if (c.action === 'eligibility' && (data.featureId !== c.params?.featureId || typeof data.eligible !== 'boolean'
         || data.eligible && (p.liveness !== 'LIVE_VERIFIED' || data.freshness !== 'CURRENT' || data.reason !== null || typeof data.checkedAt !== 'string')
         || c.params?.checkId !== undefined && p.freshness !== 'LAST_KNOWN' && data.checkId !== c.params.checkId)) throw new Error();
@@ -99,7 +101,7 @@ export class CoreCli {
     if (mutation) this.mutations++; else this.reads++;
     const generation=this.viewGeneration,previous=this.readTail;let releaseRead:(()=>void)|undefined;
     if(!mutation)this.readTail=new Promise<void>(resolve=>{releaseRead=resolve;});
-    const timeout = command.namespace === 'feature' ? (command.action==='artifact.import'?30_000:3_000) : command.namespace === 'discovery' ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
+    const timeout = command.namespace === 'feature' ? (command.action.startsWith('artifact.import')?30_000:3_000) : command.namespace === 'discovery' ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
     try {
       if(!mutation){await previous;if(this.closed)throw new Error('CLIENT_READ_CANCELLED');if(command.scope==='view'&&generation!==this.viewGeneration)throw new Error('CLIENT_READ_CANCELLED');}
       const stdout = await new Promise<string>((resolve, reject) => {
