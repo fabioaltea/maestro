@@ -103,3 +103,7 @@ Electron mostra scope e policy prima della conferma, collega la ricevuta origina
 ## T027 — policy US3
 
 Un PASS e un RED prima della policy registrazione CommandSpec. Copertura per uscita verificata, troncamento indipendente, timeout, identità estranea, argv letterale e cleanup con riferimenti.
+
+## T028 — contratto US3
+
+**1 PASS** per revisione, capability, input chiuso e distinzione tra autorizzazione e osservazione del job.
