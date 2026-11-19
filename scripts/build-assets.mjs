@@ -11,7 +11,9 @@ await writeFile(new URL('package.json', codeRoot), '{"type":"module"}\n');
 const relative = `${target}/${target === 'dist-tests' ? 'src/' : ''}platform/macos/git/`;
 const directory = new URL(relative, root);
 await mkdir(directory, { recursive: true });
-await copyFile(new URL('src/platform/macos/git/inspection.sb', root), new URL('inspection.sb', directory));
+for (const name of ['inspection.sb','workspace.sb']) {
+  await copyFile(new URL(`src/platform/macos/git/${name}`, root), new URL(name, directory));
+}
 const storage = new URL(`${target}/${target === 'dist-tests' ? 'src/' : ''}platform/macos/storage/`, root);
 await mkdir(storage, { recursive: true });
 await copyFile(new URL('src/platform/macos/storage/readonly.sb', root), new URL('readonly.sb', storage));

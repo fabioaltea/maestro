@@ -11,3 +11,7 @@ Restano aperti Foundation 001/T082 e T085, Registry 002/T093, Desktop 003/T054 e
 ## T002 — casi G0 (RED)
 
 Build:test PASS. Sei casi RED per mutatore ancora assente. Coprono Git fissato con SHA-1 e SHA-256, OID esatto e checkout dirty conservato, canali eseguibili e hook, collisioni e sostituzione di path, SIGKILL prima e dopo worktree add.
+
+## T003 — primitiva di provisioning confinata
+
+Porta Workspace e adapter macOS dietro un profilo dedicato. Git risolve l’OID locale, verificando anchor e configurazione prima dell’effetto. Update-ref crea il branch mediante CAS da assente. Worktree add usa il ref dedicato e l’osservazione successiva correla HEAD, branch, path e file Git. Build:test e suite boundary **6 PASS, 0 FAIL, 0 SKIP**. SIGKILL nelle due finestre lascia evidenza leggibile senza effettuare replay.

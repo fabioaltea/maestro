@@ -4,14 +4,14 @@ import {once} from 'node:events';
 import {access,chmod,mkdir,readFile,rename,symlink,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {workspaceBoundary,workspaceMutatorModule} from '../fixtures/workspace-boundary.js';
+import {createWorkspaceMutator} from '../../src/platform/macos/git/workspace-mutator.js';
+import {workspaceBoundary} from '../fixtures/workspace-boundary.js';
 
 async function absent(path:string){
   await assert.rejects(access(path),{code:'ENOENT'});
 }
 
 test('G0 pins native Git and provisions an exact commit without changing dirty reference files',async t=>{
-  const {createWorkspaceMutator}=await import(workspaceMutatorModule);
   for(const format of ['sha1','sha256'] as const){
     const f=await workspaceBoundary(t,format),m=createWorkspaceMutator();
     const pin=await m.qualification();
@@ -34,7 +34,6 @@ test('G0 pins native Git and provisions an exact commit without changing dirty r
 });
 
 test('G0 rejects Git includes and executable configuration before branch creation',async t=>{
-  const {createWorkspaceMutator}=await import(workspaceMutatorModule);
   const f=await workspaceBoundary(t),m=createWorkspaceMutator(),sentinel=await f.repositories.createSentinel('configured');
   const config=join(f.checkout,'.git','config'),original=await readFile(config,'utf8');
   for(const addition of [
@@ -52,7 +51,6 @@ test('G0 rejects Git includes and executable configuration before branch creatio
 });
 
 test('G0 disables repository hooks and fsmonitor even when present in the checkout metadata',async t=>{
-  const {createWorkspaceMutator}=await import(workspaceMutatorModule);
   const f=await workspaceBoundary(t),m=createWorkspaceMutator(),sentinel=await f.repositories.createSentinel('checkout-hook');
   const hooks=join(f.checkout,'.git','hooks');
   await writeFile(join(hooks,'post-checkout'),await readFile(sentinel.script),{mode:0o700});
@@ -66,7 +64,6 @@ test('G0 disables repository hooks and fsmonitor even when present in the checko
 });
 
 test('G0 rejects branch collision, stale base, replaced root and an occupied symlink target',async t=>{
-  const {createWorkspaceMutator}=await import(workspaceMutatorModule);
   const f=await workspaceBoundary(t),m=createWorkspaceMutator();
   await assert.rejects(m.createBranch({...f.request,baseOid:'1'.repeat(40)},f.deadline()),/BASE_CHANGED/);
   const outside=join(f.repositories.directory,'outside');
@@ -88,7 +85,6 @@ test('G0 rejects branch collision, stale base, replaced root and an occupied sym
 
 for(const point of ['before-add','after-add'] as const){
   test(`G0 observes branch/worktree evidence after SIGKILL at ${point}`,async t=>{
-    const {createWorkspaceMutator}=await import(workspaceMutatorModule);
     const f=await workspaceBoundary(t);
     const file=join(f.repositories.directory,'workspace-intent.json');
     await writeFile(file,JSON.stringify({point,request:f.request}));

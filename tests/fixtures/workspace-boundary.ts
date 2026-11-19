@@ -6,8 +6,6 @@ import {makeDeadline,systemClock} from '../../src/ports/clock.js';
 import {createFilesystemIdentity} from '../../src/platform/macos/git/filesystem-identity.js';
 import {createProjectRepositories} from './project-repositories.js';
 
-export const workspaceMutatorModule='../../src/platform/macos/git/workspace-mutator.js';
-
 export async function workspaceBoundary(t:TestContext,objectFormat:'sha1'|'sha256'='sha1'){
   const repositories=await createProjectRepositories(t);
   const checkout=await repositories.createRepository('reference',{objectFormat});
