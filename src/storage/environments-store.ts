@@ -4,7 +4,7 @@ import {requireWorkspaceFence,nextWorkspaceRevision} from '../domain/workspaces/
 import {foundationError,type ErrorCode} from '../domain/errors.js';
 import type {WorkflowIntent} from '../domain/workflow/authorization.js';
 import type {FeatureLedger} from './features-authoring.js';
-import {readFeatureState} from './features-store.js';
+import {readFeatureState,workflowOperation} from './features-store.js';
 import {readWorkspaceState} from './workspaces-store.js';
 import type Database from 'better-sqlite3';
 import {requireDecimal,requireUuid} from '../domain/identifiers.js';
@@ -54,6 +54,10 @@ export function readEnvironmentState(db:Database.Database,query:EnvironmentQuery
      AND (EXISTS(SELECT 1 FROM environments_plans p WHERE p.artifact_id=a.artifact_id)
        OR EXISTS(SELECT 1 FROM environments_output o WHERE o.artifact_id=a.artifact_id))`).get(id) as Row|undefined;
    return{artifact:r?{sha256:String(r.sha256),bytes:Number(r.expected_bytes)}:null};
+ }
+ if(query.kind==='pending-plans'){
+   const rows=db.prepare("SELECT * FROM workflow_operations WHERE namespace='ENVIRONMENT' AND action='plan' AND phase<>'FINALIZED' LIMIT 32").all() as Row[];
+   return{operations:rows.map(workflowOperation)};
  }
  if(query.kind==='active'){
    const rows=db.prepare("SELECT * FROM environments_jobs WHERE phase IN ('QUEUED','RUNNING','CANCELLING','RECONCILING')").all() as Row[];

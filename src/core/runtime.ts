@@ -16,6 +16,7 @@ export interface CoreDependencies {
     readonly files?: import('../ports/provider.js').DiscoveryRunFilesPort;
     readonly onResult?: (identity: import('../ports/agent-runtime.js').AgentProcessIdentity, result: import('../domain/discovery/documents.js').ArchitectResult) => Promise<void>;
   };
+  readonly environments?:(runtime:import('./environments/runtime.js').EnvironmentRuntimeContext)=>import('./environments/runtime.js').EnvironmentRuntimeServices;
   readonly workspaces?:(runtime:import('./workspaces/runtime.js').WorkspaceRuntimeContext)=>import('./workspaces/runtime.js').WorkspaceRuntimeServices;
   readonly workspaceFiles?:import('../ports/workspace.js').OwnedWorkspaceFilesPort;
   readonly featurePlanning?:import('../ports/feature-planning.js').FeaturePlanningPort;

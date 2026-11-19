@@ -35,3 +35,7 @@ Due RED prima di parser e reader. DTO chiusi, envelope bounded, prepare distinto
 ## T010 — protocollo e reader confinato
 
 Superficie chiusa per piano, autorizzazione, admission e storico. Il reader limita pagine e chunk, verifica lo scope di cursori e artefatti e restituisce currentness UNKNOWN offline. Il client recupera soltanto l’UUID originale e condivide il trasporto Workspace. Build, build:test e **4 PASS** di contratti/offline Environment e Workspace.
+
+## T011 — runtime e drain
+
+Il daemon espone solo le letture Environment già composte su schema 7. Fencing prima della recovery e prima dello shutdown. I piani interrotti mantengono il UUID originale. I job accettati appartengono al daemon e il drain è bounded. Gli import dei servizi restano nelle porte. Build, build:test, lint e **7 PASS** delle integrazioni runtime Environment, Feature e Workspace.

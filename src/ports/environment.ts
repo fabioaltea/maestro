@@ -65,12 +65,13 @@ export type EnvironmentQuery=
  |{readonly kind:'workspace'|'environment'|'plan'|'job'|'artifact';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number}
  |{readonly kind:'output';readonly id:string;readonly after?:string;readonly limit?:number}
- |{readonly kind:'active'};
+ |{readonly kind:'active'|'pending-plans'};
 export interface EnvironmentRead {
  readonly environment?:EnvironmentRecord|null;
  readonly plan?:EnvironmentPlan|null;
  readonly job?:EnvironmentJob|null;
  readonly items?:readonly EnvironmentRecord[];
+ readonly operations?:readonly WorkflowOperationRecord[];
  readonly jobs?:readonly EnvironmentJob[];
  readonly artifact?:{readonly sha256:string;readonly bytes:number}|null;
  readonly chunks?:readonly EnvironmentOutput[];
