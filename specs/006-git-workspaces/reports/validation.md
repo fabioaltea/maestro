@@ -111,3 +111,7 @@ Due test per modifiche tracked/untracked/ignored, conflitti, holder, target vari
 ## T028 — contratto cleanup
 
 1 PASS per target locale e OID, grant/revisione chiusi, capability mancante e niente path o force nel DTO.
+
+## T029 — cleanup Git reale (RED)
+
+Due casi fixture per lavoro dirty e non integrato conservato, rimozione provata e risposta persa dopo il primo effetto con ref e UUID originali preservati.
