@@ -15,3 +15,7 @@ Porta neutra e adapter con pin del binario Node e dell’intera distribuzione pn
 ## T005 — test iniziali
 
 Tre RED prima di modello e namespace, con stato manuale/stale, generazioni, limiti e scope dei grant.
+
+## T006 — test iniziali
+
+Quattro RED prima dell’upgrade 6→7. Reader immutabile, putative fault pre/post commit e collisioni in entrambi i versi.
