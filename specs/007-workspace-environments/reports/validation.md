@@ -7,3 +7,7 @@
 La prima qualifica usa pnpm installato localmente e un registro HTTP su loopback con pacchetti sintetici. Le prove non usano account, login, registry esterni o progetti utente. Schema 7 sarà accessibile soltanto dopo upgrade esplicito. Il profilo del processo e la release proof della lease derivano da evidenze di questa feature.
 
 Restano aperti 001/T082 NOT_RUN e 001/T085 FAIL/OPEN, 002/T093 BLOCKED, 003/T054 REVIEW_PENDING, 004/T028 e T050 BLOCKED da PROVIDER_UNSAFE e G1 reale 005 BLOCKED. La review 006 ha lasciato invariati questi gate. Nessuna ripetizione automatica del flake UPDATE replay 61 vs 60. [Readiness 006](../../006-git-workspaces/reports/release-readiness.md)
+
+## T003 — primitiva pnpm macOS
+
+Porta neutra e adapter con pin del binario Node e dell’intera distribuzione pnpm, due root private, politica SBPL su file/processi/rete, input frozen e output bounded. Il processo osservato è l’unico che il profilo può eseguire. Cancellazione tramite handle del figlio e attesa di chiusura. La fixture qualifica anche config ambientale ostile e redirect HTTP verso altro endpoint. Build, build:test, lint e **4 PASS** in integrazione.

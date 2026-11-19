@@ -29,12 +29,16 @@ export async function fixtureRegistry(t:TestContext,holdResponse=false){
  ]));
  const integrity='sha512-'+createHash('sha512').update(archive).digest('base64');
  const archiveUrl=`/${fixturePackage}/-/${fixturePackage}-1.0.0.tgz`;
- let origin='',requests=0,gotRequest!:()=>void;
+ let origin='',requests=0,redirect:string|null=null,gotRequest!:()=>void;
  const requested=new Promise<void>(resolve=>{gotRequest=resolve;});
  const server=createServer((req,res)=>{
    requests++;gotRequest();
    if(holdResponse)return;
-   if(req.url===archiveUrl){res.writeHead(200,{'content-type':'application/octet-stream','content-length':archive.length});res.end(archive);return;}
+   if(req.url===archiveUrl){
+     if(redirect){res.writeHead(307,{location:redirect});res.end();}
+     else{res.writeHead(200,{'content-type':'application/octet-stream','content-length':archive.length});res.end(archive);}
+     return;
+   }
    if(req.url===`/${fixturePackage}`){
      res.setHeader('Content-Type','application/json');
      res.end(JSON.stringify({name:fixturePackage,'dist-tags':{latest:'1.0.0'},versions:{'1.0.0':{...manifest,dist:{integrity,tarball:origin+archiveUrl}}}}));
@@ -46,7 +50,7 @@ export async function fixtureRegistry(t:TestContext,holdResponse=false){
  const bound=server.address();assert.ok(bound&&typeof bound==='object');
  origin=`http://127.0.0.1:${bound.port}`;
  t.after(()=>{server.closeAllConnections();return new Promise<void>(resolve=>server.close(()=>resolve()));});
- return{origin,tarball:origin+archiveUrl,integrity,requested,requests:()=>requests};
+ return{origin,tarball:origin+archiveUrl,integrity,requested,requests:()=>requests,redirectTo:(target:string)=>{redirect=target;}};
 }
 
 export async function environmentBoundaryFixture(t:TestContext,held=false){
