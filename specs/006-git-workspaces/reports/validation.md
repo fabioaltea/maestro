@@ -59,3 +59,7 @@ Un caso RED prima del modello di provisioning. Verifica ref generato, base mutat
 ## T015 — provisioning locale (RED)
 
 2 RED prima del servizio. Due workspace da handoff fixture, replay sullo stesso UUID, checkout conservato e base mutata dopo prepare.
+
+## T016 — modello di provisioning
+
+Il dominio deriva il ref da UUID, verifica la tupla dell’handoff e distingue base assente/variata, branch occupato ed evidenza per i passi di provisioning. Build:test e prove mirate di modello, store e boundary **10 PASS**.

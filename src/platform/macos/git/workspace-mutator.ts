@@ -1,3 +1,4 @@
+import {workspaceBranchRef} from '../../../domain/workspaces/provision.js';
 import {execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {constants} from 'node:fs';
@@ -79,7 +80,7 @@ async function scopeFor(input:WorkspaceMutationTarget){
     ||[reference,common,admin].some(path=>nested(root,path)||nested(path,root)))throw new Error('OWNERSHIP_UNPROVEN');
   const checkout=join(root,workspaceId),worktrees=join(common,'worktrees'),worktreeAdmin=join(worktrees,workspaceId);
   const parents=['refs','heads','maestro','feature',featureId];
-  const branchRef=[...parents,workspaceId].join('/'),ref=join(common,branchRef);
+  const branchRef=workspaceBranchRef(featureId,workspaceId),ref=join(common,branchRef);
   await directoryChain(common,parents);
   await directoryChain(common,['worktrees',workspaceId]);
   for(const file of [ref,`${ref}.lock`]){

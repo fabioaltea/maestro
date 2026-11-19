@@ -1,9 +1,9 @@
+import {workspaceBranchRef,requireWorkspaceHandoff} from '../domain/workspaces/provision.js';
 import type Database from 'better-sqlite3';
 import {requireUuid} from '../domain/identifiers.js';
 import type {WorkspaceChange,WorkspaceMutationTarget,WorkspaceQuery,WorkspaceRead,WorkspaceRecord,WorkspaceSummary,WorkspaceWrite} from '../ports/workspace.js';
 import type {FilesystemAnchor,ReferenceCheckout,RepositoryIdentity} from '../ports/repository.js';
 import {requireWorkspaceCapacity} from '../domain/workspaces/model.js';
-import {requireCurrentFeatureApproval} from '../domain/features/approval.js';
 import {currentDiscovery,type FeatureLedger} from './features-authoring.js';
 import {readFeatureState} from './features-store.js';
 import {WORKSPACE_SCHEMA_VERSION} from './workspaces-schema.js';
@@ -25,7 +25,7 @@ export function workspaceRecord(r:Row):WorkspaceRecord{
 function summary(row:Row):WorkspaceSummary{
  const r=workspaceRecord(row);
  return{workspaceId:r.workspaceId,featureId:r.featureId,projectId:r.projectId,envelopeId:r.envelopeId,state:r.state,stateRevision:r.stateRevision,
-   baseRef:r.target.baseRef,baseOid:r.target.baseOid,branchRef:`refs/heads/maestro/feature/${r.featureId}/${r.workspaceId}`,
+   baseRef:r.target.baseRef,baseOid:r.target.baseOid,branchRef:workspaceBranchRef(r.featureId,r.workspaceId),
    ownership:r.ownership?'RECORDED':'UNKNOWN',createdAt:r.createdAt,updatedAt:r.updatedAt,safeError:r.safeError};
 }
 export function readWorkspaceState(database:Database.Database,query:WorkspaceQuery):WorkspaceRead{
@@ -66,7 +66,7 @@ export function commitWorkspaceState(database:Database.Database,change:Workspace
    const approval=readFeatureState(database,{kind:'approval',id:feature.currentRevisionId}).approval??null;
    if(!revision||envelope.revisionId!==revision.revisionId||envelope.bundleDigest!==revision.bundleDigest||envelope.approvalId!==approval?.approvalId)
      throw new Error('APPROVAL_STALE');
-   requireCurrentFeatureApproval(feature,revision,approval,{projectId,configRevision:revision.configRevision,
+   requireWorkspaceHandoff(feature,revision,approval,envelope,{projectId,configRevision:revision.configRevision,
      contextDigest:revision.contextDigest,discoveryApprovalId:revision.discoveryApprovalId,discoveryRevisionId:revision.discoveryRevisionId,
      checkedAt:change.contextCheckedAt},intent.ownerUid);
    currentDiscovery(database,revision,projectId,change.contextCheckedAt);

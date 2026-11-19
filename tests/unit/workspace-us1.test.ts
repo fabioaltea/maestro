@@ -2,9 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 
-const modulePath='../../src/domain/workspaces/provision.js';
-test('provisioning binds an approved local base and the generated workspace identity',async()=>{
- const {requireProvisioningObservation,workspaceBranchRef}=await import(modulePath);
+import {requireProvisioningObservation,workspaceBranchRef} from '../../src/domain/workspaces/provision.js';
+test('provisioning binds an approved local base and the generated workspace identity',()=>{
  const featureId=randomUUID(),workspaceId=randomUUID(),baseOid='a'.repeat(40);
  assert.equal(workspaceBranchRef(featureId,workspaceId),`refs/heads/maestro/feature/${featureId}/${workspaceId}`);
  const initial={baseOid,branchOid:null,worktree:null};
