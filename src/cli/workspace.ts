@@ -4,6 +4,8 @@ import {LocalClient} from '../client/local-client.js';
 import {createClientBackend,failureResult} from '../bootstrap.js';
 import {classifyError} from '../core/control-main.js';
 import {workspaceUuid} from '../protocol/workspace.js';
+import {featureObject} from '../domain/features/bundle.js';
+import {jsonFile,jsonStdin} from './json-input.js';
 import type {PublicResult} from '../protocol/messages.js';
 import {projectExitCode} from './projects.js';
 
@@ -12,6 +14,9 @@ maestro workspace create --grant UUID --request-id UUID
 maestro workspace list PROJECT_UUID [--limit 1..20 --cursor CURSOR]
 maestro workspace show WORKSPACE_UUID
 maestro workspace refresh WORKSPACE_UUID --expected-revision N --request-id UUID
+maestro workspace cleanup prepare --input-file FILE | --input-stdin
+maestro workspace cleanup get WORKSPACE_UUID
+maestro workspace remove --grant UUID --expected-revision N --request-id UUID
 maestro workspace operation REQUEST_UUID
 --state-dir ABS --json --timeout-ms 1..2000
 Controllare il riepilogo di prepare prima di inviare create. Consultare operation con l’UUID originale.
@@ -23,6 +28,7 @@ export async function runWorkspaceCli(args:readonly string[]):Promise<number>{
    const {values,positionals}=parseArgs({args:[...args],allowPositionals:true,strict:true,options:{
      json:{type:'boolean'},help:{type:'boolean',short:'h'},'state-dir':{type:'string'},'timeout-ms':{type:'string'},
      grant:{type:'string'},'request-id':{type:'string'},'expected-revision':{type:'string'},limit:{type:'string'},cursor:{type:'string'},
+     'input-file':{type:'string'},'input-stdin':{type:'boolean'},
    }});
    json=values.json??false;
    if(values.help){process.stdout.write(help);return 0;}
@@ -49,15 +55,29 @@ export async function runWorkspaceCli(args:readonly string[]):Promise<number>{
      method='workspace.refresh';params={workspaceId:target,expectedStateRevision:values['expected-revision']};
      allowed.add('expected-revision');allowed.add('request-id');
      requestId=workspaceUuid(values['request-id']);
+   }else if(action==='cleanup'&&target==='prepare'&&positionals.length===2){
+     method='workspace.cleanup.prepare';params={};
+     allowed.add('input-file');allowed.add('input-stdin');
+   }else if(action==='cleanup'&&target==='get'&&positionals.length===3){
+     method='workspace.cleanup.get';params={workspaceId:envelope};
+   }else if(action==='remove'&&positionals.length===1){
+     method='workspace.remove';params={grantId:values.grant,expectedStateRevision:values['expected-revision']};
+     allowed.add('grant');allowed.add('expected-revision');allowed.add('request-id');
+     requestId=workspaceUuid(values['request-id']);
    }else if(action==='operation'&&positionals.length===2){
      method='workspace.operation.get';requestId=workspaceUuid(target);params={requestId};
    }else throw new Error('INVALID_REQUEST');
    if(Object.keys(values).some(key=>!allowed.has(key)))throw new Error('INVALID_REQUEST');
+   if(method==='workspace.cleanup.prepare'){
+     const file=values['input-file'],stdin=values['input-stdin'];
+     if(!!file===!!stdin)throw new Error('INVALID_REQUEST');
+     params=featureObject(stdin?await jsonStdin():await jsonFile(file));
+   }
    const directory=values['state-dir'],timeout=values['timeout-ms'];
    if(directory!==undefined&&!isAbsolute(directory)||timeout!==undefined&&!/^[1-9][0-9]{0,3}$/.test(timeout))throw new Error('INVALID_REQUEST');
    const client=new LocalClient(createClientBackend());
    result=await client.runWorkspace(method,params,{...(directory?{stateDirectory:directory}:{}),...(timeout?{timeoutMs:Number(timeout)}:{}),
-     ...(['workspace.create','workspace.refresh'].includes(method)?{requestId:requestId!}:{})});
+     ...(['workspace.create','workspace.refresh','workspace.remove'].includes(method)?{requestId:requestId!}:{})});
  }catch(error){
    const parseError=error instanceof Error&&'code' in error&&String(error.code).startsWith('ERR_PARSE_ARGS');
    result=failureResult(parseError?'INVALID_REQUEST':classifyError(error),requestId);

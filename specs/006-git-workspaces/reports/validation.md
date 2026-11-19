@@ -123,3 +123,7 @@ L’idoneità richiede proprietà, stato, target e ancestry correnti e assenza d
 ## T031 — cleanup con ancestry e CAS
 
 Il cleanup lega grant, owner, HEAD e target, poi separa la rimozione non forzata dal CAS del ref. Conserva marker e branch negli esiti parziali; il successore chiude il caso post-CAS solo dopo aver verificato l’assenza. Il lock temporaneo del backend Git resta limitato alla singola invocazione. Packed ref generati, target mosso e lavoro locale bloccano il cleanup. **4 PASS** integrazione US3 e **8 PASS** G0.
+
+## T032 — CLI cleanup
+
+La prova del target viaggia in JSON bounded da file o stdin. Remove richiede grant, revisione e UUID esatto. **2 PASS** di contratto locale e reader offline senza eligibility positiva.
