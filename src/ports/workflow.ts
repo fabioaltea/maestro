@@ -16,13 +16,13 @@ export interface WorkflowAdmission {readonly requestId:string;readonly canonical
 export type WorkflowChange=
  {readonly kind:'grant';readonly grant:WorkflowGrant}
  |{readonly kind:'admit';readonly admission:WorkflowAdmission}
- |{readonly kind:'complete';readonly requestId:string;readonly outcome:Exclude<WorkflowOperation['outcome'],'IN_PROGRESS'>;readonly result:Readonly<Record<string,unknown>>|null;readonly error:string|null;readonly nowMs:number}
+ |{readonly kind:'complete';readonly requestId:string;readonly outcome:Exclude<WorkflowOperation['outcome'],'IN_PROGRESS'>;readonly result:Readonly<Record<string,unknown>>|null;readonly error:string|null;readonly nowMs:number;readonly staleFeatureId?:string;readonly expectedRevision?:string}
  |{readonly kind:'reserve';readonly admission:WorkflowAdmission;readonly artifact:WorkflowArtifact}
  |{readonly kind:'append';readonly admission:WorkflowAdmission;readonly artifactId:string;readonly offset:number;readonly sha256:string;readonly bytes:Uint8Array}
  |{readonly kind:'seal'|'discard';readonly admission:WorkflowAdmission;readonly artifactId:string}
  |{readonly kind:'create'|'revise';readonly admission:WorkflowAdmission;readonly feature:FeatureRecord;readonly revision:FeatureRevision;readonly contextCheckedAt:string}
- |{readonly kind:'approve';readonly admission:WorkflowAdmission;readonly approval:FeatureApproval;readonly expectedRevision:string;readonly acceptedUnknownIds:readonly string[]}
- |{readonly kind:'handoff';readonly admission:WorkflowAdmission;readonly envelope:ImplementationEnvelope;readonly expectedRevision:string}
+ |{readonly kind:'approve';readonly admission:WorkflowAdmission;readonly approval:FeatureApproval;readonly expectedRevision:string;readonly acceptedUnknownIds:readonly string[];readonly contextCheckedAt:string}
+ |{readonly kind:'handoff';readonly admission:WorkflowAdmission;readonly envelope:ImplementationEnvelope;readonly expectedRevision:string;readonly contextCheckedAt:string}
  |{readonly kind:'archive';readonly admission:WorkflowAdmission;readonly featureId:string;readonly expectedRevision:string}
  |{readonly kind:'reconcile';readonly instanceId:string;readonly nowMs:number}
  |{readonly kind:'stale';readonly featureId:string;readonly expectedRevision:string;readonly nowMs:number};

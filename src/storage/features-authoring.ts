@@ -5,14 +5,14 @@ import type {FeatureRecord,FeatureRevision} from '../domain/features/model.js';
 import {nextFeatureRevision,transitionFeature} from '../domain/features/model.js';
 import {readFeatureState,type FeatureRow} from './features-store.js';
 import type {WorkflowEventContext} from './workflow-store.js';
-interface Ledger {
+export interface FeatureLedger {
  intent(canonical:string):WorkflowIntent;admit(a:WorkflowAdmission):{operation:WorkflowOperationRecord;inserted:boolean};
  transaction<T>(body:()=>T,terminal?:boolean,event?:WorkflowEventContext):T;
  complete(id:string,result:Readonly<Record<string,unknown>>|null,error?:string|null,outcome?:'SUCCEEDED'|'FAILED'|'BLOCKED'|'INTERRUPTED'|'UNKNOWN'):WorkflowOperationRecord;
 }
 type Change=Extract<WorkflowChange,{kind:'create'|'revise'|'archive'}>;
-function currentFeature(db:Database.Database,id:string):FeatureRecord{const f=readFeatureState(db,{kind:'feature',id}).feature;if(!f)throw new Error('FEATURE_NOT_FOUND');return f;}
-function currentDiscovery(db:Database.Database,r:FeatureRevision,projectId:string,checkedAt:string){
+export function currentFeature(db:Database.Database,id:string):FeatureRecord{const f=readFeatureState(db,{kind:'feature',id}).feature;if(!f)throw new Error('FEATURE_NOT_FOUND');return f;}
+export function currentDiscovery(db:Database.Database,r:FeatureRevision,projectId:string,checkedAt:string){
  const at=Date.parse(checkedAt),now=Date.now();if(!Number.isFinite(at)||at>now||now-at>30000)throw new Error('CONTEXT_UNSTABLE');
  const project=db.prepare('SELECT config_revision,removed_at FROM projects WHERE project_id=?').get(projectId) as FeatureRow|undefined;
  if(!project||project.removed_at!==null)throw new Error('PROJECT_REMOVED');if(String(project.config_revision)!==r.configRevision)throw new Error('APPROVAL_STALE');
@@ -23,7 +23,7 @@ function currentDiscovery(db:Database.Database,r:FeatureRevision,projectId:strin
  ||approval.revision_id!==r.discoveryRevisionId||approval.context_digest!==r.contextDigest||String(approval.config_revision)!==r.configRevision||String(d.config_revision)!==r.configRevision
  ||!provider||String(provider.config_revision)!==String(d.provider_revision))throw new Error('APPROVAL_STALE');
 }
-export function commitFeatureAuthoring(db:Database.Database,c:Change,ledger:Ledger):WorkflowWrite{
+export function commitFeatureAuthoring(db:Database.Database,c:Change,ledger:FeatureLedger):WorkflowWrite{
  const i=ledger.intent(c.admission.canonicalIntent);if(i.namespace!=='FEATURE'||i.action!==c.kind)throw new Error('INVALID_REQUEST');
  const admitted=ledger.admit(c.admission);if(admitted.operation.phase==='FINALIZED')return{operation:admitted.operation};
  return ledger.transaction(()=>{

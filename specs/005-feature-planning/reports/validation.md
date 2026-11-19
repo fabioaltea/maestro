@@ -99,3 +99,7 @@ Scenari locali approval/handoff, reply loss postcommit, UUID originale, mutazion
 ### T023 — tuple di approvazione
 
 Dominio neutro `requireCurrentFeatureApproval` e contenuto envelope legano feature/revisione corrente, owner, config, Discovery approval/revision/context e bundleDigest. Envelope non contiene grant o comando. Unit US2 2/2PASS; il controllo completeness/unknown resta condiviso con bundle.
+
+### T024 — approvazione e handoff core
+
+Servizio composto approve/handoff con fresh eligibility004 diretta, validazione artefatto/provenance/unknown, grant monouso, CAS e controllo writer di owner/istanza/Discovery. Approvazione ed envelope immutabili; errore di freshness marca NEEDS_REVIEW solo sulla versione attesa insieme al risultato/evento terminale. Query eligibility esplicita asincrona bounded32 check, senza riutilizzo come autorità. Nessun processo/provider o permesso runtime acquisito dall’handoff. Build:test/lint PASS; unit+contract+integration US2 5/5PASS (25,83s), incluso reply loss dopo commit recuperato senza duplicare decisioni.
