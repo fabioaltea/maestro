@@ -99,3 +99,7 @@ Prepare e cancel per grant usano l’UUID originale. Job, output e artefatti han
 ## T026 — desktop US2
 
 Electron mostra scope e policy prima della conferma, collega la ricevuta originale al job e legge il risultato sigillato anche offline. La cancellazione ha una conferma separata e può intervenire su un job con ricevuta pendente. **50 PASS** unit/contract e **1 PASS** E2E (29,1 s) con pnpm reale e registry locale. pnpm 9.4.0 ha tentato di riscrivere anche il lockfile di una fixture senza dipendenze. Il confinamento ha bloccato la scrittura e la fixture E2E qualificata usa un pacchetto locale.
+
+## T027 — policy US3
+
+Un PASS e un RED prima della policy registrazione CommandSpec. Copertura per uscita verificata, troncamento indipendente, timeout, identità estranea, argv letterale e cleanup con riferimenti.

@@ -73,7 +73,7 @@
 
 **Coverage**: FR-007–FR-009; FR-010/011/012 trasversali.
 
-- [ ] T027 [P] [US3] Scrivere policy/transizioni US3 in `tests/unit/environment-us3.test.ts`: Exit0 con output tronco/incomplete proof, timeout, restart, processo estraneo, comando contiene shell metacaratteri trattati come argv, cleanup referenced; testare grant/revisioni e comportamento sicuro (FR-007–FR-009).
+- [x] T027 [P] [US3] Scrivere policy/transizioni US3 in `tests/unit/environment-us3.test.ts`: Exit0 con output tronco/incomplete proof, timeout, restart, processo estraneo, comando contiene shell metacaratteri trattati come argv, cleanup referenced; testare grant/revisioni e comportamento sicuro (FR-007–FR-009).
 - [ ] T028 [P] [US3] Scrivere contract US3 in `tests/contract/environment-us3.test.ts`: metodi della storia in `specs/007-workspace-environments/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-007–FR-009, FR-011).
 - [ ] T029 [P] [US3] Scrivere integrazione locale US3 in `tests/integration/environment-us3.test.ts` con fixture di repository/processi/clock pertinenti: Con CommandSpec fixture eseguire check con esito0/nonzero/timeout; restart a metà non ripete il comando e conserva output e prova input. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-007–FR-009, FR-011/012).
 - [ ] T030 [US3] Implementare tipi/invarianti della storia in `src/domain/environments/validation.ts` e aggiornare `src/ports/environment.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-007–FR-009).
