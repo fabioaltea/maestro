@@ -55,3 +55,7 @@ Un caso RED prima del modello di provisioning. Verifica ref generato, base mutat
 ## T014 — contratto di ammissione
 
 1 PASS sul dispatcher iniziale. Nega capability assente, controller, schema storico e campi di comando extra.
+
+## T015 — provisioning locale (RED)
+
+2 RED prima del servizio. Due workspace da handoff fixture, replay sullo stesso UUID, checkout conservato e base mutata dopo prepare.
