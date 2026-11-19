@@ -1,3 +1,4 @@
+import {FEATURE_BRIDGE_METHODS,validateFeatureBridge} from './feature-contract.ts';
 import { CORE_ERRORS } from './core-errors.ts';
 import { METHODS } from './bridge-contract.ts';
 import type { BridgeRequest, Params } from './bridge-contract.ts';
@@ -58,7 +59,8 @@ const extras: Record<string, readonly string[]> = {
 export function validateRequest(method: string, input: unknown): BridgeRequest {
   if (!(METHODS as readonly string[]).includes(method)) throw new Error('INVALID_INPUT');
   const p = record(input);
-  if ((DISCOVERY_BRIDGE_METHODS as readonly string[]).includes(method)) validateDiscoveryBridge(method, p);
+  if ((FEATURE_BRIDGE_METHODS as readonly string[]).includes(method)) validateFeatureBridge(method,p);
+  else if ((DISCOVERY_BRIDGE_METHODS as readonly string[]).includes(method)) validateDiscoveryBridge(method, p);
   else keys(p, ['bridgeVersion', 'callId', 'selectionEpoch', ...(extras[method] ?? [])]);
   if (p.bridgeVersion !== 1 || !Number.isSafeInteger(p.selectionEpoch) || Number(p.selectionEpoch) < 0) throw new Error('INVALID_INPUT');
   uuid(p.callId);

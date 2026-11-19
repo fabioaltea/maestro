@@ -92,3 +92,7 @@ pre { white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.7 ui-monospace,m
 .discovery-review input[type=checkbox] { width:auto; flex:none; }
 .discovery-review textarea { width:100%; display:block; background:#17191c; color:#edf0f3; border:1px solid #535b66; border-radius:5px; padding:10px 12px; font:inherit; }
 .discovery-review .button { margin:12px 8px 0 0; }
+.feature-planning { margin:24px 0; padding-top:20px; border-top:1px solid var(--line); }
+.feature-planning textarea { display:block; width:100%; resize:vertical; border:1px solid #535b66; border-radius:5px; padding:10px 12px; background:#17191c; color:#edf0f3; font:13px/1.6 ui-monospace,monospace; }
+.feature-planning ul { padding-left:18px; }
+.feature-planning .row-actions { margin:14px 0; }

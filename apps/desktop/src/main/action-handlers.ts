@@ -1,3 +1,4 @@
+import {validateFeatureAction,validateFeatureData} from '../shared/feature-contract.ts';
 import type { Params, PublicResult } from '../shared/bridge-contract.ts';
 import { validateAction, record } from '../shared/validation.ts';
 import { Confirmations, blocksMutation, canonical } from './confirmations.ts';
@@ -11,6 +12,15 @@ import { validateDiscoveryAction, discoveryReceiptAction } from '../shared/disco
 import { settleDiscoveryReceipt } from './discovery-receipts.ts';
 interface Options { context: ArchiveContext; receipts: ReceiptStore; core: CorePort; owner(): { owner: number; frame: number }; confirmations?: Confirmations }
 export async function settleReceipt(store: ReceiptStore, receipt: Receipt, result: PublicResult) {
+  if (receipt.namespace === 'feature') {
+    const unknown=()=>store.update(receipt.requestId,{phase:'UNKNOWN',errorCode:'UNKNOWN_OUTCOME'});
+    if(result.requestId!==receipt.requestId||receipt.storeId&&result.storeId!==receipt.storeId||result.result==='UNKNOWN_OUTCOME')return unknown();
+    try{const data=validateFeatureData(receipt.action,result.data);const o=data.operation?record(data.operation):null;
+      if(o){if(receipt.featureId&&o.targetId!==receipt.featureId||o.requestId!==receipt.requestId||o.action!==(receipt.action==='artifact.import'?'seal':receipt.action)||o.namespace!==(receipt.action==='artifact.import'?'ARTIFACT':'FEATURE')||o.outcome==='UNKNOWN'||o.outcome!==result.outcome)return unknown();return store.update(receipt.requestId,{phase:o.phase==='FINALIZED'?'TERMINAL':'RECONCILING',outcome:result.outcome,errorCode:result.error?.code??null});}
+      if(data.accepted===true&&data.requestId===receipt.requestId)return store.update(receipt.requestId,{phase:'RECONCILING',outcome:'IN_PROGRESS'});
+      if(result.liveness==='LIVE_VERIFIED'&&['APPROVAL_REQUIRED','APPROVAL_STALE','CONTEXT_CHANGED','DISCOVERY_REQUIRED','FEATURE_NOT_FOUND','FEATURE_IN_USE','REVISION_CONFLICT','INVALID_REQUEST','RESOURCE_LIMIT'].includes(result.error?.code??''))return store.update(receipt.requestId,{phase:'TERMINAL',outcome:'BLOCKED',errorCode:result.error!.code});return unknown();
+    }catch{return unknown();}
+  }
   if (receipt.namespace === 'discovery') return settleDiscoveryReceipt(store, receipt, result);
   const operation = result.data.operation ? record(result.data.operation) : null;
   const action = receipt.namespace === 'project' ? receipt.action.toUpperCase() : receipt.action;
@@ -26,6 +36,7 @@ export class ActionService {
   readonly confirmations: Confirmations;
   resolveProject: ((action: string, params: Params) => Promise<CliCommand>) | null = null;
   resolveDiscovery: ((action: string, params: Params) => Promise<{ command: CliCommand; summary: string[] }>) | null = null;
+  resolveFeature: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   private confirming = false;
   constructor(options: Options) { this.options = options; this.confirmations = options.confirmations ?? new Confirmations(); }
   private scope(): ConfirmationScope {
@@ -37,6 +48,7 @@ export class ActionService {
     const status = await this.options.core.call({ namespace: 'daemon', action: 'status', archive: c.path });
     this.options.context.apply(c, status);
     if (status.result !== 'OK' || (command.namespace === 'daemon' && command.action === 'start' ? !['LIVE_VERIFIED', 'ABSENT_VERIFIED'].includes(status.liveness) : status.liveness !== 'LIVE_VERIFIED')) throw new Error(status.error?.code ?? 'DAEMON_UNAVAILABLE');
+    if (command.namespace === 'feature') {const cap=record(status.data.capabilities);if(cap.featureVersion!==1||!Array.isArray(cap.featureMethods)||!cap.featureMethods.includes(command.action==='artifact.import'?'feature.artifact.seal':`feature.${command.action}`))throw new Error('UNSUPPORTED_VERSION');if(command.featureId&&command.action!=='create'){const d=await this.options.core.call({namespace:'feature',action:'get',archive:c.path,params:{featureId:command.featureId}});this.options.context.apply(c,d);if(d.result!=='OK'||record(d.data.feature).stateRevision!==command.expectedStateRevision)throw new Error('REVISION_CONFLICT');}}
     if (command.namespace === 'discovery') {
       const capability = record(status.data.capabilities), methods = capability.discoveryMethods;
       if (capability.discoveryVersion !== 1 || !Array.isArray(methods) || !methods.includes(`discovery.${command.action}`)) throw new Error('UNSUPPORTED_VERSION');
@@ -68,10 +80,10 @@ export class ActionService {
     return { status, project };
   }
   async prepare(action: string, params: Params) {
-    if (action.startsWith('discovery.')) validateDiscoveryAction(action, params); else validateAction(action, params);
+    if (action.startsWith('feature.')) validateFeatureAction(action,params); else if (action.startsWith('discovery.')) validateDiscoveryAction(action, params); else validateAction(action, params);
     if (this.confirming) throw new Error('LOCAL_BUSY');
     const c = this.options.context.capture(), owner = canonical(this.options.owner());
-    const resolved = action.startsWith('discovery.') ? this.resolveDiscovery ? await this.resolveDiscovery(action, params) : (() => { throw new Error('CONFIRMATION_REQUIRED'); })() : null;
+    const resolved = action.startsWith('feature.') ? this.resolveFeature ? await this.resolveFeature(action,params) : (()=>{throw new Error('CONFIRMATION_REQUIRED');})() : action.startsWith('discovery.') ? this.resolveDiscovery ? await this.resolveDiscovery(action, params) : (() => { throw new Error('CONFIRMATION_REQUIRED'); })() : null;
     const command: CliCommand = resolved ? resolved.command : action.startsWith('daemon.') ? { namespace: 'daemon', action: action.slice(7), archive: c.path } : this.resolveProject ? await this.resolveProject(action, params) : (() => { throw new Error('CONFIRMATION_REQUIRED'); })();
     const namespace = command.namespace === 'daemon' ? 'foundation' : command.namespace, receiptAction = command.namespace === 'discovery' ? discoveryReceiptAction(command.action) : command.action;
     if (blocksMutation(await this.options.receipts.list(), c.path, namespace, receiptAction, command.projectId ?? (typeof command.params?.projectId === 'string' ? command.params.projectId : undefined))) throw new Error('OPERATION_UNCERTAIN');
@@ -93,7 +105,7 @@ export class ActionService {
       const projectId = token.command.projectId ?? (typeof token.command.params?.projectId === 'string' ? token.command.params.projectId : null);
       if (blocksMutation(await this.options.receipts.list(), c.path, namespace, receiptAction, projectId ?? undefined)) throw new Error('OPERATION_UNCERTAIN');
       const receipt = await this.options.receipts.create({ requestId: token.requestId, namespace, action: receiptAction, archivePath: c.path, storeId: c.view.storeId,
-        projectId, expectedRevision: token.command.expectedRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
+        projectId, ...(token.command.featureId?{featureId:token.command.featureId}:{}), expectedRevision: token.command.expectedRevision ?? token.command.expectedStateRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
       try {
         if (canonical(this.scope()) !== canonical(scope)) throw new Error('STALE_CONTEXT');
         const result = await this.options.core.call(token.command);

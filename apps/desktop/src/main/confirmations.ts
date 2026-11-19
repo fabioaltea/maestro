@@ -35,6 +35,7 @@ export function blocksMutation(receipts: readonly ReceiptScope[], path: string, 
   return receipts.some(receipt => {
     if (receipt.archivePath !== path || receipt.phase === 'TERMINAL' || receipt.outcome === 'BLOCKED') return false;
     if (namespace === 'foundation') return receipt.namespace === 'foundation';
+    if (namespace === 'feature') return receipt.namespace==='feature' && (action==='cancel'?receipt.action==='cancel':true) && (projectId===undefined||receipt.projectId===null||receipt.projectId===projectId);
     if (namespace === 'discovery') {
       if (receipt.namespace !== 'discovery') return false;
       if (action === 'cancel') return receipt.action === 'cancel' && receipt.projectId === projectId;

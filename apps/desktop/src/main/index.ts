@@ -10,6 +10,7 @@ import { ClientLifecycle } from './client-lifecycle.ts';
 import { installActivityStream } from './activity-bridge.ts';
 import { installActivityHistory } from './activity-history.ts';
 import { installProjectActions } from './project-actions.ts';
+import {installFeature} from './feature.ts';
 import { installDiscovery } from './discovery.ts';
 import { installLifecycle } from './lifecycle.ts';
 import { installReads } from './read-handlers.ts';
@@ -48,6 +49,7 @@ else {
     const lifecycle = installLifecycle(router, archiveContext, app.getPath('userData'));
     installProjectActions(router, archiveContext, lifecycle.actions);
     installDiscovery(router, archiveContext, lifecycle.actions);
+    installFeature(router,archiveContext,lifecycle.actions);
     installActivityHistory(router, archiveContext);
     clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
     archiveContext.onChange(() => clients?.archiveChanged());

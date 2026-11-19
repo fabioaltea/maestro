@@ -77,3 +77,9 @@ Same-writer create/revise/archive now consume the exact core grant, validate sea
 ### T018 — CLI authoring
 
 Aggiunto namespace `feature` con DTO chiusi, prepare/confirm, query original UUID, pagine e letture offline. Bundle import da file/stdin bounded256KiB, chunk8KiB; UUID seal originale e sotto-UUID deterministici rendono retry idempotente. Nessun testo nel processo argv. File aperti nofollow/nonblock e controllo identità/stabilità. Build core/test PASS; 3/3 contract+integrazione CLI PASS (7,69s), incluse creazione su Discovery fixture approvata, retry senza nuova revisione store, lettura dopo chiusura server e flag estranei rifiutati. Nessun account reale.
+
+### T019 — desktop US1
+
+Bridge nominale e DTO chiusi, grant confinati al main, stdin per documenti, selettore file con handle owner/epoch e lettura nofollow bounded256KiB. Editor JSON locale (24KiB via bridge; file per documenti maggiori), storico con hash verificato/chunk8KiB, pagine, archivi e mutazioni disabilitate offline. Navigazione nel dettaglio progetto esistente. Ricevuta privata prima di import/create/revise/archive con UUID/store/project/feature e hash intento, senza testo/grant; perdita risposta recupera soltanto UUID originale.
+
+RED iniziale: modulo feature-cli assente. Typecheck desktop/lint PASS; contract+integrazione11/11PASS (4,18s); E2E Electron1/1PASS (33,1s): Discovery fixture approvata, crea/corregge, due revisioni, testo ostile inerte, Escape/focus, archivio, riapertura offline, snapshot Git identico. Due difetti intercettati e corretti: decoder ricevuta import troppo restrittivo e concorrenza tra letture quiescenti. CoreCli serializza ora le due letture ammesse (nessuna coda illimitata), annullando anche quelle view accodate; prova nativa offline status+list simultanei PASS. Nessun aumento timeout di produzione, daemon nuovo o modifica del profilo provider. Test E2E ha budget100s per il flusso completo, esecuzione finale33s. Review umana resta distinta.
