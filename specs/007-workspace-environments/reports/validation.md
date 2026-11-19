@@ -79,3 +79,7 @@ Due RED per piano manuale, mismatch, input stale, exit verificato e generazione 
 ## T021 — contratto install
 
 1 PASS per prepare separato da grant, cancel e output bounded.
+
+## T022 — install e cancel su fixture (RED)
+
+Due RED prima di host e servizio. Due worktree, copie indipendenti, lock cambiato, cancel e rilascio dopo exit.
