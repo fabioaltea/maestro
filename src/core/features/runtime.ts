@@ -59,7 +59,7 @@ export function createFeatureRuntime(storage:StoragePort,paths:ArchivePaths,inst
  async stop(deadline:Deadline){
  accepting=false;
  const drain=async()=>{
-   if((await storage.readSnapshot())?.store.schemaVersion===5){
+   if(((await storage.readSnapshot())?.store.schemaVersion??0)>=5){
      await planning?.stop(deadline);
      if((await storage.readFeatureState!({kind:'activeTurns'})).items?.length)throw new Error('RESOURCE_IDENTITY_UNKNOWN');
    }

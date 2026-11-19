@@ -23,3 +23,7 @@ Tre unit test RED prima del modello e del namespace WORKSPACE. Coprono transizio
 ## T006 — schema cumulativo (RED)
 
 Quattro integrazioni RED prima del migratore. La fixture costruisce lo schema 5 dal SQL congelato e verifica lettura storica senza scritture, preservazione dei riferimenti, fault pre/post commit e UUID cross-namespace in entrambi i versi.
+
+## T007 — schema 6 e upgrade esclusivo
+
+Lo start esplicito esegue la catena storica fino a 6. Il passaggio 5→6 conserva operazioni e grant, ricrea i guard UUID e verifica integrità e FK nella stessa transazione sotto le due lease. Reader e worker supportano lo schema cumulativo. Build, build:test, typecheck e lint PASS. Integrazioni schema 006 e regressioni schema/runtime/offline 005 **12 PASS**. Transizioni e fence **2 PASS**. La prova di ammissione del nuovo grant è parte di T008.

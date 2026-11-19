@@ -12,7 +12,7 @@ import {makeDeadline,systemClock} from '../../src/ports/clock.js';
 import {upgradeFeatures} from '../../src/storage/features-upgrade.js';
 import {SQLiteStore} from '../../src/storage/sqlite-store.js';
 
-const upgradeModule='../../src/storage/workspaces-upgrade.js';
+import {upgradeWorkspaces,needsWorkspacesUpgrade} from '../../src/storage/workspaces-upgrade.js';
 const time='2026-11-19T00:00:00.000Z';
 const hash='a'.repeat(64);
 type DB=Database.Database;
@@ -52,7 +52,6 @@ async function archive(t:Parameters<typeof createTestContext>[0]){
 }
 
 test('schema 5 historical inspection is immutable and the explicit upgrade preserves operation and grant identity',async t=>{
- const {upgradeWorkspaces,needsWorkspacesUpgrade}=await import(upgradeModule);
  const f=await archive(t),before=await readFile(f.path),names=(await readdir(f.options.paths.directory)).sort();
  assert.equal(needsWorkspacesUpgrade(f.options.paths),true);
  const reader=new SQLiteStore({path:f.path,readonly:true,readonlyQuiescent:true});
@@ -74,7 +73,7 @@ test('schema 5 historical inspection is immutable and the explicit upgrade prese
 
 for(const point of ['workspaces.upgrade.beforeCommit','workspaces.upgrade.committed']){
  test(`schema 5→6 fault at ${point} leaves a complete readable version`,async t=>{
-   const {upgradeWorkspaces,needsWorkspacesUpgrade}=await import(upgradeModule),f=await archive(t);
+   const f=await archive(t);
    assert.throws(()=>upgradeWorkspaces({...f.options,checkpoint:(wanted:string)=>{if(point===wanted)throw new Error('OWNED_FAULT');}}));
    const db=new Database(f.path);
    try{
@@ -88,7 +87,7 @@ for(const point of ['workspaces.upgrade.beforeCommit','workspaces.upgrade.commit
 }
 
 test('workspace UUIDs collide with lifecycle, project, Discovery and feature in both directions',async t=>{
- const {upgradeWorkspaces}=await import(upgradeModule),f=await archive(t);
+ const f=await archive(t);
  upgradeWorkspaces(f.options);
  const db=new Database(f.path);
  try{

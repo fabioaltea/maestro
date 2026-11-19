@@ -18,7 +18,7 @@ export function featureTurn(r:FeatureRow):PlanningTurn{
  return {...metadata,turnId:s(r,'turn_id'),featureId:s(r,'feature_id'),runId:s(r,'run_id'),generation:s(r,'generation'),
    requestId:s(r,'request_id'),stateRevision:s(r,'expected_revision'),turnIndex:Number(r.turn_index),phase:r.phase as PlanningTurn['phase']};
 }
-export function requireFeatureSchema(db:Database.Database):void {if(Number(db.pragma('user_version',{simple:true}))!==5)throw new Error('FEATURE_NOT_INITIALIZED');}
+export function requireFeatureSchema(db:Database.Database):void {if(Number(db.pragma('user_version',{simple:true}))<5)throw new Error('FEATURE_NOT_INITIALIZED');}
 export function readFeatureState(db:Database.Database,q:FeatureQuery):FeatureRead {
  requireFeatureSchema(db);
  if(q.kind==='budget'){

@@ -7,7 +7,7 @@ export function createWorkflowAuthorization(options:{readonly storage:StoragePor
  async function guard(peer:AuthenticatedPeer):Promise<StoreSnapshot>{
  if(peer.role!=='client')throw new Error('UNAUTHORIZED');const s=await storage.readSnapshot();
  if(!s||s.store.ownerUid!==paths.ownerUid||s.store.canonicalPath!==paths.directory||s.instance?.instanceId!==instanceId||s.instance.lifecycle!=='RUNNING')throw new Error('STALE_TARGET');
- if(s.store.schemaVersion!==5||!storage.commitFeatureState||!storage.readFeatureState)throw new Error('FEATURE_NOT_INITIALIZED');return s;
+ if(s.store.schemaVersion<5||!storage.commitFeatureState||!storage.readFeatureState)throw new Error('FEATURE_NOT_INITIALIZED');return s;
  }
  return{guard,
  async prepare(peer:AuthenticatedPeer,intent:WorkflowIntent){const snapshot=await guard(peer);if(intent.storeId!==snapshot.store.storeId||intent.ownerUid!==paths.ownerUid)throw new Error('APPROVAL_REQUIRED');

@@ -1,3 +1,6 @@
+import {WORKSPACE_TABLES} from './workspaces-schema.js';
+import {readWorkspaceState} from './workspaces-store.js';
+import type {WorkspaceQuery} from '../ports/workspace.js';
 import { workflowEventDrafts } from '../protocol/feature-events.js';
 import { createWorkflowArtifacts } from './workflow-artifacts.js';
 import { createWorkflowStore } from './workflow-store.js';
@@ -81,13 +84,16 @@ export class SQLiteStore {
     try {
       if (!existed) initializeSchema(database, options.identity!);
       const version = Number(database.pragma('user_version', { simple: true }));
-      if (![4, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(Number(version)))) throw new Error('STATE_INCOMPATIBLE');
+      if (![4, 5, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
       if (version >= 4) {
         for (const name of DISCOVERY_TABLES) {
           if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
         }
       }
-      if (version === 5) for (const name of FEATURE_TABLES) if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
+      if (version >= 5) for (const name of FEATURE_TABLES) if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
+      if (version >= 6) for (const name of WORKSPACE_TABLES) {
+        if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
+      }
       this.archiveVersion = version;
       if (database.pragma('quick_check', { simple: true }) !== 'ok' || (database.pragma('foreign_key_check') as unknown[]).length !== 0) throw new Error('STATE_CORRUPT');
       const store = database.prepare('SELECT * FROM store WHERE singleton=1').get() as Row | undefined;
@@ -194,6 +200,10 @@ export class SQLiteStore {
   commitFeatureState(change: WorkflowChange) { this.writable(); return this.workflowStore().commit(change); }
   readWorkflowArtifact(id: string, offset: number, maximum: number) { return this.workflowArtifacts().read(id, offset, maximum); }
   reconcileWorkflowArtifacts() { const db = this.writable(); return this.mutate(() => { this.workflowArtifacts().reconcile(); }, []); }
+  readWorkspaceState(query:WorkspaceQuery) {
+    if(!this.database)throw new Error('STATE_ABSENT');
+    return this.database.transaction(()=>readWorkspaceState(this.database!,query)).deferred();
+  }
   readFeatureState(query: FeatureQuery) { if (!this.database) throw new Error('STATE_ABSENT'); return this.database.transaction(() => readFeatureState(this.database!, query)).deferred(); }
   readDiscoveryMetadata<Q extends DiscoveryMetadataQuery>(query: Q) { return this.discoveryMetadata().read(query); }
   commitDiscoveryMetadata(change: DiscoveryMetadataChange) { this.writable(); return this.discoveryMetadata().commit(change); }

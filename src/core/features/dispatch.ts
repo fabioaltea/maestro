@@ -7,7 +7,7 @@ import {classifyError} from '../control-main.js';
 export function createFeatureDispatch(options:{readonly storage:StoragePort;readonly mutations?:{readonly methods:readonly string[];run(method:string,p:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer):Promise<Record<string,unknown>>}}){
  return async(request:RpcRequest,peer:AuthenticatedPeer,snapshot:StoreSnapshot):Promise<RpcResponse>=>{
  const base={protocolVersion:1 as const,correlationId:request.correlationId};
- try{if(peer.role!=='client')throw new Error('UNAUTHORIZED');if(snapshot.store.schemaVersion!==5)throw new Error('FEATURE_NOT_INITIALIZED');validateFeatureParams(request.method,request.params);
+ try{if(peer.role!=='client')throw new Error('UNAUTHORIZED');if(snapshot.store.schemaVersion<5)throw new Error('FEATURE_NOT_INITIALIZED');validateFeatureParams(request.method,request.params);
  let data:Record<string,unknown>;
  if(options.mutations?.methods.includes(request.method))data=await options.mutations.run(request.method,request.params,peer);
  else if(request.method!=='feature.eligibility.get'&&(FEATURE_READ_METHODS as readonly string[]).includes(request.method))data=await createFeatureReader({storage:options.storage,storeId:snapshot.store.storeId,offline:false})(request.method,request.params);

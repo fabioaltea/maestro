@@ -3,10 +3,9 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {canonicalWorkflowIntent,validateWorkflowGrant} from '../../src/domain/workflow/authorization.js';
 
-const model='../../src/domain/workspaces/model.js';
+import {transitionWorkspace,nextWorkspaceRevision,requireWorkspaceCapacity,requireWorkspaceFence} from '../../src/domain/workspaces/model.js';
 
-test('workspace state gates the writer and forbids revival after removal',async()=>{
-  const {transitionWorkspace,nextWorkspaceRevision,requireWorkspaceCapacity}=await import(model);
+test('workspace state gates the writer and forbids revival after removal',()=>{
   assert.equal(transitionWorkspace('REQUESTED','begin'),'CREATING');
   assert.equal(transitionWorkspace('CREATING','ready'),'READY');
   assert.equal(transitionWorkspace('READY','acquire'),'IN_USE');
@@ -22,8 +21,7 @@ test('workspace state gates the writer and forbids revival after removal',async(
   assert.throws(()=>requireWorkspaceCapacity(20),/WORKSPACE_LIMIT/);
 });
 
-test('workspace fences the expected revision and owner generation',async()=>{
-  const {requireWorkspaceFence}=await import(model);
+test('workspace fences the expected revision and owner generation',()=>{
   const same={workspaceId:randomUUID(),stateRevision:'2',ownerGeneration:randomUUID()};
   assert.doesNotThrow(()=>requireWorkspaceFence(same,same));
   assert.throws(()=>requireWorkspaceFence(same,{...same,stateRevision:'3'}),/REVISION_CONFLICT/);

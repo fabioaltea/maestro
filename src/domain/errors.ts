@@ -1,4 +1,5 @@
 const catalog = {
+  WORKSPACE_NOT_INITIALIZED: ['Archivio workspace non inizializzato.', 'Avviare esplicitamente il servizio per aggiornare l’archivio.', false],
   FEATURE_NOT_INITIALIZED: ['Pianificazione feature non inizializzata.', 'Eseguire daemon start esplicito per aggiornare lo schema.', false],
   FEATURE_NOT_FOUND: ['Feature non presente.', 'Verificare archivio e identificativo.', false],
   FEATURE_IN_USE: ['Feature utilizzata da lavoro attivo.', 'Consultare e riconciliare lo stato prima di archiviare.', false],
@@ -79,7 +80,7 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
-  FEATURE_NOT_INITIALIZED: 'RUNTIME', FEATURE_NOT_FOUND: 'RUNTIME', FEATURE_IN_USE: 'CONCURRENCY', FEATURE_LIMIT: 'PERSISTENCE', DISCOVERY_REQUIRED: 'AUTHORIZATION', PLANNING_UNAVAILABLE: 'SAFETY', RESOURCE_LIMIT: 'PERSISTENCE',
+  WORKSPACE_NOT_INITIALIZED: 'RUNTIME', FEATURE_NOT_INITIALIZED: 'RUNTIME', FEATURE_NOT_FOUND: 'RUNTIME', FEATURE_IN_USE: 'CONCURRENCY', FEATURE_LIMIT: 'PERSISTENCE', DISCOVERY_REQUIRED: 'AUTHORIZATION', PLANNING_UNAVAILABLE: 'SAFETY', RESOURCE_LIMIT: 'PERSISTENCE',
   APPROVAL_REQUIRED: 'AUTHORIZATION',
   APPROVAL_STALE: 'AUTHORIZATION',
   ANSWER_CONFLICT: 'CONCURRENCY',

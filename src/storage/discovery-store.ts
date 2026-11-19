@@ -195,7 +195,7 @@ export function createDiscoveryLedger(database: Database.Database, options: Disc
           }
           if (remote) database.prepare('UPDATE discovery_grants SET consumed_by_request_id=? WHERE grant_id=? AND consumed_by_request_id IS NULL').run(input.requestId, input.grantId);
           if (run && discovery) {
-            if (Number(database.pragma('user_version',{simple:true}))===5
+            if (Number(database.pragma('user_version',{simple:true}))>=5
               && database.prepare("SELECT 1 FROM features_turns WHERE phase IN ('ACCEPTED','RUNNING','RECONCILING') LIMIT 1").get()) throw new Error('DISCOVERY_BUSY');
             database.prepare(`INSERT INTO discovery_runs(run_id,discovery_id,generation,turn_index,grant_id,request_id,context_digest,input_digest,provider_id,provider_revision,profile_digest,model_id,phase,outcome,started_at,ended_at,output_watermark,error)
               VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(run.runId, run.discoveryId, run.generation, run.turnIndex, run.grantId, run.requestId, run.contextDigest, run.inputDigest, run.providerId, run.providerRevision, run.profileDigest, run.modelId, run.phase, run.outcome, run.startedAt, run.endedAt, run.outputWatermark, run.error);

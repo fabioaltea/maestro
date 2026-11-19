@@ -1,3 +1,4 @@
+import type {WorkspaceFence,WorkspaceState} from '../domain/workspaces/model.js';
 import type {Deadline} from './clock.js';
 import type {FilesystemAnchor} from './repository.js';
 
@@ -38,4 +39,29 @@ export interface WorkspacePort {
   addWorktree(target:WorkspaceMutationTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
   removeWorktree(target:WorkspaceMutationTarget,expected:NonNullable<WorkspaceDiskObservation['worktree']>,
     integrated:{readonly targetRef:string;readonly targetOid:string},deadline:Deadline):Promise<void>;
+}
+
+export interface WorkspaceRecord extends WorkspaceFence {
+ readonly featureId:string;
+ readonly projectId:string;
+ readonly envelopeId:string;
+ readonly repositoryKey:string;
+ readonly state:WorkspaceState;
+ readonly target:WorkspaceMutationTarget;
+ readonly createdAt:string;
+ readonly updatedAt:string;
+ readonly ownership:NonNullable<WorkspaceDiskObservation['worktree']>|null;
+ readonly markerDigest:string|null;
+ readonly safeError:string|null;
+}
+export type WorkspaceQuery={readonly kind:'get';readonly id:string}
+ |{readonly kind:'list';readonly projectId:string;readonly limit?:number;readonly offset?:number};
+export interface WorkspaceRead {
+ readonly workspace?:WorkspaceRecord|null;
+ readonly items?:readonly WorkspaceRecord[];
+ readonly nextOffset?:number|null;
+ readonly pageRevision?:string;
+}
+export interface WorkspaceStoragePort {
+ readWorkspaceState?(query:WorkspaceQuery):Promise<WorkspaceRead>;
 }
