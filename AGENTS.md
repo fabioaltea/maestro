@@ -91,4 +91,10 @@ worktree, gestione dipendenze di progetti ed Electron sono fuori scope della Fou
 
 ## Current implementation
 
-005-feature-planning-implementation avviata2026-11-19 dalla004 d798a94. Feature attiva: specs/005-feature-planning/. Consultare plan.md, data-model.md, contracts e reports della005; Constitution e gate001–004 invariati. Baseline005:576PASS/1FAIL/6SKIP, UPDATE replay revision61 vs60; isolatoPASS, causa aperta. Nessun nuovo pin/package. Un commit per task; preservare apps/desktop/package-lock.json non tracciato.
+005-feature-planning-implementation completata localmente il 2026-11-19 da base 004 d798a94.
+Feature attiva: specs/005-feature-planning/. T001–T036 chiusi, US1–US3 verificati con fixture.
+G0 sintetico PASS (12 prove). G1 reale BLOCKED da 004/T028 e T050, capability assistita
+indisponibile in produzione. Readiness globale BLOCKED. Consultare reports/validation.md,
+reports/qualification.md e reports/release-readiness.md. Constitution e gate001–004 vigenti.
+Baseline005: 576PASS/1FAIL/6SKIP, UPDATE replay revision61 vs60; isolatoPASS, causa aperta.
+Nessun nuovo pin/package. Un commit per task; preservare apps/desktop/package-lock.json non tracciato.
