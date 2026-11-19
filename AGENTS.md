@@ -91,7 +91,7 @@ worktree, gestione dipendenze di progetti ed Electron sono fuori scope della Fou
 
 ## Planned Features (design only)
 
-Pianificazione2026-11-19: 005-feature-planning, 006-git-workspaces, 007-workspace-environments, 008-agent-profiles.
+Pianificazione2026-11-19: 005-feature-planning, 006-git-workspaces, 007-workspace-environments, 008-agent-profiles, 009-agent-execution.
 Brief e ordine: `docs/missing-features-brief.md`; contratti comuni: `docs/missing-features-contracts.md`.
-Schema8 e tutte le nuove capability sono PROPOSTI, non implementati. Nessun nuovo pacchetto installato.
+Schema9 e tutte le nuove capability sono PROPOSTI, non implementati. Nessun nuovo pacchetto installato.
 I pin della base e i gate001–004 riportati sopra restano invariati; i task dei nuovi pacchetti sono aperti.
