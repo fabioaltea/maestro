@@ -31,3 +31,7 @@ Lo start esplicito esegue la catena storica fino a 6. Il passaggio 5→6 conserv
 ## T008 — ledger e reservation condivisi
 
 Namespace WORKSPACE nel ledger esistente. Grant monouso e reservation persistono con contesto, envelope, anchor, branch e quota verificati. La verifica dei byte sigillati precede la reservation. Build:test e suite workspace-state/store e workflow-store **9 PASS**. Artefatto mancante, saturazione e concorrenza lasciano il grant intatto. Un reply loss restituisce l’operazione originale al replay.
+
+## T009 — DTO e lettura storica (RED)
+
+Due casi RED per validator e inspector ancora assenti. Verificano input chiusi, envelope bounded, metodi lease interni, dati storici LAST_KNOWN con UUID originale e assenza di effetti da lettura.
