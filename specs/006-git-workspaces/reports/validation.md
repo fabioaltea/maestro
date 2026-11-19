@@ -115,3 +115,7 @@ Due test per modifiche tracked/untracked/ignored, conflitti, holder, target vari
 ## T029 — cleanup Git reale (RED)
 
 Due casi fixture per lavoro dirty e non integrato conservato, rimozione provata e risposta persa dopo il primo effetto con ref e UUID originali preservati.
+
+## T030 — policy cleanup
+
+L’idoneità richiede proprietà, stato, target e ancestry correnti e assenza di lavoro locale o lease. La prova finale distingue ref conservato e rimozione completa. Build:test e **2 PASS** mirati.

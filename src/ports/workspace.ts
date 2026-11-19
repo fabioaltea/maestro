@@ -156,3 +156,8 @@ export type WorkspaceLeaseChange=
  |{readonly kind:'acquire';readonly lease:WorkspaceLease;readonly fence:WorkspaceFence;readonly worktree:NonNullable<WorkspaceDiskObservation['worktree']>}
  |{readonly kind:'release';readonly lease:WorkspaceLease;readonly instanceId:string;readonly proof:WorkspaceReleaseProof;readonly worktree:WorkspaceDiskObservation['worktree']}
  |{readonly kind:'owner-lost';readonly lease:WorkspaceLease;readonly instanceId:string};
+
+export interface WorkspaceCleanupTarget{
+ readonly targetRef:string;
+ readonly targetOid:string;
+}
