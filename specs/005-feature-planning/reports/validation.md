@@ -111,3 +111,7 @@ La CLI usa prepare da file/stdin e conferma con grant e UUID, legge approvazioni
 ### T026 — approvazione e handoff desktop
 
 Bridge e CLI condividono le chiamate nominate e le ricevute per approvazione/handoff. La conferma identifica revisione, digest e incognite accettate, mentre archivio e selezione proteggono la vista dalle risposte tardive. Typecheck e build desktop PASS, unit/contract 43/43 PASS, E2E Electron 1/1 PASS (28,2 s), inclusi Escape e ritorno del focus, revoca della selezione storica per nuove azioni, prova di eligibility, rilascio envelope e approvazione consultabile ad archivio offline.
+
+### T027 — regole dei risultati assistiti (RED)
+
+Due casi unitari coprono schema/provenance e correlazione esatta tra generazione, revisione, stato e prova di uscita. Build:test compila; 2/2 RED per modulo di dominio ancora assente.

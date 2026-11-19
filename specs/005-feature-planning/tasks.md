@@ -73,7 +73,7 @@
 
 **Coverage**: FR-007–FR-009; FR-010/011/012 trasversali.
 
-- [ ] T027 [P] [US3] Scrivere policy/transizioni US3 in `tests/unit/feature-us3.test.ts`: Schema/provenance invalida, consenso stale, provider unsafe/auth/quota, timeout/cancel e late result di generazione precedente; testare grant/revisioni e comportamento sicuro (FR-007–FR-009).
+- [X] T027 [P] [US3] Scrivere policy/transizioni US3 in `tests/unit/feature-us3.test.ts`: Schema/provenance invalida, consenso stale, provider unsafe/auth/quota, timeout/cancel e late result di generazione precedente; testare grant/revisioni e comportamento sicuro (FR-007–FR-009).
 - [ ] T028 [P] [US3] Scrivere contract US3 in `tests/contract/feature-us3.test.ts`: metodi della storia in `specs/005-feature-planning/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-007–FR-009, FR-011).
 - [ ] T029 [P] [US3] Scrivere integrazione locale US3 in `tests/integration/feature-us3.test.ts` con fixture di repository/processi/clock pertinenti: Provider simulato produce una domanda e una bozza; due turni espliciti conservano risposte/provenance; provider indisponibile lascia utilizzabile il documento manuale. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-007–FR-009, FR-011/012).
 - [ ] T030 [US3] Implementare tipi/invarianti della storia in `src/domain/features/planning.ts` e aggiornare `src/ports/feature.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-007–FR-009).
