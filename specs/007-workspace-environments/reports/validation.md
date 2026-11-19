@@ -63,3 +63,7 @@ Il dominio riconosce il pin e il formato lock, distingue piano qualificabile e M
 ## T017 — piano e attestazione
 
 Lettura bounded di dati statici su worktree con proprietà verificata. Il pin viene verificato dai file e la pianificazione non lancia pnpm. Il consenso attesta solo input e revisione correnti. Test pnpm PLANNED, npm manuale e replay attestazione PASS. Build, build:test e lint PASS.
+
+## T018 — CLI US1
+
+La CLI usa la revisione e l’UUID originali. Le limitazioni di attestazione viaggiano da file o stdin. **6 PASS** delle prove mirate US1.

@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import {createRegistryStore} from '../fixtures/registry-store.js';
 import {createEnvironmentDispatch} from '../../src/core/environments/dispatch.js';
 import {validateEnvironmentParams,environmentCapabilities} from '../../src/protocol/environment.js';
@@ -21,4 +23,18 @@ test('environment planning and attestation reject unsupported capability and out
    assert.throws(()=>validateEnvironmentParams('environment.prepare',{action:'attest',intent:{workspaceId:params.workspaceId,inputDigest:'a'.repeat(64),limitations},
      expectedRevisions:{stateRevision:'1'}}),/INVALID_REQUEST|CONTEXT_LIMIT/);
  }
+});
+
+test('environment CLI plans with exactly one UUID and keeps attestation data off argv',async t=>{
+ const f=await createRegistryStore(t),entry=fileURLToPath(new URL('../../../dist/cli/main.js',import.meta.url));
+ const flags=['--state-dir',f.directory,'--json'],workspaceId=randomUUID(),requestId=randomUUID();
+ const run=(args:string[],input?:string)=>spawnSync(process.execPath,[entry,'environment',...args,...flags],{encoding:'utf8',input});
+ const plan=JSON.parse(run(['plan',workspaceId,'--expected-revision','1','--request-id',requestId]).stdout);
+ assert.equal(plan.requestId,requestId);assert.equal(plan.error.code,'DAEMON_UNAVAILABLE');
+ const limitations='testo di attestazione fixture';
+ const prepare=run(['prepare','--input-stdin'],JSON.stringify({action:'attest',intent:{workspaceId,inputDigest:'a'.repeat(64),limitations:[limitations]},
+   expectedRevisions:{stateRevision:'1'}}));
+ assert.equal(JSON.parse(prepare.stdout).error.code,'DAEMON_UNAVAILABLE');
+ assert.ok(!prepare.stdout.includes(limitations));
+ assert.equal(run(['prepare',limitations]).status,2);
 });
