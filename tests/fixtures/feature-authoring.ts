@@ -10,6 +10,7 @@ import type {DiscoveryEligibility} from '../../src/domain/discovery/approval.js'
 import type {FeatureBundle} from '../../src/ports/feature.js';
 import type {Deadline} from '../../src/ports/clock.js';
 interface Runtime {
+ readonly methods:readonly string[];
  dispatch(r:RpcRequest,p:AuthenticatedPeer,s:NonNullable<Awaited<ReturnType<StoragePort['readSnapshot']>>>):Promise<RpcResponse>;
  idle():Promise<void>;fence():void;recover():Promise<void>;stop(d:Deadline):Promise<void>;
 }

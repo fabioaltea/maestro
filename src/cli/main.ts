@@ -53,6 +53,7 @@ async function follow(client: LocalClient, json: boolean, options: import('../cl
 }
 
 export async function runCli(args: readonly string[]): Promise<number> {
+  if (args[0] === 'feature') return (await import('./feature.js')).runFeatureCli(args.slice(1));
   if (args[0] === 'discovery') return (await import('./discovery.js')).runDiscoveryCli(args.slice(1));
   if (args[0] === 'project') return (await import('./projects.js')).runProjectCli(args.slice(1));
   let json = args.includes('--json');
