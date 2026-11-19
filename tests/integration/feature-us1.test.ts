@@ -38,3 +38,37 @@ test('US1 a lost writer reply after create is resolved by the original UUID with
  const events=f.store.listEvents({limit:100}).records.filter(e=>e.operationId===result.requestId&&e.type==='operation.completed');assert.equal(events.length,1);
  assert.equal(f.store.readFeatureState({kind:'features',id:f.projectId}).items!.length,1);
 });
+
+test('SC-001 creates, reads and revises ten distinct plans with current Discovery',async t=>{
+ const f=await featureAuthoringFixture(t);
+ const before=await f.repositories.snapshotTree(f.repo);
+ for(let index=1;index<=10;index++){
+   const title=`Feature fixture ${index}`;
+   const original={...featureDraft(),title,request:`Richiesta iniziale ${index}`};
+   const firstArtifactId=await f.upload(original);
+   const create=await f.prepareFeature('create',{projectId:f.projectId,expectedConfigRevision:'1',bundleArtifactId:firstArtifactId});
+   const created=await f.execute('create',String(create.grantId));
+   assert.equal(created.operation?.outcome,'SUCCEEDED',JSON.stringify(created.response));
+   const featureId=String(created.operation?.result?.featureId),revisionId=String(created.operation?.result?.revisionId);
+   const feature=f.checked(await f.send('feature.get',{featureId})).feature as {title:string;currentRevisionId:string};
+   assert.equal(feature.title,title);
+   assert.equal(feature.currentRevisionId,revisionId);
+
+   const revised={...original,request:`Richiesta corretta ${index}`};
+   const nextArtifactId=await f.upload(revised);
+   const revise=await f.prepareFeature('revise',{featureId,expectedStateRevision:'1',bundleArtifactId:nextArtifactId});
+   const changed=await f.execute('revise',String(revise.grantId));
+   assert.equal(changed.operation?.outcome,'SUCCEEDED',JSON.stringify(changed.response));
+   const revisions=f.checked(await f.send('feature.revisions.list',{featureId})).items as {revisionId:string;artifactId:string;parentRevisionId:string|null}[];
+   assert.equal(revisions.length,2);
+   assert.equal(revisions[0]?.revisionId,revisionId);
+   assert.equal(revisions[1]?.parentRevisionId,revisionId);
+   for(const [revision,bundle] of [[revisions[0]!,original],[revisions[1]!,revised]] as const){
+     const chunk=f.checked(await f.send('feature.artifact.get',{artifactId:revision.artifactId}));
+     assert.deepEqual(JSON.parse(Buffer.from(String(chunk.base64),'base64').toString('utf8')),bundle);
+   }
+ }
+ const features=f.checked(await f.send('feature.list',{projectId:f.projectId})).items as unknown[];
+ assert.equal(features.length,10);
+ assert.deepEqual(await f.repositories.snapshotTree(f.repo),before);
+});
