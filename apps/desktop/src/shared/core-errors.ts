@@ -339,5 +339,40 @@ export const CORE_ERRORS = {
     "code": "DISCOVERY_NOT_INITIALIZED",
     "message": "Discovery non inizializzata.",
     "nextAction": "Eseguire daemon start esplicito per aggiornare lo schema."
+  },
+  "FEATURE_NOT_INITIALIZED": {
+    "code": "FEATURE_NOT_INITIALIZED",
+    "message": "Pianificazione feature non inizializzata.",
+    "nextAction": "Eseguire daemon start esplicito per aggiornare lo schema."
+  },
+  "FEATURE_NOT_FOUND": {
+    "code": "FEATURE_NOT_FOUND",
+    "message": "Feature non presente.",
+    "nextAction": "Verificare archivio e identificativo."
+  },
+  "FEATURE_IN_USE": {
+    "code": "FEATURE_IN_USE",
+    "message": "Feature utilizzata da lavoro attivo.",
+    "nextAction": "Consultare e riconciliare lo stato prima di archiviare."
+  },
+  "FEATURE_LIMIT": {
+    "code": "FEATURE_LIMIT",
+    "message": "Limite locale delle feature raggiunto.",
+    "nextAction": "Consultare quota e revisioni; nessuna cancellazione automatica."
+  },
+  "DISCOVERY_REQUIRED": {
+    "code": "DISCOVERY_REQUIRED",
+    "message": "Discovery approvata e corrente richiesta.",
+    "nextAction": "Completare e approvare la Discovery del progetto."
+  },
+  "PLANNING_UNAVAILABLE": {
+    "code": "PLANNING_UNAVAILABLE",
+    "message": "Generazione assistita non qualificata.",
+    "nextAction": "Usare authoring manuale con Discovery corrente o verificare il provider."
+  },
+  "RESOURCE_LIMIT": {
+    "code": "RESOURCE_LIMIT",
+    "message": "Quota locale raggiunta.",
+    "nextAction": "Consultare risorse e limiti senza eliminare lavoro referenziato."
   }
 } as const;

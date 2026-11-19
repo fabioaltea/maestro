@@ -1,3 +1,4 @@
+import { workflowEventDrafts } from '../protocol/feature-events.js';
 import { createWorkflowArtifacts } from './workflow-artifacts.js';
 import { createWorkflowStore } from './workflow-store.js';
 import type { WorkflowChange } from '../ports/workflow.js';
@@ -175,7 +176,20 @@ export class SQLiteStore {
   }
   private workflowStore() {
     if (!this.database) throw new Error('STATE_ABSENT');
-    return createWorkflowStore(this.database, body => this.mutate(body, []), this.workflowArtifacts());
+    return createWorkflowStore(this.database, (body, _terminal, event) => {
+      const drafts: EventDraft[] = [];
+      return this.mutate(() => {
+        const result = body();
+        for (const requestId of event?.requestIds ?? []) {
+          const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
+          if (!op) continue;
+          const feature = op.namespace === 'FEATURE' && op.targetId ? readFeatureState(this.database!, {kind: 'feature', id: op.targetId}).feature : null;
+          const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
+          drafts.push(...workflowEventDrafts(op, String(owner.owning_instance_id), feature));
+        }
+        return result;
+      }, drafts);
+    }, this.workflowArtifacts());
   }
   commitFeatureState(change: WorkflowChange) { this.writable(); return this.workflowStore().commit(change); }
   readWorkflowArtifact(id: string, offset: number, maximum: number) { return this.workflowArtifacts().read(id, offset, maximum); }

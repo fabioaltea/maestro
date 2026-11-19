@@ -8,7 +8,8 @@ import type {createWorkflowArtifacts} from './workflow-artifacts.js';
 import {foundationError,type ErrorCode} from '../domain/errors.js';
 const digest=(text:string)=>createHash('sha256').update(text).digest('hex');
 type UploadChange=Extract<WorkflowChange,{kind:'reserve'|'append'|'seal'|'discard'}>;
-export interface WorkflowMutation {<T>(body:()=>T,terminal?:boolean):T}
+export interface WorkflowEventContext {readonly requestIds:readonly string[]}
+export interface WorkflowMutation {<T>(body:()=>T,terminal?:boolean,event?:WorkflowEventContext):T}
 export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation,artifacts:ReturnType<typeof createWorkflowArtifacts>,options:{readonly nowMs?:()=>number}={}){
  requireFeatureSchema(db);const now=options.nowMs??Date.now;
  const identity=()=>db.prepare('SELECT store_id,owner_uid,current_instance_id FROM store WHERE singleton=1').get() as FeatureRow;
@@ -19,7 +20,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  db.prepare('UPDATE workflow_budget SET metadata_bytes=? WHERE singleton=1').run(metadata);
  if(usage.allocatedBytes+usage.reservedBytes+metadata>128*1024*1024-(terminal?0:8*1024*1024)||usage.allocatedFiles>8192)throw new Error('RESOURCE_LIMIT');
  }
- function transaction<T>(body:()=>T,terminal=false):T{return mutate(()=>{const result=body();budget(terminal);return result;},terminal);}
+ function transaction<T>(body:()=>T,terminal=false,event?:WorkflowEventContext):T{return mutate(()=>{const result=body();budget(terminal);return result;},terminal,event);}
  const operation=(id:string)=>{requireUuid(id);const r=db.prepare('SELECT * FROM workflow_operations WHERE request_id=?').get(id) as FeatureRow|undefined;return r?workflowOperation(r):null;};
  function intent(canonical:string):WorkflowIntent{const i=JSON.parse(canonical) as WorkflowIntent;if(canonicalWorkflowIntent(i)!==canonical)throw new Error('INVALID_REQUEST');const owner=identity();if(i.storeId!==owner.store_id||i.ownerUid!==Number(owner.owner_uid))throw new Error('APPROVAL_REQUIRED');return i;}
  function admit(a:WorkflowAdmission,setup?:()=>void):{operation:WorkflowOperationRecord;inserted:boolean}{
@@ -27,12 +28,13 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  if(prior){if(prior.canonicalIntent!==a.canonicalIntent||prior.payloadHash!==hash)throw new Error('IDEMPOTENCY_CONFLICT');return{operation:prior,inserted:false};}
  return transaction(()=>{
  if(identity().current_instance_id!==a.instanceId)throw new Error('STALE_TARGET');
+ const pending=Number((db.prepare("SELECT count(*) AS n FROM workflow_operations WHERE phase<>'FINALIZED'").get() as FeatureRow).n);if(pending>=(i.action==='cancel'?32:31))throw new Error('RESOURCE_LIMIT');
  if(db.prepare('SELECT 1 FROM request_catalog WHERE request_id=?').get(a.requestId)||db.prepare('SELECT 1 FROM discovery_operations WHERE request_id=?').get(a.requestId))throw new Error('IDEMPOTENCY_CONFLICT');
  const granted=i.namespace==='FEATURE';if(granted){if(!a.grantId)throw new Error('APPROVAL_REQUIRED');const g=readFeatureState(db,{kind:'grant',id:a.grantId}).grant;if(!g||validateWorkflowGrant(g,a.canonicalIntent,a.requestId,now())!=='CONSUME')throw new Error('APPROVAL_REQUIRED');}else if(a.grantId!==null||!['reserve','append','seal','discard'].includes(i.action))throw new Error('INVALID_REQUEST');
  db.prepare("INSERT INTO workflow_operations(request_id,namespace,action,payload_hash,canonical_intent,owner_uid,owning_instance_id,phase,outcome,target_id,accepted_at) VALUES(?,?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?)").run(a.requestId,i.namespace,i.action,hash,a.canonicalIntent,i.ownerUid,a.instanceId,i.targetId,new Date(now()).toISOString());
  if(granted)db.prepare('UPDATE workflow_grants SET consumed_by_request_id=? WHERE grant_id=?').run(a.requestId,a.grantId);
  setup?.();return{operation:operation(a.requestId)!,inserted:true};
- },i.action==='cancel'||i.namespace==='ARTIFACT'&&i.action==='discard');
+ },i.action==='cancel'||i.namespace==='ARTIFACT'&&i.action==='discard',{requestIds:[a.requestId]});
  }
  function complete(requestId:string,result:Readonly<Record<string,unknown>>|null,error:string|null=null,outcome:'SUCCEEDED'|'FAILED'|'BLOCKED'|'INTERRUPTED'|'UNKNOWN'='SUCCEEDED'){
  const old=operation(requestId);if(!old)throw new Error('OPERATION_NOT_FOUND');if(old.phase==='FINALIZED')return old;
@@ -48,7 +50,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  const r=admit(a,()=>{if(readFeatureState(db,{kind:'budget'}).budget!.openUploads>=4)throw new Error('RESOURCE_LIMIT');
  db.prepare("INSERT INTO workflow_artifacts(artifact_id,kind,target_id,expected_bytes,sha256,allocated_bytes,state,created_at_ms,expires_at_ms) VALUES(?,?,?,?,?,?,'RESERVED',?,?)").run(value.artifactId,value.kind,value.targetId,value.expectedBytes,value.sha256,Math.ceil(value.expectedBytes/4096)*4096,now(),now()+900000);});
  if(r.operation.phase==='FINALIZED')return{operation:r.operation,artifact:readFeatureState(db,{kind:'artifact',id:value.artifactId}).artifact!};
- artifacts.create(value.artifactId);return transaction(()=>({operation:complete(a.requestId,{artifactId:value.artifactId}),artifact:readFeatureState(db,{kind:'artifact',id:value.artifactId}).artifact!}));
+ artifacts.create(value.artifactId);return transaction(()=>({operation:complete(a.requestId,{artifactId:value.artifactId}),artifact:readFeatureState(db,{kind:'artifact',id:value.artifactId}).artifact!}),false,{requestIds:[a.requestId]});
  }
  const id=c.artifactId;requireUuid(id);if(i.payload.artifactId!==id)throw new Error('INVALID_REQUEST');
  if(c.kind==='append'&&(i.payload.offset!==c.offset||i.payload.sha256!==c.sha256||i.payload.byteLength!==c.bytes.length))throw new Error('INVALID_REQUEST');
@@ -58,9 +60,9 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  if(c.kind!=='discard'&&current.expiresAtMs!==null&&now()>=current.expiresAtMs)throw new Error('APPROVAL_STALE');
  const r=admit(a);if(r.operation.phase==='FINALIZED')return{operation:r.operation,artifact:current};
  const owner=db.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(a.requestId) as FeatureRow;if(owner.owning_instance_id!==a.instanceId)throw new Error('BLOCKED');
- if(c.kind==='append'){const offset=artifacts.append(id,c.offset,c.bytes,c.sha256);return transaction(()=>{db.prepare('UPDATE workflow_artifacts SET offset_bytes=? WHERE artifact_id=?').run(offset,id);return{operation:complete(a.requestId,{artifactId:id,offsetBytes:offset}),artifact:readFeatureState(db,{kind:'artifact',id}).artifact!};});}
- if(c.kind==='seal'){artifacts.seal(id);return transaction(()=>{db.prepare("UPDATE workflow_artifacts SET state='SEALED',expires_at_ms=NULL WHERE artifact_id=? AND state='RESERVED'").run(id);return{operation:complete(a.requestId,{artifactId:id}),artifact:readFeatureState(db,{kind:'artifact',id}).artifact!};});}
- artifacts.discard(id);return transaction(()=>{db.prepare("UPDATE workflow_artifacts SET state='DISCARDED',allocated_bytes=0,expires_at_ms=NULL WHERE artifact_id=? AND ref_count=0").run(id);return{operation:complete(a.requestId,{artifactId:id}),artifact:readFeatureState(db,{kind:'artifact',id}).artifact!};},true);
+ if(c.kind==='append'){const offset=artifacts.append(id,c.offset,c.bytes,c.sha256);return transaction(()=>{db.prepare('UPDATE workflow_artifacts SET offset_bytes=? WHERE artifact_id=?').run(offset,id);return{operation:complete(a.requestId,{artifactId:id,offsetBytes:offset}),artifact:readFeatureState(db,{kind:'artifact',id}).artifact!};},false,{requestIds:[a.requestId]});}
+ if(c.kind==='seal'){artifacts.seal(id);return transaction(()=>{db.prepare("UPDATE workflow_artifacts SET state='SEALED',expires_at_ms=NULL WHERE artifact_id=? AND state='RESERVED'").run(id);return{operation:complete(a.requestId,{artifactId:id}),artifact:readFeatureState(db,{kind:'artifact',id}).artifact!};},false,{requestIds:[a.requestId]});}
+ artifacts.discard(id);return transaction(()=>{db.prepare("UPDATE workflow_artifacts SET state='DISCARDED',allocated_bytes=0,expires_at_ms=NULL WHERE artifact_id=? AND ref_count=0").run(id);return{operation:complete(a.requestId,{artifactId:id}),artifact:readFeatureState(db,{kind:'artifact',id}).artifact!};},true,{requestIds:[a.requestId]});
  }
  return{admit,complete,transaction,intent,operation,
  commit(c:WorkflowChange):WorkflowWrite{
@@ -69,11 +71,11 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  const count=Number((db.prepare('SELECT count(*) AS n FROM workflow_grants WHERE consumed_by_request_id IS NULL AND expires_at_ms>?').get(now()) as FeatureRow).n);if(count>=(i.action==='cancel'?32:31))throw new Error('RESOURCE_LIMIT');
  db.prepare('INSERT INTO workflow_grants VALUES(?,?,?,?,NULL)').run(g.grantId,g.canonicalIntent,g.createdAtMs,g.expiresAtMs);return{};},i.action==='cancel');}
  if(c.kind==='admit')return admit(c.admission);
- if(c.kind==='complete')return transaction(()=>({operation:complete(c.requestId,c.result,c.error,c.outcome)}),true);
- if(c.kind==='reconcile')return transaction(()=>{requireUuid(c.instanceId);for(const row of db.prepare("SELECT * FROM workflow_operations WHERE phase<>'FINALIZED'").all() as FeatureRow[]){const op=workflowOperation(row);
+ if(c.kind==='complete')return transaction(()=>({operation:complete(c.requestId,c.result,c.error,c.outcome)}),true,{requestIds:[c.requestId]});
+ if(c.kind==='reconcile'){const requestIds=(db.prepare("SELECT request_id FROM workflow_operations WHERE phase<>'FINALIZED' LIMIT 32").all() as FeatureRow[]).map(r=>String(r.request_id));return transaction(()=>{requireUuid(c.instanceId);for(const row of db.prepare("SELECT * FROM workflow_operations WHERE phase<>'FINALIZED'").all() as FeatureRow[]){const op=workflowOperation(row);
  if(op.namespace==='FEATURE'&&['generate','answer','cancel'].includes(op.action))complete(op.requestId,null,'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
  else { complete(op.requestId,null,'INTERRUPTED','INTERRUPTED');if(op.namespace==='ARTIFACT'){const i=JSON.parse(op.canonicalIntent) as WorkflowIntent;const id=i.action==='reserve'?op.requestId:i.payload.artifactId;if(typeof id==='string')db.prepare("UPDATE workflow_artifacts SET state='ORPHAN' WHERE artifact_id=? AND state='RESERVED' AND ref_count=0").run(id);}}}
- db.prepare("UPDATE features_records SET state='RECONCILING',state_revision=state_revision+1 WHERE feature_id IN (SELECT feature_id FROM features_turns WHERE phase IN ('ACCEPTED','RUNNING','RECONCILING'))").run();db.prepare("UPDATE features_turns SET phase='RECONCILING' WHERE phase IN ('ACCEPTED','RUNNING')").run();return{};},true);
+ db.prepare("UPDATE features_records SET state='RECONCILING',state_revision=state_revision+1 WHERE feature_id IN (SELECT feature_id FROM features_turns WHERE phase IN ('ACCEPTED','RUNNING','RECONCILING'))").run();db.prepare("UPDATE features_turns SET phase='RECONCILING' WHERE phase IN ('ACCEPTED','RUNNING')").run();return{};},true,{requestIds});}
  if(['reserve','append','seal','discard'].includes(c.kind))return executeUpload(c as UploadChange);
  throw new Error('UNSUPPORTED_VERSION');
  },

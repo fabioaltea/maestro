@@ -1,3 +1,4 @@
+export const FEATURE_STATES = ['DRAFT','PLANNING','WAITING_USER','READY_FOR_APPROVAL','APPROVED','NEEDS_REVIEW','ARCHIVED','INTERRUPTED','RECONCILING'] as const;
 import { requireDecimal } from '../identifiers.js';
 export type FeatureState = 'DRAFT'|'PLANNING'|'WAITING_USER'|'READY_FOR_APPROVAL'|'APPROVED'|'NEEDS_REVIEW'|'ARCHIVED'|'INTERRUPTED'|'RECONCILING';
 export interface FeatureRecord {

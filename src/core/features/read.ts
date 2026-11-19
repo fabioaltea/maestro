@@ -11,7 +11,7 @@ export function createFeatureReader(options:{readonly storage:Pick<StoragePort,'
  function offset(raw:unknown,target:string,revision:string){if(raw===undefined)return 0;if(typeof raw!=='string'||raw.length>4096)throw new Error('INVALID_REQUEST');let p:Record<string,unknown>;try{p=featureObject(JSON.parse(Buffer.from(raw,'base64url').toString('utf8')));}catch{throw new Error('INVALID_REQUEST');}featureFields(p,['storeId','target','revision','offset']);if(p.storeId!==storeId||p.target!==target||p.revision!==revision)throw new Error('REVISION_CONFLICT');if(typeof p.offset!=='number'||!Number.isSafeInteger(p.offset)||p.offset<0)throw new Error('INVALID_REQUEST');return p.offset;}
  return async(method:string,p:Readonly<Record<string,unknown>>):Promise<Record<string,unknown>>=>{
  validateFeatureParams(method,p);let data:Record<string,unknown>;
- if(method==='feature.provider.get')data={capabilities:FEATURE_PLANNING_CAPABILITIES,code:'PLANNING_UNAVAILABLE'};
+ if(method==='feature.provider.get')data={capabilities:FEATURE_PLANNING_CAPABILITIES,reason:'PLANNING_UNAVAILABLE'};
  else if(method==='feature.artifact.budget')data={budget:(await query({kind:'budget'})).budget};
  else if(method==='feature.operation.get'){const o=(await query({kind:'operation',id:p.requestId as string})).operation;if(!o)throw new Error('OPERATION_NOT_FOUND');data={operation:publicFeatureOperation(o)};}
  else if(method==='feature.eligibility.get')data={featureId:p.featureId,eligible:false,reason:offline?'UNKNOWN':'CHECKING',freshness:offline?'LAST_KNOWN':'UNKNOWN',checkId:null,checkedAt:null};

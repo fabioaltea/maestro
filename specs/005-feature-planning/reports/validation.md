@@ -49,3 +49,7 @@ Closed feature/upload/prepare DTOs, bounded public operation decoder, authentica
 ## T011 — daemon composition and recovery
 
 Shared authorization/admission/recovery helpers and feature runtime composed in the same daemon, writer and native reader. Only implemented reads/uploads advertised; assisted generation remains absent/unqualified. Startup reconciles local intents without replay and preserves uncertain planning ownership as UNKNOWN/RECONCILING. Drain fences admission and shares the existing deadline with Discovery; no new daemon. AST guards now reject direct OS effects from feature/workflow orchestration outside composition. RED missing runtime → GREEN runtime/architecture4/4PASS including actual daemon/client live→offline; build core/test and lint PASS.
+
+## T012 — metadata events and limits
+
+Correlated feature/artifact operation and change events are appended in the same writer transaction as admission/finalization. Shared protocol metadata builder avoids storage→core imports. Core and desktop allowlists/error catalogs extended together; arbitrary text, titles, canonical intents and chunks are redacted, not journalled. Pending ledger admissions bounded31+one cancellation to preserve outbox/terminal resources. Initial event test RED on unknown type; GREEN9/9 workflow/runtime/event cases, desktop typecheck and lint. Actual desktop decoder accepts emitted metadata. Saturation/corruption/no-follow/fsync fault/query/cancel cases remain in the foundation tests; no volume campaign.
