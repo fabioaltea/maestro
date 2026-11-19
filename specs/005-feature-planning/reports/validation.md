@@ -53,3 +53,7 @@ Shared authorization/admission/recovery helpers and feature runtime composed in 
 ## T012 — metadata events and limits
 
 Correlated feature/artifact operation and change events are appended in the same writer transaction as admission/finalization. Shared protocol metadata builder avoids storage→core imports. Core and desktop allowlists/error catalogs extended together; arbitrary text, titles, canonical intents and chunks are redacted, not journalled. Pending ledger admissions bounded31+one cancellation to preserve outbox/terminal resources. Initial event test RED on unknown type; GREEN9/9 workflow/runtime/event cases, desktop typecheck and lint. Actual desktop decoder accepts emitted metadata. Saturation/corruption/no-follow/fsync fault/query/cancel cases remain in the foundation tests; no volume campaign.
+
+## T013 — RED US1 policy
+
+US1 tests cover required current Discovery identity/config/digest, detached bounded documents and source membership. One existing data-boundary case PASS; missing requireFeatureContext is RED as expected before the story model.

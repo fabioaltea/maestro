@@ -37,7 +37,7 @@
 
 **Coverage**: FR-001–FR-003; FR-010/011/012 trasversali.
 
-- [ ] T013 [P] [US1] Scrivere policy/transizioni US1 in `tests/unit/feature-us1.test.ts`: Creation senza Discovery, race freshness, revisione concorrente, corpi grandi sigillati, rimozione progetto e retry dopo risposta persa; testare grant/revisioni e comportamento sicuro (FR-001–FR-003).
+- [X] T013 [P] [US1] Scrivere policy/transizioni US1 in `tests/unit/feature-us1.test.ts`: Creation senza Discovery, race freshness, revisione concorrente, corpi grandi sigillati, rimozione progetto e retry dopo risposta persa; testare grant/revisioni e comportamento sicuro (FR-001–FR-003).
 - [ ] T014 [P] [US1] Scrivere contract US1 in `tests/contract/feature-us1.test.ts`: metodi della storia in `specs/005-feature-planning/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-001–FR-003, FR-011).
 - [ ] T015 [P] [US1] Scrivere integrazione locale US1 in `tests/integration/feature-us1.test.ts` con fixture di repository/processi/clock pertinenti: Con progetto fixture approvato creare una feature manuale, revisionarla e rileggerla dopo restart; senza approvazione valida non compare alcuna nuova feature. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-001–FR-003, FR-011/012).
 - [ ] T016 [US1] Implementare tipi/invarianti della storia in `src/domain/features/model.ts` e aggiornare `src/ports/feature.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-001–FR-003).
