@@ -57,3 +57,7 @@ Correlated feature/artifact operation and change events are appended in the same
 ## T013 — RED US1 policy
 
 US1 tests cover required current Discovery identity/config/digest, detached bounded documents and source membership. One existing data-boundary case PASS; missing requireFeatureContext is RED as expected before the story model.
+
+## T014 — RED US1 public authority
+
+Alternative client/fake grant, controller role, client approval flag and schema4 gate tested. Closed-input/role/schema cases PASS; the intended authoring endpoint is RED (still UNSUPPORTED instead of its required grant check) before story composition. No unqualified capability advertised.
