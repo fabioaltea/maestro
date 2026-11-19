@@ -10,7 +10,7 @@
 ## Phase 1: Setup & G0
 
 - [X] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema5 in `specs/006-git-workspaces/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
-- [ ] T002 Scrivere prove negative di capability/confine in `tests/integration/workspace-boundary.test.ts` e fixture in `tests/fixtures/workspace-boundary.ts`: G0 locale con Git reale su repository temporanei, hook/config ostili, path/symlink sostituiti e crash pre/post worktree add; niente repository utente modificato nel planning. Nessun consenso reale assunto.
+- [X] T002 Scrivere prove negative di capability/confine in `tests/integration/workspace-boundary.test.ts` e fixture in `tests/fixtures/workspace-boundary.ts`: G0 locale con Git reale su repository temporanei, hook/config ostili, path/symlink sostituiti e crash pre/post worktree add; niente repository utente modificato nel planning. Nessun consenso reale assunto.
 - [ ] T003 Implementare la primitiva reale minima di confine in `src/platform/macos/git/workspace-mutator.ts` e la porta in `src/ports/workspace.ts`, con fixture `tests/fixtures/workspace-adapter.ts`; validare su questa primitiva i confini indicati in `specs/006-git-workspaces/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
 - [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/006-git-workspaces/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
 
