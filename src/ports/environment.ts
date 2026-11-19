@@ -94,3 +94,7 @@ export interface EnvironmentWrite {
  readonly plan?:EnvironmentPlan;
  readonly inserted?:boolean;
 }
+
+export interface EnvironmentInspectPort{
+ inspect(root:FilesystemAnchor,deadline:Deadline,selectedVersion?:string):Promise<EnvironmentInspection>;
+}

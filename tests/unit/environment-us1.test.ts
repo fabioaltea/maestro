@@ -3,12 +3,11 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import type {EnvironmentManagerPin} from '../../src/ports/environment.js';
 
-const planModule='../../src/domain/environments/plan.js';
-export const pin:EnvironmentManagerPin={manager:'pnpm',version:'9.4.0',nodeVersion:'26.13.0',entryDigest:'a'.repeat(64),
+import {analyzeEnvironmentPlan,requireCurrentEnvironmentPlan} from '../../src/domain/environments/plan.js';
+const pin:EnvironmentManagerPin={manager:'pnpm',version:'9.4.0',nodeVersion:'26.13.0',entryDigest:'a'.repeat(64),
  distributionDigest:'b'.repeat(64),nodeDigest:'c'.repeat(64),profileDigest:'d'.repeat(64),descendants:'DENIED',importMethod:'clone-or-copy'};
 
-test('static environment policy recognizes the exact lock/version and rejects unsafe alternatives',async()=>{
- const {analyzeEnvironmentPlan}=await import(planModule);
+test('static environment policy recognizes the exact lock/version and rejects unsafe alternatives',()=>{
  const config=(extra:Record<string,unknown>={})=>JSON.stringify({name:'fixture',packageManager:'pnpm@9.4.0',...extra});
  const lock={path:'pnpm-lock.yaml',text:"lockfileVersion: '9.0'\n"};
  const input=[{path:'package.json',text:config()},lock];
@@ -22,8 +21,7 @@ test('static environment policy recognizes the exact lock/version and rejects un
  assert.equal(analyzeEnvironmentPlan([{path:'package.json',text:config({scripts:{postinstall:'node unsafe.cjs'}})},lock],pin).reason,'SCRIPT_APPROVAL_REQUIRED');
 });
 
-test('manual attestation binds the exact observed digest and environment revision',async()=>{
- const {requireCurrentEnvironmentPlan}=await import(planModule);
+test('manual attestation binds the exact observed digest and environment revision',()=>{
  const scope={planId:randomUUID(),workspaceGeneration:randomUUID(),inputDigest:'a'.repeat(64),stateRevision:'1'};
  requireCurrentEnvironmentPlan(scope,scope);
  assert.throws(()=>requireCurrentEnvironmentPlan(scope,{...scope,inputDigest:'b'.repeat(64)}),/ENVIRONMENT_STALE/);

@@ -55,3 +55,7 @@ Due RED per lock concorrenti, pin, hook, fonti esterne e attestation stale.
 ## T015 — prove US1
 
 Due RED per piano da input statici, replay e attestation stale su worktree reale di fixture.
+
+## T016 — piano statico e fence d’attestazione
+
+Il dominio riconosce il pin e il formato lock, distingue piano qualificabile e MANUAL_REQUIRED e conserva solo i nomi degli script. Regole esplicite per config eseguibile, fonti non dichiarate e digest, generazione e revisione dell’attestazione. Build:test e **2 PASS** mirati.
