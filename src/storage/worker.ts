@@ -5,7 +5,7 @@ import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
-export const methods = ['readEnvironmentState', 'settleWorkspaceClaim', 'commitWorkspaceLease', 'commitWorkspaceState', 'commitFeatureState', 'readWorkflowArtifact', 'reconcileWorkflowArtifacts', 'readWorkspaceState', 'readFeatureState', 'reserveDiscoveryArtifact', 'publishDiscoveryArtifact', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'reconcileDiscoveryArtifacts', 'getDiscoveryBudget', 'discardDiscoveryPreview', 'readDiscoveryMetadata', 'commitDiscoveryMetadata', 'admitDiscoveryOperation', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'saveDiscoveryGrant', 'captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
+export const methods = ['commitEnvironmentState', 'readEnvironmentState', 'settleWorkspaceClaim', 'commitWorkspaceLease', 'commitWorkspaceState', 'commitFeatureState', 'readWorkflowArtifact', 'reconcileWorkflowArtifacts', 'readWorkspaceState', 'readFeatureState', 'reserveDiscoveryArtifact', 'publishDiscoveryArtifact', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'reconcileDiscoveryArtifacts', 'getDiscoveryBudget', 'discardDiscoveryPreview', 'readDiscoveryMetadata', 'commitDiscoveryMetadata', 'admitDiscoveryOperation', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'saveDiscoveryGrant', 'captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'getProject', 'listProjects', 'commitProjectRegistration', 'commitProjectObservation', 'commitProjectUpdate', 'commitProjectRemoval', 'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'listResourceSummaries', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
@@ -155,6 +155,7 @@ export function createStorageProxy(call: <T>(method: Method, args: unknown[]) =>
     settleWorkspaceClaim: claim => call('settleWorkspaceClaim', [claim]),
     commitWorkspaceLease: change => call('commitWorkspaceLease', [change]),
     commitWorkspaceState: change => call('commitWorkspaceState', [change]),
+    commitEnvironmentState: change => call('commitEnvironmentState', [change]),
     readEnvironmentState: query => call('readEnvironmentState', [query]),
     readWorkspaceState: query => call('readWorkspaceState', [query]),
     readFeatureState: query => call('readFeatureState', [query]),

@@ -1,6 +1,14 @@
+import {createHash} from 'node:crypto';
+import {transitionEnvironment} from '../domain/environments/state.js';
+import {requireWorkspaceFence,nextWorkspaceRevision} from '../domain/workspaces/model.js';
+import {foundationError,type ErrorCode} from '../domain/errors.js';
+import type {WorkflowIntent} from '../domain/workflow/authorization.js';
+import type {FeatureLedger} from './features-authoring.js';
+import {readFeatureState} from './features-store.js';
+import {readWorkspaceState} from './workspaces-store.js';
 import type Database from 'better-sqlite3';
 import {requireDecimal,requireUuid} from '../domain/identifiers.js';
-import type {EnvironmentJob,EnvironmentPlan,EnvironmentQuery,EnvironmentRead,EnvironmentRecord} from '../ports/environment.js';
+import type {EnvironmentChange,EnvironmentWrite,EnvironmentJob,EnvironmentPlan,EnvironmentQuery,EnvironmentRead,EnvironmentRecord} from '../ports/environment.js';
 import {ENVIRONMENT_SCHEMA_VERSION} from './environments-schema.js';
 
 type Row=Record<string,string|number|bigint|null>;
@@ -57,4 +65,83 @@ export function readEnvironmentState(db:Database.Database,query:EnvironmentQuery
    WHERE w.project_id=? ORDER BY e.created_at,e.environment_id LIMIT ? OFFSET ?`).all(projectId,limit+1,offset) as Row[];
  const revision=db.prepare('SELECT revision FROM store WHERE singleton=1').get() as Row;
  return{items:rows.slice(0,limit).map(record),nextOffset:rows.length>limit?offset+limit:null,pageRevision:String(revision.revision)};
+}
+
+function environmentInstance(db:Database.Database,instanceId:string,lifecycle:'RUNNING'|'RECOVERING'){
+ const row=db.prepare('SELECT i.lifecycle FROM instances i JOIN store s ON i.instance_id=s.current_instance_id WHERE i.instance_id=?')
+   .get(requireUuid(instanceId)) as Row|undefined;
+ if(row?.lifecycle!==lifecycle)throw new Error('STALE_TARGET');
+}
+function planWorkspace(db:Database.Database,intent:WorkflowIntent){
+ const workspace=readWorkspaceState(db,{kind:'get',id:requireUuid(intent.targetId)}).workspace;
+ if(!workspace||workspace.projectId!==intent.projectId)throw new Error('WORKSPACE_NOT_FOUND');
+ if(workspace.state!=='READY'||readWorkspaceState(db,{kind:'active-lease',id:workspace.workspaceId}).lease)throw new Error('WORKSPACE_IN_USE');
+ if(workspace.stateRevision!==intent.expectedRevision)throw new Error('REVISION_CONFLICT');
+ const project=db.prepare('SELECT config_revision,removed_at FROM projects WHERE project_id=?').get(workspace.projectId) as Row|undefined;
+ if(!project||project.removed_at!==null)throw new Error('PROJECT_REMOVED');
+ if(String(project.config_revision)!==intent.configRevision)throw new Error('REVISION_CONFLICT');
+ return workspace;
+}
+function environmentError(error:string){
+ return foundationError(error as ErrorCode).code;
+}
+export function commitEnvironmentState(db:Database.Database,change:EnvironmentChange,ledger:FeatureLedger,verifyArtifact:(id:string)=>void):EnvironmentWrite{
+ requireEnvironmentSchema(db);
+ if(change.kind==='plan-admit'){
+   const {admission}=change,intent=ledger.intent(admission.canonicalIntent);
+   if(intent.namespace!=='ENVIRONMENT'||intent.action!=='plan')throw new Error('INVALID_REQUEST');
+   return ledger.admit(admission,()=>{
+     environmentInstance(db,admission.instanceId,'RUNNING');
+     const workspace=planWorkspace(db,intent);
+     if(db.prepare("SELECT 1 FROM workflow_operations WHERE namespace='ENVIRONMENT' AND action='plan' AND target_id=? AND phase<>'FINALIZED' AND request_id<>?")
+       .get(workspace.workspaceId,admission.requestId))throw new Error('BUSY');
+   });
+ }
+ return ledger.transaction(()=>{
+   const operation=readFeatureState(db,{kind:'operation',id:change.requestId}).operation;
+   if(!operation||operation.namespace!=='ENVIRONMENT'||operation.action!=='plan')throw new Error('OPERATION_NOT_FOUND');
+   if(operation.phase==='FINALIZED')return{operation};
+   const owner=db.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(change.requestId) as Row;
+   if(change.kind==='plan-block'&&change.interrupted){
+     environmentInstance(db,change.instanceId,'RECOVERING');
+     if(owner.owning_instance_id===change.instanceId||change.error!=='INTERRUPTED')throw new Error('STALE_TARGET');
+     return{operation:ledger.complete(change.requestId,null,'INTERRUPTED','INTERRUPTED')};
+   }
+   environmentInstance(db,change.instanceId,'RUNNING');
+   if(owner.owning_instance_id!==change.instanceId)throw new Error('STALE_TARGET');
+   if(change.kind==='plan-block')return{operation:ledger.complete(change.requestId,null,environmentError(change.error),'BLOCKED')};
+   const intent=ledger.intent(operation.canonicalIntent),workspace=planWorkspace(db,intent);
+   requireWorkspaceFence(workspace,change.fence);
+   const value=change.plan,metadata=value.metadata,encoded=JSON.stringify(metadata);
+   const digest=createHash('sha256').update(encoded).digest('hex'),id=workspace.workspaceId;
+   if(value.planId!==change.requestId||value.workspaceGeneration!==workspace.ownerGeneration||value.configRevision!==intent.configRevision
+     ||value.workspaceRevision!==workspace.stateRevision||value.inputDigest!==metadata.inputDigest||
+     !/^[a-f0-9]{64}$/.test(value.inputDigest)||value.digest!==digest||!['PLANNED','MANUAL_REQUIRED'].includes(metadata.disposition)
+     ||!Number.isFinite(Date.parse(value.createdAt)))throw new Error('INVALID_REQUEST');
+   const artifact=readFeatureState(db,{kind:'artifact',id:value.artifactId}).artifact;
+   if(!artifact||!['SEALED','REFERENCED'].includes(artifact.state)||artifact.kind!=='BUNDLE'||artifact.sha256!==digest||artifact.targetId!==id)
+     throw new Error('ARTIFACT_CORRUPT');
+   verifyArtifact(value.artifactId);
+   const previous=readEnvironmentState(db,{kind:'workspace',id}).environment;
+   const environmentId=requireUuid(value.environmentId),state=transitionEnvironment(previous?.state??'UNCONFIGURED',
+     metadata.disposition==='PLANNED'?'plan':'manual');
+   if(previous&&previous.environmentId!==environmentId)throw new Error('REVISION_CONFLICT');
+   const stateRevision=previous?nextWorkspaceRevision(previous.stateRevision):'1';
+   if(!previous){
+     db.prepare(`INSERT INTO environments_records(environment_id,workspace_id,workspace_generation,state,state_revision,
+       current_plan_id,checked_at,created_at,updated_at) VALUES(?,?,?,?,1,?,?,?,?)`)
+       .run(environmentId,id,workspace.ownerGeneration,state,value.planId,value.createdAt,value.createdAt,value.createdAt);
+   }else{
+     db.prepare(`UPDATE environments_records SET workspace_generation=?,state=?,state_revision=?,current_plan_id=?,attestation_id=NULL,
+       prepared_digest=NULL,safe_error=NULL,checked_at=?,updated_at=? WHERE environment_id=? AND state_revision=?`)
+       .run(workspace.ownerGeneration,state,BigInt(stateRevision),value.planId,value.createdAt,value.createdAt,environmentId,BigInt(previous.stateRevision));
+   }
+   db.prepare(`INSERT INTO environments_plans(plan_id,environment_id,request_id,workspace_generation,workspace_revision,config_revision,
+     digest,input_digest,artifact_id,metadata,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
+     .run(value.planId,environmentId,change.requestId,workspace.ownerGeneration,BigInt(workspace.stateRevision),BigInt(value.configRevision),
+       value.digest,value.inputDigest,value.artifactId,encoded,value.createdAt);
+   db.prepare("UPDATE workflow_artifacts SET state='REFERENCED',ref_count=ref_count+1 WHERE artifact_id=?").run(value.artifactId);
+   const result={environmentId,planId:value.planId,workspaceId:id,stateRevision};
+   return{operation:ledger.complete(change.requestId,result),plan:value,environment:readEnvironmentState(db,{kind:'environment',id:environmentId}).environment!};
+ },true,{requestIds:[change.requestId]});
 }

@@ -1,6 +1,8 @@
 import {requireDecimal,requireUuid} from '../identifiers.js';
 
 export const ENVIRONMENT_STATES=['UNCONFIGURED','PLANNED','MANUAL_REQUIRED','MANUAL_VERIFIED','PREPARING','READY','STALE','BLOCKED','RECONCILING'] as const;
+export const ENVIRONMENT_GRANTED_ACTIONS:readonly string[]=['attest','prepare','cancel','validate'];
+export const ENVIRONMENT_OBSERVATION_ACTIONS:readonly string[]=['plan','reconcile'];
 export type EnvironmentState=typeof ENVIRONMENT_STATES[number];
 type Action='plan'|'manual'|'attest'|'prepare'|'prepared'|'stale'|'block'|'uncertain';
 const available={plan:'PLANNED',manual:'MANUAL_REQUIRED',stale:'STALE'} as const;

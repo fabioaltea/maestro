@@ -1,6 +1,8 @@
 import type {EnvironmentFence,EnvironmentState} from '../domain/environments/state.js';
 import type {Deadline} from './clock.js';
 import type {FilesystemAnchor} from './repository.js';
+import type {WorkflowOperationRecord,WorkflowAdmission} from './workflow.js';
+import type {WorkspaceFence} from '../domain/workspaces/model.js';
 
 export interface EnvironmentManagerPin {
  readonly manager:'pnpm';readonly version:string;readonly nodeVersion:string;
@@ -75,5 +77,18 @@ export interface EnvironmentRead {
  readonly pageRevision?:string;
 }
 export interface EnvironmentStoragePort {
+ commitEnvironmentState?(change:EnvironmentChange):Promise<EnvironmentWrite>;
  readEnvironmentState?(query:EnvironmentQuery):Promise<EnvironmentRead>;
+}
+
+export type EnvironmentChange=
+ |{readonly kind:'plan-admit';readonly admission:WorkflowAdmission}
+ |{readonly kind:'plan-finish';readonly instanceId:string;readonly requestId:string;
+   readonly fence:WorkspaceFence;readonly plan:EnvironmentPlan}
+ |{readonly kind:'plan-block';readonly instanceId:string;readonly requestId:string;readonly error:string;readonly interrupted?:boolean};
+export interface EnvironmentWrite {
+ readonly operation:WorkflowOperationRecord;
+ readonly environment?:EnvironmentRecord;
+ readonly plan?:EnvironmentPlan;
+ readonly inserted?:boolean;
 }

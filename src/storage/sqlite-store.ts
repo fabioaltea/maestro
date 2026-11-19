@@ -1,5 +1,5 @@
-import {readEnvironmentState} from './environments-store.js';
-import type {EnvironmentQuery} from '../ports/environment.js';
+import {commitEnvironmentState,readEnvironmentState} from './environments-store.js';
+import type {EnvironmentChange,EnvironmentQuery} from '../ports/environment.js';
 import {ENVIRONMENT_TABLES} from './environments-schema.js';
 import {workspaceChanged,workspaceEvents} from '../core/workspaces/events.js';
 import {WORKSPACE_TABLES} from './workspaces-schema.js';
@@ -202,6 +202,7 @@ export class SQLiteStore {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
+          if(op.namespace==='ENVIRONMENT')continue;
           if(op.namespace==='WORKSPACE'){
             const workspace=op.targetId?readWorkspaceState(this.database!,{kind:'get',id:op.targetId}).workspace:null;
             if(workspace)drafts.push(...workspaceEvents(op,String(owner.owning_instance_id),workspace));
@@ -224,6 +225,11 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
+  commitEnvironmentState(change:EnvironmentChange) {
+    return commitEnvironmentState(this.writable(),change,this.workflowStore(),id=>{
+      try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
+    });
+  }
   readEnvironmentState(query:EnvironmentQuery) {
     if(!this.database)throw new Error('STATE_ABSENT');
     return this.database.transaction(()=>readEnvironmentState(this.database!,query)).deferred();

@@ -1,4 +1,17 @@
 const catalog = {
+  ENVIRONMENT_NOT_INITIALIZED: ['Archivio ambienti non inizializzato.', 'Avviare esplicitamente il servizio per aggiornare lo schema.', false],
+  ENVIRONMENT_NOT_FOUND: ['Ambiente non trovato.', 'Consultare il workspace nell’archivio corrente.', false],
+  ENVIRONMENT_STALE: ['Gli input dell’ambiente sono cambiati.', 'Preparare un nuovo piano dagli input correnti.', false],
+  MANAGER_UNSUPPORTED: ['Package manager o profilo non qualificato.', 'Consultare il piano e le opzioni manuali.', false],
+  MANAGER_MISMATCH: ['Versione o digest del package manager differente dal pin.', 'Rileggere il piano e la configurazione locale.', false],
+  LOCKFILE_CHANGED: ['Il lockfile non consente un’installazione frozen.', 'Rivedere manifest e lockfile nel workspace.', false],
+  SCRIPT_APPROVAL_REQUIRED: ['L’esecuzione di script richiede un consenso distinto.', 'Rivedere gli script e il relativo piano.', false],
+  CONFIG_UNSAFE: ['Configurazione del package manager fuori dallo scope qualificato.', 'Rivedere la configurazione e i riferimenti ai file.', false],
+  DISK_BUDGET: ['Quota disco dell’ambiente o spazio disponibile insufficiente.', 'Consultare quote e risorse conservate.', false],
+  JOB_RECONCILING: ['Esito del job o uscita del processo incerti.', 'Interrogare la richiesta originale e riconciliare la prova.', true],
+  INSTALL_FAILED: ['Preparazione dipendenze non riuscita.', 'Consultare stato e diagnostica redatta del job.', false],
+  VALIDATION_FAILED: ['Comando di validazione non riuscito.', 'Consultare l’esito e l’output del job.', false],
+  CANCELLED: ['Job interrotto con uscita verificata.', 'Consultare lo stato delle risorse dell’ambiente.', false],
   WORKSPACE_LIMIT: ['Limite di workspace raggiunto.', 'Consultare i workspace già conservati.', false],
   WORKSPACE_NOT_FOUND: ['Workspace non trovato.', 'Rileggere i workspace nell’archivio corrente.', false],
   WORKSPACE_IN_USE: ['Workspace o repository riservato.', 'Interrogare il lavoro attivo e il relativo esito.', true],
@@ -89,6 +102,9 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
+  ENVIRONMENT_NOT_INITIALIZED:'RUNTIME', ENVIRONMENT_NOT_FOUND:'RUNTIME', ENVIRONMENT_STALE:'AUTHORIZATION', MANAGER_UNSUPPORTED:'SAFETY',
+  MANAGER_MISMATCH:'SAFETY', LOCKFILE_CHANGED:'SAFETY', SCRIPT_APPROVAL_REQUIRED:'AUTHORIZATION', CONFIG_UNSAFE:'SAFETY',
+  DISK_BUDGET:'PERSISTENCE', JOB_RECONCILING:'SAFETY', INSTALL_FAILED:'RUNTIME', VALIDATION_FAILED:'RUNTIME', CANCELLED:'RUNTIME',
   WORKSPACE_LIMIT: 'PERSISTENCE', WORKSPACE_NOT_FOUND: 'RUNTIME', WORKSPACE_IN_USE: 'CONCURRENCY', WORKSPACE_UNSAFE:'SAFETY',
   BASE_CHANGED:'AUTHORIZATION', BRANCH_EXISTS:'CONCURRENCY', OWNERSHIP_UNPROVEN:'SAFETY', UNINTEGRATED_WORK:'SAFETY', GIT_CONFLICT:'CONCURRENCY',
   WORKSPACE_NOT_INITIALIZED: 'RUNTIME', FEATURE_NOT_INITIALIZED: 'RUNTIME', FEATURE_NOT_FOUND: 'RUNTIME', FEATURE_IN_USE: 'CONCURRENCY', FEATURE_LIMIT: 'PERSISTENCE', DISCOVERY_REQUIRED: 'AUTHORIZATION', PLANNING_UNAVAILABLE: 'SAFETY', RESOURCE_LIMIT: 'PERSISTENCE',

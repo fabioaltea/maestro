@@ -23,3 +23,7 @@ Quattro RED prima dell’upgrade 6→7. Reader immutabile, putative fault pre/po
 ## T007 — schema cumulativo 7
 
 Lo start esplicito migra 6→7 sotto le lease esistenti. Il rebuild del parent workflow conserva riferimenti e guard UUID, con integrity/FK verificati nella transazione. Lo schema 6 resta leggibile e immutabile. Discovery, Feature e Workspace operano anche su 7. Build e build:test PASS. **16 PASS** tra state, migrazione, collisioni e regressioni Workspace/Feature.
+
+## T008 — reservation e artefatti
+
+Piano prenotato nel ledger comune e pubblicato solo dopo verifica del file sigillato, dei digest e della revisione workspace. Quota condivisa, replay con UUID identico e file mancante verificati. Build:test e **6 PASS** tra store ambiente e workflow. Gli eventi del namespace sono completati da T012.
