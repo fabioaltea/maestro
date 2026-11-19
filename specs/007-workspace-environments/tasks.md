@@ -12,7 +12,7 @@
 - [x] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema6 in `specs/007-workspace-environments/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
 - [x] T002 Scrivere prove negative di capability/confine in `tests/integration/environment-boundary.test.ts` e fixture in `tests/fixtures/environment-boundary.ts`: G0 pnpm binario reale con registry locale di fixture, zero rete esterna/account: lockfile frozen, hook/config ostili, store mutation isolation e cancel descendant tree. Versione/flag esatti fissati nel report prima di dati reali. Nessun consenso reale assunto.
 - [x] T003 Implementare la primitiva reale minima di confine in `src/platform/macos/environment/pnpm.ts` e la porta in `src/ports/environment.ts`, con fixture `tests/fixtures/environment-adapter.ts`; validare su questa primitiva i confini indicati in `specs/007-workspace-environments/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
-- [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/007-workspace-environments/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
+- [x] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/007-workspace-environments/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
 
 **Checkpoint**: G0 locale necessario alle capacità dipendenti; non certifica autenticazione/provider/remoti reali.
 
