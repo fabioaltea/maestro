@@ -107,3 +107,7 @@ Un PASS e un RED prima della policy registrazione CommandSpec. Copertura per usc
 ## T028 — contratto US3
 
 **1 PASS** per revisione, capability, input chiuso e distinzione tra autorizzazione e osservazione del job.
+
+## T029 — fixture US3
+
+Scenari su worktree posseduto per argv letterale, esiti 0/14/timeout, perdita della risposta dopo il completamento nativo e riconciliazione da successore. Prima dell’implementazione manca il metodo di esecuzione nel runtime.
