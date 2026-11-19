@@ -1,3 +1,4 @@
+import {validateWorkspaceParams,requireWorkspaceEnvelope} from './workspace.js';
 import {validateFeatureParams,requireFeatureEnvelope} from './feature.js';
 import { validateDiscoveryParams, requireDiscoveryEnvelope } from './discovery.js';
 import { MAX_FRAME_BYTES, METHODS } from './messages.js';
@@ -33,6 +34,7 @@ export function decodeRequest(frame: string | Uint8Array): RpcRequest {
     || !parsed.params || typeof parsed.params !== 'object' || Array.isArray(parsed.params)) throw new Error('INVALID_REQUEST');
   try { requireUuid(parsed.correlationId); }
   catch { throw new Error('INVALID_REQUEST'); }
+  if (parsed.method.startsWith('workspace.')) { requireWorkspaceEnvelope(parsed); validateWorkspaceParams(parsed.method, parsed.params); }
   if (parsed.method.startsWith('feature.')) { requireFeatureEnvelope(parsed); validateFeatureParams(parsed.method, parsed.params); }
   if (parsed.method.startsWith('discovery.')) { requireDiscoveryEnvelope(parsed); validateDiscoveryParams(parsed.method, parsed.params); }
   if (parsed.method.startsWith('projects.')) validateProjectParams(parsed.method, parsed.params);

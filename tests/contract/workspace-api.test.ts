@@ -2,9 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 
-const protocol='../../src/protocol/workspace.js';
-test('workspace protocol is closed, bounded and does not accept paths, ownership claims or runtime lease methods',async()=>{
- const {validateWorkspaceParams,requireWorkspaceEnvelope}=await import(protocol);
+import {validateWorkspaceParams,requireWorkspaceEnvelope} from '../../src/protocol/workspace.js';
+test('workspace protocol is closed, bounded and does not accept paths, ownership claims or runtime lease methods',()=>{
  const featureId=randomUUID(),envelopeId=randomUUID(),workspaceId=randomUUID(),requestId=randomUUID(),grantId=randomUUID();
  assert.doesNotThrow(()=>validateWorkspaceParams('workspace.prepare',{featureId,envelopeId}));
  assert.doesNotThrow(()=>validateWorkspaceParams('workspace.create',{requestId,grantId}));

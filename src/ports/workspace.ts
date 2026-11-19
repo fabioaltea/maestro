@@ -55,11 +55,17 @@ export interface WorkspaceRecord extends WorkspaceFence {
  readonly markerDigest:string|null;
  readonly safeError:string|null;
 }
-export type WorkspaceQuery={readonly kind:'get';readonly id:string}
+export interface WorkspaceSummary{
+ readonly workspaceId:string;readonly featureId:string;readonly projectId:string;readonly envelopeId:string;
+ readonly state:WorkspaceState;readonly stateRevision:string;readonly baseRef:string;readonly baseOid:string;
+ readonly branchRef:string;readonly ownership:'RECORDED'|'UNKNOWN';readonly updatedAt:string;readonly createdAt:string;readonly safeError:string|null;
+}
+export type WorkspaceQuery={readonly kind:'get'|'summary';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly limit?:number;readonly offset?:number};
 export interface WorkspaceRead {
  readonly workspace?:WorkspaceRecord|null;
- readonly items?:readonly WorkspaceRecord[];
+ readonly summary?:WorkspaceSummary|null;
+ readonly items?:readonly WorkspaceSummary[];
  readonly nextOffset?:number|null;
  readonly pageRevision?:string;
 }

@@ -5,10 +5,8 @@ import {readFile,readdir} from 'node:fs/promises';
 import {canonicalWorkflowIntent} from '../../src/domain/workflow/authorization.js';
 import {workspaceAuthoringFixture} from '../fixtures/workspace-authoring.js';
 
-const inspector='../../src/core/inspect-main.js';
+import {inspectWorkspace} from '../../src/core/inspect-main.js';
 test('workspace metadata and original receipts are LAST_KNOWN in confined offline reads',async t=>{
- const {inspectWorkspace}=await import(inspector);
- assert.equal(typeof inspectWorkspace,'function');
  const f=await workspaceAuthoringFixture(t),approved=await f.approvedFeature(),target=f.target(approved.featureId);
  const grantId=randomUUID(),requestId=randomUUID(),nowMs=Date.now();
  const canonicalIntent=canonicalWorkflowIntent({version:1,storeId:f.storeId,ownerUid:process.getuid!(),namespace:'WORKSPACE',action:'create',
@@ -19,14 +17,15 @@ test('workspace metadata and original receipts are LAST_KNOWN in confined offlin
  const before=await readFile(f.path),names=(await readdir(f.directory)).sort(),revision=f.store.readSnapshot()!.store.revision;
  const read=await inspectWorkspace(f.directory,'workspace.get',{workspaceId:target.workspaceId});
  assert.equal(read.result,'OK',JSON.stringify(read));assert.equal(read.freshness,'LAST_KNOWN');
- assert.equal(read.data.workspace.state,'CREATING');
- assert.equal(read.data.workspace.baseOid,target.baseOid);
+ const workspace=read.data.workspace as {state:string;baseOid:string};
+ assert.equal(workspace.state,'CREATING');
+ assert.equal(workspace.baseOid,target.baseOid);
  assert.ok(!JSON.stringify(read.data).includes(f.repo));
  assert.ok(!JSON.stringify(read.data).includes(f.root));
  const list=await inspectWorkspace(f.directory,'workspace.list',{projectId:f.projectId,limit:1});
- assert.equal(list.data.items.length,1);
+ assert.equal((list.data.items as unknown[]).length,1);
  const operation=await inspectWorkspace(f.directory,'workspace.operation.get',{requestId});
- assert.equal(operation.data.operation.outcome,'IN_PROGRESS');
+ assert.equal((operation.data.operation as {outcome:string}).outcome,'IN_PROGRESS');
  assert.equal(operation.requestId,requestId);
  const mutation=await inspectWorkspace(f.directory,'workspace.create',{requestId,grantId});
  assert.notEqual(mutation.result,'OK');

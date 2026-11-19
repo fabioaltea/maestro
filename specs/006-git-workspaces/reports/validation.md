@@ -35,3 +35,7 @@ Namespace WORKSPACE nel ledger esistente. Grant monouso e reservation persistono
 ## T009 — DTO e lettura storica (RED)
 
 Due casi RED per validator e inspector ancora assenti. Verificano input chiusi, envelope bounded, metodi lease interni, dati storici LAST_KNOWN con UUID originale e assenza di effetti da lettura.
+
+## T010 — protocollo e reader confinato
+
+DTO chiusi per letture e ammissione, cursore legato a store/progetto/revisione, metadata senza path privati. LocalClient verifica la risposta e recupera soltanto l’UUID originale. Workspace e Feature condividono il trasporto e conservano la propria allowlist. Build, build:test, typecheck e lint PASS. Contratti/offline 006 e regressioni CLI/runtime 005 **7 PASS**. La pubblicazione dei metodi live richiede la composizione T011.

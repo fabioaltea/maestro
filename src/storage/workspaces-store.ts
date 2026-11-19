@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 import {requireUuid} from '../domain/identifiers.js';
-import type {WorkspaceChange,WorkspaceMutationTarget,WorkspaceQuery,WorkspaceRead,WorkspaceRecord,WorkspaceWrite} from '../ports/workspace.js';
+import type {WorkspaceChange,WorkspaceMutationTarget,WorkspaceQuery,WorkspaceRead,WorkspaceRecord,WorkspaceSummary,WorkspaceWrite} from '../ports/workspace.js';
 import type {FilesystemAnchor,ReferenceCheckout,RepositoryIdentity} from '../ports/repository.js';
 import {requireWorkspaceCapacity} from '../domain/workspaces/model.js';
 import {requireCurrentFeatureApproval} from '../domain/features/approval.js';
@@ -22,18 +22,24 @@ export function workspaceRecord(r:Row):WorkspaceRecord{
    createdAt:String(r.created_at),updatedAt:String(r.updated_at),
  };
 }
+function summary(row:Row):WorkspaceSummary{
+ const r=workspaceRecord(row);
+ return{workspaceId:r.workspaceId,featureId:r.featureId,projectId:r.projectId,envelopeId:r.envelopeId,state:r.state,stateRevision:r.stateRevision,
+   baseRef:r.target.baseRef,baseOid:r.target.baseOid,branchRef:`refs/heads/maestro/feature/${r.featureId}/${r.workspaceId}`,
+   ownership:r.ownership?'RECORDED':'UNKNOWN',createdAt:r.createdAt,updatedAt:r.updatedAt,safeError:r.safeError};
+}
 export function readWorkspaceState(database:Database.Database,query:WorkspaceQuery):WorkspaceRead{
  requireWorkspaceSchema(database);
- if(query.kind==='get'){
+ if(query.kind==='get'||query.kind==='summary'){
    const row=database.prepare('SELECT * FROM workspaces_records WHERE workspace_id=?').get(requireUuid(query.id)) as Row|undefined;
-   return{workspace:row?workspaceRecord(row):null};
+   return query.kind==='get'?{workspace:row?workspaceRecord(row):null}:{summary:row?summary(row):null};
  }
  if(query.kind!=='list')throw new Error('INVALID_REQUEST');
  const projectId=requireUuid(query.projectId),offset=query.offset??0,limit=query.limit??20;
  if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>20)throw new Error('INVALID_REQUEST');
  const rows=database.prepare('SELECT * FROM workspaces_records WHERE project_id=? ORDER BY created_at,workspace_id LIMIT ? OFFSET ?').all(projectId,limit+1,offset) as Row[];
  const revision=database.prepare('SELECT revision FROM store WHERE singleton=1').get() as Row;
- return{items:rows.slice(0,limit).map(workspaceRecord),nextOffset:rows.length>limit?offset+limit:null,pageRevision:String(revision.revision)};
+ return{items:rows.slice(0,limit).map(summary),nextOffset:rows.length>limit?offset+limit:null,pageRevision:String(revision.revision)};
 }
 
 function sameAnchor(left:FilesystemAnchor,right:FilesystemAnchor){

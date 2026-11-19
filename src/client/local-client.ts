@@ -1,3 +1,4 @@
+import {WORKSPACE_METHODS,WORKSPACE_MUTATION_METHODS,validateWorkspaceParams,decodeWorkspaceOperation,requireWorkspaceEnvelope,workspaceRevision,workspaceUuid} from '../protocol/workspace.js';
 import { FEATURE_READ_METHODS, FEATURE_ADMISSION_METHODS,validateFeatureParams,validateFeatureAdmission,decodeFeatureOperationView,requireFeatureEnvelope } from '../protocol/feature.js';
 import {canonicalWorkflowIntent,type WorkflowIntent} from '../domain/workflow/authorization.js';
 import { DISCOVERY_READ_METHODS, DISCOVERY_ADMISSION_METHODS, validateDiscoveryParams, validateDiscoveryAdmission, decodeDiscoveryOperationView, requireDiscoveryEnvelope } from '../protocol/discovery.js';
@@ -20,6 +21,53 @@ export interface CommandOptions {
 
 export class LocalClient {
   constructor(private readonly backend: ClientBackend) {}
+  async runWorkspace(method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions={}):Promise<PublicResult>{
+    if(!(WORKSPACE_METHODS as readonly string[]).includes(method)||!this.backend.workspace)throw new Error('UNSUPPORTED_VERSION');
+    const mutate=(WORKSPACE_MUTATION_METHODS as readonly string[]).includes(method);
+    if(options.limit!==undefined||options.after!==undefined||mutate&&Object.hasOwn(params,'requestId')||!mutate&&options.requestId!==undefined)throw new Error('INVALID_REQUEST');
+    const requestId=mutate?workspaceUuid(options.requestId):method==='workspace.operation.get'?workspaceUuid(params.requestId):null;
+    const succeededOrBusy=(r:PublicResult)=>r.result==='OK'||r.result==='BUSY'&&r.error===null;
+    const supplied=mutate?{...params,requestId}:{...params};
+    validateWorkspaceParams(method,supplied);
+    const original=JSON.parse(JSON.stringify(supplied)) as Record<string,unknown>;
+    const directory=options.stateDirectory??this.backend.defaultDirectory,timeout=options.timeoutMs??2000;
+    if(!Number.isInteger(timeout)||timeout<1||timeout>2000)throw new Error('INVALID_REQUEST');
+    const expires=performance.now()+timeout;
+    const checked=(r:PublicResult)=>{
+      requireWorkspaceEnvelope(r);
+      if(r.requestId!==requestId)throw new Error('INVALID_REQUEST');
+      if(r.data.operation!==undefined){
+        const op=decodeWorkspaceOperation(r.data.operation);
+        if(op.requestId!==requestId||op.outcome!=='UNKNOWN'&&op.outcome!==r.outcome||mutate&&op.action!==method.split('.').at(-1))throw new Error('INVALID_REQUEST');
+      }
+      if(r.data.accepted!==undefined){
+        if(!mutate||r.data.accepted!==true||r.data.requestId!==requestId)throw new Error('INVALID_REQUEST');
+        workspaceUuid(r.data.workspaceId);
+        if(r.data.stateRevision!==undefined)workspaceRevision(r.data.stateRevision);
+      }
+      if(mutate&&succeededOrBusy(r)&&r.data.operation===undefined&&r.data.accepted!==true)throw new Error('INVALID_REQUEST');
+      if(method==='workspace.cleanup.get'&&r.freshness==='LAST_KNOWN'&&r.data.eligible===true)throw new Error('INVALID_REQUEST');
+      return r;
+    };
+    const timeoutResult=():PublicResult=>({protocolVersion:1,requestId,storeId:null,instanceId:null,
+      result:mutate?'UNKNOWN_OUTCOME':'ERROR',outcome:null,freshness:'LAST_KNOWN',liveness:'UNKNOWN',data:{},
+      error:foundationError(mutate?'UNKNOWN_OUTCOME':'DEADLINE_EXCEEDED',requestId?{operationId:requestId}:{})});
+    const call=(requested:string,body:Record<string,unknown>)=>this.backend.workspace!(directory,requested,body,Math.max(1,expires-performance.now())).then(checked);
+    async function execute(){
+      if(!mutate)return call(method,original);
+      try{
+        const response=await call(method,original);
+        if(response.result!=='UNKNOWN_OUTCOME'&&!['DEADLINE_EXCEEDED','PERSISTENCE_UNAVAILABLE'].includes(response.error?.code??''))return response;
+      }catch{/* Recover the original request only. */}
+      if(performance.now()<expires){
+        try{const observed=await call('workspace.operation.get',{requestId});if(observed.data.operation!==undefined)return observed;}catch{/* An absent observation is inconclusive. */}
+      }
+      return timeoutResult();
+    }
+    let timer:ReturnType<typeof setTimeout>|undefined;
+    try{return await Promise.race([execute(),new Promise<PublicResult>(resolve=>{timer=setTimeout(()=>resolve(timeoutResult()),timeout);})]);}
+    finally{clearTimeout(timer);}
+  }
   async runFeature(method: string, params: Readonly<Record<string, unknown>>, options: CommandOptions = {}): Promise<PublicResult> {
     const directory = options.stateDirectory ?? this.backend.defaultDirectory;
     const mutation = (FEATURE_ADMISSION_METHODS as readonly string[]).includes(method);
