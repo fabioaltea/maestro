@@ -1,6 +1,7 @@
 import {featureFields,featureIdentifier,featureObject,featureText,validateFeatureBundle} from './bundle.js';
 import type {FeatureRecord} from './model.js';
-import type {FeaturePlanningIdentity,FeaturePlanningExit,FeaturePlanningResult,FeatureProvenanceScope} from '../../ports/feature.js';
+import type {FeaturePlanningConfiguration,FeaturePlanningIdentity,FeaturePlanningExit,FeaturePlanningResult,FeatureProvenanceScope} from '../../ports/feature.js';
+import {requireDecimal} from '../identifiers.js';
 
 export const FEATURE_PLANNING_LIMITS = Object.freeze({turns:20,questions:20,answerBytes:4096,resultBytes:262144,runMs:600000,contextMs:30000,cancelMs:5000});
 export const FEATURE_PLANNING_ACTIONS = ['generate','answer','cancel'] as const;
@@ -20,6 +21,7 @@ export interface PlanningTurn extends FeaturePlanningIdentity {
   readonly revisionId:string;
   readonly contextSnapshotId:string;
   readonly inputDigest:string;
+  readonly configuration?:FeaturePlanningConfiguration;
   readonly turnIndex:number;
   readonly phase:PlanningPhase;
   readonly questionIds:readonly string[];
@@ -29,6 +31,17 @@ export interface PlanningTurn extends FeaturePlanningIdentity {
   readonly createdAt:string;
   readonly completedAt:string|null;
   readonly error:string|null;
+}
+
+export function planningConfiguration(input:unknown):FeaturePlanningConfiguration {
+  const configuration=featureObject(input);
+  featureFields(configuration,['providerId','modelId','configurationRevision','qualificationDigest']);
+  const providerId=featureText(configuration.providerId,64,true),modelId=featureText(configuration.modelId,128,true);
+  const qualificationDigest=featureText(configuration.qualificationDigest,64,true);
+  const configurationRevision=requireDecimal(configuration.configurationRevision);
+  if(!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(providerId)||!/^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(modelId)
+    ||!(/^[a-f0-9]{64}$/).test(qualificationDigest)||configurationRevision==='0')throw new Error('PROVIDER_UNSAFE');
+  return{providerId,modelId,configurationRevision,qualificationDigest};
 }
 
 export function requirePlanningFence(

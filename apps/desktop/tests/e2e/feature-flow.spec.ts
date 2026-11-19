@@ -67,6 +67,7 @@ test('US3 qualified fixture creates a turn, confirms an answer and reads the res
      await expect(prepare).toBeEnabled();
      await prepare.click();
      await expect(page.getByRole('dialog')).toContainText('Snapshot Discovery:');
+     await expect(page.getByRole('dialog')).toContainText('fixture-planning / fixture-model');
      await page.keyboard.press('Escape');
      await expect(prepare).toBeFocused();
      await prepare.click();await page.getByRole('button',{name:'Conferma operazione',exact:true}).click();

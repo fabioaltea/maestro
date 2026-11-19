@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {makeDeadline,systemClock} from '../../src/ports/clock.js';
 import {randomUUID} from 'node:crypto';
 import {featureAuthoringFixture} from '../fixtures/feature-authoring.js';
-import {featureDraft} from '../fixtures/feature-boundary.js';
+import {featureDraft,featurePlanningConfiguration} from '../fixtures/feature-boundary.js';
 
 const questions={kind:'QUESTIONS',questions:[{questionId:'Q1',text:'Quale stato mostrare?',reason:'Ambito da confermare'}]};
 const capabilities={readonlyPlanning:true as const,qualified:true as const};
@@ -19,7 +20,7 @@ async function create(f:Awaited<ReturnType<typeof featureAuthoringFixture>>){
 
 test('US3 two explicit turns retain question/answer provenance, deduplicate retries and allow plan approval',async t=>{
   let invocations=0;
-  const planning={capabilities,async check(){},async cancel(identity:Identity){return exit(identity);},async reconcile(){return null;},
+  const planning={capabilities,configuration:featurePlanningConfiguration,async check(){},async cancel(identity:Identity){return exit(identity);},async reconcile(){return null;},
     async run(input:{identity:Identity;answers:readonly {answerId:string;text:string}[]}){
       invocations++;
       const answer=input.answers[0];
@@ -57,7 +58,7 @@ test('US3 cancellation requires exit evidence and discards results that arrive a
   let started!:()=>void,finish!:(value:{exit:ReturnType<typeof exit>;value:unknown})=>void,identity!:Identity;
   const running=new Promise<void>(resolve=>{started=resolve;});
   const pending=new Promise<{exit:ReturnType<typeof exit>;value:unknown}>(resolve=>{finish=resolve;});
-  const planning={capabilities,async check(){},async cancel(run:Identity){return exit(run);},async reconcile(){return null;},
+  const planning={capabilities,configuration:featurePlanningConfiguration,async check(){},async cancel(run:Identity){return exit(run);},async reconcile(){return null;},
     run(input:{identity:Identity}){identity=input.identity;started();return pending;}};
   const f=await featureAuthoringFixture(t,{planning});
   const featureId=await create(f),contextSnapshotId=f.discovery().snapshotId;
@@ -79,7 +80,7 @@ test('US3 cancellation requires exit evidence and discards results that arrive a
 
 test('US3 preserves original requests across pre-admission and post-completion interruptions',async t=>{
   let launches=0,fault:'pre'|'post'|'none'='pre';
-  const planning={capabilities,async check(){},async cancel(identity:Identity){return exit(identity);},async reconcile(){return null;},
+  const planning={capabilities,configuration:featurePlanningConfiguration,async check(){},async cancel(identity:Identity){return exit(identity);},async reconcile(){return null;},
     async run({identity}: {identity:Identity}){launches++;return{exit:exit(identity),value:{kind:'DRAFT',bundle:featureDraft()}};}};
   const f=await featureAuthoringFixture(t,{planning,planningFault(kind,point){
     if(fault==='pre'&&kind==='planning.admit'&&point==='before'||fault==='post'&&kind==='planning.complete'&&point==='after'){
@@ -103,15 +104,23 @@ test('US3 preserves original requests across pre-admission and post-completion i
 test('US3 deadline and unverified cancellation retain the lease until authenticated recovery',async t=>{
   let elapsed=0,reconcile=false,attempts=0;
   const clock={wallUtc:()=>new Date().toISOString(),monotonicNow:()=>elapsed};
-  const planning={capabilities,async check(){},async cancel(identity:Identity){return exit({...identity,generation:randomUUID()});},
+  const planning={capabilities,configuration:featurePlanningConfiguration,async check(){},async cancel(identity:Identity){return exit({...identity,generation:randomUUID()});},
     async reconcile(identity:Identity){return reconcile?exit(identity):null;},
-    run(){attempts++;elapsed+=600001;return new Promise<never>(()=>{});}};
+    run({onPartial}:{onPartial(value:unknown):void}){attempts++;onPartial(questions);onPartial({approved:true});elapsed+=600001;return new Promise<never>(()=>{});}};
   const f=await featureAuthoringFixture(t,{planning,clock});
   const featureId=await create(f),contextSnapshotId=f.discovery().snapshotId;
   const generation=await f.prepareFeature('generate',{featureId,expectedStateRevision:'1',contextSnapshotId});
   const result=await f.execute('generate',String(generation.grantId));
   assert.equal(attempts,1);
   assert.equal(result.operation?.outcome,'UNKNOWN');
+  const turnId=String(result.operation?.result?.turnId);
+  const output=await f.send('feature.output.list',{turnId});
+  assert.equal(output.result,'OK');
+  const item=(output.data as {items:{artifactId:string;partial:boolean}[]}).items[0]!;
+  assert.equal(item.partial,true);
+  const chunk=await f.send('feature.artifact.get',{artifactId:item.artifactId});
+  assert.deepEqual(JSON.parse(Buffer.from((chunk.data as {base64:string}).base64,'base64').toString('utf8')),questions);
+  await assert.rejects(f.runtime.stop(makeDeadline(systemClock,1000)),/RESOURCE_IDENTITY_UNKNOWN/);
   assert.equal(f.store.readFeatureState({kind:'feature',id:featureId}).feature?.state,'RECONCILING');
   await f.runtime.recover();
   assert.equal(f.store.readFeatureState({kind:'operation',id:result.requestId}).operation?.outcome,'UNKNOWN');
@@ -124,11 +133,17 @@ test('US3 deadline and unverified cancellation retain the lease until authentica
 
 test('US3 preflight authentication, unsafe profile and quota failures preserve the manual bundle',async t=>{
   let code='PROVIDER_UNSAFE',launches=0;
-  const planning={capabilities,async check(){throw new Error(code);},async cancel(){return null;},async reconcile(){return null;},
+  const planning={capabilities,configuration:featurePlanningConfiguration,async check(){throw new Error(code);},async cancel(){return null;},async reconcile(){return null;},
     async run(){launches++;throw new Error('INVALID_TRANSITION');}};
   const f=await featureAuthoringFixture(t,{planning});
   const featureId=await create(f),contextSnapshotId=f.discovery().snapshotId;
   const base=f.store.readFeatureState({kind:'feature',id:featureId}).feature!;
+  const grant=await f.prepareFeature('generate',{featureId,expectedStateRevision:base.stateRevision,contextSnapshotId});
+  assert.deepEqual((grant.summary as {payload:{configuration:unknown}}).payload.configuration,featurePlanningConfiguration);
+  planning.configuration={...featurePlanningConfiguration,modelId:'replacement-model'};
+  const stale=await f.execute('generate',String(grant.grantId));
+  assert.equal((stale.response.data as {code:string}).code,'APPROVAL_STALE');
+  assert.equal(stale.operation,null);
   for(const failure of ['PROVIDER_UNSAFE','PROVIDER_AUTH_REQUIRED','PROVIDER_QUOTA']){
     code=failure;
     const current=f.store.readFeatureState({kind:'feature',id:featureId}).feature!;

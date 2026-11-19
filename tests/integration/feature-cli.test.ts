@@ -4,7 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {featureAuthoringFixture} from '../fixtures/feature-authoring.js';
-import {featureDraft} from '../fixtures/feature-boundary.js';
+import {featureDraft,featurePlanningConfiguration} from '../fixtures/feature-boundary.js';
 import {createPlatformPaths} from '../../src/platform/macos/paths.js';
 import {createLocalTransport} from '../../src/platform/macos/transport.js';
 import type {FeaturePlanningPort} from '../../src/ports/feature-planning.js';
@@ -64,7 +64,7 @@ test('feature CLI imports, authors, approves and releases a handoff with origina
 
 test('assisted CLI prepares from JSON and seals answers, preserving pages and the original turn UUID',async t=>{
  const planning:FeaturePlanningPort={
-   capabilities:{readonlyPlanning:true,qualified:true},async check(){},async cancel(){return null;},async reconcile(){return null;},
+   capabilities:{readonlyPlanning:true,qualified:true},configuration:featurePlanningConfiguration,async check(){},async cancel(){return null;},async reconcile(){return null;},
    async run({identity,answers}){
      return {exit:{...identity,hostExited:true,providerExited:true},value:answers.length?{kind:'DRAFT',bundle:featureDraft()}:
        {kind:'QUESTIONS',questions:[{questionId:'Q1',text:'Quale stato?',reason:'Ambito'}]}};

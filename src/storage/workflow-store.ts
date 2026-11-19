@@ -81,7 +81,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  if(op.namespace==='FEATURE'&&['generate','answer','cancel'].includes(op.action)){
  const turn=db.prepare("SELECT phase FROM features_turns WHERE request_id=? OR json_extract(metadata,'$.cancelRequestId')=?").get(op.requestId,op.requestId) as FeatureRow|undefined;
  if(turn?.phase==='ACCEPTED'||!turn)complete(op.requestId,null,'INTERRUPTED','INTERRUPTED');
- else complete(op.requestId,null,'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
+ else complete(op.requestId,op.result,'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
  }
  else { complete(op.requestId,null,'INTERRUPTED','INTERRUPTED');if(op.namespace==='ARTIFACT'){const i=JSON.parse(op.canonicalIntent) as WorkflowIntent;const id=i.action==='reserve'?op.requestId:i.payload.artifactId;if(typeof id==='string')db.prepare("UPDATE workflow_artifacts SET state='ORPHAN' WHERE artifact_id=? AND state='RESERVED' AND ref_count=0").run(id);}}}
  const at=new Date(now()).toISOString();

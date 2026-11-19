@@ -22,6 +22,9 @@ export interface FeaturePlanningExit extends FeaturePlanningIdentity {
 export interface FeaturePlanningAnswer {
  readonly answerId:string;readonly questionId:string;readonly text:string;
 }
+export interface FeaturePlanningConfiguration {
+ readonly providerId:string;readonly modelId:string;readonly configurationRevision:string;readonly qualificationDigest:string;
+}
 
 export const UNAVAILABLE_FEATURE_PLANNING_CAPABILITIES = Object.freeze({ readonlyPlanning: false, qualified: false });
 

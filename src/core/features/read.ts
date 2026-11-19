@@ -28,7 +28,7 @@ export function createFeatureReader(options:{readonly storage:Pick<StoragePort,'
  if(!turn)throw new Error('FEATURE_NOT_FOUND');
  if(method==='feature.planning.get'){
  const {turnId,featureId,revisionId,contextSnapshotId,turnIndex,phase,questionIds,resultArtifactId,createdAt,completedAt,error}=turn;
- data={turn:{turnId,featureId,revisionId,contextSnapshotId,turnIndex,phase,questionIds,resultArtifactId,createdAt,completedAt,error}};
+ data={turn:{turnId,featureId,revisionId,contextSnapshotId,turnIndex,phase,questionIds,resultArtifactId,createdAt,completedAt,error,...(turn.configuration?{configuration:turn.configuration}:{})}};
  }else{
  const at=offset(p.cursor,turn.turnId,turn.phase),limit=(p.limit as number|undefined)??20;
  let items:readonly unknown[]=[];
@@ -40,7 +40,7 @@ export function createFeatureReader(options:{readonly storage:Pick<StoragePort,'
  }else if(method==='feature.output.list'&&turn.resultArtifactId){
  const a=(await query({kind:'artifact',id:turn.resultArtifactId})).artifact;
  if(!a||a.state!=='REFERENCED'||a.targetId!==turn.featureId)throw new Error('ARTIFACT_CORRUPT');
- items=[{artifactId:a.artifactId,sha256:a.sha256,expectedBytes:a.expectedBytes,kind:a.kind}];
+ items=[{artifactId:a.artifactId,sha256:a.sha256,expectedBytes:a.expectedBytes,kind:a.kind,partial:!['SUCCEEDED','WAITING_USER'].includes(turn.phase)}];
  }
  let end=Math.min(at+limit,items.length);
  while(end>at+1&&Buffer.byteLength(JSON.stringify(items.slice(at,end)))>27000)end--;

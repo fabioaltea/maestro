@@ -30,7 +30,7 @@ export type WorkflowChange=
  |{readonly kind:'planning.admit'|'planning.cancel';readonly admission:WorkflowAdmission}
  |{readonly kind:'planning.start';readonly turnId:string;readonly instanceId:string;readonly checkedAt:string}
  |{readonly kind:'planning.complete';readonly turnId:string;readonly instanceId:string;readonly proof:FeaturePlanningExit|null;
-   readonly stopped:boolean;readonly error:string|null;readonly result?:{readonly artifactId:string;readonly questionIds:readonly string[];readonly revision?:FeatureRevision;readonly title?:string;readonly checkedAt:string}}
+   readonly stopped:boolean;readonly error:string|null;readonly partialArtifactId?:string;readonly result?:{readonly artifactId:string;readonly questionIds:readonly string[];readonly revision?:FeatureRevision;readonly title?:string;readonly checkedAt:string}}
  |{readonly kind:'reconcile';readonly instanceId:string;readonly nowMs:number}
  |{readonly kind:'stale';readonly featureId:string;readonly expectedRevision:string;readonly nowMs:number};
 export interface WorkflowWrite {readonly operation?:WorkflowOperationRecord;readonly inserted?:boolean;readonly turn?:PlanningTurn;readonly artifact?:WorkflowArtifact;readonly feature?:FeatureRecord;readonly revision?:FeatureRevision;readonly approval?:FeatureApproval;readonly envelope?:ImplementationEnvelope}

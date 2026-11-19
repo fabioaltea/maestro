@@ -2,7 +2,7 @@ import type Database from 'better-sqlite3';
 import type {WorkflowChange,WorkflowWrite} from '../ports/workflow.js';
 import type {WorkflowIntent} from '../domain/workflow/authorization.js';
 import type {PlanningTurn,PlanningAnswerRef,PlanningPhase} from '../domain/features/planning.js';
-import {FEATURE_PLANNING_LIMITS,requirePlanningExit,requirePlanningFence} from '../domain/features/planning.js';
+import {FEATURE_PLANNING_LIMITS,planningConfiguration,requirePlanningExit,requirePlanningFence} from '../domain/features/planning.js';
 import {transitionFeature,nextFeatureRevision} from '../domain/features/model.js';
 import type {FeatureRecord,FeatureRevision,FeatureState} from '../domain/features/model.js';
 import {currentDiscovery,currentFeature,type FeatureLedger} from './features-authoring.js';
@@ -37,9 +37,9 @@ function matchedContext(db:Database.Database,feature:FeatureRecord,intent:Workfl
  if(checkedAt)currentDiscovery(db,revision,feature.projectId,checkedAt);
  return revision;
 }
-function checkInstance(db:Database.Database,instanceId:string){
- const store=db.prepare('SELECT current_instance_id FROM store WHERE singleton=1').get() as FeatureRow;
- if(store.current_instance_id!==instanceId)throw new Error('STALE_TARGET');
+function checkInstance(db:Database.Database,instanceId:string,requireRunning=false){
+ const store=db.prepare('SELECT s.current_instance_id,i.lifecycle FROM store s LEFT JOIN instances i ON i.instance_id=s.current_instance_id WHERE singleton=1').get() as FeatureRow;
+ if(store.current_instance_id!==instanceId||requireRunning&&store.lifecycle!=='RUNNING')throw new Error('STALE_TARGET');
 }
 function requireTurnArtifact(db:Database.Database,featureId:string,artifactId:string,kind:'INPUT'|'OUTPUT'|'BUNDLE'){
  const artifact=readFeatureState(db,{kind:'artifact',id:artifactId}).artifact;
@@ -57,6 +57,7 @@ export function commitFeaturePlanning(db:Database.Database,change:PlanningChange
      ||(change.kind==='planning.admit'?!['generate','answer'].includes(intent.action):intent.action!=='cancel'))throw new Error('APPROVAL_REQUIRED');
    let turn:PlanningTurn|undefined;
    const admitted=ledger.admit(admission,()=>{
+     checkInstance(db,admission.instanceId,true);
      const feature=currentFeature(db,intent.targetId!);
      if(feature.stateRevision!==intent.expectedRevision||feature.projectId!==intent.projectId)throw new Error('REVISION_CONFLICT');
      const prior=currentTurn(db,feature.featureId);
@@ -95,7 +96,8 @@ export function commitFeaturePlanning(db:Database.Database,change:PlanningChange
      const stateRevision=updateFeature(db,feature,transitionFeature(feature.state,'plan'),at);
      turn={turnId:requireUuid(p.turnId),runId:requireUuid(p.runId),generation:requireUuid(p.generation),owningInstanceId:admission.instanceId,
        requestId:admission.requestId,featureId:feature.featureId,stateRevision,revisionId:feature.currentRevisionId,contextSnapshotId:requireUuid(p.contextSnapshotId),
-       inputDigest:String(p.inputDigest),turnIndex:index,phase:'ACCEPTED',questionIds:[],answer,resultArtifactId:null,cancelRequestId:null,createdAt:at,completedAt:null,error:null};
+       inputDigest:String(p.inputDigest),configuration:planningConfiguration(p.configuration),turnIndex:index,phase:'ACCEPTED',
+       questionIds:[],answer,resultArtifactId:null,cancelRequestId:null,createdAt:at,completedAt:null,error:null};
      db.prepare('INSERT INTO features_turns VALUES(?,?,?,?,?,?,?,?,?)')
        .run(turn.turnId,turn.featureId,turn.runId,turn.generation,turn.requestId,BigInt(turn.stateRevision),turn.turnIndex,turn.phase,metadata(turn));
    });
@@ -105,7 +107,7 @@ export function commitFeaturePlanning(db:Database.Database,change:PlanningChange
  if(!('turnId' in change))throw new Error('INVALID_REQUEST');
  const turn=readFeatureState(db,{kind:'turn',id:change.turnId}).turn;
  if(!turn)throw new Error('STALE_TARGET');
- checkInstance(db,change.instanceId);
+ checkInstance(db,change.instanceId,change.kind==='planning.start');
  const operation=readFeatureState(db,{kind:'operation',id:turn.requestId}).operation!;
  if(change.kind==='planning.start'){
    if(turn.phase!=='ACCEPTED'||turn.owningInstanceId!==change.instanceId||turn.cancelRequestId)throw new Error('STALE_TARGET');
@@ -127,15 +129,21 @@ export function commitFeaturePlanning(db:Database.Database,change:PlanningChange
    if(turn.phase!=='RECONCILING'&&turn.owningInstanceId!==change.instanceId)throw new Error('STALE_TARGET');
    const at=new Date().toISOString();
    if(turn.phase==='RUNNING')requirePlanningFence(feature,turn,turn);
+   let resultArtifactId=turn.resultArtifactId;
+   if(change.partialArtifactId&&!change.result&&!resultArtifactId){
+     const partial=requireTurnArtifact(db,feature.featureId,change.partialArtifactId,'OUTPUT');
+     resultArtifactId=partial.artifactId;
+     reference(db,resultArtifactId);
+   }
    if(turn.phase!=='ACCEPTED'&&!change.proof){
      if(turn.phase!=='RECONCILING')updateFeature(db,feature,'RECONCILING',at);
-     const uncertain:PlanningTurn={...turn,phase:'RECONCILING',error:'RESOURCE_IDENTITY_UNKNOWN'};
+     const uncertain:PlanningTurn={...turn,phase:'RECONCILING',resultArtifactId,error:'RESOURCE_IDENTITY_UNKNOWN'};
      updateTurn(db,uncertain);
-     for(const id of requests)ledger.complete(id,{featureId:feature.featureId,turnId:turn.turnId},'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
+     for(const id of requests)ledger.complete(id,{featureId:feature.featureId,turnId:turn.turnId,...(resultArtifactId?{artifactId:resultArtifactId}:{})},'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
      return{turn:uncertain,operation:readFeatureState(db,{kind:'operation',id:turn.requestId}).operation!};
    }
    if(change.proof)requirePlanningExit(turn,change.proof);
-   let revision:FeatureRevision|undefined,title:string|undefined,resultArtifactId:string|null=null,questionIds:readonly string[]=[];
+   let revision:FeatureRevision|undefined,title:string|undefined,questionIds:readonly string[]=[];
    let state:FeatureState='INTERRUPTED',phase:PlanningPhase='INTERRUPTED',error=change.error;
    if(change.stopped||turn.cancelRequestId||turn.phase==='RECONCILING')error=error??'INTERRUPTED';
    else if(change.result){

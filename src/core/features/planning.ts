@@ -1,9 +1,9 @@
 import {createHash,randomUUID} from 'node:crypto';
-import {FEATURE_PLANNING_ACTIONS,FEATURE_PLANNING_LIMITS,requirePlanningExit,validatePlanningResult,type PlanningTurn} from '../../domain/features/planning.js';
+import {FEATURE_PLANNING_ACTIONS,FEATURE_PLANNING_LIMITS,planningConfiguration,requirePlanningExit,validatePlanningResult,type PlanningTurn} from '../../domain/features/planning.js';
 import {featureText} from '../../domain/features/bundle.js';
 import {nextFeatureRevision,type FeatureRecord} from '../../domain/features/model.js';
 import type {WorkflowIntent} from '../../domain/workflow/authorization.js';
-import type {FeaturePlanningExit} from '../../ports/feature.js';
+import type {FeaturePlanningConfiguration,FeaturePlanningExit,FeaturePlanningResult} from '../../ports/feature.js';
 import type {FeaturePlanningPort} from '../../ports/feature-planning.js';
 import type {AuthenticatedPeer} from '../../ports/platform.js';
 import {makeDeadline,systemClock,type Clock,type Deadline} from '../../ports/clock.js';
@@ -37,9 +37,26 @@ export function createFeaturePlanning(
 ){
  const {storage,paths,instanceId,schedule}=options;
  const commit=storage.commitFeatureState!;
- const active=new Map<string,{controller:AbortController;turn:PlanningTurn}>();
+ type ActiveTurn={controller:AbortController;turn:PlanningTurn;storeId:string;partial?:FeaturePlanningResult};
+ const active=new Map<string,ActiveTurn>();
  const stopping=new Map<string,Promise<void>>();
  const latest=async(id:string)=>(await storage.readFeatureState!({kind:'latestTurn',id})).turn??null;
+ const qualified=()=>port.capabilities.readonlyPlanning===true&&port.capabilities.qualified===true;
+ function configuration():FeaturePlanningConfiguration {
+   if(!qualified())throw new Error('PLANNING_UNAVAILABLE');
+   try{return planningConfiguration(port.configuration);}catch{throw new Error('PROVIDER_UNSAFE');}
+ }
+ function requireConsentedConfiguration(expected:unknown):FeaturePlanningConfiguration {
+   const consent=planningConfiguration(expected);
+   if(digest(consent)!==digest(configuration()))throw new Error('APPROVAL_STALE');
+   return consent;
+ }
+ async function retainPartial(job:ActiveTurn|undefined):Promise<string|undefined>{
+   if(!job?.partial)return undefined;
+   try{
+     return (await publishPlanningArtifact({storage,instanceId,storeId:job.storeId,ownerUid:paths.ownerUid,targetId:job.turn.featureId},'OUTPUT',job.partial)).artifactId;
+   }catch{ return undefined; }
+ }
  async function current(id:string,expected?:string):Promise<FeatureRecord>{
    const feature=(await storage.readFeatureState!({kind:'feature',id})).feature;
    if(!feature)throw new Error('FEATURE_NOT_FOUND');
@@ -94,7 +111,7 @@ export function createFeaturePlanning(
      if(!['DRAFT','READY_FOR_APPROVAL','NEEDS_REVIEW','INTERRUPTED'].includes(feature.state))throw new Error('FEATURE_IN_USE');
    }
    const bound={revisionId:revision.revisionId,bundleDigest:revision.bundleDigest,discoveryApprovalId:revision.discoveryApprovalId,
-     discoveryRevisionId:revision.discoveryRevisionId,contextDigest:revision.contextDigest,contextSnapshotId,...answer};
+     discoveryRevisionId:revision.discoveryRevisionId,contextDigest:revision.contextDigest,contextSnapshotId,configuration:configuration(),...answer};
    const inputDigest=digest({bound,...priorAnswers});
    return authoring.authorization.prepare(peer,{...scope,configRevision:revision.configRevision,
      payload:{...bound,inputDigest,turnId:randomUUID(),runId:randomUUID(),generation:randomUUID()}});
@@ -103,7 +120,8 @@ export function createFeaturePlanning(
  function stopTurn(turn:PlanningTurn,deadline:Deadline,reason:string,recover=false):Promise<void>{
    const existing=stopping.get(turn.turnId);
    if(existing)return existing;
-   active.get(turn.turnId)?.controller.abort();
+   const job=active.get(turn.turnId);
+   job?.controller.abort();
    const work=Promise.resolve().then(async()=>{
      const current=(await storage.readFeatureState!({kind:'turn',id:turn.turnId})).turn;
      if(!current||!['ACCEPTED','RUNNING','RECONCILING'].includes(current.phase))return;
@@ -115,19 +133,22 @@ export function createFeaturePlanning(
          requirePlanningExit(exact,proof);
        }catch{proof=null;}
      }
-     await commit({kind:'planning.complete',instanceId,turnId:current.turnId,proof,stopped:true,error:reason});
+     const partialArtifactId=await retainPartial(job);
+     await commit({kind:'planning.complete',instanceId,turnId:current.turnId,proof,stopped:true,error:reason,...(partialArtifactId?{partialArtifactId}:{})});
    });
    stopping.set(turn.turnId,work);
    void work.finally(()=>stopping.delete(turn.turnId)).catch(()=>{});
    return work;
  }
 
- async function work(peer:AuthenticatedPeer,initial:PlanningTurn,intent:WorkflowIntent,signal:AbortSignal){
+ async function work(peer:AuthenticatedPeer,job:ActiveTurn,intent:WorkflowIntent){
+   const {turn:initial,controller:{signal}}=job;
    const turnId=initial.turnId;
    let exit:FeaturePlanningExit|null=null,possiblyStarted=false;
    try{
      const checkDeadline=makeDeadline(clock,limits.contextMs);
-     await bounded(port.check(checkDeadline),checkDeadline,signal);
+     const expected=Object.freeze(requireConsentedConfiguration(intent.payload.configuration));
+     await bounded(port.check(expected,checkDeadline),checkDeadline,signal);
      const feature=await current(initial.featureId,initial.stateRevision);
      const revision=(await storage.readFeatureState!({kind:'revision',id:feature.currentRevisionId})).revision;
      if(!revision)throw new Error('ARTIFACT_CORRUPT');
@@ -142,6 +163,7 @@ export function createFeaturePlanning(
      if(digest({bound,...input,answers:beforeAnswer})!==inputDigest)throw new Error('APPROVAL_STALE');
      const fresh=await bounded(authoring.fresh(peer,intent),checkDeadline,signal);
      if(signal.aborted||!options.accepting()||checkDeadline.expired())throw new Error('INTERRUPTED');
+     requireConsentedConfiguration(expected);
      // RUNNING is durable before the trusted host can start. A crash between those
      // steps is resolved only by authenticated exit or verified absence.
      const started=await commit({kind:'planning.start',instanceId,turnId,checkedAt:fresh.checkedAt});
@@ -149,7 +171,11 @@ export function createFeaturePlanning(
      if(signal.aborted)return;
      const exact=identity(started.turn),deadline=makeDeadline(clock,limits.runMs);
      possiblyStarted=true;
-     const reply=await bounded(port.run({identity:exact,contextSnapshotId:initial.contextSnapshotId,bundle,provenance:scope,...input,deadline,signal}),deadline,signal);
+     const reply=await bounded(port.run({identity:exact,configuration:expected,contextSnapshotId:initial.contextSnapshotId,bundle,provenance:scope,...input,deadline,signal,
+       onPartial(value:unknown){
+         if(signal.aborted||deadline.expired())return;
+         try{job.partial=validatePlanningResult(value,scope);}catch{/* Preserve the last valid bounded snapshot. */}
+       }}),deadline,signal);
      requirePlanningExit(exact,reply.exit);
      exit=reply.exit;
      if(signal.aborted)return;
@@ -171,14 +197,16 @@ export function createFeaturePlanning(
      if(!exit&&possiblyStarted){
        await stopTurn(initial,makeDeadline(clock,limits.cancelMs),code);
      }else{
-       await commit({kind:'planning.complete',instanceId,turnId,proof:exit,stopped:code==='INTERRUPTED'||code==='DEADLINE_EXCEEDED',error:code});
+       const partialArtifactId=await retainPartial(job);
+       await commit({kind:'planning.complete',instanceId,turnId,proof:exit,stopped:code==='INTERRUPTED'||code==='DEADLINE_EXCEEDED',error:code,...(partialArtifactId?{partialArtifactId}:{})});
      }
    }
  }
 
  return{
    methods:FEATURE_PLANNING_ACTIONS.map(a=>`feature.${a}`),prepare,
-   capabilities:{readonlyPlanning:true,qualified:true},
+   status(){return qualified()?{capabilities:{readonlyPlanning:true,qualified:true},configuration:configuration(),reason:null}
+     :{capabilities:{readonlyPlanning:false,qualified:false},reason:'PLANNING_UNAVAILABLE'};},
    async run(method:string,p:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer):Promise<Record<string,unknown>>{
      await authoring.authorization.guard(peer);
      const action=method.split('.').at(-1)!;
@@ -186,6 +214,8 @@ export function createFeaturePlanning(
      const original=await originalWorkflowGrant(storage,requestId,grantId,action),intent=original.intent;
      if(p.featureId!==undefined&&p.featureId!==intent.targetId||p.projectId!==undefined&&p.projectId!==intent.projectId)throw new Error('APPROVAL_REQUIRED');
      if(original.operation)return{operation:publicFeatureOperation(original.operation)};
+     if(!options.accepting())throw new Error('BLOCKED');
+     if(action!=='cancel')requireConsentedConfiguration(intent.payload.configuration);
      const admission=workflowAdmission({requestId,grantId,intent,instanceId,nowMs:Date.now()});
      let turn:PlanningTurn|undefined;
      try{
@@ -207,14 +237,14 @@ export function createFeaturePlanning(
      if(!turn)throw new Error('PERSISTENCE_UNAVAILABLE');
      if(action==='cancel'){
        const cancelled=turn;
-       active.get(cancelled.turnId)?.controller.abort();
-       schedule(()=>stopTurn(cancelled,makeDeadline(clock,limits.cancelMs),'INTERRUPTED',cancelled.phase==='RECONCILING'));
+       const stopped=stopTurn(cancelled,makeDeadline(clock,limits.cancelMs),'INTERRUPTED',cancelled.phase==='RECONCILING');
+       schedule(()=>stopped);
      }else{
        const accepted=turn;
        if(active.has(accepted.turnId))return{accepted:true,requestId,featureId:accepted.featureId,turnId:accepted.turnId,stateRevision:accepted.stateRevision};
-       const controller=new AbortController();
-       active.set(turn.turnId,{controller,turn});
-       schedule(async()=>{try{await work(peer,accepted,intent,controller.signal);}finally{active.delete(accepted.turnId);}});
+       const job={controller:new AbortController(),turn:accepted,storeId:intent.storeId};
+       active.set(turn.turnId,job);
+       schedule(async()=>{try{await work(peer,job,intent);}finally{active.delete(accepted.turnId);}});
      }
      return{accepted:true,requestId,featureId:turn.featureId,turnId:turn.turnId,stateRevision:turn.stateRevision};
    },
@@ -223,7 +253,8 @@ export function createFeaturePlanning(
      for(const turn of page.items as readonly PlanningTurn[])await stopTurn(turn,makeDeadline(clock,limits.cancelMs),'INTERRUPTED',true);
    },
    async stop(deadline:Deadline){
-     await Promise.all([...active.values()].map(({turn})=>stopTurn(turn,deadline,'INTERRUPTED')));
+     const page=await storage.readFeatureState!({kind:'activeTurns'});
+     for(const turn of page.items as readonly PlanningTurn[])await stopTurn(turn,deadline,'INTERRUPTED',turn.phase==='RECONCILING');
    },
  };
 }

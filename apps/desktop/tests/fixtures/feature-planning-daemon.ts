@@ -15,6 +15,7 @@ if(archive){
   const {readBootstrap}=await import(join(repositoryRoot,'dist/core/entrypoint.js'));
   const featurePlanning:FeaturePlanningPort={
     capabilities:{readonlyPlanning:true,qualified:true},
+    configuration:{providerId:'fixture-planning',modelId:'fixture-model',configurationRevision:'1',qualificationDigest:'a'.repeat(64)},
     async check(){},
     async cancel(identity){return{...identity,hostExited:true,providerExited:true};},
     async reconcile(){return null;},

@@ -139,3 +139,24 @@ I comandi assistiti riusano grant e recovery per UUID. La risposta usa un JSON s
 ### T033 — intervista e bozza assistita desktop
 
 Bridge nominato, testo della risposta via stdin verso artefatto sigillato, conferma esplicita per ogni turno e ricevute persistenti. Lo storico resta consultabile offline. Typecheck/build desktop e unit/contract 45/45 PASS. E2E US1/US2 PASS (27,0 s). Prima prova US3 ha esposto un conflitto tra letture concorrenti della vista; la verifica capability è ora serializzata dopo il caricamento del documento. E2E US3 ripetuto PASS (22,6 s), con fixture host e repository invariato.
+
+### T034 — verifica mirata core e desktop
+
+Build e typecheck core e desktop, build:test, lint e diff check PASS con Node 26.13.0. Il comando Node con `--test-concurrency=1` sui file `feature-*.test.js` di unit/contract/integration e sulle integrazioni `workflow-store`, `discovery-admission-store`, `discovery-writer`, `discovery-recovery`, `discovery-interview` e `discovery-lifecycle` ha dato **68 PASS, 0 FAIL, 1 SKIP** in 99,4 s. Lo skip è il test G0 sintetico opt-in, ripreso in T035.
+
+`npm run test:desktop:unit` **45 PASS**. Le integrazioni desktop mirate `feature-receipts`, `discovery-receipts`, `operation-recovery` e `action-dispatch` hanno dato **14 PASS**. Playwright Electron su `feature-flow.spec.ts` **2 PASS** in 51,5 s. Il secondo scenario usa un host fixture lanciato tramite le dipendenze del daemon e verifica conferma, provenienza e lettura offline. Si mantiene il blocco di baseline sul replay UPDATE revision 61 vs 60, che la suite mirata non riesegue.
+
+La verifica ha aggiunto il legame del consenso assistito a identificativo, modello, revisione e digest di qualifica del provider. Un cambio di modello rifiuta il grant prima dell’ammissione. Su timeout con exit proof errata, l’ultimo risultato parziale conforme resta nell’artefatto bounded e il debit resta bloccato fino alla riconciliazione. Il test verifica anche il rifiuto dell’arresto in assenza di prova di uscita.
+
+| Requisiti | Verifica locale |
+|---|---|
+| FR-001–003 | Authoring e lettura con contesto corrente, race freshness, CAS revisioni, archivio e storico immutabile |
+| FR-004–006 | Accettazione delle incognite, approvazione della revisione esatta, handoff con prova corrente e invalidazione |
+| FR-007–009 | Consenso per snapshot, bundle, provider e modello, due turni con provenance, output parziale, cancel con uscita provata e risultati tardivi |
+| FR-010–012 | CLI/Electron, letture offline, ricevute e UUID originali, quota e riserva di cancellazione, eventi metadata e paginazione |
+| SC-001 | Campione di dieci scenari eseguito al checkpoint T035 |
+| SC-002 | Rifiuto nei casi locali di contesto modificato, approvazione assente o obsoleta e revisione concorrente |
+| SC-003 | Dieci ripetizioni dell’UUID originale producono un’unica feature e lo stesso esito |
+| SC-004 | Consultazione di bundle, revisione e approvazione in CLI/Electron dopo arresto e riapertura dell’archivio |
+
+Le campagne di durata e volume, l’accettazione generale e la review umana restano fuori da questa verifica.

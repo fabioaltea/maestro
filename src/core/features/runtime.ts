@@ -29,7 +29,7 @@ export function createFeatureRuntime(storage:StoragePort,paths:ArchivePaths,inst
  methods.push(...authoring.methods,...approval.methods,...(planning?.methods??[]));
  async function run(method:string,p:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer):Promise<Record<string,unknown>>{
  if(!accepting||!safe)throw new Error('BLOCKED');
- if(method==='feature.provider.get'&&planning)return{capabilities:planning.capabilities,reason:null};
+ if(method==='feature.provider.get'&&planning)return planning.status();
  if(method==='feature.prepare'&&(FEATURE_PLANNING_ACTIONS as readonly unknown[]).includes(p.action)){
  if(!planning)throw new Error('PLANNING_UNAVAILABLE');return planning.prepare(peer,p);
  }
@@ -56,7 +56,16 @@ export function createFeatureRuntime(storage:StoragePort,paths:ArchivePaths,inst
  return{methods,async idle(){while(jobs.size)await Promise.all([...jobs]);},dispatch:createFeatureDispatch({storage,mutations:{methods:composedMethods,run}}),
  fence(){accepting=false;},
  async recover(){accepting=false;try{safe=await recoverWorkflow(storage,instanceId);if(safe)await planning?.recover();}catch{safe=false;}accepting=true;},
- async stop(deadline:Deadline){accepting=false;await planning?.stop(deadline);if(!jobs.size)return;let timer:ReturnType<typeof setTimeout>|undefined;
- try{await Promise.race([Promise.all([...jobs]),new Promise<never>((_r,reject)=>{timer=setTimeout(()=>reject(new Error('RESOURCE_IDENTITY_UNKNOWN')),Math.max(1,deadline.remainingMs()));})]);}finally{clearTimeout(timer);}},
+ async stop(deadline:Deadline){
+ accepting=false;
+ const drain=async()=>{
+   if((await storage.readSnapshot())?.store.schemaVersion===5){
+     await planning?.stop(deadline);
+     if((await storage.readFeatureState!({kind:'activeTurns'})).items?.length)throw new Error('RESOURCE_IDENTITY_UNKNOWN');
+   }
+   await Promise.all([...jobs]);
+ };
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ try{await Promise.race([drain(),new Promise<never>((_r,reject)=>{timer=setTimeout(()=>reject(new Error('RESOURCE_IDENTITY_UNKNOWN')),Math.max(1,deadline.remainingMs()));})]);}finally{clearTimeout(timer);}},
  };
 }

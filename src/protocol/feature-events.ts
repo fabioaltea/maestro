@@ -15,7 +15,7 @@ export function workflowEventDrafts(op:WorkflowOperationRecord,instanceId:string
  const common={instanceId,operationId:op.requestId,payload};
  const drafts:EventDraft[]=[{type:scope==='feature'?'feature.changed':'artifact.changed',...common}];
  if(op.phase!=='WORKING'||op.outcome!=='IN_PROGRESS')drafts.unshift({type,...common});
- if(feature&&op.outcome==='SUCCEEDED'&&['generate','answer'].includes(op.action)
+ if(feature&&['generate','answer'].includes(op.action)
    &&typeof op.result?.turnId==='string'&&typeof op.result.artifactId==='string'){
    drafts.push({type:'feature.output.available',...common,payload:{...payload,turnId:op.result.turnId,watermark:'1'}});
  }

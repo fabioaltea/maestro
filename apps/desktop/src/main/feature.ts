@@ -38,7 +38,11 @@ export class FeatureActions{
  if(typeof payload.bundleDigest==='string')summary.push(`Digest documento: ${payload.bundleDigest}`);
  if(a==='approve'&&Array.isArray(payload.acceptedUnknownIds)&&payload.acceptedUnknownIds.length)summary.push(`Incognite accettate: ${payload.acceptedUnknownIds.join(', ')}`);
  if(a==='handoff')summary.push('Conserva un riferimento versionato nell’archivio locale.');
- if(a==='generate'||a==='answer')summary.push(`Snapshot Discovery: ${payload.contextSnapshotId}`,'Invia al provider qualificato il contesto approvato, il documento e le risposte di questo percorso in sola lettura.');
+ if(a==='generate'||a==='answer'){
+ const configuration=record(payload.configuration);
+ summary.push(`Snapshot Discovery: ${payload.contextSnapshotId}`,`Provider e modello: ${configuration.providerId} / ${configuration.modelId}`,
+   'Invia al provider qualificato il contesto approvato, il documento e le risposte di questo percorso in sola lettura.');
+ }
  if(a==='answer')summary.push(`Domanda: ${payload.questionId}`,`Digest risposta: ${payload.answerDigest}`);
  if(a==='cancel')summary.push(`Turno: ${payload.turnId}`);
  return{command:{...command(a,{grantId:data.grantId}),featureId:intent.targetId as string,projectId:intent.projectId as string},summary};
