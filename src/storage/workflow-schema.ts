@@ -35,5 +35,13 @@ WHEN OLD.request_id<>NEW.request_id OR OLD.canonical_intent<>NEW.canonical_inten
 BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER workflow_terminal_immutable BEFORE UPDATE ON workflow_operations WHEN OLD.phase='FINALIZED' BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER workflow_grant_immutable BEFORE UPDATE ON workflow_grants WHEN OLD.canonical_intent<>NEW.canonical_intent OR OLD.created_at_ms<>NEW.created_at_ms OR OLD.expires_at_ms<>NEW.expires_at_ms OR OLD.consumed_by_request_id IS NOT NULL BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER workflow_artifact_identity BEFORE UPDATE ON workflow_artifacts
+WHEN NEW.artifact_id<>OLD.artifact_id OR NEW.kind<>OLD.kind OR NEW.expected_bytes<>OLD.expected_bytes OR NEW.sha256<>OLD.sha256 OR NEW.created_at_ms<>OLD.created_at_ms OR NEW.target_id IS NOT OLD.target_id
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER workflow_artifact_no_downgrade BEFORE UPDATE ON workflow_artifacts
+WHEN (OLD.state IN ('SEALED','REFERENCED','CORRUPT') AND NEW.state='RESERVED') OR NEW.offset_bytes<OLD.offset_bytes OR NEW.ref_count<OLD.ref_count
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER workflow_artifact_retained BEFORE DELETE ON workflow_artifacts WHEN OLD.ref_count>0 OR OLD.state<>'DISCARDED'
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER workflow_operations_retained BEFORE DELETE ON workflow_operations BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 `;

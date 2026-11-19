@@ -32,6 +32,9 @@ CREATE TRIGGER features_revision_immutable BEFORE UPDATE ON features_revisions B
 CREATE TRIGGER features_approval_immutable BEFORE UPDATE ON features_approvals BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER features_envelope_immutable BEFORE UPDATE ON features_envelopes BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER features_identity_immutable BEFORE UPDATE ON features_records WHEN NEW.feature_id<>OLD.feature_id OR NEW.project_id<>OLD.project_id OR NEW.created_at<>OLD.created_at BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER features_current_revision BEFORE UPDATE OF current_revision_id ON features_records
+WHEN NEW.current_revision_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM features_revisions WHERE revision_id=NEW.current_revision_id AND feature_id=NEW.feature_id)
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER features_retained BEFORE DELETE ON features_records BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER features_revision_retained BEFORE DELETE ON features_revisions BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER features_approval_retained BEFORE DELETE ON features_approvals BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;

@@ -15,11 +15,11 @@ export function requireFeatureSchema(db:Database.Database):void {if(Number(db.pr
 export function readFeatureState(db:Database.Database,q:FeatureQuery):FeatureRead {
  requireFeatureSchema(db);
  if(q.kind==='budget'){
- const row=db.prepare("SELECT coalesce(sum(allocated_bytes),0) AS allocated,coalesce(sum(CASE WHEN state='RESERVED' THEN expected_bytes ELSE 0 END),0) AS reserved,count(*) AS files,coalesce(sum(CASE WHEN state='RESERVED' THEN 1 ELSE 0 END),0) AS uploads FROM workflow_artifacts WHERE state<>'DISCARDED'").get() as FeatureRow;
+ const row=db.prepare("SELECT coalesce(sum(CASE WHEN state<>'RESERVED' THEN allocated_bytes ELSE 0 END),0) AS allocated,coalesce(sum(CASE WHEN state='RESERVED' THEN allocated_bytes ELSE 0 END),0) AS reserved,count(*) AS files,coalesce(sum(CASE WHEN state='RESERVED' THEN 1 ELSE 0 END),0) AS uploads FROM workflow_artifacts WHERE state<>'DISCARDED'").get() as FeatureRow;
  const metadata=Number((db.prepare('SELECT metadata_bytes FROM workflow_budget WHERE singleton=1').get() as FeatureRow).metadata_bytes);
  return{budget:{allocatedBytes:Number(row.allocated),reservedBytes:Number(row.reserved),allocatedFiles:Number(row.files),openUploads:Number(row.uploads),metadataBytes:metadata}};
  }
- if(q.kind==='pending')return{items:(db.prepare("SELECT * FROM workflow_operations WHERE phase<>'FINALIZED' ORDER BY accepted_at LIMIT 1000").all() as FeatureRow[]).map(workflowOperation)};
+ if(q.kind==='pending')return{items:(db.prepare("SELECT * FROM workflow_operations WHERE phase<>'FINALIZED' ORDER BY accepted_at LIMIT 20").all() as FeatureRow[]).map(workflowOperation)};
  requireUuid(q.id);
  const singles:Record<string,[string,string,(r:FeatureRow)=>unknown]>={feature:['features_records','feature_id',featureRecord],revision:['features_revisions','revision_id',featureRevision],approval:['features_approvals','revision_id',featureApproval],envelope:['features_envelopes','envelope_id',featureEnvelope],operation:['workflow_operations','request_id',workflowOperation],artifact:['workflow_artifacts','artifact_id',workflowArtifact],
  grant:['workflow_grants','grant_id',r=>({grantId:s(r,'grant_id'),canonicalIntent:s(r,'canonical_intent'),createdAtMs:Number(r.created_at_ms),expiresAtMs:Number(r.expires_at_ms),consumedByRequestId:nullable(r,'consumed_by_request_id')} satisfies WorkflowGrant)],turn:['features_turns','turn_id',r=>({...r,metadata:JSON.parse(s(r,'metadata'))})]};

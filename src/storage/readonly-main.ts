@@ -32,6 +32,7 @@ process.stdin.on('data', (chunk: Buffer) => {
       if (!Number.isSafeInteger(id) || !methods.includes(request.method!) || !Array.isArray(request.args)) throw new Error('INVALID_REQUEST');
       if (request.method === 'close') { send({ id }); process.stdin.destroy(); return; }
       if (request.method!.includes('Discovery') && !['readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readDiscoveryArtifact', 'readDiscoveryManifestPage', 'getDiscoveryBudget'].includes(request.method!)) throw new Error('UNAUTHORIZED');
+      if (['commitFeatureState','reconcileWorkflowArtifacts'].includes(request.method!)) throw new Error('UNAUTHORIZED');
       let value: unknown;
       try {
         store = new SQLiteStore({ ...options, readonlyQuiescent: request.quiescent === true });
@@ -40,6 +41,9 @@ process.stdin.on('data', (chunk: Buffer) => {
       if (request.method === 'readDiscoveryArtifact' && value && typeof value === 'object' && 'ok' in value && value.ok === true && 'value' in value) {
         const artifact = value.value as { bytes: Uint8Array; sha256: string; totalBytes: number };
         value = { ok: true, value: { ...artifact, bytes: { encoding: 'base64', data: Buffer.from(artifact.bytes).toString('base64') } } };
+      }
+      if (request.method === 'readWorkflowArtifact' && value && typeof value === 'object' && 'bytes' in value) {
+        const r = value as {bytes: Uint8Array; sha256: string; totalBytes: number}; value = {...r, bytes: {encoding: 'base64', data: Buffer.from(r.bytes).toString('base64')}};
       }
       send({ id, value });
     } catch (error) {

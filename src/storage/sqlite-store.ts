@@ -1,3 +1,6 @@
+import { createWorkflowArtifacts } from './workflow-artifacts.js';
+import { createWorkflowStore } from './workflow-store.js';
+import type { WorkflowChange } from '../ports/workflow.js';
 import { FEATURE_TABLES } from './features-upgrade.js';
 import { readFeatureState } from './features-store.js';
 import type { FeatureQuery } from '../ports/workflow.js';
@@ -166,6 +169,17 @@ export class SQLiteStore {
       }, drafts);
     } });
   }
+  private workflowArtifacts() {
+    if (!this.database) throw new Error('STATE_ABSENT');
+    return createWorkflowArtifacts(this.database, this.directory, { readonly: this.readOnly, checkpoint: point => this.hooks.checkpoint?.(point) });
+  }
+  private workflowStore() {
+    if (!this.database) throw new Error('STATE_ABSENT');
+    return createWorkflowStore(this.database, body => this.mutate(body, []), this.workflowArtifacts());
+  }
+  commitFeatureState(change: WorkflowChange) { this.writable(); return this.workflowStore().commit(change); }
+  readWorkflowArtifact(id: string, offset: number, maximum: number) { return this.workflowArtifacts().read(id, offset, maximum); }
+  reconcileWorkflowArtifacts() { const db = this.writable(); return this.mutate(() => { this.workflowArtifacts().reconcile(); }, []); }
   readFeatureState(query: FeatureQuery) { if (!this.database) throw new Error('STATE_ABSENT'); return readFeatureState(this.database, query); }
   readDiscoveryMetadata<Q extends DiscoveryMetadataQuery>(query: Q) { return this.discoveryMetadata().read(query); }
   commitDiscoveryMetadata(change: DiscoveryMetadataChange) { this.writable(); return this.discoveryMetadata().commit(change); }
@@ -205,6 +219,10 @@ export class SQLiteStore {
       const discovery = this.registry().prepare("SELECT 'DISCOVERY' AS scope,action,payload_hash FROM discovery_operations WHERE request_id=?").get(requestId) as Row | undefined;
       if (row && discovery) throw new Error('STATE_CORRUPT');
       row ??= discovery;
+    }
+    if (this.archiveVersion >= 5) {
+      const workflow = this.registry().prepare("SELECT 'WORKFLOW' AS scope,action,payload_hash FROM workflow_operations WHERE request_id=?").get(requestId) as Row | undefined;
+      if (row && workflow) throw new Error('STATE_CORRUPT'); row ??= workflow;
     }
     return row ? { scope: row.scope as RequestReservation['scope'], action: String(row.action), payloadHash: String(row.payload_hash) } : null;
   }

@@ -33,3 +33,7 @@ Frozen schema4 fixture captured from004 before changing current schema. Tests co
 ## T007 — schema5 and historical paths
 
 Explicit start migration4→5, fresh schema5, strict tables/FK, cross-ledger guards and read metadata added on the existing writer/reader. Frozen2→3/3→4 SQL unchanged; Discovery accepts4/5 without losing historical upgrade semantics. Updated the current-schema assertion in the Discovery test to5 while keeping historical4 outcomes exact. Added pure grant/lifecycle models required by T005. Build:test and lint PASS; feature-state/schema plus Discovery historical upgrade14/14PASS, including pre/post-commit faults. No public feature capability yet.
+
+## T008 — workflow ledger/artifacts
+
+Added same-writer intent/grant admission with global UUID fencing, durable intent before file effects, replay and monouse grants, cancellation reserve, private no-follow/hash-verified chunk upload/seal/discard, quota128MiB/8192objects with8MiB terminal reserve and conservative metadata accounting. Interrupted fsync keeps bytes and an interrogable original intent; orphan/corrupt data preserved. Native reader denies writes and transports bytes in bounded base64. Initial writer tests RED on missing method; GREEN12/12 for workflow/state/schema plus lint/build:test. Quota test uses one synthetic accounting record, not a volume/disk-fill campaign. Feature CRUD remains unadvertised until its story implementation.

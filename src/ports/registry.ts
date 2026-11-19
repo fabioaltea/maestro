@@ -2,7 +2,7 @@ import type { Project, ProjectObservation, ProjectOperation, ProjectOperationRes
 import type { RepositoryIdentity, ReferenceCheckout, RepositoryObservationEvidence } from './repository.js';
 
 export type AcceptProjectOperation = Omit<ProjectOperation, 'phase' | 'outcome' | 'completedAt' | 'result'>;
-export interface RequestReservation { readonly scope: 'LIFECYCLE' | 'PROJECT' | 'DISCOVERY'; readonly action: string; readonly payloadHash: string }
+export interface RequestReservation { readonly scope: 'LIFECYCLE' | 'PROJECT' | 'DISCOVERY' | 'WORKFLOW'; readonly action: string; readonly payloadHash: string }
 export type ProjectOperationView = Pick<ProjectOperation, 'requestId' | 'action' | 'projectId' | 'phase' | 'outcome'
   | 'acceptedAt' | 'deadlineAt' | 'completedAt' | 'result'>;
 export interface RegistryOperationsPort {

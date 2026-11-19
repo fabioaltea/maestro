@@ -5,7 +5,7 @@ import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
-export const methods = ['readFeatureState', 'reserveDiscoveryArtifact', 'publishDiscoveryArtifact', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'reconcileDiscoveryArtifacts', 'getDiscoveryBudget', 'discardDiscoveryPreview', 'readDiscoveryMetadata', 'commitDiscoveryMetadata', 'admitDiscoveryOperation', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'saveDiscoveryGrant', 'captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
+export const methods = ['commitFeatureState', 'readWorkflowArtifact', 'reconcileWorkflowArtifacts', 'readFeatureState', 'reserveDiscoveryArtifact', 'publishDiscoveryArtifact', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'reconcileDiscoveryArtifacts', 'getDiscoveryBudget', 'discardDiscoveryPreview', 'readDiscoveryMetadata', 'commitDiscoveryMetadata', 'admitDiscoveryOperation', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'saveDiscoveryGrant', 'captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'getProject', 'listProjects', 'commitProjectRegistration', 'commitProjectObservation', 'commitProjectUpdate', 'commitProjectRemoval', 'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'listResourceSummaries', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
@@ -34,7 +34,7 @@ if (!isMainThread) {
     store = new SQLiteStore(workerData as StorageOptions);
     port.postMessage({ ready: true });
     let queue = Promise.resolve();
-    const reads = new Set<Method>(['readFeatureState', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'listResourceSummaries', 'getControllerAttempt']);
+    const reads = new Set<Method>(['readWorkflowArtifact', 'readFeatureState', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'listResourceSummaries', 'getControllerAttempt']);
     port.on('message', (request: Request) => {
       const execute = async () => {
         if (!Number.isSafeInteger(request.id) || !methods.includes(request.method) || !Array.isArray(request.args)) {
@@ -129,7 +129,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
 
   function call<T>(method: Method, args: unknown[]): Promise<T> {
     if (closing || exited) return Promise.reject(new Error('PERSISTENCE_UNAVAILABLE'));
-    if (failure && !['readFeatureState', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'listResourceSummaries', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
+    if (failure && !['readWorkflowArtifact', 'readFeatureState', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'listResourceSummaries', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
     const id = ++nextId;
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -153,6 +153,15 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
 export function createStorageProxy(call: <T>(method: Method, args: unknown[]) => Promise<T>, onFailure: StoragePort['onFailure'], close: StoragePort['close']): StoragePort {
   return {
     readFeatureState: query => call('readFeatureState', [query]),
+    commitFeatureState: change => call('commitFeatureState', [change]),
+    reconcileWorkflowArtifacts: () => call('reconcileWorkflowArtifacts', []),
+    readWorkflowArtifact: async (id, offset, maximum) => {
+      const r = await call<{bytes: unknown; sha256: string; totalBytes: number}>('readWorkflowArtifact', [id, offset, maximum]);
+      const encoded = r.bytes;
+      const bytes = encoded instanceof Uint8Array ? encoded : encoded && typeof encoded === 'object' && 'encoding' in encoded && encoded.encoding === 'base64' && 'data' in encoded && typeof encoded.data === 'string' && encoded.data.length <= 10924 ? Buffer.from(encoded.data, 'base64') : null;
+      if (!bytes || bytes.byteLength > maximum || bytes.byteLength > 8192 || !Number.isSafeInteger(r.totalBytes) || offset + bytes.byteLength > r.totalBytes || !/^[a-f0-9]{64}$/.test(r.sha256)) throw new Error('ARTIFACT_CORRUPT');
+      return {...r, bytes};
+    },
     reserveDiscoveryArtifact: (kind, bytes) => call('reserveDiscoveryArtifact', [kind, bytes]),
     publishDiscoveryArtifact: (id, bytes) => call('publishDiscoveryArtifact', [id, bytes]),
     readDiscoveryManifestPage: (id, offset, limit) => call('readDiscoveryManifestPage', [id, offset, limit]),
