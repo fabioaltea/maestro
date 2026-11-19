@@ -1,3 +1,4 @@
+import {ENVIRONMENT_METHODS,environmentMutation,validateEnvironmentParams,decodeEnvironmentOperation} from '../protocol/environment.js';
 import {WORKSPACE_METHODS,WORKSPACE_MUTATION_METHODS,validateWorkspaceParams,decodeWorkspaceOperation,requireWorkspaceEnvelope,workspaceRevision,workspaceUuid} from '../protocol/workspace.js';
 import { FEATURE_READ_METHODS, FEATURE_ADMISSION_METHODS,validateFeatureParams,validateFeatureAdmission,decodeFeatureOperationView,requireFeatureEnvelope } from '../protocol/feature.js';
 import {canonicalWorkflowIntent,type WorkflowIntent} from '../domain/workflow/authorization.js';
@@ -21,14 +22,21 @@ export interface CommandOptions {
 
 export class LocalClient {
   constructor(private readonly backend: ClientBackend) {}
-  async runWorkspace(method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions={}):Promise<PublicResult>{
-    if(!(WORKSPACE_METHODS as readonly string[]).includes(method)||!this.backend.workspace)throw new Error('UNSUPPORTED_VERSION');
-    const mutate=(WORKSPACE_MUTATION_METHODS as readonly string[]).includes(method);
+  runWorkspace(method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions={}):Promise<PublicResult>{
+    return this.runScopedWorkflow('workspace',method,params,options);
+  }
+  runEnvironment(method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions={}):Promise<PublicResult>{
+    return this.runScopedWorkflow('environment',method,params,options);
+  }
+  private async runScopedWorkflow(scope:'workspace'|'environment',method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions):Promise<PublicResult>{
+    const environment=scope==='environment',backend=this.backend[scope];
+    if(!((environment?ENVIRONMENT_METHODS:WORKSPACE_METHODS) as readonly string[]).includes(method)||!backend)throw new Error('UNSUPPORTED_VERSION');
+    const mutate=environment?environmentMutation(method,params):(WORKSPACE_MUTATION_METHODS as readonly string[]).includes(method);
     if(options.limit!==undefined||options.after!==undefined||mutate&&Object.hasOwn(params,'requestId')||!mutate&&options.requestId!==undefined)throw new Error('INVALID_REQUEST');
-    const requestId=mutate?workspaceUuid(options.requestId):method==='workspace.operation.get'?workspaceUuid(params.requestId):null;
+    const requestId=mutate?workspaceUuid(options.requestId):method===`${scope}.operation.get`?workspaceUuid(params.requestId):null;
     const succeededOrBusy=(r:PublicResult)=>r.result==='OK'||r.result==='BUSY'&&r.error===null;
     const supplied=mutate?{...params,requestId}:{...params};
-    validateWorkspaceParams(method,supplied);
+    (environment?validateEnvironmentParams:validateWorkspaceParams)(method,supplied);
     const original=JSON.parse(JSON.stringify(supplied)) as Record<string,unknown>;
     const directory=options.stateDirectory??this.backend.defaultDirectory,timeout=options.timeoutMs??2000;
     if(!Number.isInteger(timeout)||timeout<1||timeout>2000)throw new Error('INVALID_REQUEST');
@@ -37,7 +45,7 @@ export class LocalClient {
       requireWorkspaceEnvelope(r);
       if(r.requestId!==requestId)throw new Error('INVALID_REQUEST');
       if(r.data.operation!==undefined){
-        const op=decodeWorkspaceOperation(r.data.operation);
+        const op=(environment?decodeEnvironmentOperation:decodeWorkspaceOperation)(r.data.operation);
         if(op.requestId!==requestId||op.outcome!=='UNKNOWN'&&op.outcome!==r.outcome||mutate&&op.action!==method.split('.').at(-1))throw new Error('INVALID_REQUEST');
       }
       if(r.data.accepted!==undefined){
@@ -52,7 +60,7 @@ export class LocalClient {
     const timeoutResult=():PublicResult=>({protocolVersion:1,requestId,storeId:null,instanceId:null,
       result:mutate?'UNKNOWN_OUTCOME':'ERROR',outcome:null,freshness:'LAST_KNOWN',liveness:'UNKNOWN',data:{},
       error:foundationError(mutate?'UNKNOWN_OUTCOME':'DEADLINE_EXCEEDED',requestId?{operationId:requestId}:{})});
-    const call=(requested:string,body:Record<string,unknown>)=>this.backend.workspace!(directory,requested,body,Math.max(1,expires-performance.now())).then(checked);
+    const call=(requested:string,body:Record<string,unknown>)=>backend.call(this.backend,directory,requested,body,Math.max(1,expires-performance.now())).then(checked);
     async function execute(){
       if(!mutate)return call(method,original);
       try{
@@ -60,7 +68,7 @@ export class LocalClient {
         if(response.result!=='UNKNOWN_OUTCOME'&&!['DEADLINE_EXCEEDED','PERSISTENCE_UNAVAILABLE'].includes(response.error?.code??''))return response;
       }catch{/* Recover the original request only. */}
       if(performance.now()<expires){
-        try{const observed=await call('workspace.operation.get',{requestId});if(observed.data.operation!==undefined)return observed;}catch{/* An absent observation is inconclusive. */}
+        try{const observed=await call(`${scope}.operation.get`,{requestId});if(observed.data.operation!==undefined)return observed;}catch{/* An absent observation is inconclusive. */}
       }
       return timeoutResult();
     }

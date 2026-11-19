@@ -62,7 +62,7 @@ export interface EnvironmentOutput {
  readonly seq:string;readonly artifactId:string;readonly sha256:string;readonly bytes:number;
 }
 export type EnvironmentQuery=
- |{readonly kind:'workspace'|'environment'|'plan'|'job';readonly id:string}
+ |{readonly kind:'workspace'|'environment'|'plan'|'job'|'artifact';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number}
  |{readonly kind:'output';readonly id:string;readonly after?:string;readonly limit?:number}
  |{readonly kind:'active'};
@@ -72,6 +72,7 @@ export interface EnvironmentRead {
  readonly job?:EnvironmentJob|null;
  readonly items?:readonly EnvironmentRecord[];
  readonly jobs?:readonly EnvironmentJob[];
+ readonly artifact?:{readonly sha256:string;readonly bytes:number}|null;
  readonly chunks?:readonly EnvironmentOutput[];
  readonly nextOffset?:number|null;
  readonly pageRevision?:string;

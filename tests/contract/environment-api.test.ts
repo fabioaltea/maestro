@@ -2,9 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 
-const protocolModule='../../src/protocol/environment.js';
-test('Environment uses strict observation and confirmation inputs with no executable or credential DTO',async()=>{
- const {validateEnvironmentParams,requireEnvironmentEnvelope,environmentMutation}=await import(protocolModule);
+import {validateEnvironmentParams,requireEnvironmentEnvelope,environmentMutation} from '../../src/protocol/environment.js';
+test('Environment uses strict observation and confirmation inputs with no executable or credential DTO',()=>{
  const workspaceId=randomUUID(),requestId=randomUUID(),jobId=randomUUID(),planId=randomUUID();
  const planning={workspaceId,requestId,expectedStateRevision:'1'};
  validateEnvironmentParams('environment.plan',planning);

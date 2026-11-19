@@ -48,6 +48,13 @@ export function readEnvironmentState(db:Database.Database,query:EnvironmentQuery
    const r=db.prepare('SELECT * FROM environments_jobs WHERE job_id=?').get(requireUuid(query.id)) as Row|undefined;
    return{job:r?job(r):null};
  }
+ if(query.kind==='artifact'){
+   const id=requireUuid(query.id);
+   const r=db.prepare(`SELECT sha256,expected_bytes FROM workflow_artifacts a WHERE artifact_id=? AND state='REFERENCED'
+     AND (EXISTS(SELECT 1 FROM environments_plans p WHERE p.artifact_id=a.artifact_id)
+       OR EXISTS(SELECT 1 FROM environments_output o WHERE o.artifact_id=a.artifact_id))`).get(id) as Row|undefined;
+   return{artifact:r?{sha256:String(r.sha256),bytes:Number(r.expected_bytes)}:null};
+ }
  if(query.kind==='active'){
    const rows=db.prepare("SELECT * FROM environments_jobs WHERE phase IN ('QUEUED','RUNNING','CANCELLING','RECONCILING')").all() as Row[];
    return{jobs:rows.map(job)};

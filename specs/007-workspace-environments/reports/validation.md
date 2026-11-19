@@ -31,3 +31,7 @@ Piano prenotato nel ledger comune e pubblicato solo dopo verifica del file sigil
 ## T009 — superficie API e storico (RED)
 
 Due RED prima di parser e reader. DTO chiusi, envelope bounded, prepare distinto dall’admission e interrogazione immutabile dell’UUID originale.
+
+## T010 — protocollo e reader confinato
+
+Superficie chiusa per piano, autorizzazione, admission e storico. Il reader limita pagine e chunk, verifica lo scope di cursori e artefatti e restituisce currentness UNKNOWN offline. Il client recupera soltanto l’UUID originale e condivide il trasporto Workspace. Build, build:test e **4 PASS** di contratti/offline Environment e Workspace.

@@ -32,7 +32,7 @@ process.stdin.on('data', (chunk: Buffer) => {
       if (!Number.isSafeInteger(id) || !methods.includes(request.method!) || !Array.isArray(request.args)) throw new Error('INVALID_REQUEST');
       if (request.method === 'close') { send({ id }); process.stdin.destroy(); return; }
       if (request.method!.includes('Discovery') && !['readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readDiscoveryArtifact', 'readDiscoveryManifestPage', 'getDiscoveryBudget'].includes(request.method!)) throw new Error('UNAUTHORIZED');
-      if (['commitWorkspaceState','commitFeatureState','reconcileWorkflowArtifacts'].includes(request.method!)) throw new Error('UNAUTHORIZED');
+      if (['commitEnvironmentState','commitWorkspaceState','commitWorkspaceLease','settleWorkspaceClaim','commitFeatureState','reconcileWorkflowArtifacts'].includes(request.method!)) throw new Error('UNAUTHORIZED');
       let value: unknown;
       try {
         store = new SQLiteStore({ ...options, readonlyQuiescent: request.quiescent === true });
