@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
-import {readFile,writeFile} from 'node:fs/promises';
+import {readFile,unlink,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createScratch} from '../fixtures/desktop.ts';
 import {seedWaitingDiscovery} from '../fixtures/discovery-session.ts';
@@ -61,7 +61,8 @@ test('workspace confirms an exact handoff, keeps the original receipt and reads 
      await expect(workspaces.getByText('READY',{exact:true})).toBeVisible();
      const workspace=(await fixture.cli(['workspace','list',seed.projectId])).result.data.items[0];
      const state=(await fixture.cli(['daemon','status'])).result;
-     await writeFile(join(fixture.directory,'owned-workspaces',state.storeId,workspace.workspaceId,'fixture-untracked'),'keep');
+     const untracked=join(fixture.directory,'owned-workspaces',state.storeId,workspace.workspaceId,'fixture-untracked');
+     await writeFile(untracked,'keep');
      const observe=workspaces.getByRole('button',{name:'Aggiorna osservazione'});
      await observe.click();
      await expect(page.getByRole('dialog')).toContainText(workspace.workspaceId);
@@ -82,9 +83,26 @@ test('workspace confirms an exact handoff, keeps the original receipt and reads 
      await expect(observe).toBeDisabled();
      await expect(workspaces.getByText('File non tracciati',{exact:true})).toBeVisible();
      await expect(workspaces.getByText('READY',{exact:true})).toBeVisible();
+     const cleanup=workspaces.getByRole('button',{name:'Rimozione workspace'});
+     await expect(cleanup).toBeDisabled();
+     await promisify(execFile)(process.execPath,[actor,fixture.archive],{timeout:35000,maxBuffer:16384});
+     await workspaces.getByRole('button',{name:'Aggiorna elenco'}).click();
+     await cleanup.click();
+     const prepareRemoval=workspaces.getByRole('button',{name:'Prepara rimozione'});
+     await prepareRemoval.click();
+     await expect(page.getByRole('alert')).toContainText('Lavoro');
+     expect(await readFile(untracked,'utf8')).toBe('keep');
+     await unlink(untracked);
+     await prepareRemoval.click();
+     await expect(page.getByRole('dialog')).toContainText(original);
+     await page.keyboard.press('Escape');await expect(prepareRemoval).toBeFocused();
+     await prepareRemoval.click();await confirm.click();
+     await expect.poll(async()=> (await fixture.cli(['workspace','show',workspace.workspaceId])).result.data.workspace?.state,{timeout:15000}).toBe('REMOVED');
+     await workspaces.getByRole('button',{name:'Aggiorna elenco'}).click();
+     await expect(workspaces.getByText('REMOVED',{exact:true})).toBeVisible();
      await chooseDirectory(app,other.directory);await open.click();
      await expect(page.getByText(other.directory,{exact:true})).toBeVisible();
-     await expect(workspaces.getByText('READY',{exact:true})).toHaveCount(0);
+     await expect(workspaces.getByText('REMOVED',{exact:true})).toHaveCount(0);
    }finally{await app.close();}
  }finally{await Promise.all([fixture.cleanup(),other.cleanup()]);}
 });

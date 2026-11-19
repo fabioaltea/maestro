@@ -15,6 +15,8 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
  const [loaded,setLoaded]=useState(false);
  const [live,setLive]=useState(false);
  const [canObserve,setCanObserve]=useState(false);
+ const [canCleanup,setCanCleanup]=useState(false);
+ const [cleanup,setCleanup]=useState<{workspaceId:string;targetRef:string;targetOid:string}|null>(null);
  const [busy,setBusy]=useState(false);
  const [prepared,setPrepared]=useState<PreparedAction|null>(null);
  const [receipt,setReceipt]=useState<Params|null>(null);
@@ -53,6 +55,8 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
      &&Array.isArray(capability.workspaceMethods)&&capability.workspaceMethods.includes('workspace.create'));
    setCanObserve(status?.liveness==='LIVE_VERIFIED'&&capability?.workspaceVersion===1
      &&Array.isArray(capability.workspaceMethods)&&capability.workspaceMethods.includes('workspace.refresh'));
+   setCanCleanup(status?.liveness==='LIVE_VERIFIED'&&capability?.workspaceVersion===1&&Array.isArray(capability.workspaceMethods)
+     &&['workspace.cleanup.prepare','workspace.remove'].every(method=>(capability.workspaceMethods as unknown[]).includes(method)));
    const page=await core('listWorkspaces',{projectId:id,...(next?{cursor:next}:{})});
    if(!active.current||generation!==current.current)return;
    if(page?.result==='OK'){
@@ -64,7 +68,7 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
  function select(id:string){
    project.current=id;current.current++;
    latestReceipt.current=null;
-   setProjectId(id);setItems([]);setCursor(null);setLoaded(false);setReceipt(null);
+   setProjectId(id);setItems([]);setCursor(null);setLoaded(false);setReceipt(null);setCleanup(null);
    if(id)void refresh(id);
  }
  async function prepare(params:Params,button:HTMLButtonElement){
@@ -94,6 +98,7 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
      if(value){
        const received=record(record(value).receipt);
        latestReceipt.current=received;setReceipt(received);
+       if(prepared.action==='workspace.remove')setCleanup(null);
      }
      setPrepared(null);setBusy(false);
      await refresh(projectId);
@@ -119,6 +124,7 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
    {items.length>0&&<ul aria-label="Workspace del progetto">
      {items.map(item=>{
        const observation=item.observation as Params|null|undefined;
+       const draft=cleanup&&cleanup.workspaceId===item.workspaceId?cleanup:null;
        return <li key={String(item.workspaceId)}>
        <strong>{String(item.state)}</strong> · <span className="mono">{String(item.branchRef)}</span>
        <dl><div><dt>Base</dt><dd className="mono">{String(item.baseRef)} · {String(item.baseOid)}</dd></div>
@@ -139,6 +145,22 @@ export function Workspaces({desktop,source,onProjects,onOperations}:{desktop:Des
          onClick={event=>void prepare({action:'refresh',workspaceId:item.workspaceId,expectedStateRevision:item.stateRevision},event.currentTarget)}>
          Aggiorna osservazione
        </button>
+       <button className="button subtle" disabled={!canCleanup||busy||!!prepared||item.state!=='READY'}
+         aria-expanded={!!draft}
+         onClick={()=>setCleanup(draft?null:{workspaceId:String(item.workspaceId),targetRef:String(item.baseRef),targetOid:String(item.baseOid)})}>
+         Rimozione workspace
+       </button>
+       {canCleanup&&draft&&<form onSubmit={event=>{
+         event.preventDefault();
+         const button=event.currentTarget.querySelector('button');
+         if(button)void prepare({action:'remove',...draft,expectedStateRevision:item.stateRevision},button);
+       }}>
+         <label>Ref locale di integrazione <input required maxLength={1035} value={draft.targetRef}
+           onChange={event=>setCleanup({...draft,targetRef:event.target.value})}/></label>
+         <label>OID del target <input required maxLength={64} value={draft.targetOid}
+           onChange={event=>setCleanup({...draft,targetOid:event.target.value})}/></label>
+         <button className="button subtle" disabled={busy||!!prepared}>Prepara rimozione</button>
+       </form>}
      </li>;})}
    </ul>}
    {cursor&&<button className="button subtle" disabled={busy||!!prepared} onClick={()=>void refresh(projectId,cursor)}>Altri workspace</button>}

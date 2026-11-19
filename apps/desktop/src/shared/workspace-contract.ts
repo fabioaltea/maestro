@@ -2,11 +2,12 @@ import type {Params} from './bridge-contract.ts';
 import {CORE_ERRORS} from './core-errors.ts';
 import {keys,record,revision,text,uuid} from './validation.ts';
 
-export const WORKSPACE_MUTATIONS=['create','refresh'] as const;
+export const WORKSPACE_MUTATIONS=['create','refresh','remove'] as const;
 export const WORKSPACE_QUERIES={
  listWorkspaces:{action:'list',key:'projectId'},
  getWorkspace:{action:'get',key:'workspaceId'},
  getWorkspaceOperation:{action:'operation',key:'requestId'},
+ getWorkspaceCleanup:{action:'cleanup.get',key:'workspaceId'},
 } as const;
 export const WORKSPACE_BRIDGE_METHODS=[
  'prepareWorkspaceAction','confirmWorkspaceAction','cancelWorkspaceAction',
@@ -22,6 +23,9 @@ export function validateWorkspaceAction(action:string,p:Params){
    requireFields(p,['featureId','envelopeId']);uuid(p.featureId);uuid(p.envelopeId);
  }else if(action==='workspace.refresh'){
    requireFields(p,['workspaceId','expectedStateRevision']);uuid(p.workspaceId);revision(p.expectedStateRevision);
+ }else if(action==='workspace.remove'){
+   requireFields(p,['workspaceId','expectedStateRevision','targetRef','targetOid']);
+   uuid(p.workspaceId);revision(p.expectedStateRevision);cleanupTarget(p);
  }else throw new Error('INVALID_INPUT');
 }
 export function workspaceBridgeAction(raw:unknown){
@@ -54,6 +58,14 @@ function gitScope(p:Params){
  if(!/^refs\/heads\/[!-~]{1,1024}$/.test(text(p.baseRef,1035))
    ||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(text(p.baseOid,64))
    ||p.branchRef!==`refs/heads/maestro/feature/${uuid(p.featureId)}/${uuid(p.workspaceId)}`)throw new Error('INVALID_INPUT');
+}
+export function cleanupTarget(p:Params){
+ if(!/^refs\/heads\/[!-~]{1,1024}$/.test(text(p.targetRef,1035))
+   ||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(text(p.targetOid,64)))throw new Error('INVALID_INPUT');
+}
+function cleanupEvidence(p:Params){
+ cleanupTarget(p);revision(p.stateRevision);time(p.checkedAt);
+ if(!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(text(p.headOid,64)))throw new Error('INVALID_INPUT');
 }
 function time(value:unknown){
  if(typeof value!=='string'||!Number.isFinite(Date.parse(value)))throw new Error('INVALID_INPUT');
@@ -107,6 +119,9 @@ export function validateWorkspaceData(action:string,raw:unknown):Params{
      prepare:['grantId','canonicalIntentHash','expiresAtMs','summary'],list:['items','nextCursor'],get:['workspace'],
      operation:['operation'],create:['accepted','requestId','workspaceId','stateRevision','operation'],
      refresh:['accepted','requestId','workspaceId','stateRevision','operation'],
+     remove:['accepted','requestId','workspaceId','stateRevision','operation'],
+     'cleanup.prepare':['grantId','canonicalIntentHash','expiresAtMs','summary'],
+     'cleanup.get':['workspaceId','eligible','reason','checkedAt','evidence'],
    };
    if(!Object.hasOwn(expected,action))throw new Error('INVALID_INPUT');
    keys(p,[...expected[action]!,'freshness','storeId','observabilityDegraded','code','error']);
@@ -127,10 +142,29 @@ export function validateWorkspaceData(action:string,raw:unknown):Params{
    }
    if(p.summary!==undefined){
      const s=record(p.summary);
-     requireFields(s,['workspaceId','projectId','featureId','envelopeId','featureRevision','baseRef','baseOid','branchRef']);
-     uuid(s.projectId);uuid(s.envelopeId);revision(s.featureRevision);gitScope(s);
+     if(action==='cleanup.prepare'){
+       requireFields(s,['workspaceId','projectId','stateRevision','branchRef','headOid','targetRef','targetOid','checkedAt']);
+       uuid(s.workspaceId);uuid(s.projectId);cleanupEvidence(s);
+       if(!/^refs\/heads\/maestro\/feature\/[a-f0-9-]{36}\/[a-f0-9-]{36}$/.test(text(s.branchRef,124))||!String(s.branchRef).endsWith('/'+s.workspaceId))throw new Error('INVALID_INPUT');
+     }else{
+       requireFields(s,['workspaceId','projectId','featureId','envelopeId','featureRevision','baseRef','baseOid','branchRef']);
+       uuid(s.projectId);uuid(s.envelopeId);revision(s.featureRevision);gitScope(s);
+     }
      uuid(p.grantId);
      if(!/^[a-f0-9]{64}$/.test(text(p.canonicalIntentHash,64))||!Number.isSafeInteger(p.expiresAtMs))throw new Error('INVALID_INPUT');
+   }
+   if(action==='cleanup.get'&&p.workspaceId!==undefined){
+     uuid(p.workspaceId);
+     if(typeof p.eligible!=='boolean'||p.freshness==='LAST_KNOWN'&&p.eligible)throw new Error('INVALID_INPUT');
+     if(p.eligible){
+       if(p.reason!==null)throw new Error('INVALID_INPUT');
+       const evidence=record(p.evidence);
+       requireFields(evidence,['targetRef','targetOid','headOid','stateRevision','checkedAt']);cleanupEvidence(evidence);
+       if(p.checkedAt!==evidence.checkedAt)throw new Error('INVALID_INPUT');
+     }else{
+       enumValue(p.reason,['CHECK_REQUIRED','UNKNOWN','WORKSPACE_IN_USE','OWNERSHIP_UNPROVEN']);
+       if(p.checkedAt!==null||p.evidence!==null)throw new Error('INVALID_INPUT');
+     }
    }
    return out;
  }catch{throw new Error('CLIENT_PROTOCOL_ERROR');}

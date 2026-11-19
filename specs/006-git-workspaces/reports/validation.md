@@ -127,3 +127,7 @@ Il cleanup lega grant, owner, HEAD e target, poi separa la rimozione non forzata
 ## T032 — CLI cleanup
 
 La prova del target viaggia in JSON bounded da file o stdin. Remove richiede grant, revisione e UUID esatto. **2 PASS** di contratto locale e reader offline senza eligibility positiva.
+
+## T033 — desktop cleanup
+
+La vista espone ref/OID del target, conferma, ricevuta e stato aggiornato. Il test Electron rifiuta il file non tracciato, mantiene il focus dopo Escape e completa la rimozione solo dopo aver ripulito la fixture. Typecheck PASS, **48 PASS** unit/contract e **1 PASS** E2E su tre storie.

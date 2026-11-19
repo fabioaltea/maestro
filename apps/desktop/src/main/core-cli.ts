@@ -1,7 +1,7 @@
 import {buildFeatureCliArgs,featureCliInput} from './feature-cli.ts';
 import {FEATURE_MUTATIONS,validateFeatureData} from '../shared/feature-contract.ts';
 import {WORKSPACE_MUTATIONS,validateWorkspaceData} from '../shared/workspace-contract.ts';
-import {buildWorkspaceCliArgs} from './workspace-cli.ts';
+import {buildWorkspaceCliArgs,workspaceCliInput} from './workspace-cli.ts';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
@@ -72,6 +72,7 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
       if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
       if(c.action==='get'&&p.result==='OK'&&record(data.workspace).workspaceId!==c.params?.workspaceId)throw new Error();
       if(c.action==='list'&&p.result==='OK'&&(!Array.isArray(data.items)||data.items.some(item=>record(item).projectId!==c.params?.projectId)))throw new Error();
+      if(c.action==='cleanup.get'&&p.result==='OK'&&(data.workspaceId!==c.params?.workspaceId||data.eligible===true&&p.liveness!=='LIVE_VERIFIED'))throw new Error();
     }
     if (c.namespace === 'discovery' && c.action === 'operation' && p.requestId !== c.params?.requestId) throw new Error();
     if (c.namespace === 'discovery' && c.action === 'eligibility' && (p.freshness !== 'LIVE' || p.liveness !== 'LIVE_VERIFIED') && data.eligible === true) throw new Error();
@@ -113,7 +114,7 @@ export class CoreCli {
     try {
       if(!mutation){await previous;if(this.closed)throw new Error('CLIENT_READ_CANCELLED');if(command.scope==='view'&&generation!==this.viewGeneration)throw new Error('CLIENT_READ_CANCELLED');}
       const stdout = await new Promise<string>((resolve, reject) => {
-        const input = featureCliInput(command) ?? discoveryCliInput(command);
+        const input = featureCliInput(command) ?? discoveryCliInput(command) ?? workspaceCliInput(command);
         const child = spawn(this.runtime.node, [this.runtime.cli, ...args], { env: this.runtime.env, shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
         this.children.add(child); if (!mutation && command.scope === 'view') this.viewChildren.add(child);
         const chunks: Buffer[] = []; let bytes = 0, stderr = 0, failed = false;

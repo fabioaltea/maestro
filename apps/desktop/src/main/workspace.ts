@@ -22,6 +22,20 @@ export function installWorkspace(router:BridgeRouter,context:ArchiveContext,acti
      return{command:{namespace:'workspace',action:'refresh',archive:c.path,workspaceId,projectId:uuid(workspace.projectId),expectedStateRevision,params},
        summary:['Aggiorna l’osservazione locale del worktree',`Workspace ${workspaceId}`,`Revisione ${expectedStateRevision}`]};
    }
+   if(action==='workspace.remove'){
+     const workspaceId=uuid(params.workspaceId),expectedStateRevision=revision(params.expectedStateRevision);
+     const result=await core.call({namespace:'workspace',action:'cleanup.prepare',archive:c.path,
+       params:{workspaceId,targetRef:params.targetRef,targetOid:params.targetOid}});
+     context.apply(c,result);
+     if(result.result!=='OK'||result.liveness!=='LIVE_VERIFIED')throw new Error(result.error?.code??'DAEMON_UNAVAILABLE');
+     const data=validateWorkspaceData('cleanup.prepare',result.data),summary=record(data.summary);
+     if(summary.workspaceId!==workspaceId||summary.stateRevision!==expectedStateRevision||
+       summary.targetRef!==params.targetRef||summary.targetOid!==params.targetOid)throw new Error('REVISION_CONFLICT');
+     return{command:{namespace:'workspace',action:'remove',archive:c.path,workspaceId,projectId:uuid(summary.projectId),expectedStateRevision,
+       params:{grantId:data.grantId,expectedStateRevision}},
+       summary:['Rimuovi il worktree pulito e il branch integrato',`Archivio ${c.path}`,`Workspace ${workspaceId}`,
+         `Branch ${summary.branchRef}`,`HEAD ${summary.headOid}`,`Target ${summary.targetRef}`,`Commit integrato ${summary.targetOid}`]};
+   }
    const result=await core.call({namespace:'workspace',action:'prepare',archive:c.path,params});
    context.apply(c,result);
    if(result.result!=='OK'||result.liveness!=='LIVE_VERIFIED')throw new Error(result.error?.code??'DAEMON_UNAVAILABLE');

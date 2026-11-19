@@ -25,7 +25,7 @@ export async function settleReceipt(store: ReceiptStore, receipt: Receipt, resul
       if(data.accepted===true&&data.requestId===receipt.requestId&&data.workspaceId===receipt.workspaceId)
         return store.update(receipt.requestId,{phase:'RECONCILING',outcome:'IN_PROGRESS'});
       if(result.liveness==='LIVE_VERIFIED'&&['APPROVAL_REQUIRED','APPROVAL_STALE','BASE_CHANGED','CONTEXT_UNSTABLE','DISCOVERY_REQUIRED',
-        'WORKSPACE_UNSAFE','WORKSPACE_IN_USE','WORKSPACE_NOT_FOUND','WORKSPACE_LIMIT','REVISION_CONFLICT','INVALID_REQUEST','RESOURCE_LIMIT'].includes(result.error?.code??''))
+        'WORKSPACE_UNSAFE','WORKSPACE_IN_USE','WORKSPACE_NOT_FOUND','WORKSPACE_LIMIT','REVISION_CONFLICT','INVALID_REQUEST','RESOURCE_LIMIT','UNINTEGRATED_WORK','GIT_CONFLICT'].includes(result.error?.code??''))
         return store.update(receipt.requestId,{phase:'TERMINAL',outcome:'BLOCKED',errorCode:result.error!.code});
       return unknown();
     }catch{return unknown();}
