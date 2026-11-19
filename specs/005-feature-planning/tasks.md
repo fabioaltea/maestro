@@ -55,7 +55,7 @@
 
 **Coverage**: FR-004–FR-006; FR-010/011/012 trasversali.
 
-- [ ] T020 [P] [US2] Scrivere policy/transizioni US2 in `tests/unit/feature-us2.test.ts`: Approval assente/stale, contesto cambiato tra prepare e consumo, progetto reimportato e collisione UUID cross namespace; testare grant/revisioni e comportamento sicuro (FR-004–FR-006).
+- [X] T020 [P] [US2] Scrivere policy/transizioni US2 in `tests/unit/feature-us2.test.ts`: Approval assente/stale, contesto cambiato tra prepare e consumo, progetto reimportato e collisione UUID cross namespace; testare grant/revisioni e comportamento sicuro (FR-004–FR-006).
 - [ ] T021 [P] [US2] Scrivere contract US2 in `tests/contract/feature-us2.test.ts`: metodi della storia in `specs/005-feature-planning/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-004–FR-006, FR-011).
 - [ ] T022 [P] [US2] Scrivere integrazione locale US2 in `tests/integration/feature-us2.test.ts` con fixture di repository/processi/clock pertinenti: Approvare un bundle fixture, ottenere envelope, mutare contesto o piano e verificare che ogni handoff successivo sia rifiutato mentre la decisione storica resta leggibile. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-004–FR-006, FR-011/012).
 - [ ] T023 [US2] Implementare tipi/invarianti della storia in `src/domain/features/approval.ts` e aggiornare `src/ports/feature.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-004–FR-006).
