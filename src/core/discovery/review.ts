@@ -13,8 +13,11 @@ import { makeDeadline, systemClock } from '../../ports/clock.js';
 import { prepareDiscoveryLaunch, readDiscoverySnapshot, readDiscoveryArtifact } from './launch.js';
 
 interface Options { readonly storage: Pick<StoragePort, 'readDiscoveryMetadata' | 'commitDiscoveryMetadata' | 'getProject'>;
-  readonly paths: ArchivePaths; readonly context: DiscoveryContextPort; readonly artifacts: DiscoveryArtifactPort; readonly provider: ProviderPort }
+  readonly contextTimeoutMs?: number; readonly paths: ArchivePaths; readonly context: DiscoveryContextPort; readonly artifacts: DiscoveryArtifactPort; readonly provider: ProviderPort }
 export function createDiscoveryReview(options: Options) {
+  const revalidating = new Set<string>();
+  const contextTimeoutMs = options.contextTimeoutMs ?? limits.contextMs;
+  if (!Number.isSafeInteger(contextTimeoutMs) || contextTimeoutMs < 1 || contextTimeoutMs > limits.contextMs) throw new Error('INVALID_REQUEST');
   async function meta<Q extends DiscoveryMetadataQuery>(q: Q): Promise<DiscoveryMetadataData<Q>> {
     const r = await options.storage.readDiscoveryMetadata!(q); if (!r.ok) throw new Error(r.code); return r.value.data;
   }
@@ -36,9 +39,13 @@ export function createDiscoveryReview(options: Options) {
   async function fresh(d: DiscoveryRecord) {
     try {
       const current = await scope(d), sealed = await readDiscoverySnapshot(options.artifacts, current.snapshot, d.storeId);
-      const controller = new AbortController(), deadline = makeDeadline(systemClock, limits.contextMs); let timer: ReturnType<typeof setTimeout> | undefined;
+      const controller = new AbortController(), deadline = makeDeadline(systemClock, contextTimeoutMs); let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        const fingerprint = await Promise.race([options.context.revalidate(current.request, sealed.manifest, { deadline, signal: controller.signal }), new Promise<never>((_r, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('DEADLINE_EXCEEDED')); }, deadline.remainingMs()); })]);
+        if (revalidating.has(d.projectId) || revalidating.size >= 4) throw new Error('DISCOVERY_BUSY');
+        revalidating.add(d.projectId);
+        const work = Promise.resolve().then(() => options.context.revalidate(current.request, sealed.manifest, { deadline, signal: controller.signal }));
+        const release = () => revalidating.delete(d.projectId); void work.then(release, release);
+        const fingerprint = await Promise.race([work, new Promise<never>((_r, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('DEADLINE_EXCEEDED')); }, deadline.remainingMs()); })]);
         if (!fingerprint.ok) throw new Error(fingerprint.code);
         if (fingerprint.value.freshness === 'UNKNOWN') throw new Error('CONTEXT_UNSTABLE');
         if (fingerprint.value.freshness !== 'CURRENT' || fingerprint.value.contextDigest !== current.snapshot.contextDigest) throw new Error('CONTEXT_CHANGED');

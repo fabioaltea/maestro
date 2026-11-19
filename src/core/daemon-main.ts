@@ -84,7 +84,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       } });
     const inspection = await createGitRunner().capabilities();
     discovery = createDiscoveryRuntime(storage, paths, intent.instanceId, dependencies.discovery);
-    features = createFeatureRuntime(storage, paths, intent.instanceId);
+    features = createFeatureRuntime(storage, paths, intent.instanceId, { currentEligibility: (peer, projectId) => discovery!.operations.currentEligibility(peer, projectId) });
     const capabilities = { ...(lastSnapshot?.store.schemaVersion === 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });

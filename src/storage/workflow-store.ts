@@ -1,3 +1,4 @@
+import {commitFeatureAuthoring} from './features-authoring.js';
 import {createHash} from 'node:crypto';
 import type Database from 'better-sqlite3';
 import {requireUuid} from '../domain/identifiers.js';
@@ -17,7 +18,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  const usage=readFeatureState(db,{kind:'budget'}).budget!;
  const tables=['workflow_operations','workflow_grants','workflow_artifacts','features_records','features_revisions','features_approvals','features_envelopes','features_turns'];
  let metadata=8192;for(const table of tables){const rows=db.prepare(`SELECT * FROM ${table}`).iterate() as Iterable<FeatureRow>;for(const row of rows)metadata+=Math.ceil(Buffer.byteLength(JSON.stringify(row,(_k,v:unknown)=>typeof v==='bigint'?v.toString():v))/4096)*4096+4096;}
- db.prepare('UPDATE workflow_budget SET metadata_bytes=? WHERE singleton=1').run(metadata);
+ db.prepare('UPDATE workflow_budget SET metadata_bytes=? WHERE singleton=1 AND metadata_bytes<>?').run(metadata,metadata);
  if(usage.allocatedBytes+usage.reservedBytes+metadata>128*1024*1024-(terminal?0:8*1024*1024)||usage.allocatedFiles>8192)throw new Error('RESOURCE_LIMIT');
  }
  function transaction<T>(body:()=>T,terminal=false,event?:WorkflowEventContext):T{return mutate(()=>{const result=body();budget(terminal);return result;},terminal,event);}
@@ -76,6 +77,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  if(op.namespace==='FEATURE'&&['generate','answer','cancel'].includes(op.action))complete(op.requestId,null,'RESOURCE_IDENTITY_UNKNOWN','UNKNOWN');
  else { complete(op.requestId,null,'INTERRUPTED','INTERRUPTED');if(op.namespace==='ARTIFACT'){const i=JSON.parse(op.canonicalIntent) as WorkflowIntent;const id=i.action==='reserve'?op.requestId:i.payload.artifactId;if(typeof id==='string')db.prepare("UPDATE workflow_artifacts SET state='ORPHAN' WHERE artifact_id=? AND state='RESERVED' AND ref_count=0").run(id);}}}
  db.prepare("UPDATE features_records SET state='RECONCILING',state_revision=state_revision+1 WHERE feature_id IN (SELECT feature_id FROM features_turns WHERE phase IN ('ACCEPTED','RUNNING','RECONCILING'))").run();db.prepare("UPDATE features_turns SET phase='RECONCILING' WHERE phase IN ('ACCEPTED','RUNNING')").run();return{};},true,{requestIds});}
+ if(c.kind==='create'||c.kind==='revise'||c.kind==='archive')return commitFeatureAuthoring(db,c,{admit,complete,transaction,intent});
  if(['reserve','append','seal','discard'].includes(c.kind))return executeUpload(c as UploadChange);
  throw new Error('UNSUPPORTED_VERSION');
  },

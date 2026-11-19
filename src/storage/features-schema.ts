@@ -2,7 +2,7 @@ export const FEATURES_SCHEMA_SQL=`
 CREATE TABLE features_records (
  feature_id TEXT PRIMARY KEY CHECK(length(feature_id)=36),project_id TEXT NOT NULL REFERENCES projects(project_id),title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 120),
  state TEXT NOT NULL CHECK(state IN ('DRAFT','PLANNING','WAITING_USER','READY_FOR_APPROVAL','APPROVED','NEEDS_REVIEW','ARCHIVED','INTERRUPTED','RECONCILING')),
- state_revision INTEGER NOT NULL CHECK(state_revision>0),current_revision_id TEXT REFERENCES features_revisions(revision_id) DEFERRABLE INITIALLY DEFERRED,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,archived_at TEXT
+ state_revision INTEGER NOT NULL CHECK(state_revision>0),current_revision_id TEXT NOT NULL REFERENCES features_revisions(revision_id) DEFERRABLE INITIALLY DEFERRED,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,archived_at TEXT
 ) STRICT;
 CREATE INDEX features_by_project ON features_records(project_id,created_at,feature_id);
 CREATE TABLE features_revisions (

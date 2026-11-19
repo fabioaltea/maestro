@@ -69,3 +69,7 @@ Real temporary Git+readonly Discovery fixture prepares manual authoring tests fo
 ## T016 — US1 model GREEN
 
 Added neutral internal FeatureContextProof with strict project/config/approval/revision/digest/time validation; it is not accepted by any public DTO. Create/revise storage input includes the observation timestamp. US1/state5/5PASS and lint/build:test PASS; no OS/SQLite dependency in domain.
+
+## T017 — US1 authoring core GREEN
+
+Same-writer create/revise/archive now consume the exact core grant, validate sealed bundle/provenance, rerun authoritative Discovery freshness (never cached checkId), CAS config/state and retain immutable revisions/artifacts. Private per-project admission limits4 contexts; shared Discovery review holds its source-I/O debit until actual completion after a timeout. Actor/root/client checks precede effects. Replayed finalizations no longer update an unchanged budget or produce duplicate completion events. Tests include real Git snapshots,10retries, changed source after consent, concurrent revisions, archive retention and lost writer reply after commit. Initial8/8US1 cases PASS; final14/14 including actual daemon, Discovery eligibility regressions and timeout debit test, build core/test and lint PASS. CLI/desktop story integration follows; no real provider invocation.

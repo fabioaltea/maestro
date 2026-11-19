@@ -27,7 +27,7 @@ export function transitionFeature(from:FeatureState,action:'revise'|'approve'|'s
  if(action==='revise'&& !['PLANNING','RECONCILING'].includes(from))return from==='DRAFT'?'DRAFT':'NEEDS_REVIEW';
  if(action==='approve'&&['DRAFT','READY_FOR_APPROVAL','NEEDS_REVIEW'].includes(from))return 'APPROVED';
  if(action==='stale')return 'NEEDS_REVIEW';
- if(action==='archive'&&!['PLANNING','RECONCILING'].includes(from))return 'ARCHIVED';
+ if(action==='archive'&&!['PLANNING','WAITING_USER','RECONCILING'].includes(from))return 'ARCHIVED';
  if(action==='plan'&&!['PLANNING','RECONCILING'].includes(from))return 'PLANNING';
  if(action==='question'&&from==='PLANNING')return 'WAITING_USER';
  if(action==='draft'&&from==='PLANNING')return 'READY_FOR_APPROVAL';

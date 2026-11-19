@@ -175,6 +175,7 @@ export function createDiscoveryOperations(options: Options) {
         return { ok: true, value: prepared } as const;
       } catch (error) { return failure(error); }
     },
+    async currentEligibility(peer: AuthenticatedPeer, projectId: string): Promise<import('../../domain/discovery/approval.js').DiscoveryEligibility> { await guard(peer); if (!review) fail('DISCOVERY_NOT_INITIALIZED'); return { ...await review!.eligibility(projectId), checkId: null }; },
     async eligibility(peer: AuthenticatedPeer, projectId: string, checkId?: string) { await guard(peer); return eligibility(projectId, checkId); },
     async approve(peer: AuthenticatedPeer, input: DiscoveryCommand): Promise<DiscoveryResult<DiscoveryAccepted>> {
       try {
