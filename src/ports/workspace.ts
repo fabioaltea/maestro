@@ -40,8 +40,10 @@ export interface WorkspacePort {
   inspect(target:WorkspaceMutationTarget,deadline:Deadline):Promise<{readonly disk:WorkspaceDiskObservation;readonly status:WorkspaceWorkingStatus|null}>;
   createBranch(target:WorkspaceMutationTarget,deadline:Deadline):Promise<void>;
   addWorktree(target:WorkspaceMutationTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
+  verifyIntegration(target:WorkspaceMutationTarget,headOid:string,integrated:WorkspaceCleanupTarget,deadline:Deadline):Promise<boolean>;
   removeWorktree(target:WorkspaceMutationTarget,expected:NonNullable<WorkspaceDiskObservation['worktree']>,
-    integrated:{readonly targetRef:string;readonly targetOid:string},deadline:Deadline):Promise<void>;
+    integrated:WorkspaceCleanupTarget,deadline:Deadline):Promise<void>;
+  deleteBranch(target:WorkspaceMutationTarget,headOid:string,integrated:WorkspaceCleanupTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
 }
 
 export interface WorkspaceRecord extends WorkspaceFence {
@@ -70,6 +72,8 @@ export type WorkspaceQuery={readonly kind:'get'|'summary';readonly id:string}
  |{readonly kind:'unresolved-effect';readonly id:string}
  |{readonly kind:'interrupted-refresh'}
  |{readonly kind:'pending-claim-settlements'}
+ |{readonly kind:'cleanup-evidence';readonly id:string}
+ |{readonly kind:'interrupted-removals'}
  |{readonly kind:'interrupted-leases'}
  |{readonly kind:'interrupted-provisioning'};
 export interface WorkspaceRead {
@@ -84,6 +88,8 @@ export interface WorkspaceRead {
  readonly effect?:WorkspaceEffect|null;
  readonly operations?:readonly WorkflowOperationRecord[];
  readonly claims?:readonly WorkspaceClaim[];
+ readonly cleanup?:WorkspaceCleanupEvidence|null;
+ readonly removals?:readonly {readonly workspace:WorkspaceRecord;readonly effect:WorkspaceEffect}[];
 }
 export interface WorkspaceStoragePort {
  commitWorkspaceState?(change:WorkspaceChange):Promise<WorkspaceWrite>;
@@ -118,7 +124,12 @@ export type WorkspaceChange=
  |{readonly kind:'refresh-interrupted';readonly requestId:string;readonly instanceId:string}
  |{readonly kind:'refresh-finish';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence;
    readonly observation:WorkspaceObservation;readonly error:string|null;
-   readonly recovered?:{readonly originalRequestId:string;readonly contextCheckedAt:string}};
+   readonly recovered?:{readonly originalRequestId:string;readonly contextCheckedAt:string}}
+ |{readonly kind:'cleanup-admit';readonly admission:WorkflowAdmission}
+ |{readonly kind:'cleanup-step';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence;
+   readonly stage:'REMOVE_INTENT'|'WORKTREE_REMOVED'|'DELETE_BRANCH_INTENT'|'BRANCH_REMOVED';readonly observation?:WorkspaceDiskObservation}
+ |{readonly kind:'cleanup-block';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence;readonly error:string;readonly uncertain:boolean}
+ |{readonly kind:'cleanup-interrupted';readonly requestId:string;readonly instanceId:string;readonly fence:WorkspaceFence;readonly observation?:WorkspaceDiskObservation};
 export interface WorkspaceWrite{
  readonly workspace?:WorkspaceRecord;
  readonly operation:WorkflowOperationRecord;
@@ -150,7 +161,8 @@ export interface WorkspaceObservation{
 }
 export interface WorkspaceEffect{
  readonly requestId:string;
- readonly phase:'INTENT'|'BRANCH_INTENT'|'BRANCH_CREATED'|'WORKTREE_ADDED'|'WORKTREE_REMOVED'|'UNKNOWN';
+ readonly phase:'INTENT'|'BRANCH_INTENT'|'BRANCH_CREATED'|'WORKTREE_ADDED'|'REMOVE_INTENT'|'WORKTREE_REMOVED'|'DELETE_BRANCH_INTENT'|'UNKNOWN';
+ readonly lastPhase?:string;
 }
 export type WorkspaceLeaseChange=
  |{readonly kind:'acquire';readonly lease:WorkspaceLease;readonly fence:WorkspaceFence;readonly worktree:NonNullable<WorkspaceDiskObservation['worktree']>}
@@ -160,4 +172,9 @@ export type WorkspaceLeaseChange=
 export interface WorkspaceCleanupTarget{
  readonly targetRef:string;
  readonly targetOid:string;
+}
+export interface WorkspaceCleanupEvidence extends WorkspaceCleanupTarget{
+ readonly headOid:string;
+ readonly stateRevision:string;
+ readonly checkedAt:string;
 }

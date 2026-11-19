@@ -3,6 +3,7 @@ import type {Deadline} from '../../ports/clock.js';
 import type {AuthenticatedPeer} from '../../ports/platform.js';
 import {WORKSPACE_READ_METHODS} from '../../protocol/workspace.js';
 import {createWorkspaceDispatch} from './dispatch.js';
+import {createWorkspaceCleanup} from './remove.js';
 import {createWorkspaceRecovery} from './recovery.js';
 import {createWorkspaceProvisioning,type WorkspaceProvisionOptions} from './provision.js';
 import {createWorkspaceMutator} from '../../platform/macos/git/workspace-mutator.js';
@@ -11,9 +12,9 @@ import {createOwnedWorkspaceFiles} from '../../platform/macos/git/workspace-file
 export function nativeWorkspaceServices(options:Omit<WorkspaceProvisionOptions,keyof WorkspaceRuntimeContext|'mutator'|'files'>&{files?:WorkspaceProvisionOptions['files']}){
  return (runtime:WorkspaceRuntimeContext)=>{
    const settings={...options,...runtime,mutator:createWorkspaceMutator(),files:options.files??createOwnedWorkspaceFiles()};
-   const provisioning=createWorkspaceProvisioning(settings),recovery=createWorkspaceRecovery(settings);
-   return{actions:{...provisioning.actions,...recovery.actions},leases:recovery.leases,
-     async recover(){await provisioning.recover();await recovery.recover();}};
+   const provisioning=createWorkspaceProvisioning(settings),recovery=createWorkspaceRecovery(settings),cleanup=createWorkspaceCleanup(settings);
+   return{actions:{...provisioning.actions,...recovery.actions,...cleanup.actions},leases:recovery.leases,
+     async recover(){await provisioning.recover();await recovery.recover();await cleanup.recover();}};
  };
 }
 

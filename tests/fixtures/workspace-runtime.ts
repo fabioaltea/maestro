@@ -36,3 +36,13 @@ export async function workspaceRuntimeFixture(t:Parameters<typeof workspaceAutho
  }
  return{...f,files,storage,mutator,runtime,send,prepare,submit};
 }
+
+export function startSuccessor(f:Pick<Awaited<ReturnType<typeof workspaceRuntimeFixture>>,'store'|'instanceId'|'paths'>){
+ const instanceId=randomUUID(),ticketId=randomUUID(),requestId=randomUUID(),at=new Date().toISOString();
+ f.store.reconcileInstanceAbsent(f.instanceId,'1');
+ f.store.acceptOperation({requestId,action:'start',payloadHash:'a'.repeat(64),ownerUid:f.paths.ownerUid,targetInstanceId:null,acceptedAt:at});
+ f.store.issueTicket({requestId,ticketId,instanceId,generation:'2'});
+ f.store.claimTicket(ticketId,'2',process.pid);
+ f.store.recordInstance({instanceId,generation:'2',pid:process.pid,lifecycle:'RECOVERING',startedAt:at,shutdownPrepared:false,lastError:null});
+ return instanceId;
+}

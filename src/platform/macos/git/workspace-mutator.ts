@@ -1,5 +1,6 @@
 import {workspaceBranchRef} from '../../../domain/workspaces/provision.js';
 import {requireMatchingWorktree} from '../../../domain/workspaces/ownership.js';
+import {requireCleanupEffect,requireCleanupTarget} from '../../../domain/workspaces/cleanup.js';
 import {execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {constants} from 'node:fs';
@@ -10,7 +11,7 @@ import {promisify} from 'node:util';
 import {requireUuid} from '../../../domain/identifiers.js';
 import type {Deadline} from '../../../ports/clock.js';
 import type {FilesystemAnchor} from '../../../ports/repository.js';
-import type {WorkspaceDiskObservation,WorkspaceGitPin,WorkspaceMutationTarget,WorkspacePort} from '../../../ports/workspace.js';
+import type {WorkspaceCleanupTarget,WorkspaceDiskObservation,WorkspaceGitPin,WorkspaceMutationTarget,WorkspacePort} from '../../../ports/workspace.js';
 import {createFilesystemIdentity} from './filesystem-identity.js';
 import {buildInspectionEnvironment,createGitRunner} from './runner.js';
 
@@ -117,7 +118,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
   }
   const selected=()=>pin??=resolvePin();
   function check(deadline:Deadline){if(deadline.expired())throw new Error('DEADLINE_EXCEEDED');}
-  async function git(scope:Scope,deadline:Deadline,args:readonly string[],unlink?:readonly string[]){
+  async function git(scope:Scope,deadline:Deadline,args:readonly string[],effect?:readonly string[]|'delete-branch'){
     check(deadline);
     const {executable,identity,profileSha256}=await selected();
     const body=await readFile(profile);
@@ -127,8 +128,13 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       WORKTREES:scope.worktrees,WORKTREE_ADMIN:scope.worktreeAdmin,REF:scope.ref,REF_LOCK:scope.ref+'.lock',
       REF_HEADS:join(scope.common,'refs','heads'),REF_MAESTRO:join(scope.common,'refs','heads','maestro'),
       REF_FEATURE:join(scope.common,'refs','heads','maestro','feature'),REF_FEATURE_ID:dirname(scope.ref)};
-    const literals=unlink?.map((path,index)=>[`UNLINK_${index}`,path] as const);
-    const guard=literals?`(deny file-write-unlink (require-all (subpath (param "WORKTREE")) (require-not (require-any ${literals.map(([key])=>`(literal (param "${key}"))`).join(' ')}))))`:null;
+    const literals=effect==='delete-branch'?[
+      ['PACKED_LOCK',join(scope.common,'packed-refs.lock')],
+      ['REFLOG',join(scope.common,'logs',scope.branchRef)],
+    ] as const:effect?.map((path,index)=>[`UNLINK_${index}`,path] as const);
+    const guard=effect==='delete-branch'
+      ?'(allow file-write-create file-write-unlink (literal (param "PACKED_LOCK")))\n(allow file-write-unlink (literal (param "REFLOG")))'
+      :literals?`(deny file-write-unlink (require-all (subpath (param "WORKTREE")) (require-not (require-any ${literals.map(([key])=>`(literal (param "${key}"))`).join(' ')}))))`:null;
     const policy=guard?['-p',body.toString('utf8')+'\n'+guard]:['-f',profile];
     const bindings=[...Object.entries(params),...(literals??[])].flatMap(([k,v])=>['-D',`${k}=${v}`]);
     return exec(sandbox,[...bindings,...policy,executable,...prefix,...args],
@@ -167,6 +173,22 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     const value=result.stdout.trim();
     if(result.code||result.stderr||scope.baseOid!==undefined&&value.length!==scope.baseOid.length||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value))throw new Error('OWNERSHIP_UNPROVEN');
     return value;
+  }
+  async function requireIntegrated(scope:Scope,deadline:Deadline,headOid:string,integrated:WorkspaceCleanupTarget){
+    requireCleanupTarget(integrated,scope.branchRef);
+    if(!localRef(integrated.targetRef)||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(headOid)
+      ||(await git(scope,deadline,['check-ref-format',integrated.targetRef])).code)throw new Error('INVALID_REQUEST');
+    if(await oid(scope,deadline,integrated.targetRef)!==integrated.targetOid)throw new Error('BASE_CHANGED');
+    const merged=await git(scope,deadline,['merge-base','--is-ancestor',headOid,integrated.targetOid]);
+    if(merged.stderr||merged.code>1)throw new Error('OWNERSHIP_UNPROVEN');
+    return merged.code===0;
+  }
+  async function requireUnpackedWorkspaceRef(scope:Scope){
+    const packed=await stableFile(join(scope.common,'packed-refs'),1048576);
+    if(packed?.toString('utf8').split('\n').some(line=>line.endsWith(' '+scope.branchRef)))throw new Error('WORKSPACE_UNSAFE');
+    await directoryChain(scope.common,['logs','refs','heads','maestro','feature',scope.featureId]);
+    const log=await pathInfo(join(scope.common,'logs',scope.branchRef));
+    if(log&&(!log.isFile()||log.nlink!==1n))throw new Error('OWNERSHIP_UNPROVEN');
   }
 
   async function disk(scope:Scope,deadline:Deadline):Promise<WorkspaceDiskObservation>{
@@ -297,22 +319,42 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       if(after.worktree?.headOid!==scope.baseOid||after.baseOid!==scope.baseOid)throw new Error('OWNERSHIP_UNPROVEN');
       return after;
     },
+    async verifyIntegration(input,headOid,integrated,deadline){
+      const {scope,fingerprint}=await prepare(input,deadline);
+      await requireUnpackedWorkspaceRef(scope);
+      const result=await requireIntegrated(scope,deadline,headOid,integrated);
+      await verify(input,scope,fingerprint,deadline);
+      return result;
+    },
     async removeWorktree(input,expected,integrated,deadline){
       const {scope,fingerprint}=await prepare(input,deadline);
-      if(!localRef(integrated.targetRef)||integrated.targetRef===scope.branchRef
-        ||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(integrated.targetOid))throw new Error('INVALID_REQUEST');
       const observed=(await disk(scope,deadline)).worktree;
-      if(!observed||observed.headOid!==expected.headOid||observed.branchRef!==expected.branchRef
-        ||(['root','adminDirectory','gitFile'] as const).some(key=>filesystem.compare(expected[key],observed[key])!=='VERIFIED'))throw new Error('OWNERSHIP_UNPROVEN');
-      if((await git(scope,deadline,['check-ref-format',integrated.targetRef])).code)throw new Error('INVALID_REQUEST');
-      if(await oid(scope,deadline,integrated.targetRef)!==integrated.targetOid)throw new Error('BASE_CHANGED');
-      const merged=await git(scope,deadline,['merge-base','--is-ancestor',observed.headOid,integrated.targetOid]);
-      if(merged.code||merged.stderr)throw new Error('UNINTEGRATED_WORK');
+      await requireUnpackedWorkspaceRef(scope);
+      requireMatchingWorktree(expected,observed);
+      if(observed.headOid!==expected.headOid)throw new Error('UNINTEGRATED_WORK');
+      if(!await requireIntegrated(scope,deadline,observed.headOid,integrated))throw new Error('UNINTEGRATED_WORK');
       const paths=await unlinkInventory(scope,deadline);
       await verify(input,scope,fingerprint,deadline);
       await options.beforeRemove?.();
+      if(await oid(scope,deadline,integrated.targetRef)!==integrated.targetOid)throw new Error('BASE_CHANGED');
       const result=await git(scope,deadline,['worktree','remove','--',scope.checkout],paths);
       if(result.code||result.stderr||await pathInfo(scope.checkout)||await pathInfo(scope.worktreeAdmin))throw new Error('OWNERSHIP_UNPROVEN');
+    },
+    async deleteBranch(input,headOid,integrated,deadline){
+      const {scope,fingerprint}=await prepare(input,deadline);
+      await requireUnpackedWorkspaceRef(scope);
+      requireCleanupEffect(await disk(scope,deadline),headOid,'WORKTREE_REMOVED');
+      await verify(input,scope,fingerprint,deadline);
+      if(!await requireIntegrated(scope,deadline,headOid,integrated))throw new Error('UNINTEGRATED_WORK');
+      // The files backend takes this temporary lock for even a loose deletion.
+      // The dynamic profile leaves packed-refs and its rewrite tempfile read-only.
+      const result=await git(scope,deadline,['update-ref','--no-deref','-d',scope.branchRef,headOid],'delete-branch');
+      if(result.code||result.stderr)throw new Error('OWNERSHIP_UNPROVEN');
+      if(await oid(scope,deadline,integrated.targetRef)!==integrated.targetOid)throw new Error('BASE_CHANGED');
+      const observed=await disk(scope,deadline);
+      requireCleanupEffect(observed,headOid,'BRANCH_REMOVED');
+      await verify(input,scope,fingerprint,deadline);
+      return observed;
     },
   };
 }

@@ -2,7 +2,7 @@ import {requireDecimal,requireUuid} from '../identifiers.js';
 
 export const WORKSPACE_STATES=['REQUESTED','CREATING','READY','IN_USE','BLOCKED','RECONCILING','REMOVING','REMOVED'] as const;
 export type WorkspaceState=typeof WORKSPACE_STATES[number];
-type Action='begin'|'ready'|'acquire'|'release'|'uncertain'|'block'|'remove'|'removed';
+type Action='begin'|'ready'|'acquire'|'release'|'uncertain'|'block'|'remove'|'removed'|'restore';
 
 const transitions:Readonly<Partial<Record<WorkspaceState,Partial<Record<Action,WorkspaceState>>>>>={
   REQUESTED:{begin:'CREATING',uncertain:'RECONCILING',block:'BLOCKED'},
@@ -10,8 +10,8 @@ const transitions:Readonly<Partial<Record<WorkspaceState,Partial<Record<Action,W
   READY:{acquire:'IN_USE',remove:'REMOVING',block:'BLOCKED',uncertain:'RECONCILING'},
   IN_USE:{release:'READY',uncertain:'RECONCILING',block:'BLOCKED'},
   RECONCILING:{ready:'READY',block:'BLOCKED',removed:'REMOVED'},
-  BLOCKED:{uncertain:'RECONCILING'},
-  REMOVING:{removed:'REMOVED',uncertain:'RECONCILING',block:'BLOCKED'},
+  BLOCKED:{uncertain:'RECONCILING',ready:'READY'},
+  REMOVING:{removed:'REMOVED',uncertain:'RECONCILING',block:'BLOCKED',restore:'READY'},
 };
 
 export function transitionWorkspace(current:WorkspaceState,action:Action):WorkspaceState{

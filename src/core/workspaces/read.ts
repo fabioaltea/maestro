@@ -36,7 +36,13 @@ export function createWorkspaceReader(options:{
    }else{
      const workspaceId=String(params.workspaceId),{summary}=await storage.readWorkspaceState({kind:'summary',id:workspaceId});
      if(!summary)throw new Error('WORKSPACE_NOT_FOUND');
-     result=method==='workspace.get'?{workspace:summary}:{workspaceId,eligible:false,reason:offline?'UNKNOWN':'CHECK_REQUIRED',checkedAt:null};
+     if(method==='workspace.get')result={workspace:summary};
+     else{
+       const {cleanup}=offline?{cleanup:null}:await storage.readWorkspaceState({kind:'cleanup-evidence',id:workspaceId});
+       const reason=offline?'UNKNOWN':summary.state!=='READY'?'WORKSPACE_IN_USE':
+         summary.observation?.ownership==='UNKNOWN'?'OWNERSHIP_UNPROVEN':'CHECK_REQUIRED';
+       result={workspaceId,eligible:!!cleanup,reason:cleanup?null:reason,checkedAt:cleanup?.checkedAt??null,evidence:cleanup??null};
+     }
    }
    const data={...result,freshness};requireWorkspaceEnvelope(data);return data;
  };
