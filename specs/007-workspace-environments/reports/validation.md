@@ -19,3 +19,7 @@ Tre RED prima di modello e namespace, con stato manuale/stale, generazioni, limi
 ## T006 — test iniziali
 
 Quattro RED prima dell’upgrade 6→7. Reader immutabile, putative fault pre/post commit e collisioni in entrambi i versi.
+
+## T007 — schema cumulativo 7
+
+Lo start esplicito migra 6→7 sotto le lease esistenti. Il rebuild del parent workflow conserva riferimenti e guard UUID, con integrity/FK verificati nella transazione. Lo schema 6 resta leggibile e immutabile. Discovery, Feature e Workspace operano anche su 7. Build e build:test PASS. **16 PASS** tra state, migrazione, collisioni e regressioni Workspace/Feature.

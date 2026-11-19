@@ -27,7 +27,7 @@ function readEffect(row:Row):WorkspaceEffect{
  return{requestId:String(row.request_id),phase:row.phase as WorkspaceEffect['phase'],...(lastPhase?{lastPhase}:{})};
 }
 export function requireWorkspaceSchema(database:Database.Database):void{
- if(Number(database.pragma('user_version',{simple:true}))!==WORKSPACE_SCHEMA_VERSION)throw new Error('WORKSPACE_NOT_INITIALIZED');
+ if(Number(database.pragma('user_version',{simple:true}))<WORKSPACE_SCHEMA_VERSION)throw new Error('WORKSPACE_NOT_INITIALIZED');
 }
 export function workspaceRecord(r:Row):WorkspaceRecord{
  return{

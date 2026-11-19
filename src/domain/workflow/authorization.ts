@@ -1,6 +1,6 @@
 import { requireUuid,requireDecimal } from '../identifiers.js';
 import { featureObject,featureFields,featureText } from '../features/bundle.js';
-export type WorkflowNamespace='FEATURE'|'ARTIFACT'|'WORKSPACE';
+export type WorkflowNamespace='FEATURE'|'ARTIFACT'|'WORKSPACE'|'ENVIRONMENT';
 export interface WorkflowIntent {
  readonly version:1;readonly storeId:string;readonly ownerUid:number;readonly namespace:WorkflowNamespace;readonly action:string;
  readonly targetId:string|null;readonly projectId:string|null;readonly expectedRevision:string|null;readonly configRevision:string|null;readonly payload:Readonly<Record<string,unknown>>;
@@ -17,7 +17,7 @@ function sorted(value:unknown,depth=0):unknown {
 }
 export function canonicalWorkflowIntent(value:unknown):string {
  const i=featureObject(value);featureFields(i,['version','storeId','ownerUid','namespace','action','targetId','projectId','expectedRevision','configRevision','payload']);
- if(i.version!==1||!Number.isSafeInteger(i.ownerUid)||(i.ownerUid as number)<0||!['FEATURE','ARTIFACT','WORKSPACE'].includes(String(i.namespace)))throw new Error('INVALID_REQUEST');
+ if(i.version!==1||!Number.isSafeInteger(i.ownerUid)||(i.ownerUid as number)<0||!['FEATURE','ARTIFACT','WORKSPACE','ENVIRONMENT'].includes(String(i.namespace)))throw new Error('INVALID_REQUEST');
  requireUuid(i.storeId);for(const k of ['targetId','projectId'])if(i[k]!==null)requireUuid(i[k]);
  for(const k of ['expectedRevision','configRevision'])if(i[k]!==null){requireDecimal(i[k]);if(i[k]==='0')throw new Error('INVALID_REQUEST');}
  featureText(i.action,64,true);featureObject(i.payload);

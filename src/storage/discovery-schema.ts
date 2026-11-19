@@ -172,5 +172,5 @@ CREATE TRIGGER retained_discovery_revisions BEFORE DELETE ON discovery_revisions
 CREATE TRIGGER retained_discovery_approvals BEFORE DELETE ON discovery_approvals BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 `;
 export function requireDiscoverySchema(version: number): void {
-  if (![4,5,6].includes(version)) throw new Error('DISCOVERY_NOT_INITIALIZED');
+  if (![4,5,6,7].includes(version)) throw new Error('DISCOVERY_NOT_INITIALIZED');
 }

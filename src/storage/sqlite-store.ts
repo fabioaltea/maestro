@@ -1,3 +1,6 @@
+import {readEnvironmentState} from './environments-store.js';
+import type {EnvironmentQuery} from '../ports/environment.js';
+import {ENVIRONMENT_TABLES} from './environments-schema.js';
 import {workspaceChanged,workspaceEvents} from '../core/workspaces/events.js';
 import {WORKSPACE_TABLES} from './workspaces-schema.js';
 import {commitWorkspaceLease,commitWorkspaceState,readWorkspaceState,settleWorkspaceClaim} from './workspaces-store.js';
@@ -85,7 +88,7 @@ export class SQLiteStore {
     try {
       if (!existed) initializeSchema(database, options.identity!);
       const version = Number(database.pragma('user_version', { simple: true }));
-      if (![4, 5, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
+      if (![4, 5, 6, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
       if (version >= 4) {
         for (const name of DISCOVERY_TABLES) {
           if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
@@ -93,6 +96,9 @@ export class SQLiteStore {
       }
       if (version >= 5) for (const name of FEATURE_TABLES) if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
       if (version >= 6) for (const name of WORKSPACE_TABLES) {
+        if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
+      }
+      if (version >= 7) for (const name of ENVIRONMENT_TABLES) {
         if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
       }
       this.archiveVersion = version;
@@ -218,6 +224,10 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
+  readEnvironmentState(query:EnvironmentQuery) {
+    if(!this.database)throw new Error('STATE_ABSENT');
+    return this.database.transaction(()=>readEnvironmentState(this.database!,query)).deferred();
+  }
   readWorkspaceState(query:WorkspaceQuery) {
     if(!this.database)throw new Error('STATE_ABSENT');
     return this.database.transaction(()=>readWorkspaceState(this.database!,query)).deferred();
