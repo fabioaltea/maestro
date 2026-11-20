@@ -58,6 +58,11 @@ CREATE TABLE review_receipts (
  receipt_id TEXT PRIMARY KEY REFERENCES workflow_operations(request_id), integration_id TEXT NOT NULL UNIQUE REFERENCES review_integrations(integration_id),
  metadata TEXT NOT NULL CHECK(json_valid(metadata) AND length(CAST(metadata AS BLOB))<=8192)
 ) STRICT;
+CREATE TRIGGER review_snapshot_immutable BEFORE UPDATE OF review_id,project_id,feature_id,feature_revision_id,workspace_id,checkpoint_id,
+ source_oid,source_tree_oid,target_ref,target_oid,digest,created_at,file_count,diff_bytes ON review_records
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+CREATE TRIGGER review_revision_step BEFORE UPDATE OF state_revision ON review_records WHEN NEW.state_revision<>OLD.state_revision+1
+BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER review_diff_immutable BEFORE UPDATE ON review_diff_parts
 BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER review_decision_immutable BEFORE UPDATE ON review_decisions
