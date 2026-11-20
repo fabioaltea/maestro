@@ -1,3 +1,4 @@
+import {reviewOid,reviewTargetRef} from '../../../domain/review/state.js';
 import {EXECUTION_LIMITS} from '../../../domain/execution/model.js';
 import {workspaceBranchRef} from '../../../domain/workspaces/provision.js';
 import {requireMatchingWorktree} from '../../../domain/workspaces/ownership.js';
@@ -12,6 +13,7 @@ import {promisify} from 'node:util';
 import {requireUuid} from '../../../domain/identifiers.js';
 import type {Deadline} from '../../../ports/clock.js';
 import type {FilesystemAnchor} from '../../../ports/repository.js';
+import type {GitIntegrationPort,GitIntegrationScope,IntegrationGuard} from '../../../ports/review.js';
 import type {WorkspaceCleanupTarget,WorkspaceDiskObservation,WorkspaceGitPin,WorkspaceMutationTarget,WorkspacePort} from '../../../ports/workspace.js';
 import {createFilesystemIdentity} from './filesystem-identity.js';
 import {buildInspectionEnvironment,createGitRunner} from './runner.js';
@@ -102,7 +104,8 @@ async function fingerprint(path:string){
 }
 
 /** Closed native Git adapter. No user argv, environment, helper or general editor. */
-export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promise<void>}={}):WorkspacePort {
+export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promise<void>;readonly integrationCheckpoint?:(point:'ref.intent'|'ref.updated')=>void}={}):
+ WorkspacePort&{integration:Omit<GitIntegrationPort,'qualification'>} {
   type Scope=Awaited<ReturnType<typeof scopeFor>>;
   const reader=createGitRunner();
   let pin:Promise<WorkspaceGitPin&{executable:string;identity:string}>|undefined;
@@ -119,7 +122,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
   }
   const selected=()=>pin??=resolvePin();
   function check(deadline:Deadline){if(deadline.expired())throw new Error('DEADLINE_EXCEEDED');}
-  async function git(scope:Scope,deadline:Deadline,args:readonly string[],effect?:readonly string[]|'delete-branch'){
+  async function git(scope:Scope,deadline:Deadline,args:readonly string[],effect?:readonly string[]|'delete-branch'|'read-only'|'integration-guard'|'integration-ref'){
     check(deadline);
     const {executable,identity,profileSha256}=await selected();
     const body=await readFile(profile);
@@ -132,10 +135,17 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     const literals=effect==='delete-branch'?[
       ['PACKED_LOCK',join(scope.common,'packed-refs.lock')],
       ['REFLOG',join(scope.common,'logs',scope.branchRef)],
-    ] as const:effect?.map((path,index)=>[`UNLINK_${index}`,path] as const);
-    const guard=effect==='delete-branch'
+    ] as const:effect==='integration-ref'?[['TARGET_LOG',join(scope.common,'logs',scope.branchRef)]] as const:
+      typeof effect!=='string'?effect?.map((path,index)=>[`UNLINK_${index}`,path] as const):undefined;
+    const scoped=effect==='read-only'?'(deny file-write* (require-not (literal "/dev/null")))':
+      effect==='integration-guard'?`(deny file-write* (require-not (require-any (literal "/dev/null") (literal (param "WORKTREES"))
+       (subpath (param "WORKTREE")) (subpath (param "WORKTREE_ADMIN")))))`:
+      effect==='integration-ref'?`(allow file-write* (literal (param "TARGET_LOG")))
+       (deny file-write* (require-not (require-any (literal "/dev/null") (literal (param "REF"))
+        (literal (param "REF_LOCK")) (literal (param "TARGET_LOG")))))`:null;
+    const guard=scoped??(effect==='delete-branch'
       ?'(allow file-write-create file-write-unlink (literal (param "PACKED_LOCK")))\n(allow file-write-unlink (literal (param "REFLOG")))'
-      :literals?`(deny file-write-unlink (require-all (subpath (param "WORKTREE")) (require-not (require-any ${literals.map(([key])=>`(literal (param "${key}"))`).join(' ')}))))`:null;
+      :literals?`(deny file-write-unlink (require-all (subpath (param "WORKTREE")) (require-not (require-any ${literals.map(([key])=>`(literal (param "${key}"))`).join(' ')}))))`:null);
     const policy=guard?['-p',body.toString('utf8')+'\n'+guard]:['-f',profile];
     const bindings=[...Object.entries(params),...(literals??[])].flatMap(([k,v])=>['-D',`${k}=${v}`]);
     return exec(sandbox,[...bindings,...policy,executable,...prefix,...args],
@@ -257,7 +267,106 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     if(allowed.size||directories.size)throw new Error('UNINTEGRATED_WORK');
     return paths;
   }
+  async function integration(input:GitIntegrationScope,deadline:Deadline,guard?:IntegrationGuard){
+    reviewTargetRef(input.targetRef);reviewOid(input.sourceOid);reviewOid(input.targetOid);
+    if(input.sourceOid.length!==input.targetOid.length||input.sourceOid===input.targetOid)throw new Error('INVALID_REQUEST');
+    const {scope,fingerprint}=await prepare(input.source,deadline),guardId=requireUuid(input.guardId);
+    if(guardId===input.source.workspaceId||scope.branchRef===input.targetRef)throw new Error('INVALID_REQUEST');
+    if(await pathInfo(join(scope.worktreeAdmin,'config.worktree')))throw new Error('WORKSPACE_UNSAFE');
+    const parts=input.targetRef.split('/');
+    await directoryChain(scope.common,parts.slice(0,-1));
+    await directoryChain(scope.common,['logs',...parts.slice(0,-1)]);
+    const ref=join(scope.common,input.targetRef);
+    for(const path of [ref,`${ref}.lock`,join(scope.common,'logs',input.targetRef)]){
+      const info=await pathInfo(path);
+      if(info&&(!info.isFile()||info.nlink!==1n))throw new Error('WORKSPACE_UNSAFE');
+    }
+    const candidateScope={...scope,checkout:join(scope.root,guardId),worktreeAdmin:join(scope.worktrees,guardId),branchRef:input.targetRef,ref};
+    await directoryChain(scope.common,['worktrees',guardId]);
+    if(await pathInfo(join(candidateScope.worktreeAdmin,'config.worktree')))throw new Error('WORKSPACE_UNSAFE');
+    if((await git(scope,deadline,['check-ref-format',input.targetRef],'read-only')).code)throw new Error('INVALID_REQUEST');
+    const source=await disk(scope,deadline);
+    requireMatchingWorktree(input.ownership,source.worktree);
+    if(source.worktree.headOid!==input.sourceOid)throw new Error('REVIEW_STALE');
+    const status=async(checkout:Scope)=>{
+      const r=await git(checkout,deadline,['-C',checkout.checkout,'status','--porcelain=v2','-z','--untracked-files=all','--ignored=matching'],'read-only');
+      if(r.code||r.stderr)throw new Error('WORKSPACE_UNSAFE');
+      return r.stdout;
+    };
+    if(await status(scope))throw new Error('SOURCE_NOT_QUIESCENT');
+    const listed=await git(scope,deadline,['worktree','list','--porcelain','-z'],'read-only');
+    if(listed.code||listed.stderr)throw new Error('OWNERSHIP_UNPROVEN');
+    const matches=listed.stdout.split('\0\0').map(record=>record.split('\0')).filter(record=>record.includes(`branch ${input.targetRef}`));
+    if(guard){
+      if(matches.length!==1||!matches[0]!.includes(`worktree ${candidateScope.checkout}`))throw new Error('INTEGRATION_UNKNOWN');
+      const observed=(await disk(candidateScope,deadline)).worktree;
+      requireMatchingWorktree(guard,observed);
+    }else if(matches.length)throw new Error('TARGET_IN_USE');
+    const targetOid=await oid(scope,deadline,input.targetRef);
+    if(targetOid===null)throw new Error('TARGET_MOVED');
+    const sourceTree=await git(scope,deadline,['rev-parse','--verify',`${input.sourceOid}^{tree}`],'read-only');
+    const sourceTreeOid=sourceTree.stdout.trim();
+    if(sourceTree.code||sourceTree.stderr||!new RegExp(`^[a-f0-9]{${input.sourceOid.length}}$`).test(sourceTreeOid))throw new Error('WORKSPACE_UNSAFE');
+    const ancestry=await git(scope,deadline,['merge-base','--is-ancestor',input.targetOid,input.sourceOid],'read-only');
+    if(ancestry.stderr||ancestry.code>1)throw new Error('WORKSPACE_UNSAFE');
+    await verify(input.source,scope,fingerprint,deadline);
+    return{scope,candidateScope,targetOid,sourceOid:input.sourceOid,sourceTreeOid,fastForward:ancestry.code===0,status};
+  }
+  const integrationPort:Omit<GitIntegrationPort,'qualification'>={
+    async preflight(input,deadline){
+      const result=await integration(input,deadline);
+      if(result.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
+      const {targetOid,sourceOid,sourceTreeOid,fastForward}=result;
+      return{targetOid,sourceOid,sourceTreeOid,fastForward};
+    },
+    async reserveGuard(input,deadline){
+      const result=await integration(input,deadline);
+      if(result.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
+      const {candidateScope}=result;
+      if(await pathInfo(candidateScope.checkout)||await pathInfo(candidateScope.worktreeAdmin))throw new Error('TARGET_IN_USE');
+      const added=await git(candidateScope,deadline,['worktree','add','--no-checkout','--no-guess-remote','--',candidateScope.checkout,input.targetRef.slice(11)],'integration-guard');
+      if(added.code||added.stderr&&!/^Preparing worktree/.test(added.stderr))throw new Error('INTEGRATION_UNKNOWN');
+      const guard=(await disk(candidateScope,deadline)).worktree;
+      if(!guard||guard.headOid!==input.targetOid)throw new Error('INTEGRATION_UNKNOWN');
+      if(await pathInfo(join(candidateScope.worktreeAdmin,'index')))throw new Error('INTEGRATION_UNKNOWN');
+      for await(const file of await opendir(candidateScope.checkout))if(file.name!=='.git')throw new Error('INTEGRATION_UNKNOWN');
+      const indexed=await git(candidateScope,deadline,['-C',candidateScope.checkout,'read-tree','-u','-m',input.targetOid],'integration-guard');
+      if(indexed.code||indexed.stderr||await result.status(candidateScope))throw new Error('INTEGRATION_UNKNOWN');
+      await integration(input,deadline,guard);
+      return guard;
+    },
+    async publishFastForward(input,guard,deadline){
+      const result=await integration(input,deadline,guard),{candidateScope}=result;
+      if(result.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
+      if(!result.fastForward)throw new Error('CANDIDATE_CHANGED');
+      if(await result.status(candidateScope))throw new Error('INTEGRATION_UNKNOWN');
+      options.integrationCheckpoint?.('ref.intent');
+      const changed=await git(candidateScope,deadline,['update-ref','--no-deref',input.targetRef,input.sourceOid,input.targetOid],'integration-ref');
+      if(changed.code||changed.stderr){
+        if(await oid(candidateScope,deadline,input.targetRef)!==input.targetOid)throw new Error('TARGET_MOVED');
+        throw new Error('INTEGRATION_UNKNOWN');
+      }
+      options.integrationCheckpoint?.('ref.updated');
+      const verified=await integration(input,deadline,guard);
+      if(verified.targetOid!==input.sourceOid)throw new Error('INTEGRATION_UNKNOWN');
+      return{resultingOid:verified.targetOid};
+    },
+    async syncGuard(input,guard,deadline){
+      const result=await integration(input,deadline,guard),{candidateScope}=result;
+      if(result.targetOid!==input.sourceOid)throw new Error('INTEGRATION_UNKNOWN');
+      const inGuard=(args:readonly string[],write=false)=>git(candidateScope,deadline,['-C',candidateScope.checkout,...args],write?'integration-guard':'read-only');
+      const index=await inGuard(['diff-index','--cached','--quiet','--no-ext-diff','--no-textconv',input.targetOid,'--']);
+      const work=await inGuard(['diff-files','--quiet','--no-ext-diff','--no-textconv','--']);
+      const others=await inGuard(['ls-files','--others','-z','--']);
+      if([index,work,others].some(value=>value.code||value.stderr)||others.stdout)throw new Error('INTEGRATION_UNKNOWN');
+      const synced=await inGuard(['read-tree','-u','-m',input.targetOid,input.sourceOid],true);
+      if(synced.code||synced.stderr||await result.status(candidateScope))throw new Error('INTEGRATION_UNKNOWN');
+      const verified=await integration(input,deadline,guard);
+      if(verified.targetOid!==input.sourceOid)throw new Error('INTEGRATION_UNKNOWN');
+    },
+  };
   return{
+    integration:integrationPort,
     async qualification(){const {version,sha256,profileSha256}=await selected();return{version,sha256,profileSha256};},
     async resolveBase(input,deadline){
       const scope=await scopeFor(input),before=await config(scope,deadline);

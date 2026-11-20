@@ -52,3 +52,27 @@ test('G0 fault after CAS preserves ref evidence and refuses changed guard sync',
  await assert.rejects(git.syncGuard(f.scope,guard,f.deadline()),/INTEGRATION_UNKNOWN/);
  assert.equal(await readFile(local,'utf8'),'keep local changes');
 });
+
+test('G0 preserves a diverged target and its conflicting work',async t=>{
+ const {createIntegrationMutator}=await import(adapter),f=await reviewBoundaryFixture(t);
+ const temporary=join(f.root,'fixture-divergence');
+ await f.git(f.repo,['worktree','add',temporary,'local-integration']);
+ await writeFile(join(temporary,f.relative),'conflicting target fixture\n');
+ await f.git(temporary,['add','--',f.relative]);await f.git(temporary,['commit','-m','fixture divergence']);
+ const targetOid=await f.git(temporary,['rev-parse','HEAD']);
+ await f.git(f.repo,['worktree','remove',temporary]);
+ const diverged={...f.scope,targetOid};
+ const git=createIntegrationMutator();
+ assert.equal((await git.preflight(diverged,f.deadline())).fastForward,false);
+ const guard=await git.reserveGuard(diverged,f.deadline());
+ await assert.rejects(git.publishFastForward(diverged,guard,f.deadline()),/CANDIDATE_CHANGED/);
+ assert.equal(await f.git(f.repo,['rev-parse',f.scope.targetRef]),targetOid);
+});
+
+test('G0 crash before CAS leaves the exact prior target',async t=>{
+ const {createIntegrationMutator}=await import(adapter),f=await reviewBoundaryFixture(t);
+ const git=createIntegrationMutator({checkpoint:(point:string)=>{if(point==='ref.intent')throw new Error('FIXTURE_FAULT');}});
+ const guard=await git.reserveGuard(f.scope,f.deadline());
+ await assert.rejects(git.publishFastForward(f.scope,guard,f.deadline()),/FIXTURE_FAULT/);
+ assert.equal(await f.git(f.repo,['rev-parse',f.scope.targetRef]),f.scope.targetOid);
+});

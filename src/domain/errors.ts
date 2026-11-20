@@ -1,4 +1,15 @@
 const catalog = {
+  REVIEW_NOT_INITIALIZED: ['Archivio review non inizializzato.', 'Avviare il servizio per aggiornare lo schema.', false],
+  REVIEW_STALE: ['Input della review superati.', 'Creare una nuova review dal lavoro corrente.', false],
+  CHECKS_FAILED: ['Verifiche richieste fallite.', 'Consultare le prove del candidate.', false],
+  CHECKS_NOT_RUN: ['Verifiche richieste assenti.', 'Eseguire le verifiche sul candidate corrente.', false],
+  TARGET_IN_USE: ['Branch target in uso.', 'Scegliere un target libero.', false],
+  TARGET_MOVED: ['La ref target è cambiata.', 'Rivedere il target corrente e richiedere un nuovo consenso.', false],
+  MERGE_CONFLICT: ['Conflitto nel candidate locale.', 'Conservare il lavoro e risolvere lo staging.', false],
+  SOURCE_NOT_QUIESCENT: ['La source ha modifiche o processi attivi.', 'Conservare il lavoro e verificare il checkpoint.', false],
+  CANDIDATE_CHANGED: ['Il candidate è cambiato o non è qualificato.', 'Verificare il tree corrente e la strategia.', false],
+  INTEGRATION_UNKNOWN: ['Esito della mutazione locale non dimostrato.', 'Riconciliare ref e guard senza ripetere il merge.', false],
+  REVIEW_SCOPE_LIMIT: ['Il diff supera il limite di review.', 'Limitare la review o ripartire da uno scope più piccolo.', false],
   SCHEDULER_NOT_INITIALIZED: ['Archivio coda non inizializzato.', 'Avviare il servizio per aggiornare lo schema.', false],
   QUEUE_FULL: ['La coda locale è piena.', 'Consultare i job prima di accodarne altri.', false],
   RESOURCE_WAIT: ['Risorse locali in attesa.', 'Consultare stato e reservation nella coda.', true],
@@ -127,6 +138,17 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
+  REVIEW_NOT_INITIALIZED:'RUNTIME',
+  REVIEW_STALE:'AUTHORIZATION',
+  CHECKS_FAILED:'SAFETY',
+  CHECKS_NOT_RUN:'SAFETY',
+  TARGET_IN_USE:'SAFETY',
+  TARGET_MOVED:'SAFETY',
+  MERGE_CONFLICT:'SAFETY',
+  SOURCE_NOT_QUIESCENT:'SAFETY',
+  CANDIDATE_CHANGED:'SAFETY',
+  INTEGRATION_UNKNOWN:'SAFETY',
+  REVIEW_SCOPE_LIMIT:'SAFETY',
   SCHEDULER_NOT_INITIALIZED:'RUNTIME', QUEUE_FULL:'RUNTIME', RESOURCE_WAIT:'RUNTIME', PROVIDER_WAIT:'RUNTIME', QUOTA_RESET_UNKNOWN:'SAFETY',
   NO_COMPATIBLE_PROVIDER:'SAFETY', COST_UNKNOWN:'SAFETY', POLICY_REVOKED:'AUTHORIZATION', RETRY_EXHAUSTED:'SAFETY', RESERVATION_UNKNOWN:'SAFETY',
   EXECUTION_NOT_INITIALIZED:'RUNTIME', EXECUTION_UNSUPPORTED:'SAFETY', EXECUTION_APPROVAL_STALE:'AUTHORIZATION', CHECKPOINT_STALE:'SAFETY',
