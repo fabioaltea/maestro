@@ -1,7 +1,7 @@
 import {createHash,randomUUID} from 'node:crypto';
-import {partitionReviewDiff} from '../../domain/review/model.js';
+import {partitionReviewDiff,requireCleanReviewCheckpoint} from '../../domain/review/model.js';
 import {reviewOid,reviewTargetRef} from '../../domain/review/state.js';
-import {featureFields,featureObject} from '../../domain/features/bundle.js';
+import {featureObject} from '../../domain/features/bundle.js';
 import type {GitIntegrationPort,ReviewRecord} from '../../ports/review.js';
 import type {WorkspaceRecord} from '../../ports/workspace.js';
 import type {DiscoveryEligibility} from '../../domain/discovery/approval.js';
@@ -47,17 +47,14 @@ export function createReviewSnapshotServices(options:ReviewServicesOptions):Read
      throw new Error('REVIEW_STALE');
    const sealed=await readSealedFeatureArtifact(storage,checkpoint.patchArtifactId,'CHECKPOINT',262144,session.sessionId);
    if(sealed.artifact.sha256!==checkpoint.digest)throw new Error('ARTIFACT_CORRUPT');
-   let patch:Record<string,unknown>;
-   try{
-     patch=featureObject(JSON.parse(sealed.text));featureFields(patch,['version','baseOid','trackedDiff','untracked']);
-     if(patch.version!==1||!Array.isArray(patch.untracked)||typeof patch.trackedDiff!=='string')throw new Error();
-     reviewOid(patch.baseOid);
-   }catch{throw new Error('ARTIFACT_CORRUPT');}
-   if((patch.untracked as unknown[]).length!==0||patch.trackedDiff!=='')throw new Error('SOURCE_NOT_QUIESCENT');
+   let patch:unknown;
+   try{patch=JSON.parse(sealed.text);}catch{throw new Error('ARTIFACT_CORRUPT');}
    const current=await options.captureCheckpoint(workspace);
-   if(current.treeDigest!==checkpoint.treeDigest||digest(current.patch)!==checkpoint.digest)throw new Error('REVIEW_STALE');
+   const sourceOid=requireCleanReviewCheckpoint(patch,
+     {tree:checkpoint.treeDigest,digest:checkpoint.digest,revision:envelope.revisionId},
+     {tree:current.treeDigest,digest:digest(current.patch),revision:feature.currentRevisionId});
    const evidence=await git.captureDiff({source:workspace.target,ownership:workspace.ownership,targetRef,targetOid,
-     sourceOid:reviewOid(patch.baseOid),guardId:randomUUID()},makeDeadline(systemClock,12000));
+     sourceOid,guardId:randomUUID()},makeDeadline(systemClock,12000));
    const raw=partitionReviewDiff(evidence.diff,evidence.fileCount);
    const partDescriptors=raw.map(bytes=>({bytes:bytes.length,sha256:digest(bytes)}));
    const payload={featureId:feature.featureId,checkpointId:checkpoint.checkpointId,workspaceId:workspace.workspaceId,

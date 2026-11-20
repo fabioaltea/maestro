@@ -14,6 +14,10 @@ Base `0f9a9be`, schema 10. La 010 ha concluso 20/36 task e verificato 24 test co
 
 Tre test core mirati (`review-limits.test`, `review-us1.test`), due contratti Desktop e typecheck Desktop PASS. Il commit dello snapshot emette `review.changed` e, se il diff ha parti sigillate, `review.output.available` con il numero delle parti. Il journal e Desktop ricevono solo metadati. A outbox saturo la conferma del feedback lascia intatti grant e ledger, con query dello snapshot precedente disponibile. Alla quota ordinaria il nuovo grant è rifiutato, mentre il discard del feedback ancora senza riferimenti e il recovery dello snapshot usano la riserva terminale.
 
+## Ripresa T013
+
+Sette test unitari e di contratto mirati PASS. Il checkpoint rifiuta modifiche staged/unstaged e file untracked, patch fuori schema e incoerenze di tree, digest e piano. Una prova 007 con comando o input discordante, output incompleto, exit non verificata o tree superato resta BLOCKED. Un criterio con prove discordanti resta bloccato anche quando una prova risulta PASS.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.
