@@ -62,6 +62,10 @@ Cinque integrazioni 011/006 PASS. Il fault prima del commit lascia la Discovery 
 
 ## T034 — verifica locale
 
+### Ripresa T031
+
+La ricevuta identifica il blob esatto della documentazione nel commit integrato. La transazione aggiorna l'approvazione Discovery interessata e conserva il numero di run e corpus. Stesso UUID e revisione recuperano la ricevuta dopo un reply loss, mentre lo stesso UUID con revisione diversa è rifiutato. Build test, lint e quattro prove US3 core PASS.
+
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.
 - Suite core mirata, 27 PASS, 0 FAIL, 0 SKIP. Include cinque prove native G0, la migrazione 10→11 e regressioni schema 9→10 e lease workspace. Il successivo test unitario su chiusura/cleanup porta il totale a 28 PASS mirati.
 - Desktop unit/contract, 60 PASS, 0 FAIL, 0 SKIP. E2E Electron review e coda, 2 PASS, 0 FAIL, 0 SKIP.

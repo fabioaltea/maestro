@@ -36,6 +36,9 @@ test('completion keeps one receipt, marks the approved context stale and preview
  assert.equal(((await complete()).data as {code:string}).code,'DEADLINE_EXCEEDED');
  assert.equal(f.store.readReviewState({kind:'receipt',id:integrationId}).receipt,null);
  const previous=checked();assert.ok(previous.ok);assert.equal(previous.value.data?.state,'APPROVED');
+ const discoveryCounts=()=>f.database.prepare(`SELECT (SELECT count(*) FROM discovery_runs) AS runs,
+   (SELECT count(*) FROM discovery_artifacts WHERE kind='CORPUS') AS corpus`).get();
+ const discoveryBefore=discoveryCounts();
  failure='after';
  assert.equal(((await complete()).data as {code:string}).code,'DEADLINE_EXCEEDED');
  const receipt=data(await call(rt,'review.receipt.get',{integrationId})).receipt as ReviewReceiptRecord;
@@ -44,9 +47,14 @@ test('completion keeps one receipt, marks the approved context stale and preview
  assert.equal(receipt.contextFreshness,'STALE');
  assert.equal(receipt.publicationGrantRequired,true);
  assert.ok(receipt.documents.some(doc=>doc.path==='REVIEW.md'&&doc.blobOid));
+ const expectedDoc=(await f.repositories.git(stagePath,['rev-parse','HEAD:REVIEW.md'])).trim();
+ assert.equal(receipt.documents.find(doc=>doc.path==='REVIEW.md')?.blobOid,expectedDoc);
  const current=checked();assert.ok(current.ok);assert.equal(current.value.data?.state,'STALE');
+ assert.deepEqual(discoveryCounts(),discoveryBefore);
  const retry=await Promise.all([complete(),complete()]);
  assert.deepEqual(retry[0]?.data,retry[1]?.data);
+ const collision=await call(rt,'review.complete',{...params,integrationId:randomUUID()});
+ assert.equal((collision.data as {code:string}).code,'IDEMPOTENCY_CONFLICT');
  const offline=createReviewReader({storage,storeId:f.storeId,offline:true});
  assert.equal((await offline('review.receipt.get',{integrationId})).freshness,'LAST_KNOWN');
  const clean=data(await call(rt,'review.cleanup.preview',{integrationId,workspaceId}));
