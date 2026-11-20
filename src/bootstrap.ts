@@ -1,6 +1,7 @@
+import {executionMutation,validateExecutionParams,executionCapabilities,decodeExecutionOperation} from './protocol/execution.js';
 import {profileMutation,validateProfileParams,profileCapabilities,decodeProfileOperation} from './protocol/profile.js';
 import {environmentMutation,validateEnvironmentParams,environmentCapabilities,decodeEnvironmentOperation} from './protocol/environment.js';
-import {inspectProfile,inspectEnvironment,inspectWorkspace} from './core/inspect-main.js';
+import {inspectExecution,inspectProfile,inspectEnvironment,inspectWorkspace} from './core/inspect-main.js';
 import {WORKSPACE_MUTATION_METHODS,WORKSPACE_PREPARE_METHODS,validateWorkspaceParams,workspaceCapabilities,decodeWorkspaceOperation} from './protocol/workspace.js';
 import { inspectFeature } from './core/inspect-main.js';
 import { FEATURE_ADMISSION_METHODS,validateFeatureParams,requireFeatureCapability,decodeFeatureOperationView,requireFeatureEnvelope } from './protocol/feature.js';
@@ -25,15 +26,15 @@ export function failureResult(code: ErrorCode, requestId: string | null): Public
     data: {}, error: foundationError(code, requestId ? { operationId: requestId } : {}) };
 }
 
-function workflowBackend(scope:'feature'|'workspace'|'environment'|'profile'):NonNullable<ClientBackend['feature']>{
+function workflowBackend(scope:'feature'|'workspace'|'environment'|'profile'|'execution'):NonNullable<ClientBackend['feature']>{
   return async(directory, method, params, timeoutMs)=>{
-      const feature=scope==='feature',environment=scope==='environment',profile=scope==='profile';
-      (feature?validateFeatureParams:environment?validateEnvironmentParams:profile?validateProfileParams:validateWorkspaceParams)(method,params);
-      const mutation = profile?profileMutation(method):environment?environmentMutation(method,params):((feature?FEATURE_ADMISSION_METHODS:WORKSPACE_MUTATION_METHODS) as readonly string[]).includes(method);
+      const feature=scope==='feature',environment=scope==='environment',profile=scope==='profile',execution=scope==='execution';
+      (execution?validateExecutionParams:feature?validateFeatureParams:environment?validateEnvironmentParams:profile?validateProfileParams:validateWorkspaceParams)(method,params);
+      const mutation = execution?executionMutation(method):profile?profileMutation(method):environment?environmentMutation(method,params):((feature?FEATURE_ADMISSION_METHODS:WORKSPACE_MUTATION_METHODS) as readonly string[]).includes(method);
       const requestId = mutation || method === `${scope}.operation.get` ? requireUuid(params.requestId) : null;
-      const preparation=feature?method==='feature.prepare':environment?method==='environment.prepare'&&!mutation:profile?['profile.prepare','profile.skill.source','profile.capabilities','profile.suggest'].includes(method):(WORKSPACE_PREPARE_METHODS as readonly string[]).includes(method);
+      const preparation=execution?method==='execution.prepare':feature?method==='feature.prepare':environment?method==='environment.prepare'&&!mutation:profile?['profile.prepare','profile.skill.source','profile.capabilities','profile.suggest'].includes(method):(WORKSPACE_PREPARE_METHODS as readonly string[]).includes(method);
       const offline=()=>mutation||preparation?Promise.resolve(failureResult('DAEMON_UNAVAILABLE',requestId))
-        :(feature?inspectFeature:environment?inspectEnvironment:profile?inspectProfile:inspectWorkspace)(directory,method,params);
+        :(execution?inspectExecution:feature?inspectFeature:environment?inspectEnvironment:profile?inspectProfile:inspectWorkspace)(directory,method,params);
       const expires = performance.now() + timeoutMs;
       let possiblySent = false;
       try {
@@ -50,13 +51,13 @@ function workflowBackend(scope:'feature'|'workspace'|'environment'|'profile'):No
           requireFeatureCapability(state.capabilities);
           const methods=(state.capabilities as {featureMethods?:unknown}).featureMethods;
           if(!Array.isArray(methods)||!methods.includes(method))throw new Error('UNSUPPORTED_VERSION');
-        }else (environment?environmentCapabilities:profile?profileCapabilities:workspaceCapabilities)(state.capabilities,method);
+        }else (execution?executionCapabilities:environment?environmentCapabilities:profile?profileCapabilities:workspaceCapabilities)(state.capabilities,method);
         if (performance.now() >= expires) throw new Error('DEADLINE_EXCEEDED');
         possiblySent = true;
         const response = await transport.call(paths.daemonEndpoint, key, { protocolVersion: 1, correlationId: randomUUID(), method, params }, Math.max(1, Math.min(2000, expires - performance.now())));
         requireFeatureEnvelope(response); const data = response.data as Record<string, unknown>;
         if (!data || typeof data !== 'object' || data.storeId !== state.storeId) throw new Error('WRONG_STORE');
-        const operation = data.operation === undefined ? null : (feature?decodeFeatureOperationView:environment?decodeEnvironmentOperation:profile?decodeProfileOperation:decodeWorkspaceOperation)(data.operation);
+        const operation = data.operation === undefined ? null : (execution?decodeExecutionOperation:feature?decodeFeatureOperationView:environment?decodeEnvironmentOperation:profile?decodeProfileOperation:decodeWorkspaceOperation)(data.operation);
         const code = typeof data.code === 'string' ? foundationError(data.code as ErrorCode).code : null;
         return { protocolVersion: 1, requestId, storeId: requireUuid(state.storeId), instanceId: requireUuid(state.instanceId), result: operation?.outcome === 'UNKNOWN' ? 'UNKNOWN_OUTCOME' : response.result,
           outcome: operation?.outcome && operation.outcome !== 'UNKNOWN' ? operation.outcome as PublicResult['outcome'] : null,
@@ -135,7 +136,7 @@ export function createClientBackend(launcher = createDaemonLauncher()): ClientBa
     feature: workflowBackend('feature'),
     workspace: workflowBackend('workspace'),
     environment:workflowBackend('environment'),
-    profile:workflowBackend('profile'),
+    execution:workflowBackend('execution'),profile:workflowBackend('profile'),
     async discovery(directory, method, params, timeoutMs) {
       validateDiscoveryParams(method, params);
       const mutation = (DISCOVERY_ADMISSION_METHODS as readonly string[]).includes(method);

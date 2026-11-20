@@ -1,3 +1,4 @@
+import {EXECUTION_METHODS} from './execution.js';
 import {PROFILE_METHODS} from './profile.js';
 import {ENVIRONMENT_METHODS} from './environment.js';
 import {WORKSPACE_METHODS} from './workspace.js';
@@ -6,7 +7,7 @@ import { DISCOVERY_READ_METHODS, DISCOVERY_ADMISSION_METHODS } from './discovery
 export const MAX_FRAME_BYTES = 64 * 1024;
 export const HANDSHAKE_TIMEOUT_MS = 1_000;
 export const MAX_CLIENT_BUFFER_BYTES = 1024 * 1024;
-export const METHODS = [...PROFILE_METHODS,...ENVIRONMENT_METHODS,...WORKSPACE_METHODS, ...FEATURE_METHODS, ...DISCOVERY_READ_METHODS, ...DISCOVERY_ADMISSION_METHODS, 'discovery.prepare', 'status.get', 'diagnostics.get', 'operation.get', 'events.list',
+export const METHODS = [...EXECUTION_METHODS,...PROFILE_METHODS,...ENVIRONMENT_METHODS,...WORKSPACE_METHODS, ...FEATURE_METHODS, ...DISCOVERY_READ_METHODS, ...DISCOVERY_ADMISSION_METHODS, 'discovery.prepare', 'status.get', 'diagnostics.get', 'operation.get', 'events.list',
   'events.subscribe', 'subscription.close', 'internal.prepareStop', 'internal.readiness',
   'projects.register', 'projects.list', 'projects.get', 'projects.verify', 'projects.update', 'projects.remove', 'projects.operation.get'] as const;
 

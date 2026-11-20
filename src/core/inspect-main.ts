@@ -301,3 +301,31 @@ export async function inspectProfile(directory:string,method:string,params:Reado
    return{...base(),result:safe.category==='SAFETY'?'BLOCKED':'ERROR',error:safe};
  }finally{await store?.close();}
 }
+
+export async function inspectExecution(directory:string,method:string,params:Readonly<Record<string,unknown>>):Promise<PublicResult>{
+ const {validateExecutionParams,EXECUTION_READ_METHODS,decodeExecutionOperation,executionMutation}=await import('../protocol/execution.js');
+ const {createExecutionReader}=await import('./execution/read.js');
+ const {executionResult}=await import('./execution/dispatch.js');
+ const {classifyError}=await import('./control-main.js');
+ let store:Awaited<ReturnType<typeof openStorage>>|undefined;
+ let snapshot:import('../ports/storage.js').StoreSnapshot|null=null;
+ const requestId=(method==='execution.operation.get'||executionMutation(method))&&typeof params.requestId==='string'?params.requestId:null;
+ const base=():PublicResult=>({...absentResult(),requestId,storeId:snapshot?.store.storeId??null,instanceId:snapshot?.instance?.instanceId??null,
+   freshness:'LAST_KNOWN',liveness:snapshot?.instance?.lifecycle==='STOPPED'?'ABSENT_VERIFIED':'UNKNOWN'});
+ try{
+   validateExecutionParams(method,params);
+   if(!(EXECUTION_READ_METHODS as readonly string[]).includes(method))throw new Error('DAEMON_UNAVAILABLE');
+   const paths=await createPlatformPaths().resolveArchive(directory,'read');
+   if(!paths)throw new Error('STATE_ABSENT');
+   store=await openStorage({path:paths.stateFile,readonly:true});
+   snapshot=await store.readSnapshot();
+   if(!snapshot)throw new Error('STATE_ABSENT');
+   if(snapshot.store.schemaVersion<9)throw new Error('EXECUTION_NOT_INITIALIZED');
+   const data=await createExecutionReader({storage:store,storeId:snapshot.store.storeId,offline:true})(method,params);
+   const operation=data.operation?decodeExecutionOperation(data.operation):null;
+   return{...base(),data,result:executionResult(data),outcome:operation?.outcome==='UNKNOWN'?null:operation?.outcome??null,error:operation?.error??null};
+ }catch(error){
+   const safe=foundationError(classifyError(error));
+   return{...base(),result:safe.category==='SAFETY'?'BLOCKED':'ERROR',error:safe};
+ }finally{await store?.close();}
+}
