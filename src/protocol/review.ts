@@ -49,6 +49,17 @@ export function validateReviewParams(method:string,value:unknown){
      }else if(p.action==='validate'){
        featureFields(i,['reviewId','commandSpecIds']);featureFields(r,['stateRevision']);
        workspaceUuid(i.reviewId);commandIds(i.commandSpecIds);workspaceRevision(r.stateRevision);
+     }else if(p.action==='candidate.prepare'){
+       featureFields(i,['reviewId','expectedStateRevision']);featureFields(r,['stateRevision']);
+       workspaceUuid(i.reviewId);workspaceRevision(r.stateRevision);
+       if(i.expectedStateRevision!==r.stateRevision)throw new Error('INVALID_REQUEST');
+     }else if(p.action==='approve'){
+       featureFields(i,['reviewId','candidateId','evidenceDigest']);featureFields(r,['stateRevision']);
+       workspaceUuid(i.reviewId);workspaceUuid(i.candidateId);workspaceRevision(r.stateRevision);
+       if(typeof i.evidenceDigest!=='string'||!/^[a-f0-9]{64}$/.test(i.evidenceDigest))throw new Error('INVALID_REQUEST');
+     }else if(p.action==='integrate'){
+       featureFields(i,['candidateId','decisionId','expectedTargetOid']);featureFields(r,['stateRevision']);
+       workspaceUuid(i.candidateId);workspaceUuid(i.decisionId);workspaceRevision(r.stateRevision);reviewOid(i.expectedTargetOid);
      }else throw new Error('UNSUPPORTED_VERSION');
      break;
    }

@@ -36,6 +36,10 @@ Build e typecheck Desktop, lint, 61 test unit/contract e 2 E2E Electron PASS. I 
 
 Quattro test unitari mirati PASS. Il confronto di candidate, riserva, target e prove di validazione blocca scope alterato, guard sporco e conflitti. Il recovery richiede attribuzione al requestId e agli OID esatti.
 
+## Ripresa T021
+
+Otto test unitari e di contratto mirati PASS. Le richieste prepare di candidate, approvazione e integrazione vincolano revisioni, identificativi e digest. Campi extra come `force` e selettori di ref su confirm sono rifiutati.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.
