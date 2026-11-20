@@ -1,3 +1,4 @@
+import {profileBridgeAction,validateProfileData} from '../shared/profile-contract.ts';
 import {validateFeatureAction,validateFeatureData} from '../shared/feature-contract.ts';
 import {validateWorkspaceAction,validateWorkspaceData} from '../shared/workspace-contract.ts';
 import {environmentBridgeAction,validateEnvironmentData} from '../shared/environment-contract.ts';
@@ -14,21 +15,21 @@ import { validateDiscoveryAction, discoveryReceiptAction } from '../shared/disco
 import { settleDiscoveryReceipt } from './discovery-receipts.ts';
 interface Options { context: ArchiveContext; receipts: ReceiptStore; core: CorePort; owner(): { owner: number; frame: number }; confirmations?: Confirmations }
 export async function settleReceipt(store: ReceiptStore, receipt: Receipt, result: PublicResult) {
-  if(receipt.namespace==='workspace'||receipt.namespace==='environment'){
+  if(['workspace','environment','profile'].includes(receipt.namespace)){
     const unknown=()=>store.update(receipt.requestId,{phase:'UNKNOWN',errorCode:'UNKNOWN_OUTCOME'});
     if(result.requestId!==receipt.requestId||result.storeId!==receipt.storeId||result.result==='UNKNOWN_OUTCOME')return unknown();
     try{
-      const validate=receipt.namespace==='workspace'?validateWorkspaceData:validateEnvironmentData;
+      const validate=receipt.namespace==='workspace'?validateWorkspaceData:receipt.namespace==='profile'?validateProfileData:validateEnvironmentData;
       const data=validate(receipt.action,result.data),operation=data.operation===undefined?null:record(data.operation);
       if(operation){
-        if(operation.requestId!==receipt.requestId||operation.action!==receipt.action||operation.targetId!==receipt.workspaceId||operation.outcome!==result.outcome)return unknown();
+        if(operation.requestId!==receipt.requestId||operation.action!==receipt.action||operation.targetId!==(receipt.profileId??receipt.workspaceId)||operation.outcome!==result.outcome)return unknown();
         return store.update(receipt.requestId,{phase:operation.phase==='FINALIZED'?'TERMINAL':'RECONCILING',outcome:result.outcome,errorCode:result.error?.code??null});
       }
       if(data.accepted===true&&data.requestId===receipt.requestId&&data.workspaceId===receipt.workspaceId)
         return store.update(receipt.requestId,{phase:'RECONCILING',outcome:'IN_PROGRESS'});
       if(result.liveness==='LIVE_VERIFIED'&&['APPROVAL_REQUIRED','APPROVAL_STALE','BASE_CHANGED','CONTEXT_UNSTABLE','DISCOVERY_REQUIRED',
         'WORKSPACE_UNSAFE','WORKSPACE_IN_USE','WORKSPACE_NOT_FOUND','WORKSPACE_LIMIT','REVISION_CONFLICT','INVALID_REQUEST','RESOURCE_LIMIT','UNINTEGRATED_WORK','GIT_CONFLICT',
-        'ENVIRONMENT_STALE','ENVIRONMENT_NOT_FOUND','MANAGER_MISMATCH','CONFIG_UNSAFE','DISK_BUDGET','BUSY','JOB_RECONCILING'].includes(result.error?.code??''))
+        'PROFILE_STALE','PROFILE_NOT_FOUND','PROFILE_CONFLICT','REQUIRED_SKILL_MISSING','TOOL_DISABLED','PERMISSION_CONFLICT','CAPABILITY_UNAVAILABLE','EXTENSION_UNTRUSTED','ENVIRONMENT_STALE','ENVIRONMENT_NOT_FOUND','MANAGER_MISMATCH','CONFIG_UNSAFE','DISK_BUDGET','BUSY','JOB_RECONCILING'].includes(result.error?.code??''))
         return store.update(receipt.requestId,{phase:'TERMINAL',outcome:'BLOCKED',errorCode:result.error!.code});
       return unknown();
     }catch{return unknown();}
@@ -60,6 +61,7 @@ export class ActionService {
   resolveDiscovery: ((action: string, params: Params) => Promise<{ command: CliCommand; summary: string[] }>) | null = null;
   resolveFeature: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveWorkspace: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
+  resolveProfile: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveEnvironment: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   private confirming = false;
   constructor(options: Options) { this.options = options; this.confirmations = options.confirmations ?? new Confirmations(); }
@@ -84,6 +86,16 @@ export class ActionService {
         const workspace=await this.options.core.call({namespace:'workspace',action:'get',archive:c.path,params:{workspaceId:command.workspaceId}});
         this.options.context.apply(c,workspace);
         if(workspace.result!=='OK'||record(workspace.data.workspace).stateRevision!==command.expectedStateRevision)throw new Error('REVISION_CONFLICT');
+      }
+    }
+    if(command.namespace==='profile'){
+      const capability=record(status.data.capabilities);
+      if(capability.profileVersion!==1||!Array.isArray(capability.profileMethods)||!capability.profileMethods.includes(`profile.${command.action}`))
+        throw new Error('UNSUPPORTED_VERSION');
+      if(command.expectedStateRevision){
+        const current=await this.options.core.call({namespace:'profile',action:'get',archive:c.path,params:{entityId:command.profileId}});
+        this.options.context.apply(c,current);
+        if(current.result!=='OK'||record(current.data.record).stateRevision!==command.expectedStateRevision)throw new Error('PROFILE_STALE');
       }
     }
     if(command.namespace==='environment'){
@@ -126,12 +138,13 @@ export class ActionService {
     return { status, project };
   }
   async prepare(action: string, params: Params) {
-    if(action.startsWith('environment.'))environmentBridgeAction({...params,action:action.slice('environment.'.length)});
+    if(action.startsWith('profile.'))profileBridgeAction({...params,action:action.slice('profile.'.length)});
+    else if(action.startsWith('environment.'))environmentBridgeAction({...params,action:action.slice('environment.'.length)});
     else if(action.startsWith('workspace.'))validateWorkspaceAction(action,params);
     else if (action.startsWith('feature.')) validateFeatureAction(action,params); else if (action.startsWith('discovery.')) validateDiscoveryAction(action, params); else validateAction(action, params);
     if (this.confirming) throw new Error('LOCAL_BUSY');
     const c = this.options.context.capture(), owner = canonical(this.options.owner());
-    const resolver=action.startsWith('environment.')?this.resolveEnvironment:action.startsWith('workspace.')?this.resolveWorkspace:action.startsWith('feature.')?this.resolveFeature:
+    const resolver=action.startsWith('profile.')?this.resolveProfile:action.startsWith('environment.')?this.resolveEnvironment:action.startsWith('workspace.')?this.resolveWorkspace:action.startsWith('feature.')?this.resolveFeature:
       action.startsWith('discovery.')?this.resolveDiscovery:undefined;
     if(resolver===null)throw new Error('CONFIRMATION_REQUIRED');
     const resolved=resolver?await resolver(action,params):null;
@@ -156,7 +169,7 @@ export class ActionService {
       const projectId = token.command.projectId ?? (typeof token.command.params?.projectId === 'string' ? token.command.params.projectId : null);
       if (blocksMutation(await this.options.receipts.list(), c.path, namespace, receiptAction, projectId ?? undefined)) throw new Error('OPERATION_UNCERTAIN');
       const receipt = await this.options.receipts.create({ requestId: token.requestId, namespace, action: receiptAction, archivePath: c.path, storeId: c.view.storeId,
-        projectId, ...(token.command.featureId?{featureId:token.command.featureId}:{}), ...(token.command.workspaceId?{workspaceId:token.command.workspaceId}:{}), expectedRevision: token.command.expectedRevision ?? token.command.expectedStateRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
+        projectId, ...(token.command.featureId?{featureId:token.command.featureId}:{}), ...(token.command.profileId?{profileId:token.command.profileId}:{}), ...(token.command.workspaceId?{workspaceId:token.command.workspaceId}:{}), expectedRevision: token.command.expectedRevision ?? token.command.expectedStateRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
       try {
         if (canonical(this.scope()) !== canonical(scope)) throw new Error('STALE_CONTEXT');
         const result = await this.options.core.call(token.command);

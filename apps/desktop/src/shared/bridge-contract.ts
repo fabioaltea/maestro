@@ -1,8 +1,9 @@
+import {PROFILE_BRIDGE_METHODS} from './profile-contract.ts';
 import {ENVIRONMENT_BRIDGE_METHODS} from './environment-contract.ts';
 import {FEATURE_BRIDGE_METHODS} from './feature-contract.ts';
 import {WORKSPACE_BRIDGE_METHODS} from './workspace-contract.ts';
 import { DISCOVERY_BRIDGE_METHODS } from './discovery-contract.ts';
-export const METHODS = [...ENVIRONMENT_BRIDGE_METHODS,...WORKSPACE_BRIDGE_METHODS, ...FEATURE_BRIDGE_METHODS, ...DISCOVERY_BRIDGE_METHODS, 'releaseViewReads', 'chooseArchive', 'context', 'status', 'diagnostics', 'listProjects', 'getProject', 'chooseRepository', 'prepareAction', 'confirmAction', 'cancelAction', 'reconcileOperation', 'listReceipts', 'dismissReceipt', 'selectReceiptArchive', 'readEvents', 'startEvents', 'stopEvents', 'ackEvents'] as const;
+export const METHODS = [...PROFILE_BRIDGE_METHODS,...ENVIRONMENT_BRIDGE_METHODS,...WORKSPACE_BRIDGE_METHODS, ...FEATURE_BRIDGE_METHODS, ...DISCOVERY_BRIDGE_METHODS, 'releaseViewReads', 'chooseArchive', 'context', 'status', 'diagnostics', 'listProjects', 'getProject', 'chooseRepository', 'prepareAction', 'confirmAction', 'cancelAction', 'reconcileOperation', 'listReceipts', 'dismissReceipt', 'selectReceiptArchive', 'readEvents', 'startEvents', 'stopEvents', 'ackEvents'] as const;
 export type BridgeMethod = typeof METHODS[number];
 export type Params = Record<string, unknown>;
 export interface BridgeRequest extends Params { bridgeVersion: 1; callId: string; selectionEpoch: number }

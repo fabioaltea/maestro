@@ -1,5 +1,50 @@
 // Public core v1 safe error catalog; no runtime dependency on core adapters.
 export const CORE_ERRORS = {
+  "PROFILE_NOT_INITIALIZED": {
+    "code": "PROFILE_NOT_INITIALIZED",
+    "message": "Catalogo profili non inizializzato.",
+    "nextAction": "Avviare esplicitamente il servizio per aggiornare lo schema."
+  },
+  "PROFILE_NOT_FOUND": {
+    "code": "PROFILE_NOT_FOUND",
+    "message": "Profilo o estensione assente.",
+    "nextAction": "Consultare il catalogo locale."
+  },
+  "PROFILE_CONFLICT": {
+    "code": "PROFILE_CONFLICT",
+    "message": "Conflitto di alias, scope o dipendenze tra profili.",
+    "nextAction": "Scegliere le revisioni correlate in modo esplicito."
+  },
+  "REQUIRED_SKILL_MISSING": {
+    "code": "REQUIRED_SKILL_MISSING",
+    "message": "Una skill obbligatoria non è disponibile.",
+    "nextAction": "Selezionare una revisione disponibile della skill."
+  },
+  "EXTENSION_UNTRUSTED": {
+    "code": "EXTENSION_UNTRUSTED",
+    "message": "Sorgente estensione fuori dalla policy di import.",
+    "nextAction": "Selezionare un bundle locale regolare e verificarne il contenuto."
+  },
+  "PERMISSION_CONFLICT": {
+    "code": "PERMISSION_CONFLICT",
+    "message": "I permessi richiesti superano lo scope autorizzato.",
+    "nextAction": "Rivedere i vincoli del profilo e della capability."
+  },
+  "CAPABILITY_UNAVAILABLE": {
+    "code": "CAPABILITY_UNAVAILABLE",
+    "message": "Capability richiesta indisponibile.",
+    "nextAction": "Consultare il profilo e le capacità qualificate."
+  },
+  "PROFILE_STALE": {
+    "code": "PROFILE_STALE",
+    "message": "Profilo, sorgente o risoluzione non più correnti.",
+    "nextAction": "Preparare una nuova risoluzione o conferma."
+  },
+  "TOOL_DISABLED": {
+    "code": "TOOL_DISABLED",
+    "message": "Tool disabilitato o non abilitato.",
+    "nextAction": "Consultare il catalogo e le autorizzazioni del tool."
+  },
   "ENVIRONMENT_NOT_INITIALIZED": {
     "code": "ENVIRONMENT_NOT_INITIALIZED",
     "message": "Archivio ambienti non inizializzato.",

@@ -1,3 +1,4 @@
+import {installProfile} from './profile.ts';
 import { app, BrowserWindow, dialog, protocol, session } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { SafeLog } from './safe-log.ts';
@@ -54,6 +55,7 @@ else {
     installFeature(router,archiveContext,lifecycle.actions);
     installWorkspace(router,archiveContext,lifecycle.actions);
     installEnvironment(router,archiveContext,lifecycle.actions);
+    installProfile(router,archiveContext,lifecycle.actions);
     installActivityHistory(router, archiveContext);
     clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
     archiveContext.onChange(() => clients?.archiveChanged());

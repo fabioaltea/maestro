@@ -33,3 +33,7 @@ Il daemon pubblica le sole capability composte. Runtime fenced prima del drain, 
 ## T013–T017 — profili e snapshot
 
 Sei seed versionati come dati. Le istruzioni non concedono permessi. Risoluzione deterministica legata a policy, capability, progetto e revisione. Una revisione successiva rende lo snapshot storico senza mutarne il contenuto. **3 PASS** US1, inclusa revisione concorrente con grant precedente e disabilitazione.
+
+## T018–T019 — CLI ed Electron US1
+
+Draft e grant passano per stdin e artefatti sigillati. Electron mostra alias, scope e digest prima della conferma, salva la ricevuta e legge il catalogo offline. Conferma, Escape/focus e cambio archivio verificati in **1 E2E PASS**. La prima prova ha corretto il DTO desktop dell’artefatto seal al contratto effettivo.
