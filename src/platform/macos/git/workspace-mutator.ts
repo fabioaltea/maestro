@@ -122,7 +122,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
   }
   const selected=()=>pin??=resolvePin();
   function check(deadline:Deadline){if(deadline.expired())throw new Error('DEADLINE_EXCEEDED');}
-  async function git(scope:Scope,deadline:Deadline,args:readonly string[],effect?:readonly string[]|'delete-branch'|'read-only'|'integration-guard'|'integration-ref'){
+  async function git(scope:Scope,deadline:Deadline,args:readonly string[],effect?:readonly string[]|'delete-branch'|'read-only'|'integration-guard'|'integration-ref',maxOutputBytes=1024*1024){
     check(deadline);
     const {executable,identity,profileSha256}=await selected();
     const body=await readFile(profile);
@@ -149,10 +149,12 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     const policy=guard?['-p',body.toString('utf8')+'\n'+guard]:['-f',profile];
     const bindings=[...Object.entries(params),...(literals??[])].flatMap(([k,v])=>['-D',`${k}=${v}`]);
     return exec(sandbox,[...bindings,...policy,executable,...prefix,...args],
-      {cwd:scope.reference,env:{...env,GIT_EXEC_PATH:dirname(executable)},timeout:Math.max(1,Math.min(26000,Math.floor(deadline.remainingMs()))),maxBuffer:1024*1024,encoding:'utf8'})
+      {cwd:scope.reference,env:{...env,GIT_EXEC_PATH:dirname(executable)},timeout:Math.max(1,Math.min(26000,Math.floor(deadline.remainingMs()))),maxBuffer:maxOutputBytes,encoding:'utf8'})
       .then(({stdout,stderr})=>({stdout,stderr,code:0}),(error:unknown)=>{
         if(!deadline.expired()&&error instanceof Error&&'code'in error&&typeof error.code==='number'&&'stderr'in error)
           return{stdout:'',stderr:String(error.stderr),code:error.code};
+        if(maxOutputBytes>1024*1024&&error instanceof Error&&'code' in error&&error.code==='ERR_CHILD_PROCESS_STDIO_MAXBUFFER')
+          throw new Error('REVIEW_SCOPE_LIMIT');
         throw new Error(deadline.expired()?'DEADLINE_EXCEEDED':'OWNERSHIP_UNPROVEN');
       });
   }
@@ -318,6 +320,22 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       if(result.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
       const {targetOid,sourceOid,sourceTreeOid,fastForward}=result;
       return{targetOid,sourceOid,sourceTreeOid,fastForward};
+    },
+    async captureDiff(input,deadline){
+      const before=await integration(input,deadline),{scope}=before;
+      if(before.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
+      const options=['-C',scope.checkout,'diff','--no-ext-diff','--no-textconv','--no-renames'];
+      const names=await git(scope,deadline,[...options,'--name-only','-z',input.targetOid,input.sourceOid,'--'],'read-only',2097153);
+      const listed=names.stdout.split('\0').filter(Boolean);
+      if(names.code||names.stderr||!names.stdout.isWellFormed()||names.stdout.includes('\uFFFD'))throw new Error('WORKSPACE_UNSAFE');
+      if(listed.length>100)throw new Error('REVIEW_SCOPE_LIMIT');
+      const result=await git(scope,deadline,[...options,'--binary','--full-index',input.targetOid,input.sourceOid,'--'],'read-only',2097153);
+      if(result.code||result.stderr||!result.stdout.isWellFormed()||result.stdout.includes('\uFFFD'))throw new Error('WORKSPACE_UNSAFE');
+      const diff=Buffer.from(result.stdout);
+      if(diff.length>2097152)throw new Error('REVIEW_SCOPE_LIMIT');
+      const after=await integration(input,deadline);
+      if(after.targetOid!==before.targetOid||after.sourceTreeOid!==before.sourceTreeOid)throw new Error('REVIEW_STALE');
+      return{sourceOid:after.sourceOid,sourceTreeOid:after.sourceTreeOid,targetOid:after.targetOid,fastForward:after.fastForward,fileCount:listed.length,diff};
     },
     async reserveGuard(input,deadline){
       const result=await integration(input,deadline);

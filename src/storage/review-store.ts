@@ -70,6 +70,12 @@ export function commitReviewState(db:Database.Database,c:ReviewChange,ledger:Ret
        .get(r.checkpointId,r.featureId,r.projectId,r.workspaceId,BigInt(String(p.workspaceRevision)),BigInt(i.configRevision!),
          r.featureRevisionId,BigInt(i.expectedRevision!)))throw new Error('REVIEW_STALE');
      if(r.parts.length>8||r.parts.reduce((sum,part)=>sum+part.bytes,0)!==r.diffBytes)throw new Error('REVIEW_SCOPE_LIMIT');
+     if(!Array.isArray(p.partDescriptors)||p.partDescriptors.length!==r.parts.length||
+        r.parts.some((part,index)=>{
+          const expected=(p.partDescriptors as {sha256:string;bytes:number}[])[index];
+          return part.sha256!==expected?.sha256||part.bytes!==expected?.bytes;
+        }))
+       throw new Error('REVIEW_STALE');
      db.prepare(`INSERT INTO review_records VALUES(?,?,?,?,?,?,?,?,?,?,?,'DRAFT',1,?,?,?)`)
        .run(r.reviewId,r.projectId,r.featureId,r.featureRevisionId,r.workspaceId,r.checkpointId,r.sourceOid,r.sourceTreeOid,r.targetRef,
          r.targetOid,r.digest,at,r.fileCount,r.diffBytes);
