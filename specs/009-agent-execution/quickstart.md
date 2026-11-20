@@ -1,12 +1,12 @@
 # Quickstart — Agent Sessions, Runs & Portable Checkpoints
 
-Questa è una procedura di futura verifica, non prova già eseguita. Usare copia di archivio/checkout temporanei e fixture sintetiche; non usare il repository utente come banco di mutazione. Prima leggere [plan.md](plan.md), [contracts/api.md](contracts/api.md) e [gate precedenti](../../docs/missing-features-brief.md).
+Usare archivi e checkout temporanei di fixture sintetiche. Gli esiti del 20 novembre 2026 sono descritti nei report. Prima leggere [plan.md](plan.md), [contracts/api.md](contracts/api.md) e [gate precedenti](../../docs/missing-features-brief.md).
 
 ## Prerequisiti
 
 Schema precedente8 con feature cumulative e test fixture controllate; Node e tool pin del repository. Lo start esplicito deve migrare a9; una lettura offline prima dello start deve lasciare l’archivio invariato. Nessuna installazione o login implicito. Port/provider fake nella suite ordinaria; binari reali solo per il gate qualificato.
 
-## Verifica mirata prevista
+## Verifica mirata
 
 ```sh
 npm run build
@@ -18,7 +18,7 @@ npm run typecheck:desktop
 npm run build:desktop
 ```
 
-I file sono proposti nei task; non dichiarare disponibili prima della loro creazione. Gli altri casi `tests/integration/execution-usN.test.ts` sono eseguiti compilati con lo stesso runner; Playwright seleziona `apps/desktop/tests/e2e/execution-flow.spec.ts`. Usare invocazioni mirate, non acceptance/bench lunghi. `npm run lint` e typecheck core fanno parte del checkpoint.
+Gli altri casi `tests/integration/execution-usN.test.ts` sono eseguiti compilati con lo stesso runner; Playwright seleziona `apps/desktop/tests/e2e/execution-flow.spec.ts`. Usare invocazioni mirate, non acceptance/bench lunghi. `npm run lint` e typecheck core fanno parte del checkpoint.
 
 ## Scenari
 
@@ -37,4 +37,4 @@ Atteso locale: tutte le verifiche degli invarianti pertinenti PASS, oppure blocc
 
 ## Evidenze
 
-`reports/validation.md`: comandi/versioni/esiti e matrice FR/SC. `reports/qualification.md`: pin/hash/policy/capability e differenza fixture/reale. `reports/release-readiness.md`: review e tutti i gate esterni ancora aperti. Questi report verranno creati dai task; non sono attestazioni nel planning.
+`reports/validation.md`: comandi/versioni/esiti e matrice FR/SC. `reports/qualification.md`: pin/hash/policy/capability e differenza fixture/reale. `reports/release-readiness.md`: review e tutti i gate esterni ancora aperti. Gli esiti distinguono le prove di fixture dalla qualifica di produzione.
