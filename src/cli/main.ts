@@ -53,6 +53,7 @@ async function follow(client: LocalClient, json: boolean, options: import('../cl
 }
 
 export async function runCli(args: readonly string[]): Promise<number> {
+  if (args[0] === 'execution') return (await import('./execution.js')).runExecutionCli(args.slice(1));
   if (args[0] === 'profile') return (await import('./profile.js')).runProfileCli(args.slice(1));
   if (args[0] === 'environment') return (await import('./environment.js')).runEnvironmentCli(args.slice(1));
   if (args[0] === 'workspace') return (await import('./workspace.js')).runWorkspaceCli(args.slice(1));
