@@ -35,14 +35,21 @@ export function buildCliArgs(c: CliCommand): string[] {
   if (c.namespace === 'feature') return buildFeatureCliArgs(c);
   if(c.namespace==='review'){
     const args=['review',c.action,`--state-dir=${c.archive}`,'--json'];
-    const p=c.params??{},selectors:Record<string,string>={list:'projectId',get:'reviewId',artifact:'artifactId',operation:'requestId'};
+    const p=c.params??{},selectors:Record<string,string>={list:'projectId',get:'reviewId',artifact:'artifactId',operation:'requestId',receipt:'integrationId'};
+    if(c.action==='complete'){
+      keys(p,['integrationId','expectedStateRevision']);return [...args,`--request-id=${uuid(c.requestId)}`,
+        `--expected-state-revision=${revision(p.expectedStateRevision)}`,'--',uuid(p.integrationId)];
+    }
+    if(c.action==='cleanup.preview'&&c.requestId===undefined){
+      keys(p,['integrationId','workspaceId']);return [...args,'--',uuid(p.integrationId),uuid(p.workspaceId)];
+    }
     if(isMutation(c)){
       keys(p,['grantId']);return [...args,`--request-id=${uuid(c.requestId)}`,`--grant=${uuid(p.grantId)}`];
     }
     if(c.action==='prepare'&&c.requestId===undefined){reviewBridgeAction(p);return [...args,'--input-stdin'];}
     if(!Object.hasOwn(selectors,c.action)||c.requestId!==undefined)throw new Error('INVALID_INPUT');
     const field=selectors[c.action]!;
-    keys(p,c.action==='operation'?[field]:[field,'cursor']);
+    keys(p,['operation','receipt'].includes(c.action)?[field]:[field,'cursor']);
     return [...args,...(p.cursor===undefined?[]:[`--cursor=${text(p.cursor,1024)}`]),'--',uuid(p[field])];
   }
   if(c.namespace==='scheduler'){
@@ -107,6 +114,7 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
     const reviewResult=c.namespace==='review'&&(p.result==='OK'||c.action==='operation'||isMutation(c));
     const data = c.namespace==='review'?(reviewResult?validateReviewData(c.action,p.data,{...c.params,...(c.requestId?{requestId:c.requestId}:{})}):{}):c.namespace==='scheduler'?(p.result==='OK'?validateSchedulerQueue(p.data,c.params?.projectId):{}):c.namespace==='execution'?validateExecutionData(c.action,p.data):c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
     if(c.namespace==='review'&&c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
+    if(c.namespace==='review'&&c.action==='cleanup.preview'&&data.eligible===true&&(p.freshness!=='LIVE'||p.liveness!=='LIVE_VERIFIED'))throw new Error();
     if(c.namespace==='execution'){
       if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
       if(c.action==='get'&&p.result==='OK'&&record(data.session).sessionId!==c.params?.sessionId)throw new Error();

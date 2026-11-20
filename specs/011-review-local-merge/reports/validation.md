@@ -68,6 +68,10 @@ La ricevuta identifica il blob esatto della documentazione nel commit integrato.
 
 Tre contratti headless PASS. La CLI usa identificativi e revisione per la chiusura, consulta ricevuta e anteprima del cleanup e rifiuta `force` e grant estranei. Alla perdita della risposta il client interroga l'UUID originale senza reinviare la chiusura. L'anteprima offline non abilita rimozioni.
 
+## Ripresa T033
+
+Tre contratti Desktop e due E2E Electron PASS. Electron recupera l'esito asincrono del candidate, conferma la chiusura con l'OID visibile e mostra ricevuta e documenti anche dopo l'arresto del daemon. La CLI restituisce lo stesso UUID. L'anteprima live apre una conferma 006 separata. Escape ripristina il focus e l'anteprima è disabilitata offline. Le risposte di un archivio deselezionato sono scartate. L'E2E ricostruisce l'integrazione storica nel Git di fixture e poi esegue la chiusura attraverso il daemon. Approvazione, CAS e recovery effettivi sono esercitati dalle integrazioni core.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

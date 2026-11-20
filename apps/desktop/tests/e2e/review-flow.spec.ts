@@ -10,6 +10,13 @@ import {fileURLToPath} from 'node:url';
 import Database from 'better-sqlite3';
 import {openOwnedWorktree} from '../fixtures/owned-worktree.ts';
 
+async function fixtureGit(directory:string,worktree:string,...args:string[]){
+ expect(worktree.startsWith(`${directory}/`)).toBeTruthy();
+ return (await promisify(execFile)('/usr/bin/git',[
+   '-c','core.hooksPath=/dev/null','-c','user.name=Maestro Fixture','-c','user.email=fixture@example.invalid',...args,
+ ],{cwd:worktree,timeout:5000,env:{PATH:'/usr/bin:/bin',GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_NOSYSTEM:'1'}})).stdout.trim();
+}
+
 test('review history is scoped to the selected archive and remains available offline',async()=>{
  const f=await createScratch(),other=await createScratch();
  try{
@@ -33,7 +40,7 @@ test('review history is scoped to the selected archive and remains available off
  }finally{await Promise.all([f.cleanup(),other.cleanup()]);}
 });
 
-test('review feedback confirms the original receipt and restores focus',async()=>{
+test('review feedback, candidate and completion preserve receipts and confirmation focus',async()=>{
  test.setTimeout(100000);
  const f=await createScratch();
  try{
@@ -53,14 +60,11 @@ test('review feedback confirms the original receipt and restores focus',async()=
          JOIN features_records f USING(feature_id) WHERE w.workspace_id=?`).get(workspaceId) as
          {feature_id:string;project_id:string;envelope_id:string;current_revision_id:string;ownership:string};
        const worktree=(JSON.parse(w.ownership) as {root:{canonicalPath:string}}).root.canonicalPath;
-       expect(worktree.startsWith(`${f.directory}/`)).toBeTruthy();
-       const git=async(...args:string[])=>(await promisify(execFile)('/usr/bin/git',[
-         '-c','core.hooksPath=/dev/null','-c','user.name=Maestro Fixture','-c','user.email=fixture@example.invalid',...args,
-       ],{cwd:worktree,timeout:5000,env:{PATH:'/usr/bin:/bin',GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_NOSYSTEM:'1'}})).stdout.trim();
+       const git=(...args:string[])=>fixtureGit(f.directory,worktree,...args);
        targetOid=await git('rev-parse','HEAD');
        await git('branch','review-target',targetOid);
-       await writeFile(join(worktree,'review-content.txt'),'Contenuto approvato.\n');
-       await git('add','--','review-content.txt');await git('commit','-m','synthetic review source');
+       await writeFile(join(worktree,'REVIEW.md'),'Contenuto approvato.\n');
+       await git('add','--','REVIEW.md');await git('commit','-m','synthetic review source');
        oid=await git('rev-parse','HEAD');const treeOid=await git('rev-parse','HEAD^{tree}');
        const patch=JSON.stringify({version:1,baseOid:oid,trackedDiff:'',untracked:[]}),hash=createHash('sha256').update(patch).digest('hex');
        await writeFile(join(objects,ids.artifact),patch,{mode:0o600,flag:'wx'});
@@ -117,14 +121,72 @@ test('review feedback confirms the original receipt and restores focus',async()=
      const candidateId=(await receipt.textContent())?.match(/[a-f0-9-]{36}/)?.[0];
      expect(candidateId).toBeTruthy();
      await expect.poll(async()=>(await f.cli(['review','operation',candidateId!])).result.outcome).toBe('SUCCEEDED');
+     const reconcile=panel.getByRole('button',{name:'Aggiorna esito'});
+     if(await reconcile.isVisible())await reconcile.click();
+     await expect(receipt).toContainText('SUCCEEDED');
      await panel.getByRole('button',{name:'Aggiorna dettaglio'}).click();
      await expect(panel.getByText('Commit candidate',{exact:true})).toBeVisible();
      await expect(panel.getByRole('button',{name:'Prepara integrazione locale'})).toBeDisabled();
+     const paused=await f.cli(['daemon','stop']);
+     expect(paused.result.outcome).toBe('SUCCEEDED');
+     await panel.getByRole('button',{name:'Aggiorna dettaglio'}).click();
+     await expect(panel.getByText(/Servizio offline/)).toBeVisible();
+     await expect(panel.getByText('Commit candidate',{exact:true})).toBeVisible();
+
+     // The core integration suite produces the CAS and validates 007. Replay its finalized shape for the Desktop closure.
+     const history=new Database(join(f.archive,'state.sqlite'));
+     const decisionId=randomUUID(),integrationId=randomUUID(),targetRef='refs/heads/review-target';
+     let integratedOid:string;
+     try{
+       history.pragma('foreign_keys=ON');
+       const candidate=history.prepare(`SELECT c.candidate_oid,c.guard_id,r.digest,w.repository_key,w.ownership FROM review_candidates c
+         JOIN review_records r USING(review_id) JOIN workspaces_records w ON w.workspace_id=r.workspace_id WHERE c.candidate_id=?`)
+         .get(candidateId) as {candidate_oid:string;guard_id:string;digest:string;repository_key:string;ownership:string};
+       integratedOid=candidate.candidate_oid;
+       const guard=history.prepare('SELECT ownership FROM workspaces_records WHERE workspace_id=?').get(candidate.guard_id) as {ownership:string};
+       const root=(item:{ownership:string})=>(JSON.parse(item.ownership) as {root:{canonicalPath:string}}).root.canonicalPath;
+       await fixtureGit(f.directory,root(candidate),'update-ref','--create-reflog','-m',`maestro-integration ${integrationId}`,targetRef,integratedOid,targetOid);
+       await fixtureGit(f.directory,root(guard),'read-tree','-u','-m',targetOid,integratedOid);
+       history.transaction(()=>{
+         const done=history.prepare(`INSERT INTO workflow_operations(request_id,namespace,action,payload_hash,canonical_intent,owner_uid,
+           owning_instance_id,phase,outcome,target_id,accepted_at,completed_at) VALUES(?,'REVIEW',?,?,?,?,?,'FINALIZED','SUCCEEDED',?,?,?)`);
+         done.run(decisionId,'approve',candidate.digest,JSON.stringify({payload:{evidenceDigest:candidate.digest}}),process.getuid!(),
+           paused.result.instanceId,ids.review,at,at);
+         done.run(integrationId,'integrate',candidate.digest,'{}',process.getuid!(),paused.result.instanceId,candidateId,at,at);
+         history.prepare("INSERT INTO review_decisions VALUES(?,?,?,?,'APPROVE_INTEGRATION',NULL,?)")
+           .run(decisionId,ids.review,candidateId,candidate.digest,at);
+         history.prepare("INSERT INTO review_integrations VALUES(?,?,?,?,?,?,'FINALIZED',?,?)")
+           .run(integrationId,candidateId,decisionId,candidate.repository_key,targetRef,targetOid,integratedOid,
+             JSON.stringify({requestId:integrationId,old:targetOid,candidate:integratedOid,guardSynced:true}));
+         history.prepare("UPDATE review_records SET state='APPROVED',state_revision=state_revision+1 WHERE review_id=?").run(ids.review);
+       })();
+     }finally{history.close();}
+     await promisify(execFile)(process.execPath,[actor,f.archive],{timeout:35000,maxBuffer:16384});
+     await panel.getByRole('button',{name:'Aggiorna revisioni'}).click();
+     await panel.getByRole('button',{name:'Aggiorna dettaglio'}).click();
+     const complete=panel.getByRole('button',{name:'Concludi revisione'});
+     await complete.click();
+     await expect(page.getByRole('dialog')).toContainText(integratedOid);
+     await page.keyboard.press('Escape');await expect(complete).toBeFocused();
+     await complete.click();await page.getByRole('button',{name:'Conferma operazione',exact:true}).click();
+     const completion=panel.getByRole('region',{name:'Ricevuta di integrazione'});
+     await expect(completion.getByText('REVIEW.md',{exact:true})).toBeVisible();
+     const completed=await f.cli(['review','receipt',integrationId]);
+     const completionId=(await receipt.textContent())?.match(/[a-f0-9-]{36}/)?.[0];
+     expect(completionId).toBeTruthy();
+     expect(completed.result.data.receipt).toMatchObject({receiptId:completionId,integrationId,resultingOid:integratedOid,publicationGrantRequired:true});
+     const checkCleanup=completion.getByRole('button',{name:'Verifica rimozione worktree'});
+     await checkCleanup.click();
+     const prepareCleanup=completion.getByRole('button',{name:'Prepara rimozione worktree'});
+     await prepareCleanup.click();
+     await expect(page.getByRole('dialog')).toContainText(workspaceId);
+     await page.keyboard.press('Escape');await expect(prepareCleanup).toBeFocused();
      expect((await f.cli(['daemon','stop'])).result.outcome).toBe('SUCCEEDED');
      await panel.getByRole('button',{name:'Aggiorna dettaglio'}).click();
      await expect(panel.getByText(/Servizio offline/)).toBeVisible();
      await expect(prepare).toHaveCount(0);
-     await expect(panel.getByText('Commit candidate',{exact:true})).toBeVisible();
+     await expect(completion.getByText('REVIEW.md',{exact:true})).toBeVisible();
+     await expect(checkCleanup).toBeDisabled();
    }finally{await app.close();}
  }finally{await f.cleanup();}
 });

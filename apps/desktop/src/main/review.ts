@@ -14,6 +14,18 @@ export function installReview(router:BridgeRouter,context:ArchiveContext,actions
  const sync=async<T>(work:()=>Promise<T>)=>{try{return await work();}finally{router.setContext(context.current?.view??null);}};
  if(actions)actions.resolveReview=async(route,params)=>{
    const {action,input}=reviewBridgeAction({...params,action:route.slice('review.'.length)}),c=context.capture();
+   if(action==='complete'){
+     const reviewId=uuid(input.reviewId),integrationId=uuid(input.integrationId),projectId=uuid(input.projectId),stateRevision=revision(input.stateRevision);
+     const detail=await core.call({namespace:'review',action:'get',archive:c.path,params:{reviewId}});
+     context.apply(c,detail);
+     if(detail.result!=='OK'||detail.liveness!=='LIVE_VERIFIED')throw new Error(detail.error?.code??'DAEMON_UNAVAILABLE');
+     const r=record(detail.data.review),i=record(detail.data.integration);
+     if(r.stateRevision!==stateRevision||r.projectId!==projectId||i.integrationId!==integrationId||i.phase!=='FINALIZED'||detail.data.receiptId)
+       throw new Error('REVIEW_STALE');
+     const command:CliCommand={namespace:'review',action,archive:c.path,reviewTarget:integrationId,projectId,reviewId,
+       expectedStateRevision:stateRevision,params:{integrationId,expectedStateRevision:stateRevision}};
+     return{command,summary:['Concludi la revisione',`Integrazione ${integrationId}`,`Commit ${text(i.resultingOid,64)}`]};
+   }
    const reply=await core.call({namespace:'review',action:'prepare',archive:c.path,params:{action,...input}});
    context.apply(c,reply);
    if(reply.result!=='OK'||reply.liveness!=='LIVE_VERIFIED')throw new Error(reply.error?.code??'DAEMON_UNAVAILABLE');

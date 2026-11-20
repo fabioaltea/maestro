@@ -21,6 +21,7 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
  const [freshness,setFreshness]=useState<string|null>(null),[loading,setLoading]=useState(false);
  const [diff,setDiff]=useState<{id:string;offset:number;text:string;cursor:string|null}|null>(null);
  const [candidateDetail,setCandidateDetail]=useState<{candidate:Params;decisionId:string|null;integration:Params|null;evidenceDigest:string}|null>(null);
+ const [completion,setCompletion]=useState<Params|null>(null),[cleanup,setCleanup]=useState<Params|null>(null);
  const [methods,setMethods]=useState<string[]>([]),[creating,setCreating]=useState(false);
  const [commands,setCommands]=useState<Params[]>([]),[checked,setChecked]=useState<string[]>([]);
  const [prepared,setPrepared]=useState<PreparedAction|null>(null),[receipt,setReceipt]=useState<Params|null>(null),[busy,setBusy]=useState(false);
@@ -36,7 +37,7 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
  },[core]);
  useEffect(()=>{
    setDetail(null);setDiff(null);setItems([]);setSelected('');setFreshness(null);setNextCursor(null);setCriteria([]);setCriteriaCursor(null);
-   setCreating(false);setReceipt(null);setCandidateDetail(null);
+   setCreating(false);setReceipt(null);setCandidateDetail(null);setCompletion(null);setCleanup(null);
    if(projectId)void list(projectId);
  },[projectId]);
  async function list(projectId:string,cursor?:string){
@@ -55,7 +56,8 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
  }
  async function show(reviewId:string,cursor?:string){
    const token=++generation.current;
-   if(!cursor){setSelected(reviewId);setDetail(null);setDiff(null);setCriteria([]);setCriteriaCursor(null);setCommands([]);setChecked([]);setCandidateDetail(null);}
+   if(!cursor){setSelected(reviewId);setDetail(null);setDiff(null);setCriteria([]);setCriteriaCursor(null);setCommands([]);setChecked([]);
+     setCandidateDetail(null);setCompletion(null);setCleanup(null);}
    setLoading(true);
    try{
      const r=await core('getFeatureReview',{reviewId,...(cursor?{cursor}:{})});
@@ -66,7 +68,13 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
          integration:r.data.integration?record(r.data.integration):null,evidenceDigest:String(r.data.evidenceDigest)}:null);
        setCriteria(previous=>cursor?[...previous,...rows(r.data.criteria)]:rows(r.data.criteria));
        setCriteriaCursor(typeof r.data.nextCursor==='string'?r.data.nextCursor:null);
-       if(!cursor&&r.freshness==='LIVE'&&methods.includes('review.validate')){
+       if(!cursor&&r.data.receiptId&&r.data.integration){
+         const reply=await core('getReviewReceipt',{integrationId:record(r.data.integration).integrationId});
+         if(token===generation.current&&reply?.result==='OK'){
+           const proof=record(reply.data.receipt);
+           if(proof.reviewId===reviewId&&proof.receiptId===r.data.receiptId)setCompletion(proof);
+         }
+       }else if(!cursor&&r.freshness==='LIVE'&&methods.includes('review.validate')){
          const environment=await core('getEnvironment',{workspaceId:candidate?.stagingId??record(r.data.review).workspaceId});
          const plan=environment?.result==='OK'&&environment.data.plan?record(environment.data.plan):null;
          if(token===generation.current)setCommands(plan?rows(plan.commands):[]);
@@ -106,7 +114,9 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
    if(!prepared)return;
    const token=generation.current;setBusy(true);
    try{
-     const result=await invoke(confirm?'confirmReviewAction':'cancelReviewAction',{confirmationId:prepared.confirmationId});
+     const workspaceAction=prepared.action==='workspace.remove';
+     const method=workspaceAction?(confirm?'confirmWorkspaceAction':'cancelWorkspaceAction'):(confirm?'confirmReviewAction':'cancelReviewAction');
+     const result=await invoke(method,{confirmationId:prepared.confirmationId});
      if(token!==generation.current)return;
      setPrepared(null);
      if(confirm&&result){
@@ -116,6 +126,38 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
          setCreating(false);await list(projectId);
        }else if(selected)await show(selected);
      }
+   }finally{setBusy(false);}
+ }
+ async function refreshOperation(){
+   if(!receipt)return;
+   const token=generation.current;setBusy(true);
+   try{
+     const result=await invoke('reconcileOperation',{receiptId:receipt.requestId});
+     if(token!==generation.current||!result)return;
+     setReceipt(record(record(result).receipt));
+     if(selected)await show(selected);
+   }finally{setBusy(false);}
+ }
+ async function previewCleanup(){
+   if(!completion)return;
+   const token=generation.current;setBusy(true);setCleanup(null);
+   try{
+     const reply=await core('previewReviewCleanup',{integrationId:completion.integrationId,workspaceId:completion.workspaceId});
+     if(token===generation.current&&reply?.result==='OK')setCleanup(reply.data);
+   }finally{setBusy(false);}
+ }
+ async function prepareCleanup(button:HTMLElement){
+   if(!cleanup||cleanup.eligible!==true)return;
+   const token=generation.current;trigger.current=button;setBusy(true);setReceipt(null);
+   try{
+     const result=await core('getWorkspace',{workspaceId:cleanup.workspaceId});
+     if(token!==generation.current||result?.result!=='OK'||result.liveness!=='LIVE_VERIFIED')return;
+     const workspace=record(result.data.workspace);
+     const action=await invoke('prepareWorkspaceAction',{params:{action:'remove',workspaceId:cleanup.workspaceId,
+       expectedStateRevision:workspace.stateRevision,targetRef:cleanup.targetRef,targetOid:cleanup.targetOid}}) as PreparedAction|null;
+     if(!action)return;
+     if(token===generation.current)setPrepared(action);
+     else await invoke('cancelWorkspaceAction',{confirmationId:action.confirmationId});
    }finally{setBusy(false);}
  }
  function create(event:FormEvent<HTMLFormElement>){
@@ -135,7 +177,11 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
      <button className="button subtle" disabled={!projectId||loading||busy||!can('create')} onClick={()=>setCreating(value=>!value)}>Nuova revisione</button>
    </div>
    {freshness==='LAST_KNOWN'&&<p className="hint">Ultimo stato registrato. Servizio offline.</p>}
-   {receipt&&<p role="status">Operazione {String(receipt.requestId)} · {String(receipt.outcome??receipt.phase)}</p>}
+   {receipt&&<div className="row-actions">
+     <p role="status">Operazione {String(receipt.requestId)} · {String(receipt.outcome??receipt.phase)}</p>
+     {receipt.phase!=='TERMINAL'&&<button className="button subtle" disabled={loading||busy}
+       onClick={()=>void refreshOperation()}>Aggiorna esito</button>}
+   </div>}
    {creating&&can('create')&&<form className="detail-panel" aria-label="Crea revisione" onSubmit={create}>
      <label>Feature <input name="featureId" required maxLength={36}/></label>
      <label>Checkpoint <input name="checkpointId" required maxLength={36}/></label>
@@ -170,8 +216,23 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
            {can('integrate')&&<button className="button primary" disabled={busy||loading||!candidateDetail.decisionId||!!candidateDetail.integration}
              onClick={e=>void prepare({action:'integrate',projectId,reviewId:detail.reviewId,candidateId:candidateDetail.candidate.candidateId,
                decisionId:candidateDetail.decisionId,expectedTargetOid:detail.targetOid,stateRevision:detail.stateRevision},e.currentTarget)}>Prepara integrazione locale</button>}
+           {can('complete')&&candidateDetail.integration?.phase==='FINALIZED'&&!completion&&<button className="button subtle" disabled={busy||loading}
+             onClick={e=>void prepare({action:'complete',projectId,reviewId:detail.reviewId,integrationId:candidateDetail.integration?.integrationId,
+               stateRevision:detail.stateRevision},e.currentTarget)}>Concludi revisione</button>}
          </div>
        </>}
+       {completion&&<section aria-label="Ricevuta di integrazione">
+         <h4>Ricevuta di integrazione</h4>
+         <dl><dt>Commit integrato</dt><dd>{String(completion.resultingOid)}</dd>
+           <dt>Contesto Discovery</dt><dd>{completion.contextFreshness==='STALE'?'Da aggiornare':completion.contextFreshness==='LAST_KNOWN'?'Ultimo contesto noto':'Stato sconosciuto'}</dd></dl>
+         {rows(completion.documents).length>0&&<ul aria-label="Documentazione modificata">{rows(completion.documents).map(doc=>
+           <li key={String(doc.path)}>{String(doc.path)}{doc.blobOid===null?' · Rimosso':''}</li>)}</ul>}
+         {completion.documentsTruncated===true&&<p className="hint">Documenti mostrati {rows(completion.documents).length} di {String(completion.documentCount)}</p>}
+         <button className="button subtle" disabled={busy||loading||freshness!=='LIVE'} onClick={()=>void previewCleanup()}>Verifica rimozione worktree</button>
+         {cleanup?.eligible===true&&freshness==='LIVE'&&<button className="button subtle" disabled={busy||loading}
+           onClick={e=>void prepareCleanup(e.currentTarget)}>Prepara rimozione worktree</button>}
+         {cleanup?.eligible===false&&<p className="hint">Rimozione bloccata · {String(cleanup.reason)}</p>}
+       </section>}
        {!candidateDetail&&can('candidate.prepare')&&<button className="button subtle" disabled={busy||loading||!['DRAFT','READY_FOR_APPROVAL','BLOCKED','CHANGES_REQUESTED'].includes(String(detail.state))}
          onClick={e=>void prepare({action:'candidate.prepare',projectId,reviewId:detail.reviewId,stateRevision:detail.stateRevision},e.currentTarget)}>Prepara candidate</button>}
        {criteria.length>0&&<>
