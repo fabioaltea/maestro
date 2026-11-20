@@ -3,7 +3,7 @@ import test from 'node:test';
 import {randomUUID} from 'node:crypto';
 import {canonicalWorkflowIntent,validateWorkflowGrant} from '../../src/domain/workflow/authorization.js';
 
-const domain='../../src/domain/review/state.js';
+const domain='../../src/domain/review/integration.js';
 test('review grants bind the exact target OID and replay only the consumed ID',()=>{
  const now=1800000000000,id=randomUUID(),intent={version:1,namespace:'REVIEW',action:'integrate',storeId:randomUUID(),ownerUid:501,
    targetId:randomUUID(),projectId:randomUUID(),expectedRevision:'2',configRevision:'1',payload:{targetOid:'a'.repeat(40)}};
