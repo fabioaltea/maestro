@@ -1,4 +1,5 @@
-import {EXECUTION_SCHEMA_VERSION,EXECUTION_SCHEMA_SQL,WORKFLOW_SCHEMA_V9_SQL} from './execution-schema.js';
+import {SCHEDULER_SCHEMA_VERSION,SCHEDULER_SCHEMA_SQL,WORKFLOW_SCHEMA_V10_SQL} from './scheduler-schema.js';
+import {EXECUTION_SCHEMA_SQL,WORKFLOW_SCHEMA_V9_SQL} from './execution-schema.js';
 import {PROFILES_SCHEMA_SQL,WORKFLOW_SCHEMA_V8_SQL} from './profiles-schema.js';
 import {ENVIRONMENTS_SCHEMA_SQL,WORKFLOW_SCHEMA_V7_SQL} from './environments-schema.js';
 import {WORKFLOW_SCHEMA_V6_SQL,WORKSPACES_SCHEMA_SQL} from './workspaces-schema.js';
@@ -8,7 +9,7 @@ import { FEATURES_SCHEMA_SQL } from './features-schema.js';
 import { DISCOVERY_SCHEMA_SQL } from './discovery-schema.js';
 import { requireUuid } from '../domain/identifiers.js';
 
-export const SCHEMA_VERSION = EXECUTION_SCHEMA_VERSION;
+export const SCHEMA_VERSION = SCHEDULER_SCHEMA_VERSION;
 export const REGISTRY_SCHEMA_VERSION = 3;
 export const STORE_SCHEMA_V3_SQL = `
 CREATE TABLE store (
@@ -186,8 +187,11 @@ export const SCHEMA_V7_SQL = SCHEMA_V6_SQL.replace('CHECK(schema_version = 6)', 
   .replace(WORKFLOW_SCHEMA_V6_SQL, WORKFLOW_SCHEMA_V7_SQL) + ENVIRONMENTS_SCHEMA_SQL;
 export const SCHEMA_V8_SQL=SCHEMA_V7_SQL.replace('CHECK(schema_version = 7)','CHECK(schema_version = 8)')
   .replace(WORKFLOW_SCHEMA_V7_SQL,WORKFLOW_SCHEMA_V8_SQL)+PROFILES_SCHEMA_SQL;
-export const SCHEMA_SQL=SCHEMA_V8_SQL.replace('CHECK(schema_version = 8)','CHECK(schema_version = 9)')
+export const SCHEMA_V9_SQL=SCHEMA_V8_SQL.replace('CHECK(schema_version = 8)','CHECK(schema_version = 9)')
   .replace(WORKFLOW_SCHEMA_V8_SQL,WORKFLOW_SCHEMA_V9_SQL)+EXECUTION_SCHEMA_SQL;
+
+export const SCHEMA_SQL=SCHEMA_V9_SQL.replace('CHECK(schema_version = 9)','CHECK(schema_version = 10)')
+  .replace(WORKFLOW_SCHEMA_V9_SQL,WORKFLOW_SCHEMA_V10_SQL)+SCHEDULER_SCHEMA_SQL;
 
 export function initializeSchema(database: Database.Database, identity: StoreIdentity): void {
   requireUuid(identity.storeId);

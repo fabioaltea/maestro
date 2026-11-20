@@ -1,4 +1,14 @@
 const catalog = {
+  SCHEDULER_NOT_INITIALIZED: ['Archivio coda non inizializzato.', 'Avviare il servizio per aggiornare lo schema.', false],
+  QUEUE_FULL: ['La coda locale è piena.', 'Consultare i job prima di accodarne altri.', false],
+  RESOURCE_WAIT: ['Risorse locali in attesa.', 'Consultare stato e reservation nella coda.', true],
+  PROVIDER_WAIT: ['Disponibilità del provider in attesa.', 'Consultare la prossima osservazione autorizzata.', true],
+  QUOTA_RESET_UNKNOWN: ['Reset della quota sconosciuto.', 'Scegliere esplicitamente se e quando riprovare.', false],
+  NO_COMPATIBLE_PROVIDER: ['Provider compatibile non disponibile.', 'Verificare capability, scope e consenso.', false],
+  COST_UNKNOWN: ['Stima di costo assente o non confrontabile.', 'Fornire una stima corrente e comparabile.', false],
+  POLICY_REVOKED: ['Policy revocata o superata.', 'Rivedere la policy prima di riprendere.', false],
+  RETRY_EXHAUSTED: ['Budget di tentativi esaurito.', 'Consultare l’operazione e confermare un nuovo intento.', false],
+  RESERVATION_UNKNOWN: ['Esito della reservation non dimostrato.', 'Consultare il job originale e la prova di uscita.', false],
   EXECUTION_NOT_INITIALIZED: ['Archivio di esecuzione non inizializzato.', 'Avviare esplicitamente il servizio per aggiornare lo schema.', false],
   EXECUTION_UNSUPPORTED: ['Capability di esecuzione non qualificata.', 'Consultare le capacità verificate del provider.', false],
   EXECUTION_APPROVAL_STALE: ['Consenso di esecuzione non più corrente.', 'Rivedere gli input di esecuzione e richiedere un nuovo grant.', false],
@@ -117,6 +127,8 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
+  SCHEDULER_NOT_INITIALIZED:'RUNTIME', QUEUE_FULL:'RUNTIME', RESOURCE_WAIT:'RUNTIME', PROVIDER_WAIT:'RUNTIME', QUOTA_RESET_UNKNOWN:'SAFETY',
+  NO_COMPATIBLE_PROVIDER:'SAFETY', COST_UNKNOWN:'SAFETY', POLICY_REVOKED:'AUTHORIZATION', RETRY_EXHAUSTED:'SAFETY', RESERVATION_UNKNOWN:'SAFETY',
   EXECUTION_NOT_INITIALIZED:'RUNTIME', EXECUTION_UNSUPPORTED:'SAFETY', EXECUTION_APPROVAL_STALE:'AUTHORIZATION', CHECKPOINT_STALE:'SAFETY',
   PROCESS_UNKNOWN:'SAFETY', TOOL_PERMISSION_REQUIRED:'AUTHORIZATION', PROFILE_NOT_INITIALIZED:'RUNTIME', PROFILE_NOT_FOUND:'RUNTIME', PROFILE_CONFLICT:'VALIDATION', REQUIRED_SKILL_MISSING:'SAFETY',
   EXTENSION_UNTRUSTED:'SAFETY', PERMISSION_CONFLICT:'AUTHORIZATION', CAPABILITY_UNAVAILABLE:'SAFETY', PROFILE_STALE:'AUTHORIZATION', TOOL_DISABLED:'SAFETY',

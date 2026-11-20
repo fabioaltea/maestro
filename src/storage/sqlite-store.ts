@@ -1,3 +1,6 @@
+import {commitSchedulerState,readSchedulerState} from './scheduler-store.js';
+import type {SchedulerChange,SchedulerQuery} from '../ports/scheduler.js';
+import {SCHEDULER_SCHEMA_VERSION,SCHEDULER_TABLES} from './scheduler-schema.js';
 import {EXECUTION_SCHEMA_VERSION,EXECUTION_TABLES} from './execution-schema.js';
 import {executionEvents} from '../core/execution/events.js';
 import {commitExecutionState,readExecutionState} from './execution-store.js';
@@ -97,7 +100,7 @@ export class SQLiteStore {
     try {
       if (!existed) initializeSchema(database, options.identity!);
       const version = Number(database.pragma('user_version', { simple: true }));
-      if (![4, 5, 6, 7, 8, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
+      if (![4, 5, 6, 7, 8, 9, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
       if (version >= 4) {
         for (const name of DISCOVERY_TABLES) {
           if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
@@ -115,6 +118,9 @@ export class SQLiteStore {
       }
       if(version>=EXECUTION_SCHEMA_VERSION)for(const name of EXECUTION_TABLES){
         if(!this.database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name))throw new Error('STATE_CORRUPT');
+      }
+      if(version>=SCHEDULER_SCHEMA_VERSION)for(const name of SCHEDULER_TABLES){
+        if(!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name))throw new Error('STATE_CORRUPT');
       }
       this.archiveVersion = version;
       if (database.pragma('quick_check', { simple: true }) !== 'ok' || (database.pragma('foreign_key_check') as unknown[]).length !== 0) throw new Error('STATE_CORRUPT');
@@ -223,6 +229,7 @@ export class SQLiteStore {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
+          if(op.namespace==='SCHEDULER')continue;
           if(op.namespace==='EXECUTION'){
             const sessionId=op.result?.sessionId,runId=op.result?.runId;
             if(typeof sessionId==='string'&&typeof runId==='string'){
@@ -269,6 +276,13 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
+  commitSchedulerState(change:SchedulerChange) {
+    return commitSchedulerState(this.writable(),change,this.workflowStore());
+  }
+  readSchedulerState(query:SchedulerQuery) {
+    if(!this.database)throw new Error('STATE_ABSENT');
+    return this.database.transaction(()=>readSchedulerState(this.database!,query)).deferred();
+  }
   commitExecutionState(change:ExecutionChange) {
     return commitExecutionState(this.writable(),change,this.workflowStore(),id=>this.workflowArtifacts().read(id,0,1));
   }

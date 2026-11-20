@@ -1,4 +1,4 @@
-import { needsExecutionUpgrade, upgradeExecution } from '../storage/execution-upgrade.js';
+import { needsSchedulerUpgrade, upgradeScheduler } from '../storage/scheduler-upgrade.js';
 import { SCHEMA_VERSION } from '../storage/schema.js';
 import type { CoreDependencies } from './runtime.js';
 import { reconcileControl } from './recovery.js';
@@ -108,12 +108,12 @@ export async function runControl(intent: BootstrapIntent, dependencies: CoreDepe
     if (lock.status !== 'HELD') { report(false, lock.status === 'BUSY' ? 'BUSY' : 'BLOCKED'); return lock.status === 'BUSY' ? 3 : 4; }
     lease = lock.handle;
     const fresh = !existsSync(paths.stateFile);
-    if (!fresh && intent.action === 'start' && needsExecutionUpgrade(paths)) {
+    if (!fresh && intent.action === 'start' && needsSchedulerUpgrade(paths)) {
       const daemon = createOwnershipLease().tryAcquire(paths.daemonLeaseFile, 'daemon');
       if (daemon.status !== 'HELD') throw new Error('BLOCKED');
       try {
         await checkpoint('control.beforeRegistryUpgrade');
-        upgradeExecution({ paths, controlLease: lease, daemonLease: daemon.handle, deadline });
+        upgradeScheduler({ paths, controlLease: lease, daemonLease: daemon.handle, deadline });
         await checkpoint('control.registryUpgraded');
       } finally { daemon.handle.release(); }
     }
