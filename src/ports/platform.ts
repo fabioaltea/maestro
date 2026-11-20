@@ -91,6 +91,7 @@ export interface LocalTransport {
 import type { PublicResult } from '../protocol/messages.js';
 
 export interface ClientBackend {
+  review?(directory:string, method:string, params:Readonly<Record<string,unknown>>, timeoutMs:number):Promise<PublicResult>;
   scheduler?(directory:string, method:string, params:Readonly<Record<string,unknown>>, timeoutMs:number):Promise<PublicResult>;
   execution?(directory:string, method:string, params:Readonly<Record<string,unknown>>, timeoutMs:number):Promise<PublicResult>;
   profile?(directory:string, method:string, params:Readonly<Record<string,unknown>>, timeoutMs:number):Promise<PublicResult>;

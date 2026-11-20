@@ -357,3 +357,31 @@ export async function inspectScheduler(directory:string,method:string,params:Rea
    return{...base(),result:safe.category==='SAFETY'?'BLOCKED':'ERROR',error:safe};
  }finally{await store?.close();}
 }
+
+export async function inspectReview(directory:string,method:string,params:Readonly<Record<string,unknown>>):Promise<PublicResult>{
+ const {validateReviewParams,REVIEW_READ_METHODS,decodeReviewOperation,reviewMutation}=await import('../protocol/review.js');
+ const {createReviewReader}=await import('./review/read.js');
+ const {reviewResult}=await import('./review/dispatch.js');
+ const {classifyError}=await import('./control-main.js');
+ let store:Awaited<ReturnType<typeof openStorage>>|undefined;
+ let snapshot:import('../ports/storage.js').StoreSnapshot|null=null;
+ const requestId=(method==='review.operation.get'||reviewMutation(method))&&typeof params.requestId==='string'?params.requestId:null;
+ const base=():PublicResult=>({...absentResult(),requestId,storeId:snapshot?.store.storeId??null,instanceId:snapshot?.instance?.instanceId??null,
+   freshness:'LAST_KNOWN',liveness:snapshot?.instance?.lifecycle==='STOPPED'?'ABSENT_VERIFIED':'UNKNOWN'});
+ try{
+   validateReviewParams(method,params);
+   if(!(REVIEW_READ_METHODS as readonly string[]).includes(method))throw new Error('DAEMON_UNAVAILABLE');
+   const paths=await createPlatformPaths().resolveArchive(directory,'read');
+   if(!paths)throw new Error('STATE_ABSENT');
+   store=await openStorage({path:paths.stateFile,readonly:true});
+   snapshot=await store.readSnapshot();
+   if(!snapshot)throw new Error('STATE_ABSENT');
+   if(snapshot.store.schemaVersion<11)throw new Error('REVIEW_NOT_INITIALIZED');
+   const data=await createReviewReader({storage:store,storeId:snapshot.store.storeId,offline:true})(method,params);
+   const operation=data.operation?decodeReviewOperation(data.operation):null;
+   return{...base(),data,result:reviewResult(data),outcome:operation?.outcome==='UNKNOWN'?null:operation?.outcome??null,error:operation?.error??null};
+ }catch(error){
+   const safe=foundationError(classifyError(error));
+   return{...base(),result:safe.category==='SAFETY'?'BLOCKED':'ERROR',error:safe};
+ }finally{await store?.close();}
+}

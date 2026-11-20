@@ -1,3 +1,4 @@
+import {requireReviewEnvelope,validateReviewParams} from './review.js';
 import {requireSchedulerEnvelope,validateSchedulerParams} from './scheduler.js';
 import {requireExecutionEnvelope,validateExecutionParams} from './execution.js';
 import {requireProfileEnvelope,validateProfileParams} from './profile.js';
@@ -38,6 +39,7 @@ export function decodeRequest(frame: string | Uint8Array): RpcRequest {
     || !parsed.params || typeof parsed.params !== 'object' || Array.isArray(parsed.params)) throw new Error('INVALID_REQUEST');
   try { requireUuid(parsed.correlationId); }
   catch { throw new Error('INVALID_REQUEST'); }
+  if(parsed.method.startsWith('review.')){requireReviewEnvelope(parsed);validateReviewParams(parsed.method,parsed.params);}
   if(parsed.method.startsWith('scheduler.')){requireSchedulerEnvelope(parsed);validateSchedulerParams(parsed.method,parsed.params);}
   if(parsed.method.startsWith('execution.')){requireExecutionEnvelope(parsed);validateExecutionParams(parsed.method,parsed.params);}
   if(parsed.method.startsWith('profile.')){requireProfileEnvelope(parsed);validateProfileParams(parsed.method,parsed.params);}

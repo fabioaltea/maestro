@@ -1,3 +1,4 @@
+import {REVIEW_METHODS,reviewMutation,validateReviewParams,decodeReviewOperation} from '../protocol/review.js';
 import {SCHEDULER_METHODS,schedulerMutation,validateSchedulerParams,decodeSchedulerOperation} from '../protocol/scheduler.js';
 import {EXECUTION_METHODS,executionMutation,validateExecutionParams,decodeExecutionOperation} from '../protocol/execution.js';
 import {PROFILE_METHODS,profileMutation,validateProfileParams,decodeProfileOperation} from '../protocol/profile.js';
@@ -40,15 +41,18 @@ export class LocalClient {
   runScheduler(method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions={}):Promise<PublicResult>{
     return this.runScopedWorkflow('scheduler',method,params,options);
   }
-  private async runScopedWorkflow(scope:'workspace'|'environment'|'profile'|'execution'|'scheduler',method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions):Promise<PublicResult>{
-    const environment=scope==='environment',profile=scope==='profile',execution=scope==='execution',scheduler=scope==='scheduler',backend=this.backend[scope];
-    if(!((scheduler?SCHEDULER_METHODS:execution?EXECUTION_METHODS:environment?ENVIRONMENT_METHODS:profile?PROFILE_METHODS:WORKSPACE_METHODS) as readonly string[]).includes(method)||!backend)throw new Error('UNSUPPORTED_VERSION');
-    const mutate=scheduler?schedulerMutation(method):execution?executionMutation(method):profile?profileMutation(method):environment?environmentMutation(method,params):(WORKSPACE_MUTATION_METHODS as readonly string[]).includes(method);
+  runReview(method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions={}):Promise<PublicResult>{
+    return this.runScopedWorkflow('review',method,params,options);
+  }
+  private async runScopedWorkflow(scope:'workspace'|'environment'|'profile'|'execution'|'scheduler'|'review',method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions):Promise<PublicResult>{
+    const environment=scope==='environment',profile=scope==='profile',execution=scope==='execution',scheduler=scope==='scheduler',review=scope==='review',backend=this.backend[scope];
+    if(!((review?REVIEW_METHODS:scheduler?SCHEDULER_METHODS:execution?EXECUTION_METHODS:environment?ENVIRONMENT_METHODS:profile?PROFILE_METHODS:WORKSPACE_METHODS) as readonly string[]).includes(method)||!backend)throw new Error('UNSUPPORTED_VERSION');
+    const mutate=review?reviewMutation(method):scheduler?schedulerMutation(method):execution?executionMutation(method):profile?profileMutation(method):environment?environmentMutation(method,params):(WORKSPACE_MUTATION_METHODS as readonly string[]).includes(method);
     if(options.limit!==undefined||options.after!==undefined||mutate&&Object.hasOwn(params,'requestId')||!mutate&&options.requestId!==undefined)throw new Error('INVALID_REQUEST');
     const requestId=mutate?workspaceUuid(options.requestId):method===`${scope}.operation.get`?workspaceUuid(params.requestId):null;
     const succeededOrBusy=(r:PublicResult)=>r.result==='OK'||r.result==='BUSY'&&r.error===null;
     const supplied=mutate?{...params,requestId}:{...params};
-    (scheduler?validateSchedulerParams:execution?validateExecutionParams:environment?validateEnvironmentParams:profile?validateProfileParams:validateWorkspaceParams)(method,supplied);
+    (review?validateReviewParams:scheduler?validateSchedulerParams:execution?validateExecutionParams:environment?validateEnvironmentParams:profile?validateProfileParams:validateWorkspaceParams)(method,supplied);
     const original=JSON.parse(JSON.stringify(supplied)) as Record<string,unknown>;
     const directory=options.stateDirectory??this.backend.defaultDirectory,timeout=options.timeoutMs??2000;
     if(!Number.isInteger(timeout)||timeout<1||timeout>2000)throw new Error('INVALID_REQUEST');
@@ -57,12 +61,12 @@ export class LocalClient {
       requireWorkspaceEnvelope(r);
       if(r.requestId!==requestId)throw new Error('INVALID_REQUEST');
       if(r.data.operation!==undefined){
-        const op=(scheduler?decodeSchedulerOperation:execution?decodeExecutionOperation:environment?decodeEnvironmentOperation:profile?decodeProfileOperation:decodeWorkspaceOperation)(r.data.operation);
+        const op=(review?decodeReviewOperation:scheduler?decodeSchedulerOperation:execution?decodeExecutionOperation:environment?decodeEnvironmentOperation:profile?decodeProfileOperation:decodeWorkspaceOperation)(r.data.operation);
         if(op.requestId!==requestId||op.outcome!=='UNKNOWN'&&op.outcome!==r.outcome||mutate&&op.action!==method.slice(scope.length+1))throw new Error('INVALID_REQUEST');
       }
       if(r.data.accepted!==undefined){
         if(!mutate||r.data.accepted!==true||r.data.requestId!==requestId)throw new Error('INVALID_REQUEST');
-        if(!(execution||scheduler)||r.data.entityId!==undefined)workspaceUuid(profile||execution||scheduler?r.data.entityId:r.data.workspaceId);
+        if(!(execution||scheduler||review)||r.data.entityId!==undefined)workspaceUuid(profile||execution||scheduler||review?r.data.entityId:r.data.workspaceId);
         if(r.data.stateRevision!==undefined)workspaceRevision(r.data.stateRevision);
       }
       if(mutate&&succeededOrBusy(r)&&r.data.operation===undefined&&r.data.accepted!==true)throw new Error('INVALID_REQUEST');
