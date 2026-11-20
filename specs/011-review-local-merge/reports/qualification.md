@@ -8,3 +8,13 @@
 - Guard creato senza force. Il pin prova ad aprire il lock sulla ref durante checkout implicito. Il percorso qualificato prenota con `worktree add --no-checkout` e materializza il tree con `read-tree` dopo verifica di directory e indice iniziali. Hook ostile non eseguito.
 - Fast-forward tramite CAS sulla sola ref target, poi verifica distinta di indice e file del guard. Fault prima del CAS conserva l'OID precedente, fault dopo CAS osserva il nuovo OID e rifiuta la sincronizzazione se il guard ha lavoro aggiunto.
 - Un target divergente resta intatto. Candidate a due parent, staging registrato nello store, validazioni 007 sul candidate e l'uso del port in un'integrazione reale restano da qualificare.
+
+## T035 — scenari del quickstart
+
+| Scenario | Esito locale | Limite |
+| --- | --- | --- |
+| US1 | PASS per checkpoint pulito, diff sigillato, replay, invalidazione del grant e archivio offline. | Prove dei check 007 sul candidate NOT_RUN. |
+| US2 | PASS per fast-forward confinato su fixture e i fault di ref/guard coperti da G0. | Merge a due parent e pubblicazione con receipt durevole NOT_RUN. |
+| US3 | PASS per invarianti puri di esito, cambi di documentazione e cleanup. | Workflow reale di ricalcolo Discovery e cleanup delegato NOT_RUN. |
+
+Capability della build standard per consultazione, preparazione e creazione snapshot e richiesta modifiche tramite CLI. Snapshot subordinato a un checkpoint 009 corrente e quiescente. Consultazione e diff Desktop sono disponibili live e offline. Il CAS nativo resta confinato ai test finché manca il workflow di integrazione con attori 006/007 registrati. Nessun nuovo pin, login, hosting o review umana eseguita.
