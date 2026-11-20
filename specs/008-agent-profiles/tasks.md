@@ -10,7 +10,7 @@
 ## Phase 1: Setup & G0
 
 - [x] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema7 in `specs/008-agent-profiles/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
-- [ ] T002 Scrivere prove negative di capability/confine in `tests/integration/profile-boundary.test.ts` e fixture in `tests/fixtures/profile-boundary.ts`: Nessuna inferenza. Qualificare parser/resolver e import con bundle ostili/symlink/overflow; tool runtime reale non è certificato da ENABLED e viene qualificato in009. Nessun consenso reale assunto.
+- [x] T002 Scrivere prove negative di capability/confine in `tests/integration/profile-boundary.test.ts` e fixture in `tests/fixtures/profile-boundary.ts`: Nessuna inferenza. Qualificare parser/resolver e import con bundle ostili/symlink/overflow; tool runtime reale non è certificato da ENABLED e viene qualificato in009. Nessun consenso reale assunto.
 - [ ] T003 Implementare la primitiva reale minima di confine in `src/platform/macos/extensions/import-reader.ts` e la porta in `src/ports/profile.ts`, con fixture `tests/fixtures/profile-adapter.ts`; validare su questa primitiva i confini indicati in `specs/008-agent-profiles/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
 - [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/008-agent-profiles/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
 
