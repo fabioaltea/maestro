@@ -33,13 +33,13 @@ export const executionProviderPolicy=base+`(allow file-read-data (subpath (param
 `;
 const codexDirectoryMetadata='(allow mach-lookup (global-name "com.apple.system.opendirectoryd.libinfo"))\n';
 const syntheticLoopback='(allow network-outbound (remote tcp (param "SYNTHETIC_BACKEND")))\n';
-interface Invocation{readonly executable:string;readonly args:readonly string[]}
+export interface ExecutionInvocation{readonly executable:'/usr/bin/sandbox-exec';readonly args:readonly string[]}
 function path(value:string){
  if(!isAbsolute(value)||normalize(value)!==value||!value.isWellFormed()||/[\x00-\x1f\x7f]/.test(value)||Buffer.byteLength(value)>4096)
    throw new Error('EXECUTION_UNSUPPORTED');
  return value;
 }
-function profile(executable:string,policy:string,scope:Record<string,string>):Invocation{
+function profile(executable:string,policy:string,scope:Record<string,string>):ExecutionInvocation{
  if(process.platform!=='darwin'||process.arch!=='arm64')throw new Error('EXECUTION_UNSUPPORTED');
  path(executable);
  const values={EXECUTABLE:executable,...scope};
@@ -71,7 +71,7 @@ export function createExecutionProviderProfile(input:{providerId:ExecutionProvid
 }
 
 /** Qualification only. The caller owns disposable fixtures and the live child handle. */
-export async function runExecutionQualificationProbe(invocation:Invocation,args:readonly string[],cwd:string,env:Readonly<NodeJS.ProcessEnv>={},input=''){
+export async function runExecutionQualificationProbe(invocation:ExecutionInvocation,args:readonly string[],cwd:string,env:Readonly<NodeJS.ProcessEnv>={},input=''){
  if(Buffer.byteLength(input)>32768)throw new Error('RESOURCE_LIMIT');
  const child=spawn(invocation.executable,[...invocation.args,...args],{cwd,env:{PATH:'/usr/bin:/bin',LANG:'C',LC_ALL:'C',...env},
    shell:false,stdio:['pipe','pipe','pipe']});

@@ -10,6 +10,7 @@ export function executionQualificationFixture(initial:ExecutionCapabilityInspect
 }
 
 import {spawn} from 'node:child_process';
+import {codexExecutionInput,codexExecutionThread} from '../../src/providers/codex/execution.js';
 import {createInterface} from 'node:readline';
 
 /** Disposable JSONL protocol client. This fixture never reads an account or repository. */
@@ -46,7 +47,7 @@ export async function appServerFixture(input:{
    try{
      const value=JSON.parse(line);
      const waiting=replies.get(value.id);
-     if(waiting){
+     if(waiting&&value.method===undefined){
        replies.delete(value.id);
        if(value.error)waiting.reject(new Error('FIXTURE_PROTOCOL_ERROR'));else waiting.resolve(value.result);
        return;
@@ -67,9 +68,9 @@ export async function appServerFixture(input:{
  try{
    await request('initialize',{clientInfo:{name:'maestro_fixture',version:'0'},capabilities:{experimentalApi:true}});
    send({method:'initialized'});
-   const started=await request('thread/start',{cwd:input.cwd,model:'maestro-fixture',approvalPolicy:'never',sandbox:'read-only',ephemeral:true,
-     dynamicTools:input.tools.map(name=>({type:'function',name,description:'Fixed synthetic operation',inputSchema:{type:'object',properties:{},additionalProperties:false}}))});
-   await request('turn/start',{threadId:started.thread.id,input:[{type:'text',text:'Use only the compiled fixture operations.',text_elements:[]}]});
+   const started=await request('thread/start',codexExecutionThread({cwd:input.cwd,modelId:'maestro-fixture',
+     tools:input.tools.map(name=>({name,description:'Fixed synthetic operation',inputSchema:{type:'object',properties:{},additionalProperties:false}}))}));
+   await request('turn/start',{threadId:started.thread.id,input:codexExecutionInput(Buffer.from('Use only the compiled fixture operations.'))});
    const status=await completed;
    child.stdin.end();
    const exit=await close;
