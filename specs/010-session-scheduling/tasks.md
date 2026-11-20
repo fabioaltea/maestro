@@ -11,7 +11,7 @@
 
 - [x] T001 Registrare baseline, gate001–004 aperti e dipendenze di schema9 in `specs/010-session-scheduling/reports/validation.md`; preservare modifiche utente e fissare l’ambito del gate senza eseguire campagne lunghe.
 - [x] T002 Scrivere prove negative di capability/confine in `tests/integration/scheduler-boundary.test.ts` e fixture in `tests/fixtures/scheduler-boundary.ts`: Fixture clock/provider e processi locali brevi; almeno due progetti e quattro job, fault per reservation/spawn/release. Nessuna prova600s, volume1000 o consumo reale necessario al gate locale. Nessun consenso reale assunto.
-- [ ] T003 Implementare la primitiva reale minima di confine in `src/domain/scheduler/resource-admission.ts` e la porta in `src/ports/scheduler.ts`, con fixture `tests/fixtures/scheduler-adapter.ts`; validare su questa primitiva i confini indicati in `specs/010-session-scheduling/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
+- [x] T003 Implementare la primitiva reale minima di confine in `src/domain/scheduler/resource-admission.ts` e la porta in `src/ports/scheduler.ts`, con fixture `tests/fixtures/scheduler-adapter.ts`; validare su questa primitiva i confini indicati in `specs/010-session-scheduling/contracts/api.md`; usare solo API/pin supportati e non pubblicare capability prima della composizione.
 - [ ] T004 Eseguire G0 locale sintetico e registrare pin/hash/config, prove negative, limiti e stato in `specs/010-session-scheduling/reports/qualification.md`; capability non dimostrata resta BLOCKED/UNSUPPORTED, qualifica reale distinta e nessun allentamento per superare il gate.
 
 **Checkpoint**: G0 locale necessario alle capacità dipendenti; non certifica autenticazione/provider/remoti reali.
