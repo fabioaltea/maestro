@@ -1,3 +1,4 @@
+import {REVIEW_BRIDGE_METHODS,validateReviewBridge} from './review-contract.ts';
 import {validateSchedulerBridge} from './scheduler-contract.ts';
 import {EXECUTION_BRIDGE_METHODS,validateExecutionBridge} from './execution-contract.ts';
 import {PROFILE_BRIDGE_METHODS,validateProfileBridge} from './profile-contract.ts';
@@ -49,7 +50,8 @@ const extras: Record<string, readonly string[]> = {
 export function validateRequest(method: string, input: unknown): BridgeRequest {
   if (!(METHODS as readonly string[]).includes(method)) throw new Error('INVALID_INPUT');
   const p = record(input);
-  if(method==='listScheduledJobs')validateSchedulerBridge(p);
+  if((REVIEW_BRIDGE_METHODS as readonly string[]).includes(method))validateReviewBridge(method,p);
+  else if(method==='listScheduledJobs')validateSchedulerBridge(p);
   else if ((EXECUTION_BRIDGE_METHODS as readonly string[]).includes(method))validateExecutionBridge(method,p);
   else if ((PROFILE_BRIDGE_METHODS as readonly string[]).includes(method))validateProfileBridge(method,p);
   else if ((ENVIRONMENT_BRIDGE_METHODS as readonly string[]).includes(method))validateEnvironmentBridge(method,p);

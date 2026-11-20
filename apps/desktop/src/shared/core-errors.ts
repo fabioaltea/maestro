@@ -1,5 +1,16 @@
 // Public core v1 safe error catalog; no runtime dependency on core adapters.
 export const CORE_ERRORS = {
+  "REVIEW_NOT_INITIALIZED": {"code": "REVIEW_NOT_INITIALIZED", "message": "Archivio review non inizializzato.", "nextAction": "Avviare il servizio per aggiornare lo schema."},
+  "REVIEW_STALE": {"code": "REVIEW_STALE", "message": "Input della review superati.", "nextAction": "Creare una nuova review dal lavoro corrente."},
+  "CHECKS_FAILED": {"code": "CHECKS_FAILED", "message": "Verifiche richieste fallite.", "nextAction": "Consultare le prove del candidate."},
+  "CHECKS_NOT_RUN": {"code": "CHECKS_NOT_RUN", "message": "Verifiche richieste assenti.", "nextAction": "Eseguire le verifiche sul candidate corrente."},
+  "TARGET_IN_USE": {"code": "TARGET_IN_USE", "message": "Branch target in uso.", "nextAction": "Scegliere un target libero."},
+  "TARGET_MOVED": {"code": "TARGET_MOVED", "message": "La ref target è cambiata.", "nextAction": "Rivedere il target corrente e richiedere un nuovo consenso."},
+  "MERGE_CONFLICT": {"code": "MERGE_CONFLICT", "message": "Conflitto nel candidate locale.", "nextAction": "Conservare il lavoro e risolvere lo staging."},
+  "SOURCE_NOT_QUIESCENT": {"code": "SOURCE_NOT_QUIESCENT", "message": "La source ha modifiche o processi attivi.", "nextAction": "Conservare il lavoro e verificare il checkpoint."},
+  "CANDIDATE_CHANGED": {"code": "CANDIDATE_CHANGED", "message": "Il candidate è cambiato o non è qualificato.", "nextAction": "Verificare il tree corrente e la strategia."},
+  "INTEGRATION_UNKNOWN": {"code": "INTEGRATION_UNKNOWN", "message": "Esito della mutazione locale non dimostrato.", "nextAction": "Riconciliare ref e guard senza ripetere il merge."},
+  "REVIEW_SCOPE_LIMIT": {"code": "REVIEW_SCOPE_LIMIT", "message": "Il diff supera il limite di review.", "nextAction": "Limitare la review o ripartire da uno scope più piccolo."},
   "SCHEDULER_NOT_INITIALIZED": {"code": "SCHEDULER_NOT_INITIALIZED", "message": "Archivio coda non inizializzato.", "nextAction": "Avviare il servizio per aggiornare lo schema."},
   "QUEUE_FULL": {"code": "QUEUE_FULL", "message": "La coda locale è piena.", "nextAction": "Consultare i job prima di accodarne altri."},
   "RESOURCE_WAIT": {"code": "RESOURCE_WAIT", "message": "Risorse locali in attesa.", "nextAction": "Consultare stato e reservation nella coda."},

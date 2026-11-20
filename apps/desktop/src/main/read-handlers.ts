@@ -3,20 +3,21 @@ import type { CorePort } from './ports.ts';
 import { ArchiveContext } from './archive-context.ts';
 import type { BridgeRouter } from './bridge.ts';
 import type { Params, BridgeMethod } from '../shared/bridge-contract.ts';
+const reviewActions:Record<string,string>={listFeatureReviews:'list',getFeatureReview:'get',getReviewDiffPart:'artifact'};
 export class ArchiveReader {
   private context: ArchiveContext;
   private client: CorePort;
   constructor(context: ArchiveContext, client: CorePort) { this.context = context; this.client = client; }
   async read(method: string, params: Params = {}) {
     const c = this.context.capture();
-    const project = ['listProjects', 'getProject'].includes(method), scheduler=method==='listScheduledJobs';
-    const action = method === 'listProjects' ? 'list' : method === 'getProject' ? 'get' : method === 'readEvents' ? 'events' : scheduler?'queue.list':method;
-    if (!['status', 'diagnostics', 'listProjects', 'getProject', 'readEvents', 'listScheduledJobs'].includes(method)) throw new Error('INVALID_INPUT');
+    const project = ['listProjects', 'getProject'].includes(method), scheduler=method==='listScheduledJobs',review=Object.hasOwn(reviewActions,method);
+    const action = method === 'listProjects' ? 'list' : method === 'getProject' ? 'get' : method === 'readEvents' ? 'events' : scheduler?'queue.list':review?reviewActions[method]!:method;
+    if (!review&&!['status', 'diagnostics', 'listProjects', 'getProject', 'readEvents', 'listScheduledJobs'].includes(method)) throw new Error('INVALID_INPUT');
     for (let attempt = 0; attempt < 5; attempt++) {
       if (attempt) await new Promise(resolve => setTimeout(resolve, attempt * 50));
       if (this.context.capture().view.selectionEpoch !== c.view.selectionEpoch) throw new Error('STALE_CONTEXT');
       try {
-        const result = await this.client.call({ namespace: project ? 'project' : scheduler?'scheduler':'daemon', action, archive: c.path, params, scope: 'view' });
+        const result = await this.client.call({ namespace: project ? 'project' : scheduler?'scheduler':review?'review':'daemon', action, archive: c.path, params, scope: 'view' });
         this.context.apply(c, result); return result;
       } catch (error) { if (!(error instanceof Error) || error.message !== 'LOCAL_BUSY' || attempt === 4) throw error; }
     }

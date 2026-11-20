@@ -1,3 +1,4 @@
+import {validateReviewData} from '../shared/review-contract.ts';
 import {validateSchedulerQueue} from '../shared/scheduler-contract.ts';
 import {EXECUTION_MUTATIONS,validateExecutionData} from '../shared/execution-contract.ts';
 import {buildExecutionCliArgs,executionCliInput} from './execution-cli.ts';
@@ -25,6 +26,13 @@ export function isMutation(c: CliCommand) { return c.namespace==='execution'?(EX
 export function buildCliArgs(c: CliCommand): string[] {
   if (!isAbsolute(c.archive) || c.archive.includes('\0')) throw new Error('INVALID_INPUT');
   if (c.namespace === 'feature') return buildFeatureCliArgs(c);
+  if(c.namespace==='review'){
+    const p=c.params??{},selectors:Record<string,string>={list:'projectId',get:'reviewId',artifact:'artifactId'};
+    if(!Object.hasOwn(selectors,c.action)||c.requestId!==undefined)throw new Error('INVALID_INPUT');
+    const field=selectors[c.action]!;
+    keys(p,[field,...(c.action==='get'?[]:['cursor'])]);
+    return ['review',c.action,`--state-dir=${c.archive}`,'--json',...(p.cursor===undefined?[]:[`--cursor=${text(p.cursor,1024)}`]),'--',uuid(p[field])];
+  }
   if(c.namespace==='scheduler'){
     const p=c.params??{};
     if(c.action!=='queue.list'||c.requestId!==undefined)throw new Error('INVALID_INPUT');
@@ -62,7 +70,7 @@ export function buildCliArgs(c: CliCommand): string[] {
   if (positional.length) args.push('--', ...positional);
   return args;
 }
-const safeFields = new Set(('protocolVersion capabilities schedulerVersion schedulerMethods executionVersion executionMethods profileVersion profileMethods entityId environmentVersion environmentMethods workspaceVersion workspaceMethods featureVersion featureMethods discoveryVersion discoveryMethods projectRegistryVersion scope from to generation correlationId redactedFields resourceIssues resourceIssuesTruncated referencePath checkoutAvailability repositoryIdentityStatus hasCommits headKind currentBranch headOid objectFormat baseOid fileStatusScope limitations freshness observedInstanceId startedAt identityState checkoutState referenceState status lifecycle ready observedAt requestedAt completedAt accepted effect action requestId storeId instanceId operationId projectId displayName referenceCheckout baseBranch baseState configRevision expectedRevision observedConfigRevision observationRevision registryRevision createdAt updatedAt removedAt observation availability identity trackedChanges untrackedChanges conflicts error code category cause message nextAction retryable persisted operation result outcome phase projects project tombstone count nextCursor cursor versions package node protocol schema platform os arch health observability resources resourcesTruncated resourceId kind releaseState projectRegistry activeProjects tombstones operations queue active pending capacity oldestWaitMs maxQueueWaitMs fenced total busy blocked failures limits highWater firstAvailable nextAfter records truncated events eventId seq occurredAt type payload pendingBytes degraded errorCode usage journalBytes logBytes walBytes shmBytes outboxMetadataBytes totalBytes temporaryBytes logLimitBytes journalLimitBytes').split(' '));
+const safeFields = new Set(('protocolVersion capabilities reviewVersion reviewMethods schedulerVersion schedulerMethods executionVersion executionMethods profileVersion profileMethods entityId reviewId jobId sessionId runId state stateRevision watermark environmentVersion environmentMethods workspaceVersion workspaceMethods featureVersion featureMethods discoveryVersion discoveryMethods projectRegistryVersion scope from to generation correlationId redactedFields resourceIssues resourceIssuesTruncated referencePath checkoutAvailability repositoryIdentityStatus hasCommits headKind currentBranch headOid objectFormat baseOid fileStatusScope limitations freshness observedInstanceId startedAt identityState checkoutState referenceState status lifecycle ready observedAt requestedAt completedAt accepted effect action requestId storeId instanceId operationId projectId displayName referenceCheckout baseBranch baseState configRevision expectedRevision observedConfigRevision observationRevision registryRevision createdAt updatedAt removedAt observation availability identity trackedChanges untrackedChanges conflicts error code category cause message nextAction retryable persisted operation result outcome phase projects project tombstone count nextCursor cursor versions package node protocol schema platform os arch health observability resources resourcesTruncated resourceId kind releaseState projectRegistry activeProjects tombstones operations queue active pending capacity oldestWaitMs maxQueueWaitMs fenced total busy blocked failures limits highWater firstAvailable nextAfter records truncated events eventId seq occurredAt type payload pendingBytes degraded errorCode usage journalBytes logBytes walBytes shmBytes outboxMetadataBytes totalBytes temporaryBytes logLimitBytes journalLimitBytes').split(' '));
 export function projectSafe(value: unknown, depth = 0): unknown {
   if (depth > 12) throw new Error('CLIENT_PROTOCOL_ERROR');
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
@@ -84,7 +92,7 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
       || (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome)))) throw new Error();
     for (const k of ['requestId', 'storeId', 'instanceId']) if (p[k] !== null) uuid(p[k]);
     if (c.requestId && p.requestId !== c.requestId) throw new Error();
-    const data = c.namespace==='scheduler'?(p.result==='OK'?validateSchedulerQueue(p.data,c.params?.projectId):{}):c.namespace==='execution'?validateExecutionData(c.action,p.data):c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    const data = c.namespace==='review'?(p.result==='OK'?validateReviewData(c.action,p.data,c.params??{}):{}):c.namespace==='scheduler'?(p.result==='OK'?validateSchedulerQueue(p.data,c.params?.projectId):{}):c.namespace==='execution'?validateExecutionData(c.action,p.data):c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
     if(c.namespace==='execution'){
       if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
       if(c.action==='get'&&p.result==='OK'&&record(data.session).sessionId!==c.params?.sessionId)throw new Error();

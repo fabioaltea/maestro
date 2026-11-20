@@ -1,3 +1,4 @@
+import {installReview} from './review.ts';
 import {installScheduler} from './scheduler.ts';
 import {installExecution} from './execution.ts';
 import {installProfile} from './profile.ts';
@@ -60,6 +61,7 @@ else {
     installProfile(router,archiveContext,lifecycle.actions);
     installExecution(router,archiveContext,lifecycle.actions);
     installScheduler(router,archiveContext);
+    installReview(router,archiveContext);
     installActivityHistory(router, archiveContext);
     clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
     archiveContext.onChange(() => clients?.archiveChanged());

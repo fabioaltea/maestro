@@ -177,7 +177,7 @@ export class ActionService {
     if(resolver===null)throw new Error('CONFIRMATION_REQUIRED');
     const resolved=resolver?await resolver(action,params):null;
     const command: CliCommand = resolved ? resolved.command : action.startsWith('daemon.') ? { namespace: 'daemon', action: action.slice(7), archive: c.path } : this.resolveProject ? await this.resolveProject(action, params) : (() => { throw new Error('CONFIRMATION_REQUIRED'); })();
-    if(command.namespace==='scheduler')throw new Error('INVALID_INPUT');
+    if(command.namespace==='scheduler'||command.namespace==='review')throw new Error('INVALID_INPUT');
     const namespace = command.namespace === 'daemon' ? 'foundation' : command.namespace, receiptAction = command.namespace === 'discovery' ? discoveryReceiptAction(command.action) : command.action;
     if (blocksMutation(await this.options.receipts.list(), c.path, namespace, receiptAction, command.projectId ?? (typeof command.params?.projectId === 'string' ? command.params.projectId : undefined))) throw new Error('OPERATION_UNCERTAIN');
     const checked = await this.preflight(command);
@@ -193,7 +193,7 @@ export class ActionService {
     try {
       await this.preflight(token.command);
       if (canonical(this.scope()) !== canonical(scope)) throw new Error('STALE_CONTEXT');
-      if(token.command.namespace==='scheduler')throw new Error('INVALID_INPUT');
+      if(token.command.namespace==='scheduler'||token.command.namespace==='review')throw new Error('INVALID_INPUT');
       const c = this.options.context.capture(), namespace = token.command.namespace === 'daemon' ? 'foundation' : token.command.namespace;
       const receiptAction = namespace === 'discovery' ? discoveryReceiptAction(token.command.action) : token.command.action;
       const projectId = token.command.projectId ?? (typeof token.command.params?.projectId === 'string' ? token.command.params.projectId : null);
