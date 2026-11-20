@@ -49,7 +49,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  db.prepare("INSERT INTO workflow_operations(request_id,namespace,action,payload_hash,canonical_intent,owner_uid,owning_instance_id,phase,outcome,target_id,accepted_at) VALUES(?,?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?)").run(a.requestId,i.namespace,i.action,hash,a.canonicalIntent,i.ownerUid,a.instanceId,i.targetId,new Date(now()).toISOString());
  if(granted)db.prepare('UPDATE workflow_grants SET consumed_by_request_id=? WHERE grant_id=?').run(a.requestId,a.grantId);
  setup?.();return{operation:operation(a.requestId)!,inserted:true};
- },i.action==='cancel'||i.namespace==='ARTIFACT'&&i.action==='discard',{requestIds:[a.requestId]});
+ },i.action==='cancel'||i.namespace==='EXECUTION'&&i.action==='reconcile'||i.namespace==='ARTIFACT'&&i.action==='discard',{requestIds:[a.requestId]});
  }
  function complete(requestId:string,result:Readonly<Record<string,unknown>>|null,error:string|null=null,outcome:'SUCCEEDED'|'FAILED'|'BLOCKED'|'INTERRUPTED'|'UNKNOWN'='SUCCEEDED'){
  const old=operation(requestId);if(!old)throw new Error('OPERATION_NOT_FOUND');if(old.phase==='FINALIZED')return old;
