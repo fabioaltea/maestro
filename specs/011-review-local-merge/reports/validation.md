@@ -48,6 +48,10 @@ Undici test di regressione core PASS. Il percorso Git divergente lascia entrambi
 
 Build, lint e cinque prove native/contratto mirate PASS. Il writer registra `REF_INTENT`, riconosce il CAS tramite la riga di reflog dell’UUID, persiste `REF_UPDATED` e la prova `GUARD_SYNCED`, quindi finalizza il ledger. La build standard compone il servizio quando sono disponibili il mutatore Git, le risorse possedute 006 e la validazione 007. I conflitti e le attribuzioni incerte conservano i worktree.
 
+## Ripresa T025
+
+Cinque contratti CLI/client PASS. L’help espone candidate, approvazione e integrazione. La consultazione dell’UUID originale riporta la fase del cambio ref e la relativa prova. Un reply loss porta a una query dell’operazione senza ripetere `integrate`.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

@@ -26,9 +26,13 @@ export function createReviewReader({storage,storeId,offline}:{storage:StoragePor
    const next=(target:string,revision:string|undefined,offset:number)=>encode({storeId,method,target,revision,offset});
    let result:Record<string,unknown>;
    if(method==='review.operation.get'){
-     const {operation}=await storage.readFeatureState({kind:'operation',id:String(p.requestId)});
+     const requestId=String(p.requestId),{operation}=await storage.readFeatureState({kind:'operation',id:requestId});
      if(!operation)throw new Error('OPERATION_NOT_FOUND');
      result={operation:publicReviewOperation(operation)};
+     if(operation.action==='integrate'){
+       const {integration}=await query({kind:'integration',id:requestId});
+       if(integration)result.integration={integrationId:requestId,phase:integration.phase,resultingOid:integration.resultingOid,proof:integration.proof};
+     }
    }else if(method==='review.get'){
      const reviewId=String(p.reviewId),page=cursor(reviewId);
      const {review}=await query({kind:'review',id:reviewId});

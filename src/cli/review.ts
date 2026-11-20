@@ -14,6 +14,7 @@ const help=`maestro review list PROJECT [--limit 1..20] [--cursor CURSOR]
 maestro review get REVIEW [--cursor CURSOR] | operation REQUEST | artifact ARTIFACT [--cursor CURSOR]
 maestro review prepare --input-file FILE | --input-stdin
 maestro review create|validate|request-changes --grant UUID --request-id UUID
+maestro review candidate.prepare|approve|integrate --grant UUID --request-id UUID
 --state-dir ABS --json --timeout-ms 1..2000
 `;
 const reads:Record<string,readonly [string,string]>={list:['list','projectId'],get:['get','reviewId'],

@@ -68,6 +68,7 @@ export class LocalClient {
         if(!mutate||r.data.accepted!==true||r.data.requestId!==requestId)throw new Error('INVALID_REQUEST');
         if(!(execution||scheduler||review)||r.data.entityId!==undefined)workspaceUuid(profile||execution||scheduler||review?r.data.entityId:r.data.workspaceId);
         if(r.data.stateRevision!==undefined)workspaceRevision(r.data.stateRevision);
+        if(review&&r.data.operationId!==undefined&&workspaceUuid(r.data.operationId)!==requestId)throw new Error('INVALID_REQUEST');
       }
       if(mutate&&succeededOrBusy(r)&&r.data.operation===undefined&&r.data.accepted!==true)throw new Error('INVALID_REQUEST');
       if(method==='workspace.cleanup.get'&&r.freshness==='LAST_KNOWN'&&r.data.eligible===true)throw new Error('INVALID_REQUEST');
