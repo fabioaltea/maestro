@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import {createHash,randomUUID} from 'node:crypto';
-import {chmod,readFile,writeFile} from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
+import {chmod,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {setTimeout as wait} from 'node:timers/promises';
 import type {TestContext} from 'node:test';
@@ -15,11 +15,11 @@ import {createWorkspaceLeases,verifyOwnedWorktree} from '../../src/core/workspac
 import {createEnvironmentRuntime} from '../../src/core/environments/runtime.js';
 import {createEnvironmentPlanning} from '../../src/core/environments/plan.js';
 import {createEnvironmentInspector} from '../../src/platform/macos/environment/inspect.js';
+import {createExecutionCheckpointCapture} from '../../src/platform/macos/git/execution-commit.js';
 import {createExecutionCommandProfile,runExecutionQualificationProbe} from '../../src/platform/macos/execution/runtime.js';
 import {workspaceRuntimeFixture} from './workspace-runtime.js';
 import {compileBoundaryProbe} from './discovery-boundary.js';
 
-const hash=(data:Uint8Array)=>createHash('sha256').update(data).digest('hex');
 export async function executionRuntimeFixture(t:TestContext,options:{question?:boolean;output?:string;unknownExit?:boolean;beforeGo?:()=>void}={}){
  const f=await workspaceRuntimeFixture(t),created=await f.prepare(),workspaceId=created.data.summary.workspaceId;
  assert.equal((await f.submit(created.data.grantId)).operation?.outcome,'SUCCEEDED');
@@ -29,6 +29,7 @@ export async function executionRuntimeFixture(t:TestContext,options:{question?:b
  await writeFile(target,'fixture original',{mode:0o600});
  const probe=await compileBoundaryProbe(f.repositories.directory);
  const owned=(worktree:typeof workspace)=>verifyOwnedWorktree(f,f.storeId,worktree);
+ const capture=createExecutionCheckpointCapture(f.mutator,owned);
  const eligibility=(peer:typeof f.peer,projectId:string)=>f.service.currentEligibility(peer,projectId) as Promise<DiscoveryEligibility>;
  const call=(runtime:{dispatch:typeof f.runtime.dispatch},method:string,params:Record<string,unknown>)=>
    runtime.dispatch({protocolVersion:1,correlationId:randomUUID(),method,params},f.peer,f.store.readSnapshot()!);
@@ -63,8 +64,8 @@ export async function executionRuntimeFixture(t:TestContext,options:{question?:b
  const receivedAnswers:string[]=[];
  const processProofs=new Map<string,ExecutionExitProof>();
  const host:ExecutionRuntimePort={
-   async input({workspace}){await owned(workspace);return{treeDigest:hash(await readFile(target)),profileBytes:7,bytes:Buffer.from('fixture input')};},
-   async checkpoint(workspace){await owned(workspace);const patch=await readFile(target);return{treeDigest:hash(patch),patch};},
+   async input({workspace}){return{treeDigest:(await capture(workspace)).treeDigest,profileBytes:7,bytes:Buffer.from('fixture input')};},
+   checkpoint:capture,
    async observe(identity){return processProofs.get(identity.runId)??null;},
    async open({identity,output,question,permissions}){
      assert.deepEqual(permissions,['WORKSPACE_READ','WORKSPACE_WRITE']);

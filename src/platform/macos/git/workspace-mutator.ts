@@ -1,3 +1,4 @@
+import {EXECUTION_LIMITS} from '../../../domain/execution/model.js';
 import {workspaceBranchRef} from '../../../domain/workspaces/provision.js';
 import {requireMatchingWorktree} from '../../../domain/workspaces/ownership.js';
 import {requireCleanupEffect,requireCleanupTarget} from '../../../domain/workspaces/cleanup.js';
@@ -294,6 +295,47 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       if(observed.branchOid!==after.branchOid||observed.baseOid!==after.baseOid)throw new Error('REPOSITORY_UNSTABLE');
       await verify(input,scope,fingerprint,deadline);
       return{disk:after,status};
+    },
+    async captureCheckpoint(input,expected,deadline){
+      const {scope,fingerprint}=await prepare(input,deadline);
+      const before=(await disk(scope,deadline)).worktree;
+      requireMatchingWorktree(expected,before);
+      const collect=async()=>{
+        const gitScope=['-C',scope.checkout];
+        const changes=await git(scope,deadline,[...gitScope,'diff','--binary','--no-ext-diff','--no-textconv','--no-renames',before.headOid,'--']);
+        const unmerged=await git(scope,deadline,[...gitScope,'ls-files','--unmerged','-z','--']);
+        const files=await git(scope,deadline,[...gitScope,'ls-files','--others','--exclude-standard','-z','--']);
+        if([changes,files,unmerged].some(result=>result.code||result.stderr))throw new Error('WORKSPACE_UNSAFE');
+        if(unmerged.stdout)throw new Error('GIT_CONFLICT');
+        const maximum=EXECUTION_LIMITS.checkpointBytes;
+        let bytes=Buffer.byteLength(changes.stdout)+Buffer.byteLength(files.stdout);
+        if(bytes>maximum)throw new Error('CONTEXT_LIMIT');
+        const additions=[];
+        for(const name of files.stdout.split('\0').filter(Boolean)){
+          check(deadline);
+          if(!name.isWellFormed()||/[\x00-\x1f\x7f\uFFFD]/.test(name)||
+             name.split('/').some(part=>!part||['.','..','.git'].includes(part.toLowerCase())))throw new Error('WORKSPACE_UNSAFE');
+          const file=join(scope.checkout,name);
+          if(await realpath(file)!==file)throw new Error('WORKSPACE_UNSAFE');
+          const info=await pathInfo(file);
+          if(!info||!info.isFile()||info.uid!==BigInt(process.getuid!())||(info.mode&0o022n)!==0n)throw new Error('WORKSPACE_UNSAFE');
+          if(info.size>BigInt(maximum-bytes))throw new Error('CONTEXT_LIMIT');
+          const content=await stableFile(file,maximum-bytes);
+          if(!content)throw new Error('REPOSITORY_UNSTABLE');
+          bytes+=content.length;
+          additions.push({path:name,mode:(info.mode&0o111n)===0n?'100644':'100755',base64:content.toString('base64')});
+        }
+        const patch=Buffer.from(JSON.stringify({version:1,baseOid:before.headOid,trackedDiff:changes.stdout,untracked:additions}));
+        if(patch.length>maximum)throw new Error('CONTEXT_LIMIT');
+        return patch;
+      };
+      const patch=await collect();
+      if(!patch.equals(await collect()))throw new Error('REPOSITORY_UNSTABLE');
+      const after=(await disk(scope,deadline)).worktree;
+      requireMatchingWorktree(before,after);
+      if(after.headOid!==before.headOid)throw new Error('CHECKPOINT_STALE');
+      await verify(input,scope,fingerprint,deadline);
+      return{treeDigest:hash(patch),patch};
     },
     async createBranch(input,deadline){
       const {scope,fingerprint}=await prepare(input,deadline);

@@ -38,6 +38,8 @@ export interface WorkspacePort {
   resolveBase(target:Omit<WorkspaceMutationTarget,'baseOid'>,deadline:Deadline):Promise<string>;
   observe(target:WorkspaceMutationTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
   inspect(target:WorkspaceMutationTarget,deadline:Deadline):Promise<{readonly disk:WorkspaceDiskObservation;readonly status:WorkspaceWorkingStatus|null}>;
+  captureCheckpoint?(target:WorkspaceMutationTarget,expected:NonNullable<WorkspaceDiskObservation['worktree']>,deadline:Deadline):
+    Promise<import('./execution-runtime.js').ExecutionCheckpointInput>;
   createBranch(target:WorkspaceMutationTarget,deadline:Deadline):Promise<void>;
   addWorktree(target:WorkspaceMutationTarget,deadline:Deadline):Promise<WorkspaceDiskObservation>;
   verifyIntegration(target:WorkspaceMutationTarget,headOid:string,integrated:WorkspaceCleanupTarget,deadline:Deadline):Promise<boolean>;

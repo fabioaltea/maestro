@@ -1,3 +1,4 @@
+import {requireExecutionIdentity} from '../../domain/execution/model.js';
 import type {ExecutionRun} from '../../ports/execution.js';
 import type {ExecutionContext} from './runtime.js';
 
@@ -19,7 +20,14 @@ export function createExecutionRecovery(options:ExecutionContext){
    if(!session)throw new Error('STATE_CORRUPT');
    const held=(await storage.readWorkspaceState!({kind:'active-lease',id:session.workspaceId})).lease;
    const noLaunch=run.phase==='PREPARED'&&(!held||held.holderId!==run.runId);
-   const proof=run.identity&&dependencies?.host?await dependencies.host.observe(run.identity).catch(()=>null):null;
+   const proof=run.identity&&dependencies?.host?await (async()=>{
+     try{
+       const proof=await dependencies.host!.observe(run.identity!);
+       if(!proof||proof.verified!==true)return null;
+       requireExecutionIdentity(run.identity!,proof.identity);
+       return proof;
+     }catch{return null;}
+   })():null;
    const beforeGo=run.phase==='PREPARED'||run.phase==='HOST_READY';
    const result=await commit({kind:'end',runId:run.runId,instanceId,generation:run.generation,proof:beforeGo?null:proof,
      noLaunch:noLaunch||beforeGo&&proof!==null,recovering:true,error:'INTERRUPTED'});
