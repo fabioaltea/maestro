@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
 import { seedWaitingDiscovery } from '../fixtures/discovery-session.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop } from '../fixtures/electron.ts';
 test('review loads verified chunks, renders hostile text inert and binds keyboard confirmation to one revision', async () => {
   const f = await createScratch();
   try {
     const seed = await seedWaitingDiscovery(f, true), before = await f.snapshot(seed.repo.path), { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click(); await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Discovery', exact: true }).click();
+      await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Conoscenza del progetto', exact: true })).toBeVisible();
       const approve = page.getByRole('button', { name: 'Approva questa revisione', exact: true }); await expect(approve).toBeDisabled();
       await expect(page.locator('.discovery-review')).toContainText('<script>Contenuto sintetico'); expect(await page.locator('.discovery-review script').count()).toBe(0);

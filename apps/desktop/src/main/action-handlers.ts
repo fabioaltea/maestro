@@ -1,4 +1,5 @@
 import {executionBridgeAction,validateExecutionData} from '../shared/execution-contract.ts';
+import { createHash, randomUUID } from 'node:crypto';
 import {reviewBridgeAction,validateReviewData} from '../shared/review-contract.ts';
 import {profileBridgeAction,validateProfileData} from '../shared/profile-contract.ts';
 import {validateFeatureAction,validateFeatureData} from '../shared/feature-contract.ts';
@@ -11,6 +12,7 @@ import type { ConfirmationScope } from './confirmations.ts';
 import { ReceiptStore } from './receipt-store.ts';
 import type { Receipt } from './receipt-store.ts';
 import { ArchiveContext } from './archive-context.ts';
+import { ArchiveReader } from './read-handlers.ts';
 import type { CliCommand, CorePort } from './ports.ts';
 import { unknownResult } from './core-cli.ts';
 import { validateDiscoveryAction, discoveryReceiptAction } from '../shared/discovery-contract.ts';
@@ -82,13 +84,17 @@ export async function settleReceipt(store: ReceiptStore, receipt: Receipt, resul
   }
   if (receipt.namespace === 'discovery') return settleDiscoveryReceipt(store, receipt, result);
   const operation = result.data.operation ? record(result.data.operation) : null;
-  const action = receipt.namespace === 'project' ? receipt.action.toUpperCase() : receipt.action;
+  const action = receipt.namespace === 'project' ? (['open', 'create'].includes(receipt.action) ? 'REGISTER' : receipt.action.toUpperCase()) : receipt.action;
   if (result.requestId !== receipt.requestId || (receipt.storeId && result.storeId && result.storeId !== receipt.storeId)
     || (operation && (operation.requestId !== receipt.requestId || operation.action !== action))) return await store.update(receipt.requestId, { phase: 'UNKNOWN' });
+  if (receipt.namespace === 'project' && !operation && result.data.accepted === false && result.error) {
+    return store.update(receipt.requestId, { phase: 'TERMINAL', outcome: 'BLOCKED', errorCode: result.error.code });
+  }
   if (!operation || result.result === 'UNKNOWN_OUTCOME' || result.outcome === null) return await store.update(receipt.requestId, { phase: 'UNKNOWN', errorCode: result.error?.code ?? 'UNKNOWN_OUTCOME' });
   const terminal = ['SUCCEEDED', 'FAILED', 'INTERRUPTED'].includes(result.outcome) || (receipt.namespace === 'project' && result.outcome === 'BLOCKED');
   return await store.update(receipt.requestId, { phase: terminal ? 'TERMINAL' : 'RECONCILING', outcome: result.outcome,
-    errorCode: result.error?.code ?? null, ...(result.storeId ? { storeId: result.storeId } : {}) });
+    errorCode: result.error?.code ?? null, ...(result.storeId ? { storeId: result.storeId } : {}),
+    ...(receipt.namespace === 'project' && typeof operation.projectId === 'string' ? { projectId: operation.projectId } : {}) });
 }
 export class ActionService {
   readonly options: Options;
@@ -103,13 +109,28 @@ export class ActionService {
   resolveEnvironment: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   private confirming = false;
   constructor(options: Options) { this.options = options; this.confirmations = options.confirmations ?? new Confirmations(); }
+  async enterRepository(action: 'open' | 'create', path: string, selected: ReturnType<ArchiveContext['capture']>) {
+    const requestId = randomUUID(), archive = selected.path;
+    if (this.options.context.current?.view.selectionEpoch !== selected.view.selectionEpoch) throw new Error('STALE_CONTEXT');
+    const receipt = await this.options.receipts.create({ requestId, namespace: 'project', action, archivePath: archive,
+      storeId: selected.view.storeId, projectId: null, expectedRevision: null,
+      intentHash: createHash('sha256').update(canonical({ action, path })).digest('hex') });
+    let result: PublicResult;
+    try {
+      if (this.options.context.current?.view.selectionEpoch !== selected.view.selectionEpoch) throw new Error('STALE_CONTEXT');
+      result = await this.options.core.call({ namespace: 'project', action, archive, requestId, params: { path } });
+    } catch { result = unknownResult(requestId); }
+    await settleReceipt(this.options.receipts, receipt, result);
+    return result;
+  }
   private scope(): ConfirmationScope {
     const c = this.options.context.capture(); return { ...this.options.owner(), epoch: c.view.selectionEpoch, archiveHandle: c.view.archiveHandle, storeId: c.view.storeId };
   }
   private async preflight(command: CliCommand) {
     const c = this.options.context.capture();
     if (c.path !== command.archive) throw new Error('STALE_CONTEXT');
-    const status = await this.options.core.call({ namespace: 'daemon', action: 'status', archive: c.path });
+    const reader = new ArchiveReader(this.options.context, this.options.core);
+    const status = await reader.read('status');
     this.options.context.apply(c, status);
     if (status.result !== 'OK' || (command.namespace === 'daemon' && command.action === 'start' ? !['LIVE_VERIFIED', 'ABSENT_VERIFIED'].includes(status.liveness) : status.liveness !== 'LIVE_VERIFIED')) throw new Error(status.error?.code ?? 'DAEMON_UNAVAILABLE');
     if (command.namespace === 'feature') {const cap=record(status.data.capabilities);if(cap.featureVersion!==1||!Array.isArray(cap.featureMethods)||!cap.featureMethods.includes(command.action.startsWith('artifact.import')?'feature.artifact.seal':`feature.${command.action}`))throw new Error('UNSUPPORTED_VERSION');if(command.featureId&&command.action!=='create'){const d=await this.options.core.call({namespace:'feature',action:'get',archive:c.path,params:{featureId:command.featureId}});this.options.context.apply(c,d);if(d.result!=='OK'||record(d.data.feature).stateRevision!==command.expectedStateRevision)throw new Error('REVISION_CONFLICT');}}
@@ -172,14 +193,14 @@ export class ActionService {
     }
     let project: Params | null = null;
     if (command.namespace === 'project' && command.action !== 'register') {
-      const detail = await this.options.core.call({ namespace: 'project', action: 'get', archive: c.path, params: { projectId: command.params?.projectId } });
+      const detail = await reader.read('getProject', { projectId: command.params?.projectId });
       this.options.context.apply(c, detail);
       if (detail.result !== 'OK') throw new Error(detail.error?.code ?? 'PROJECT_NOT_FOUND');
       project = record(detail.data.project);
       if (['update', 'remove'].includes(command.action) && project.configRevision !== command.params?.expectedRevision) throw new Error('REVISION_CONFLICT');
     }
     if (command.namespace === 'discovery' && ['start', 'preview'].includes(command.action)) {
-      const detail = await this.options.core.call({ namespace: 'project', action: 'get', archive: c.path, params: { projectId: command.projectId ?? command.params?.projectId } });
+      const detail = await reader.read('getProject', { projectId: command.projectId ?? command.params?.projectId });
       this.options.context.apply(c, detail); if (detail.result !== 'OK') throw new Error(detail.error?.code ?? 'PROJECT_NOT_FOUND');
       project = record(detail.data.project); if (project.configRevision !== (command.expectedRevision ?? command.params?.expectedConfigRevision)) throw new Error('REVISION_CONFLICT');
     }
@@ -233,17 +254,19 @@ export class ActionService {
       if (blocksMutation(await this.options.receipts.list(), c.path, namespace, receiptAction, projectId ?? undefined)) throw new Error('OPERATION_UNCERTAIN');
       const receipt = await this.options.receipts.create({ requestId: token.requestId, namespace, action: receiptAction, archivePath: c.path, storeId: c.view.storeId,
         projectId, ...(token.command.executionTarget!==undefined?{executionTarget:token.command.executionTarget}:{}), ...(token.command.reviewTarget?{reviewTarget:token.command.reviewTarget}:{}), ...(token.command.featureId?{featureId:token.command.featureId}:{}), ...(token.command.profileId?{profileId:token.command.profileId}:{}), ...(token.command.workspaceId?{workspaceId:token.command.workspaceId}:{}), expectedRevision: token.command.expectedRevision ?? token.command.expectedStateRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
+      let result: PublicResult;
+      let final: Receipt;
       try {
         if (canonical(this.scope()) !== canonical(scope)) throw new Error('STALE_CONTEXT');
-        const result = await this.options.core.call(token.command);
-        const final = await settleReceipt(this.options.receipts, receipt, result);
-        if (final.phase === 'UNKNOWN') return { receipt: final, result: unknownResult(token.requestId) };
-        this.options.context.apply(c, result);
-        return { receipt: final, result };
+        result = await this.options.core.call(token.command);
+        final = await settleReceipt(this.options.receipts, receipt, result);
       } catch {
         const unknown = await this.options.receipts.update(token.requestId, { phase: 'UNKNOWN', errorCode: 'UNKNOWN_OUTCOME' }).catch(() => receipt);
         return { receipt: unknown, result: unknownResult(token.requestId) };
       }
+      if (final.phase === 'UNKNOWN') return { receipt: final, result: unknownResult(token.requestId) };
+      this.options.context.apply(c, result);
+      return { receipt: final, result };
     } finally { this.confirming = false; }
   }
 }

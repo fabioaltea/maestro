@@ -8,18 +8,19 @@ const labels:Record<string,string>={QUEUED:'In coda',RESERVED:'Riservato',RUNNIN
  PAUSED:'In pausa',CANCELLING:'Annullamento in corso',CANCELLED:'Annullato',SUCCEEDED:'Completato',FAILED:'Fallito',RECONCILING:'Da riconciliare'};
 
 export function SessionQueue({desktop}:{desktop:Desktop}){
+ const projectId=desktop.context?.activeProjectId;
  const {core}=desktop,sequence=useRef(0);
  const [queue,setQueue]=useState<Params|null>(null),[loading,setLoading]=useState(false);
  async function load(cursor?:string){
    const version=++sequence.current;setLoading(true);
    try{
-     const r=await core('listScheduledJobs',cursor?{cursor}:{});
+     const r=await core('listScheduledJobs',{...(cursor?{cursor}:{}),...(projectId?{projectId}:{})});
      if(version!==sequence.current||r?.result!=='OK')return;
      setQueue(previous=>({...r.data,archiveFreshness:r.freshness,...(cursor&&previous?
        {jobs:[...previous.jobs as unknown[],...r.data.jobs as unknown[]]}:{})}));
    }finally{if(version===sequence.current)setLoading(false);}
  }
- useEffect(()=>{void load();return()=>{sequence.current++;};},[core]);
+ useEffect(()=>{void load();return()=>{sequence.current++;};},[core,projectId]);
  const jobs=Array.isArray(queue?.jobs)?queue.jobs.map(record):[],policy=queue?.policy?record(queue.policy):null;
  const reservations=Array.isArray(queue?.reservations)?queue.reservations.length:0;
  return <section aria-label="Coda sessioni">

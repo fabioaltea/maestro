@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {createScratch} from '../fixtures/desktop.ts';
-import {chooseDirectory,launchDesktop} from '../fixtures/electron.ts';
+import {launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
 
 test('sessions stays available offline and does not enable unqualified start',async()=>{
  const first=await createScratch(),other=await createScratch();
@@ -10,8 +10,7 @@ test('sessions stays available offline and does not enable unqualified start',as
    expect((await first.cli(['project','add',repo.path])).result.outcome).toBe('SUCCEEDED');
    const {app,page}=await launchDesktop(first);
    try{
-     await chooseDirectory(app,first.archive);
-     await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
+     await page.locator('.project-row').first().click();
      const nav=page.getByRole('button',{name:'Sessioni',exact:true});
      await nav.click();
      const panel=page.getByRole('region',{name:'Sessioni agente'});
@@ -21,8 +20,7 @@ test('sessions stays available offline and does not enable unqualified start',as
      await panel.getByRole('button',{name:'Aggiorna',exact:true}).click();
      await expect(panel.getByText(/Servizio offline/)).toBeVisible();
      await expect(panel.getByRole('button',{name:'Nuova sessione'})).toBeDisabled();
-     await chooseDirectory(app,other.directory);
-     await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
+     await switchArchiveForRegression(app,page,other.directory);
      await expect(page.getByText('execution-local',{exact:true})).toHaveCount(0);
    }finally{await app.close();}
  }finally{await Promise.all([first.cleanup(),other.cleanup()]);}

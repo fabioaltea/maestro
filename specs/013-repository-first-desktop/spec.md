@@ -1,8 +1,8 @@
 # Feature Specification: Un repository alla volta in Maestro
 
-**Feature Branch**: `013-repository-first-desktop`  
-**Created**: 2026-11-20  
-**Status**: Draft  
+**Feature Branch**: `013-repository-first-desktop`
+**Created**: 2026-11-20
+**Status**: Draft
 **Input**: Aprire Maestro, aprire o creare un repository locale, analizzare la codebase e creare una nuova feature. Maestro gestisce l’archivio in una posizione privata del sistema.
 
 ## User Scenarios & Testing *(mandatory)*

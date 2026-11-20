@@ -8,9 +8,10 @@ export function useDesktop() {
   const [runtimeReady, setRuntimeReady] = useState(false);
   const invoke = useCallback(async (method: BridgeMethod, params: Params = {}): Promise<unknown> => {
     const epoch = current.current?.selectionEpoch ?? 0;
+    const transitions: readonly BridgeMethod[] = ['chooseArchive', 'selectReceiptArchive', 'context', 'openRepository', 'createRepository', 'selectProject', 'closeProject', 'recoverArchive'];
     try {
       const response = await window.maestro[method]({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch, ...params });
-      if (!['chooseArchive', 'selectReceiptArchive', 'context'].includes(method) && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) {
+      if (!transitions.includes(method) && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) {
         if ((current.current?.selectionEpoch ?? 0) === epoch && response.selectionEpoch !== epoch) {
           const latest = await window.maestro.context({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch });
           if (!latest.error && (current.current?.selectionEpoch ?? 0) === epoch) {
@@ -22,7 +23,7 @@ export function useDesktop() {
       }
       if (response.error?.code === 'CLIENT_READ_CANCELLED') return null;
       if (response.error) { setNotice(response.error.message); return null; }
-      if (method === 'context' || method === 'chooseArchive' || method === 'selectReceiptArchive') {
+      if (transitions.includes(method) && (current.current?.selectionEpoch ?? 0) === epoch) {
         const data = record(response.result), selected = data.context as ArchiveView | null;
         current.current = selected; setContext(selected);
         if (method === 'context') { setRuntimeReady(data.runtimeReady === true); if (data.error) setNotice(String(record(data.error).message)); }

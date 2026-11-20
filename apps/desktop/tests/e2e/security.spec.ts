@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop } from '../fixtures/electron.ts';
 test('renderer has only named methods and cannot execute or navigate arbitrary content', async () => {
   const f = await createScratch();
   try {
@@ -26,8 +26,7 @@ test('another real sandboxed window cannot invoke the owning window bridge', asy
   try {
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
-      await expect(page.getByText('Servizio fermo', { exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Apri repository', exact: true })).toBeVisible();
       const result = await app.evaluate(async ({ app, BrowserWindow }) => {
         const foreign = new BrowserWindow({ show: false, webPreferences: { preload: `${app.getAppPath()}/preload/index.cjs`, contextIsolation: true, sandbox: true, nodeIntegration: false } });
         try {

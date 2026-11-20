@@ -32,7 +32,7 @@ export function validateReceipt(value: unknown): Receipt {
   else if(p.profileId!==undefined)throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if(p.namespace==='review'){uuid(p.reviewTarget);uuid(p.storeId);uuid(p.projectId);}
   else if(p.reviewTarget!==undefined)throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
-  const actions: readonly string[] = p.namespace === 'foundation' ? ['start', 'stop', 'restart'] : p.namespace === 'project' ? ['register', 'verify', 'update', 'remove'] : p.namespace === 'feature' ? FEATURE_MUTATIONS : p.namespace==='workspace'?WORKSPACE_MUTATIONS:p.namespace==='environment'?ENVIRONMENT_MUTATIONS:p.namespace==='profile'?PROFILE_MUTATIONS:p.namespace==='execution'?EXECUTION_MUTATIONS:p.namespace==='review'?REVIEW_MUTATIONS:['configure', 'check', 'preview', 'discard', 'start', 'answer', 'correct', 'approve', 'cancel'];
+  const actions: readonly string[] = p.namespace === 'foundation' ? ['start', 'stop', 'restart'] : p.namespace === 'project' ? ['register', 'open', 'create', 'verify', 'update', 'remove'] : p.namespace === 'feature' ? FEATURE_MUTATIONS : p.namespace==='workspace'?WORKSPACE_MUTATIONS:p.namespace==='environment'?ENVIRONMENT_MUTATIONS:p.namespace==='profile'?PROFILE_MUTATIONS:p.namespace==='execution'?EXECUTION_MUTATIONS:p.namespace==='review'?REVIEW_MUTATIONS:['configure', 'check', 'preview', 'discard', 'start', 'answer', 'correct', 'approve', 'cancel'];
   if (!actions.includes(String(p.action)) || !['PREPARED', 'RECONCILING', 'TERMINAL', 'UNKNOWN'].includes(String(p.phase))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if (p.errorCode !== null && (typeof p.errorCode !== 'string' || !Object.hasOwn(CORE_ERRORS, p.errorCode))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
@@ -110,10 +110,11 @@ export class ReceiptStore {
       await this.persist(receipt); return receipt;
     });
   }
-  update(id: string, patch: Partial<Pick<Receipt, 'phase' | 'outcome' | 'errorCode' | 'storeId'>>): Promise<Receipt> {
+  update(id: string, patch: Partial<Pick<Receipt, 'phase' | 'outcome' | 'errorCode' | 'storeId' | 'projectId'>>): Promise<Receipt> {
     return this.serialize(async () => {
-      uuid(id); keys(record(patch), ['phase', 'outcome', 'errorCode', 'storeId']);
+      uuid(id); keys(record(patch), ['phase', 'outcome', 'errorCode', 'storeId', 'projectId']);
       const original = (await this.scan()).find(r => r.requestId === id); if (!original) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+      if (patch.projectId !== undefined && original.projectId !== null && patch.projectId !== original.projectId) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
       if (patch.storeId !== undefined && original.storeId !== null && patch.storeId !== original.storeId) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
       if (original.phase === 'TERMINAL') { if (Object.entries(patch).some(([key, value]) => original[key as keyof Receipt] !== value)) throw new Error('RECEIPT_STORAGE_UNAVAILABLE'); return original; }
       const receipt = { ...original, ...patch, updatedAt: new Date().toISOString() }; await this.persist(receipt); return receipt;

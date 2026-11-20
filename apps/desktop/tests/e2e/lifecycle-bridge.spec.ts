@@ -1,13 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop } from '../fixtures/electron.ts';
 test('named bridge requires confirmation, returns no private receipt fields and leaves service running on app close', async () => {
   const f = await createScratch();
   try {
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
-      await expect(page.getByText('Servizio fermo', { exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Apri repository', exact: true })).toBeVisible();
       const prepared = await page.evaluate(async () => {
         const context = await window.maestro.context({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: 0 });
         return await window.maestro.prepareAction({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: context.selectionEpoch, action: 'daemon.start', params: {} });

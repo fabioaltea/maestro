@@ -11,7 +11,7 @@ export function publicReceipt(receipt: Receipt, context: ArchiveContext) {
     storeId: receipt.storeId, phase: receipt.phase, outcome: receipt.outcome, errorCode: receipt.errorCode, createdAt: receipt.createdAt,
     updatedAt: receipt.updatedAt, currentArchive: context.current?.path === receipt.archivePath };
 }
-export function installLifecycle(router: BridgeRouter, context: ArchiveContext, userData: string) {
+export function installLifecycle(router: BridgeRouter, context: ArchiveContext, userData: string, allowArchiveSelection = true) {
   const receipts = new ReceiptStore(join(userData, 'operation-receipts'));
   const core = router.services.core;
   const actions = core ? new ActionService({ core, receipts, context, owner: () => ({ owner: router.window.webContents.id, frame: router.window.webContents.mainFrame.routingId }) }) : null;
@@ -34,6 +34,7 @@ export function installLifecycle(router: BridgeRouter, context: ArchiveContext, 
   });
   router.register('dismissReceipt', async request => { await receipts.dismiss(text(request.receiptId)); return { dismissed: true }; });
   router.register('selectReceiptArchive', async request => {
+    if (!allowArchiveSelection) throw new Error('INVALID_INPUT');
     const receipt = (await receipts.list()).find(r => r.requestId === request.receiptId); if (!receipt) throw new Error('INVALID_INPUT');
     if (!router.services.dialogs.confirmSelection || !await router.services.dialogs.confirmSelection('Aprire l’archivio di questa operazione?', receipt.archivePath)) return { context: router.context, canceled: true };
     if ((router.context?.selectionEpoch ?? 0) !== request.selectionEpoch) throw new Error('STALE_CONTEXT');

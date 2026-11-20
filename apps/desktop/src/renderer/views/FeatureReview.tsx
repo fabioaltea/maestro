@@ -14,7 +14,7 @@ const checkLabels:Record<string,string>={NOT_RUN:'Non verificato',PASS:'Superato
 
 export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnvironment(workspaceId:string):void}){
  const {core,invoke}=desktop;
- const [projects,setProjects]=useState<Params[]>([]),[projectId,setProjectId]=useState('');
+ const projectId=desktop.context?.activeProjectId??'';
  const [items,setItems]=useState<Params[]>([]),[selected,setSelected]=useState('');
  const [nextCursor,setNextCursor]=useState<string|null>(null),[detail,setDetail]=useState<Params|null>(null);
  const [criteria,setCriteria]=useState<Params[]>([]),[criteriaCursor,setCriteriaCursor]=useState<string|null>(null);
@@ -27,14 +27,7 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
  const [prepared,setPrepared]=useState<PreparedAction|null>(null),[receipt,setReceipt]=useState<Params|null>(null),[busy,setBusy]=useState(false);
  const trigger=useRef<HTMLElement|null>(null);
  const generation=useRef(0);
- useEffect(()=>{
-   let alive=true;
-   void core('listProjects',{limit:25}).then(reply=>{
-     if(!alive||reply?.result!=='OK')return;
-     const page=rows(reply.data.projects);setProjects(page);setProjectId(String(page[0]?.projectId??''));
-   });
-   return()=>{alive=false;generation.current++;};
- },[core]);
+ useEffect(()=>()=>{generation.current++;},[projectId]);
  useEffect(()=>{
    setDetail(null);setDiff(null);setItems([]);setSelected('');setFreshness(null);setNextCursor(null);setCriteria([]);setCriteriaCursor(null);
    setCreating(false);setReceipt(null);setCandidateDetail(null);setCompletion(null);setCleanup(null);
@@ -168,11 +161,6 @@ export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnviron
  }
  return <section aria-label="Revisioni delle feature">
    <div className="toolbar">
-     <label>Progetto <select value={projectId} disabled={projects.length===0||busy}
-       onChange={e=>{generation.current++;setProjectId(e.target.value);}}>
-       {projects.length===0&&<option value="">Nessun progetto disponibile</option>}
-       {projects.map(p=><option key={String(p.projectId)} value={String(p.projectId)}>{String(p.displayName??p.projectId)}</option>)}
-     </select></label>
      <button className="button subtle" disabled={!projectId||loading||busy} onClick={()=>void list(projectId)}>Aggiorna revisioni</button>
      <button className="button subtle" disabled={!projectId||loading||busy||!can('create')} onClick={()=>setCreating(value=>!value)}>Nuova revisione</button>
    </div>

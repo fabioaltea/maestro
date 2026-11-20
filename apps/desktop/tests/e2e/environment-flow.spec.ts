@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {lstat,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createScratch} from '../fixtures/desktop.ts';
-import {chooseDirectory} from '../fixtures/electron.ts';
+import { switchArchiveForRegression } from '../fixtures/electron.ts';
 import {openOwnedWorktree} from '../fixtures/owned-worktree.ts';
 import {fixtureLock,fixturePackage,startFixtureRegistry} from '../../../../tests/fixtures/environment-registry.ts';
 
@@ -35,9 +35,8 @@ test('environment plan and manual attestation use the original receipt across of
      await env.getByRole('button',{name:'Aggiorna ambiente'}).click();
      await expect(env).toContainText('Ultimo stato noto');
      await expect(env).toContainText('MANUAL_VERIFIED');await expect(plan).toBeDisabled();
-     await chooseDirectory(app,other.directory);
-     await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
-     await expect(env).toContainText('Scegli un worktree');
+     await switchArchiveForRegression(app,page,other.directory);
+     await expect(page.getByRole('button',{name:'Ambiente',exact:true})).toHaveCount(0);
      await expect(env.getByText('MANUAL_VERIFIED',{exact:true})).toHaveCount(0);
    }finally{await app.close();}
  }finally{await Promise.all([fixture.cleanup(),other.cleanup()]);}

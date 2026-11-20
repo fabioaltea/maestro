@@ -7,14 +7,17 @@ import { DiscoveryLaunch } from '../components/DiscoveryLaunch.tsx';
 import { ConfirmationDialog } from '../components/ConfirmationDialog.tsx';
 import { dateLabel } from '../format.ts';
 import { DiscoveryInterview } from '../components/DiscoveryInterview.tsx';
-export function Discovery({ desktop, project, live }: { desktop: Desktop; project: Project; live: boolean }) {
-  const view = useDiscovery(desktop, project.projectId, project.configRevision), [binary, setBinary] = useState<{ providerBinaryHandle: string; displayName: string } | null>(null), [model, setModel] = useState(''), [choosing, setChoosing] = useState(false);
+export function Discovery({ desktop, project, live, onApproved }: { desktop: Desktop; project: Project; live: boolean; onApproved: () => void }) {
+  const view = useDiscovery(desktop, project.projectId, project.configRevision, onApproved), [binary, setBinary] = useState<{ providerBinaryHandle: string; displayName: string } | null>(null), [model, setModel] = useState(''), [choosing, setChoosing] = useState(false);
   const configuration = view.provider?.configuration ? record(view.provider.configuration) : null, check = view.provider?.check ? record(view.provider.check) : null;
   const labels: Record<string, string> = { RUNNING: 'In corso', WAITING_USER: 'Attende risposta', READY_FOR_REVIEW: 'Da approvare', APPROVED: 'Approvata', STALE: 'Da aggiornare', INTERRUPTED: 'Interrotta', UPDATING: 'Aggiornamento in corso', RECONCILING: 'Esito incerto', FAILED: 'Non riuscita', CANCELLED: 'Annullata', CANCELLING: 'Annullamento in corso' };
-  const [selected, setSelected] = useState<string | null>(null), selectedId = selected ?? view.items.at(-1)?.discoveryId;
+  const [selected, setSelected] = useState<string | null>(null);
+  const current = view.items.findLast(item => ['RUNNING', 'WAITING_USER', 'READY_FOR_REVIEW', 'RECONCILING'].includes(item.state));
+  const selectedId = selected ?? current?.discoveryId ?? view.items.at(-1)?.discoveryId;
   async function choose() { setChoosing(true); try { const result = await desktop.invoke('chooseProviderBinary'); if (result) setBinary(record(result).provider as typeof binary); } finally { setChoosing(false); } }
   return <section className="discovery-view" aria-labelledby="discovery-title"><div className="section-heading"><h3 id="discovery-title">Discovery del progetto</h3><button className="text-button" disabled={view.busy || view.loading} onClick={() => void view.refresh()}>Aggiorna Discovery</button></div>
     <p className="hint">Analisi in sola lettura per conoscere scopo, architettura e convenzioni di {project.displayName}.</p>
+    {project.observation?.hasCommits === false && <p className="hint">Il repository non ha ancora commit. Aggiungi i file da analizzare e includili nell’anteprima delle fonti.</p>}
     {view.loading && <p role="status">Lettura dello stato Discovery…</p>}
     {!live && <p className="hint">Ultimo stato noto. Avvia esplicitamente il servizio per preparare o avviare una Discovery.</p>}
     <section className="discovery-provider" aria-labelledby="provider-title"><h4 id="provider-title">Provider</h4><p>{configuration ? `Codex · ${configuration.modelId}` : 'Provider non configurato'}</p>

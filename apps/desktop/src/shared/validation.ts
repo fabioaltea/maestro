@@ -43,7 +43,7 @@ export function validateAction(action: unknown, input: unknown): Params {
   return p;
 }
 const extras: Record<string, readonly string[]> = {
-  chooseArchive: ['newArchiveName'], listProjects: ['cursor', 'limit'], getProject: ['projectId'], prepareAction: ['action', 'params'],
+  selectProject: ['projectId'], chooseArchive: ['newArchiveName'], listProjects: ['cursor', 'limit'], getProject: ['projectId'], prepareAction: ['action', 'params'],
   confirmAction: ['confirmationId'], cancelAction: ['confirmationId'], reconcileOperation: ['receiptId'], dismissReceipt: ['receiptId'], selectReceiptArchive: ['receiptId'],
   readEvents: ['after', 'limit'], startEvents: ['afterApplied'], stopEvents: ['subscriptionId'], ackEvents: ['subscriptionId', 'batchId', 'lastAppliedSeq'],
 };

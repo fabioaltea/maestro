@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test';
 import { readFile, readdir, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
 test('renderer cannot inject paths/argv or bypass approval; credentials and raw output stay out of diagnostics and logs',async()=>{
  const f=await createScratch();try{
   await f.cli(['daemon','start']);const repo=await f.repository('PRIVATE_PATH_SENTINEL');await f.cli(['project','add',repo.path,'--name=PRIVATE_NAME_SENTINEL']);
   const {app,page}=await launchDesktop(f);try{
-   await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();await expect(page.locator('.project-row')).toHaveCount(1);
+   await expect(page.locator('.project-row')).toHaveCount(1);
    const replies=await page.evaluate(async()=>{
     const ctx=await window.maestro.context({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:0}),epoch=(ctx.result as {context:{selectionEpoch:number}}).context.selectionEpoch;
     const envelope=()=>({bridgeVersion:1 as const,callId:crypto.randomUUID(),selectionEpoch:epoch});
@@ -30,10 +30,10 @@ test('archive switch invalidates a prepared mutation and never redirects it into
  const f=await createScratch(),g=await createScratch();try{
   await f.cli(['daemon','start']);const repo=await f.repository();const added=(await f.cli(['project','add',repo.path,'--name=Originale'])).result;
   const {app,page}=await launchDesktop(f);try{
-   await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();await expect(page.locator('.project-row')).toHaveCount(1);
+   await expect(page.locator('.project-row')).toHaveCount(1);
    const prepared=await page.evaluate(async id=>{const response=await window.maestro.context({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:0}),epoch=(response.result as {context:{selectionEpoch:number}}).context.selectionEpoch;
     return{epoch,reply:await window.maestro.prepareAction({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:epoch,action:'project.update',params:{projectId:id,expectedRevision:'1',patch:{name:'Da non applicare'}}})};},added.data.projectId);expect(prepared.reply.error).toBeNull();
-   await chooseDirectory(app,g.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
+   await switchArchiveForRegression(app,page,g.archive);
    const replies=await page.evaluate(async data=>{const context=await window.maestro.context({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:0}),epoch=(context.result as {context:{selectionEpoch:number}}).context.selectionEpoch,confirmationId=(data.reply.result as {confirmationId:string}).confirmationId;
     return[await window.maestro.confirmAction({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:data.epoch,confirmationId}),await window.maestro.confirmAction({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:epoch,confirmationId})];},prepared);
    expect(replies.every(r=>r.error!==null)).toBe(true);expect((await f.cli(['project','show',added.data.projectId])).result.data.project.displayName).toBe('Originale');expect((await g.cli(['daemon','status'])).result.liveness).toBe('ABSENT_VERIFIED');

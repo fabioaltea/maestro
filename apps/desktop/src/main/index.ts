@@ -6,7 +6,7 @@ import { app, BrowserWindow, dialog, protocol, session } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { SafeLog } from './safe-log.ts';
 import { join, isAbsolute } from 'node:path';
-import { validateRuntime } from './runtime.ts';
+import { archiveLocation, recoverArchiveLocation, validateRuntime } from './runtime.ts';
 import { CoreCli } from './core-cli.ts';
 import { secureSession, secureWindow } from './security.ts';
 import { installProtocol } from './protocol.ts';
@@ -21,6 +21,7 @@ import { installDiscovery } from './discovery.ts';
 import { installLifecycle } from './lifecycle.ts';
 import { installReads } from './read-handlers.ts';
 import { installBridge } from './bridge.ts';
+import { ArchiveContext } from './archive-context.ts';
 app.setName('Maestro');
 const data = app.commandLine.getSwitchValue('user-data-dir');
 if (data && isAbsolute(data)) app.setPath('userData', data);
@@ -35,7 +36,13 @@ else {
   app.on('before-quit', () => { clients?.dispose(); core?.close(); });
   void app.whenReady().then(async () => {
     let runtimeError: string | null = null;
-    try { core = new CoreCli(await validateRuntime(process.env.MAESTRO_NODE_BINARY ?? '', fileURLToPath(new URL('../../dist/cli/main.js', import.meta.url)))); }
+    let archive: string | null = null;
+    const override = app.commandLine.getSwitchValue('maestro-state-dir');
+    try {
+      const runtime = await validateRuntime(process.env.MAESTRO_NODE_BINARY ?? '', fileURLToPath(new URL('../../dist/cli/main.js', import.meta.url)));
+      core = new CoreCli(runtime);
+      archive = override || await archiveLocation(runtime);
+    }
     catch (error) { runtimeError = error instanceof Error ? error.message : 'RUNTIME_UNAVAILABLE'; }
     secureSession(session.defaultSession);
     await installProtocol(session.defaultSession, fileURLToPath(new URL('../renderer/', import.meta.url)));
@@ -48,11 +55,31 @@ else {
     }, async chooseFile(title) {
       const result = await dialog.showOpenDialog(window!, { title, properties: ['openFile'] }); return result.canceled ? null : result.filePaths[0] ?? null;
     }, async confirmSelection(message, detail) {
-      const response = await dialog.showMessageBox(window!, { type: 'question', message, detail, buttons: ['Apri archivio', 'Annulla'], defaultId: 1, cancelId: 1 });
+      const response = await dialog.showMessageBox(window!, { type: 'question', message, detail, buttons: ['Conferma', 'Annulla'], defaultId: 1, cancelId: 1 });
       return response.response === 0;
     } } });
-    const archiveContext = installReads(router);
-    const lifecycle = installLifecycle(router, archiveContext, app.getPath('userData'));
+    const archiveContext = installReads(router, new ArchiveContext(), Boolean(override));
+    if (archive) try { const selected = await archiveContext.select(archive); router.setContext(selected.view); }
+    catch { /* The repository screen reports unavailable local state. */ }
+    let recoveringArchive = false;
+    router.register('recoverArchive', async request => {
+      if (!core) throw new Error('RUNTIME_UNAVAILABLE');
+      if (override) throw new Error('ARCHIVE_RECOVERY_BLOCKED');
+      if (recoveringArchive) throw new Error('LOCAL_BUSY');
+      recoveringArchive = true;
+      try {
+        const source = await router.services.dialogs.chooseDirectory('Scegli l’archivio Maestro da recuperare');
+        if (!source || !await router.services.dialogs.confirmSelection?.('Recuperare lo storico di Maestro?', source)) {
+          return { context: router.context, canceled: true };
+        }
+        if ((router.context?.selectionEpoch ?? 0) !== request.selectionEpoch) throw new Error('STALE_CONTEXT');
+        const directory = await recoverArchiveLocation(core.runtime, source);
+        await core.cancelViewReads();
+        router.setContext((await archiveContext.select(directory)).view);
+        return { context: router.context, canceled: false };
+      } finally { recoveringArchive = false; }
+    });
+    const lifecycle = installLifecycle(router, archiveContext, app.getPath('userData'), Boolean(override));
     installProjectActions(router, archiveContext, lifecycle.actions);
     installDiscovery(router, archiveContext, lifecycle.actions);
     installFeature(router,archiveContext,lifecycle.actions);

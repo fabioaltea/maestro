@@ -19,7 +19,7 @@ export function discoveryCanStart(provider: Params | null, snapshot: DiscoverySn
   const configuration = provider.configuration ? record(provider.configuration) : null, check = provider.check ? record(provider.check) : null;
   return Boolean(configuration && check?.state === 'AVAILABLE' && check.capabilities && record(check.capabilities).readOnlyAnalysis === true);
 }
-export function useDiscovery(desktop: Desktop, projectId: string, configRevision: string) {
+export function useDiscovery(desktop: Desktop, projectId: string, configRevision: string, onApproved?: () => void) {
   const [provider, setProvider] = useState<Params | null>(null), [items, setItems] = useState<DiscoverySummary[]>([]);
   const [snapshot, setSnapshot] = useState<DiscoverySnapshot | null>(null), [sources, setSources] = useState<Params[]>([]), [cursor, setCursor] = useState<string | null>(null);
   const [prepared, setPrepared] = useState<PreparedAction | null>(null), [busy, setBusy] = useState(false), [pending, setPending] = useState<{ id: string; action: string } | null>(null);
@@ -62,8 +62,9 @@ export function useDiscovery(desktop: Desktop, projectId: string, configRevision
       } else if (request.action === 'discard') { setSnapshot(null); setSources([]); setCursor(null); setMessage('Anteprima scartata.'); }
       else setMessage(request.action === 'start' ? 'Richiesta accettata: la Discovery è stata avviata. L’analisi non è ancora completata.' : 'Operazione completata.');
       await refresh();
+      if (request.action === 'approve' && active.current) onApproved?.();
     } finally { reading.current = false; }
-  }, [core, invoke, refresh]);
+  }, [core, invoke, onApproved, refresh]);
   useEffect(() => {
     if (!pending) return;
     let disposed = false, timer: ReturnType<typeof setTimeout>;

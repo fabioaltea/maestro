@@ -10,7 +10,7 @@ const labels:Record<string,string>={CREATED:'In avvio',RUNNING:'In esecuzione',W
 function rows(value:unknown):Params[]{return Array.isArray(value)?value.map(record):[];}
 export function Sessions({desktop,onOperations}:{desktop:Desktop;onOperations():void}){
  const {core,invoke}=desktop;
- const [projects,setProjects]=useState<Params[]>([]),[projectId,setProjectId]=useState('');
+ const projectId=desktop.context?.activeProjectId??'';
  const [items,setItems]=useState<Params[]>([]),[next,setNext]=useState<string|null>(null),[sessionId,setSessionId]=useState('');
  const [detail,setDetail]=useState<Params|null>(null),[methods,setMethods]=useState<string[]>([]),[freshness,setFreshness]=useState<string|null>(null);
  const [prepared,setPrepared]=useState<PreparedAction|null>(null),[receipt,setReceipt]=useState<Params|null>(null);
@@ -21,14 +21,8 @@ export function Sessions({desktop,onOperations}:{desktop:Desktop;onOperations():
  const alive=useRef(false),target=useRef(0),readVersion=useRef(0),trigger=useRef<HTMLElement|null>(null);
  useEffect(()=>{
    alive.current=true;
-   void (async()=>{
-     const reply=await core('listProjects');
-     if(!alive.current||reply?.result!=='OK')return;
-     const projects=rows(reply.data.projects);
-     setProjects(projects);setProjectId(String(projects[0]?.projectId??''));
-   })();
    return()=>{alive.current=false;target.current++;readVersion.current++;};
- },[core]);
+ },[projectId]);
  useEffect(()=>{
    setItems([]);setNext(null);setSessionId('');setDetail(null);setReceipt(null);setText(null);setChunkPage(null);setPageLoaded(false);
    void refresh(projectId,'');
@@ -105,11 +99,6 @@ export function Sessions({desktop,onOperations}:{desktop:Desktop;onOperations():
    onClick={event=>{trigger.current=event.currentTarget;void prepare(name,params);}}>{label}</button>;
  return <section aria-label="Sessioni agente">
    <div className="toolbar">
-     <label>Progetto <select value={projectId} disabled={busy||projects.length===0}
-       onChange={event=>{target.current++;setProjectId(event.target.value);}}>
-       {projects.length===0&&<option value="">Nessun progetto disponibile</option>}
-       {projects.map(project=><option key={String(project.projectId)} value={String(project.projectId)}>{String(project.displayName??project.projectId)}</option>)}
-     </select></label>
      <button className="button subtle" disabled={busy} onClick={()=>void refresh(projectId,sessionId)}>Aggiorna</button>
      <button className="button primary" disabled={!projectId||busy||!available('start')} onClick={()=>setStarting(value=>!value)}>Nuova sessione</button>
    </div>

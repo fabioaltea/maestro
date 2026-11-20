@@ -1,5 +1,7 @@
 // Public core v1 safe error catalog; no runtime dependency on core adapters.
 export const CORE_ERRORS = {
+  ARCHIVE_RECOVERY_BLOCKED: {code: 'ARCHIVE_RECOVERY_BLOCKED', message: 'Recupero dello storico bloccato.', nextAction: 'Verifica che l’archivio originale sia fermo. Se il profilo ha già dati, puoi consultare l’originale dalla CLI con --state-dir.'},
+  REPOSITORY_DESTINATION_OCCUPIED: {code: 'REPOSITORY_DESTINATION_OCCUPIED', message: 'La destinazione del repository è già occupata.', nextAction: 'Apri il repository esistente o scegli una cartella vuota.'},
   "REVIEW_NOT_INITIALIZED": {"code": "REVIEW_NOT_INITIALIZED", "message": "Archivio review non inizializzato.", "nextAction": "Avviare il servizio per aggiornare lo schema."},
   "REVIEW_STALE": {"code": "REVIEW_STALE", "message": "Input della review superati.", "nextAction": "Creare una nuova review dal lavoro corrente."},
   "CHECKS_FAILED": {"code": "CHECKS_FAILED", "message": "Verifiche richieste fallite.", "nextAction": "Consultare le prove del candidate."},

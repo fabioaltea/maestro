@@ -6,7 +6,7 @@ import {readFile,unlink,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createScratch} from '../fixtures/desktop.ts';
 import {seedWaitingDiscovery} from '../fixtures/discovery-session.ts';
-import {launchDesktop,chooseDirectory} from '../fixtures/electron.ts';
+import {launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
 
 test('workspace confirms an exact handoff, keeps the original receipt and reads offline',async()=>{
  test.setTimeout(100000);
@@ -19,10 +19,9 @@ test('workspace confirms an exact handoff, keeps the original receipt and reads 
    await promisify(execFile)(process.execPath,[actor,fixture.archive],{timeout:35000,maxBuffer:16384});
    const {app,page}=await launchDesktop(fixture);
    try{
-     const open=page.getByRole('button',{name:'Apri archivio',exact:true});
-     await chooseDirectory(app,fixture.archive);await open.click();
+
      await page.locator('.project-row').first().click();
-     await page.getByRole('button',{name:'Discovery',exact:true}).click();
+     await page.getByRole('button',{name:'Analizza codebase',exact:true}).click();
      const review=page.locator('.discovery-review');
      await expect(review.getByRole('checkbox')).toHaveCount(3);
      for(const checkbox of await review.getByRole('checkbox').all())await checkbox.check();
@@ -30,7 +29,7 @@ test('workspace confirms an exact handoff, keeps the original receipt and reads 
      const confirm=page.getByRole('button',{name:'Conferma operazione',exact:true});
      await confirm.click();
      await expect(review).toContainText('Approvazione storica:',{timeout:15000});
-     await page.getByRole('button',{name:'Discovery',exact:true}).click();
+     await page.getByRole('button',{name:'Analizza codebase',exact:true}).click();
      await page.getByRole('button',{name:'Feature',exact:true}).click();
      const panel=page.locator('.feature-planning'),editor=panel.getByLabel('Specifica e piano JSON');
      const bundle=JSON.parse(await editor.inputValue());
@@ -100,8 +99,8 @@ test('workspace confirms an exact handoff, keeps the original receipt and reads 
      await expect.poll(async()=> (await fixture.cli(['workspace','show',workspace.workspaceId])).result.data.workspace?.state,{timeout:15000}).toBe('REMOVED');
      await workspaces.getByRole('button',{name:'Aggiorna elenco'}).click();
      await expect(workspaces.getByText('REMOVED',{exact:true})).toBeVisible();
-     await chooseDirectory(app,other.directory);await open.click();
-     await expect(page.getByText(other.directory,{exact:true})).toBeVisible();
+     await switchArchiveForRegression(app,page,other.directory);
+     await expect(page.getByRole('button',{name:'Workspace',exact:true})).toHaveCount(0);
      await expect(workspaces.getByText('REMOVED',{exact:true})).toHaveCount(0);
    }finally{await app.close();}
  }finally{await Promise.all([fixture.cleanup(),other.cleanup()]);}

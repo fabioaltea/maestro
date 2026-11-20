@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop } from '../fixtures/electron.ts';
 
 test('opening Discovery with no provider preserves the repository and does not invent an available AI session', async () => {
   const f = await createScratch();
@@ -9,8 +9,7 @@ test('opening Discovery with no provider preserves the repository and does not i
     const projectId = (await f.cli(['project', 'add', repo.path, '--name=Discovery UI'])).result.data.projectId;
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
-      await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Discovery', exact: true }).click();
+      await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Discovery del progetto', exact: true })).toBeVisible();
       await expect(page.getByText('Provider non configurato', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Avvia Discovery', exact: true })).toBeDisabled();
@@ -26,8 +25,7 @@ test('local preview requires an explicit action, cancellation is inert and the d
     const projectId = (await f.cli(['project', 'add', repo.path, '--name=Anteprima UI'])).result.data.projectId;
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
-      await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Discovery', exact: true }).click();
+      await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
       await page.getByLabel('Percorsi da analizzare', { exact: true }).fill('../fuori-progetto');
       await page.getByRole('button', { name: 'Prepara anteprima', exact: true }).click();
       await expect(page.locator('#discovery-error')).toContainText('percorsi relativi');

@@ -18,7 +18,7 @@ test('G1 SC-001 official Codex login: UI interview, correction, exact approval a
     const projectId = (await f.cli(['project', 'add', repo.path, '--name=SC001 sintetico'])).result.data.projectId;
     const before = await f.snapshot(repo.path), { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click(); await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Discovery', exact: true }).click();
+      await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
       await page.getByText('Configura Codex e login ufficiale', { exact: true }).click(); await chooseDirectory(app, binary!); await page.getByRole('button', { name: 'Scegli binario Codex', exact: true }).click(); await page.getByLabel('Modello Codex', { exact: true }).fill(model!);
       await page.getByRole('button', { name: 'Configura provider', exact: true }).click(); await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click(); await expect(page.locator('.discovery-provider')).toContainText(`Codex · ${model}`, { timeout: 15000 });
       await page.getByRole('button', { name: 'Verifica provider e login', exact: true }).click(); await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();

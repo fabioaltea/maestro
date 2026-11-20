@@ -6,11 +6,11 @@ import {ENVIRONMENT_BRIDGE_METHODS} from './environment-contract.ts';
 import {FEATURE_BRIDGE_METHODS} from './feature-contract.ts';
 import {WORKSPACE_BRIDGE_METHODS} from './workspace-contract.ts';
 import { DISCOVERY_BRIDGE_METHODS } from './discovery-contract.ts';
-export const METHODS = [...REVIEW_BRIDGE_METHODS,...SCHEDULER_BRIDGE_METHODS,...EXECUTION_BRIDGE_METHODS,...PROFILE_BRIDGE_METHODS,...ENVIRONMENT_BRIDGE_METHODS,...WORKSPACE_BRIDGE_METHODS, ...FEATURE_BRIDGE_METHODS, ...DISCOVERY_BRIDGE_METHODS, 'releaseViewReads', 'chooseArchive', 'context', 'status', 'diagnostics', 'listProjects', 'getProject', 'chooseRepository', 'prepareAction', 'confirmAction', 'cancelAction', 'reconcileOperation', 'listReceipts', 'dismissReceipt', 'selectReceiptArchive', 'readEvents', 'startEvents', 'stopEvents', 'ackEvents'] as const;
+export const METHODS = [...REVIEW_BRIDGE_METHODS,...SCHEDULER_BRIDGE_METHODS,...EXECUTION_BRIDGE_METHODS,...PROFILE_BRIDGE_METHODS,...ENVIRONMENT_BRIDGE_METHODS,...WORKSPACE_BRIDGE_METHODS, ...FEATURE_BRIDGE_METHODS, ...DISCOVERY_BRIDGE_METHODS, 'releaseViewReads', 'openRepository', 'createRepository', 'selectProject', 'closeProject', 'recoverArchive', 'chooseArchive', 'context', 'status', 'diagnostics', 'listProjects', 'getProject', 'chooseRepository', 'prepareAction', 'confirmAction', 'cancelAction', 'reconcileOperation', 'listReceipts', 'dismissReceipt', 'selectReceiptArchive', 'readEvents', 'startEvents', 'stopEvents', 'ackEvents'] as const;
 export type BridgeMethod = typeof METHODS[number];
 export type Params = Record<string, unknown>;
 export interface BridgeRequest extends Params { bridgeVersion: 1; callId: string; selectionEpoch: number }
-export interface ArchiveView { selectionEpoch: number; archiveHandle: string; storeId: string | null; displayPath: string }
+export interface ArchiveView { selectionEpoch: number; archiveHandle: string; storeId: string | null; displayPath: string; activeProjectId?: string }
 export interface SafeError { code: string; message: string; nextAction: string }
 export interface PublicResult {
   protocolVersion: 1; requestId: string | null; storeId: string | null; instanceId: string | null;

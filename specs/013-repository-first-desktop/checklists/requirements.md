@@ -1,7 +1,7 @@
 # Specification Quality Checklist: Un repository alla volta in Maestro
 
-**Purpose**: Validate specification completeness and quality before proceeding to planning  
-**Created**: 2026-11-20  
+**Purpose**: Validate specification completeness and quality before proceeding to planning
+**Created**: 2026-11-20
 **Feature**: [Specifica](../spec.md)
 
 ## Content Quality

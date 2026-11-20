@@ -26,9 +26,10 @@ async function absent(path: string) {
 }
 
 export async function recoverArchive(source: string) {
+  const platform = createPlatformPaths();
   const slotLease = await reserveDefaultArchiveSlot();
   try {
-    const paths = await createPlatformPaths().resolveArchive(source, 'read');
+    const paths = await platform.resolveArchive(source, 'read');
     if (!paths || paths.directory === privateArchiveSlot() || await absent(paths.stateFile)) throw new Error('STATE_ABSENT');
     const reference = archiveReferenceFile();
     if (!await absent(reference)) {

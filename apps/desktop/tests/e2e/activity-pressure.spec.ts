@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createScratch, repositoryRoot } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop } from '../fixtures/electron.ts';
 import { watchVisible, visibleSamples, p95 } from '../fixtures/activity-metrics.ts';
 test.use({trace:'off'});
 const report=join(repositoryRoot,'specs/003-desktop-core-ui/reports');
@@ -12,7 +12,7 @@ test('separate real core stream load reports reference pipe availability to visi
  test.setTimeout(90000);const f=await createScratch();let child:ReturnType<typeof spawn>|undefined;try{
   await f.cli(['daemon','start']);const history=(await f.cli(['daemon','events'])).result,after=history.data.events.cursor;
   const {app,page}=await launchDesktop(f);try{
-   await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();await page.getByRole('button',{name:'Attività',exact:true}).click();await expect(page.locator('.event-row').first()).toBeVisible();await watchVisible(page);
+   await page.getByRole('button',{name:'Attività',exact:true}).click();await expect(page.locator('.event-row').first()).toBeVisible();await watchVisible(page);
    const available:{seq:string;availableAt:number}[]=[];let pending='';child=spawn(process.execPath,[join(repositoryRoot,'dist/cli/main.js'),'daemon','events','--follow','--json',`--after=${after}`,`--state-dir=${f.archive}`],{stdio:['ignore','pipe','pipe']});
    let started=false;child.stdout!.on('data',chunk=>{pending+=String(chunk);for(;;){const n=pending.indexOf('\n');if(n<0)break;const frame=JSON.parse(pending.slice(0,n));pending=pending.slice(n+1);if(frame.kind==='subscription.started')started=true;if(frame.kind==='event')available.push({seq:frame.event.seq,availableAt:Date.now()});}});
    await expect.poll(()=>started).toBe(true);await page.getByRole('button',{name:'Segui attività',exact:true}).click();await expect(page.getByText('Osservazione live',{exact:true})).toBeVisible();const begin=Date.now();

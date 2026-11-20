@@ -10,7 +10,7 @@ Desktop apre il registro privato predefinito del core in sola consultazione. Una
 
 - **Language/Version** TypeScript strict, Node 26.13.0, Electron 45.3.0, React 19.3.1.
 - **Primary Dependencies** Pin esistenti di Git Apple, SQLite, esbuild e Playwright. Nessun pacchetto nuovo.
-- **Storage** Schema 11, stesso writer, registre e ricevute esistenti. Il recupero iniziale riferisce un archivio verificato nella sua directory originale.
+- **Storage** Schema 11, stesso writer, registro e ricevute esistenti. Il recupero iniziale riferisce un archivio verificato nella sua directory originale.
 - **Testing** Suite mirate Node e Playwright con archivio temporaneo, Git nativo confinato e provider di fixture.
 - **Target Platform** macOS 26.3 arm64/APFS.
 - **Project Type** Core headless, CLI e Desktop.

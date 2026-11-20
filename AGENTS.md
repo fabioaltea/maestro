@@ -111,4 +111,4 @@ Nessun nuovo pin/package. Un commit per task; preservare apps/desktop/package-lo
 
 011-review-local-merge-implementation basata su 010 0f9a9be. Feature attiva specs/011-review-local-merge/. Schema 11 e 36/36 task completati localmente. Snapshot, check 007, candidate, CAS e recovery Git, ricevuta, freshness Discovery e cleanup 006 verificati su fixture con CLI e Desktop. Build e suite mirate PASS. Readiness di rilascio BLOCKED per gate ereditati. Consultare reports/{validation,qualification,release-readiness}.md. Preservare apps/desktop/package-lock.json non tracciato.
 
-013-repository-first-desktop. Percorso ordinario Desktop centrato sul repository con archivio privato. Consultare specs/013-repository-first-desktop/{spec,plan,tasks}.md. Gate ereditati vigenti.
+013-repository-first-desktop completata localmente da 011 7de6984. Il Desktop apre o crea repository nel registro privato gestito dal core e guida da Discovery a nuova feature. Schema 11, nessun nuovo pacchetto. 14/14 task, SC-001–004 verificati con fixture e SC-005/picker manuale NOT_RUN. Gate ereditati vigenti. Consultare specs/013-repository-first-desktop/reports/{validation,readiness}.md.

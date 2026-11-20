@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
 import { seedWaitingDiscovery } from '../fixtures/discovery-session.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop } from '../fixtures/electron.ts';
 test('a durable interview reopens, renders inert output and confirms UNKNOWN without duplicating a run', async () => {
   const f = await createScratch();
   try {
@@ -9,8 +9,7 @@ test('a durable interview reopens, renders inert output and confirms UNKNOWN wit
     for (const reopen of [false, true]) {
       const { app, page } = await launchDesktop(f);
       try {
-        await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
-        await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Discovery', exact: true }).click();
+        await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
         await expect(page.getByRole('heading', { name: 'Quale distribuzione è prevista?', exact: true })).toBeVisible();
         await expect(page.getByLabel('Output Discovery', { exact: true })).toContainText('<img src=x onerror=alert(1)>'); expect(await page.locator('img[src=x]').count()).toBe(0);
         if (!reopen) { await page.getByRole('button', { name: 'Invia e continua', exact: true }).click(); await expect(page.getByRole('alert').filter({ hasText: 'Scrivi una risposta' })).toBeVisible(); }

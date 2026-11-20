@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop } from '../fixtures/electron.ts';
 test('persistent activity and diagnostics stay accessible after daemon stop without writes',async()=>{
  const f=await createScratch();try{
   await f.cli(['daemon','start']);const{app,page}=await launchDesktop(f);try{
-   await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
    await page.getByRole('button',{name:'Attività',exact:true}).click();await expect(page.locator('.event-row').first()).toBeVisible();
    await f.cli(['daemon','stop']);const before=await f.snapshot(f.archive);
    await page.getByRole('button',{name:'Rileggi storia',exact:true}).click();await expect(page.getByText('Storia persistita del core · Ultimo stato noto',{exact:true})).toBeVisible();

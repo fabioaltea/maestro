@@ -1,24 +1,17 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
 import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
-test('repository picker and explicit import display the actual registered project without changing files', async () => {
+test('repository picker and opening display the actual registered project without changing files', async () => {
   const f = await createScratch();
   try {
     await f.cli(['daemon', 'start']); const repo = await f.repository('repo con spazi'); const before = await f.snapshot(repo.path);
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
-      await page.getByRole('button', { name: 'Importa progetto', exact: true }).click();
-      await chooseDirectory(app, repo.path); await page.getByRole('button', { name: 'Scegli repository', exact: true }).click();
-      await page.getByLabel('Nome progetto (facoltativo)', { exact: true }).fill('Progetto UI');
-      await page.getByLabel('Branch base locale (facoltativo)', { exact: true }).fill('main');
-      await page.getByRole('button', { name: 'Rivedi importazione', exact: true }).click();
-      await expect(page.getByRole('dialog')).toBeVisible();
-      expect((await f.cli(['project', 'list'])).result.data.projects).toHaveLength(0);
-      await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Progetto UI', exact: true })).toBeVisible({ timeout: 15_000 });
+      await chooseDirectory(app, repo.path);
+      await page.getByRole('button', { name: 'Apri repository', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'repo con spazi', exact: true })).toBeVisible({ timeout: 15_000 });
       const list = (await f.cli(['project', 'list'])).result.data.projects;
-      expect(list).toHaveLength(1); expect(list[0].displayName).toBe('Progetto UI'); expect(list[0].baseBranch).toBe('main');
+      expect(list).toHaveLength(1); expect(list[0].displayName).toBe('repo con spazi'); expect(list[0].baseBranch).toBe('main');
       expect(await f.snapshot(repo.path)).toEqual(before);
       const { writeFile, rename } = await import('node:fs/promises'); const { join } = await import('node:path');
       await writeFile(join(repo.path, 'untracked.txt'), 'local work'); const changed = await f.snapshot(repo.path);
@@ -42,7 +35,6 @@ test('stale configuration approval is rejected and a new explicit review can cle
     const projectId = added.data.projectId as string, before = await f.snapshot(repo.path);
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Modifica progetto', exact: true }).click();
       await page.getByLabel('Nome progetto', { exact: true }).fill('Proposta');
       await page.getByLabel('Configurazione branch base', { exact: true }).selectOption('clear');
@@ -55,9 +47,11 @@ test('stale configuration approval is rejected and a new explicit review can cle
       await expect(page.getByLabel('Nome progetto', { exact: true })).toHaveValue('Proposta');
       await page.getByRole('button', { name: 'Ricarica configurazione', exact: true }).click();
       await expect(page.getByLabel('Nome progetto', { exact: true })).toHaveValue('Concorrenza');
+      await expect(page.getByText('Revisione da approvare: 2')).toBeVisible();
       await page.getByLabel('Nome progetto', { exact: true }).fill('Proposta');
       await page.getByLabel('Configurazione branch base', { exact: true }).selectOption('clear');
       await page.getByRole('button', { name: 'Rivedi modifica', exact: true }).click();
+      await expect(page.getByRole('dialog')).toBeVisible();
       await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Proposta', exact: true })).toBeVisible();
       await expect(page.locator('.project-row strong').first()).toHaveText('Proposta');
@@ -74,7 +68,6 @@ test('remove touches only registration and a UI reimport gets a new UUID', async
     const before = await f.snapshot(repo.path), oldId = added.data.projectId as string;
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await page.locator('.project-row').first().click();
       await page.getByRole('button', { name: 'Rimuovi dal registro', exact: true }).click();
       await expect(page.getByText('Viene rimossa soltanto la registrazione. Repository e file conservati.', { exact: true })).toBeVisible();
@@ -82,20 +75,17 @@ test('remove touches only registration and a UI reimport gets a new UUID', async
       expect((await f.cli(['project', 'list'])).result.data.projects).toHaveLength(1);
       await page.getByRole('button', { name: 'Rimuovi dal registro', exact: true }).click();
       await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Nessun progetto registrato', exact: true })).toBeVisible();
+      await expect(page.getByText('Nessun repository recente.', { exact: true })).toBeVisible();
       expect(await f.snapshot(repo.path)).toEqual(before);
-      await page.getByRole('button', { name: 'Importa progetto', exact: true }).click();
-      await chooseDirectory(app, repo.path); await page.getByRole('button', { name: 'Scegli repository', exact: true }).click();
-      await page.getByLabel('Nome progetto (facoltativo)', { exact: true }).fill('Nuova registrazione');
-      await page.getByRole('button', { name: 'Rivedi importazione', exact: true }).click();
-      await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Nuova registrazione', exact: true })).toBeVisible();
+      await chooseDirectory(app, repo.path);
+      await page.getByRole('button', { name: 'Apri repository', exact: true }).click();
+      await expect(page.getByRole('heading', { name: 'project', exact: true })).toBeVisible();
       const list = (await f.cli(['project', 'list'])).result.data.projects;
       expect(list).toHaveLength(1); expect(list[0].projectId).not.toBe(oldId); expect(await f.snapshot(repo.path)).toEqual(before);
     } finally { await app.close(); }
   } finally { await f.cleanup(); }
 });
-test('twenty complete UI import verify update remove sequences agree with CLI and preserve every repository', async () => {
+test('twenty complete UI open verify update remove sequences agree with CLI and preserve every repository', async () => {
   test.setTimeout(300_000);
   const f = await createScratch();
   try {
@@ -103,19 +93,14 @@ test('twenty complete UI import verify update remove sequences agree with CLI an
     const { app, page } = await launchDesktop(f);
     const results: { sequence: number; configRevision: string; filesPreserved: boolean }[] = [];
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       for (let i = 0; i < 20; i++) {
         const name = `Sequenza ${i}`, repository = await f.repository(`repo-${i}`);
         const { writeFile } = await import('node:fs/promises'); const { join } = await import('node:path');
         await writeFile(join(repository.path, 'dirty.txt'), `local work ${i}`);
         const before = await f.snapshot(repository.path);
-        await page.getByRole('button', { name: 'Importa progetto', exact: true }).click();
-        await chooseDirectory(app, repository.path); await page.getByRole('button', { name: 'Scegli repository', exact: true }).click();
-        await page.getByLabel('Nome progetto (facoltativo)', { exact: true }).fill(name);
-        await page.getByLabel('Branch base locale (facoltativo)', { exact: true }).fill('main');
-        await page.getByRole('button', { name: 'Rivedi importazione', exact: true }).click();
-        await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
-        await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+        await chooseDirectory(app, repository.path);
+        await page.getByRole('button', { name: 'Apri repository', exact: true }).click();
+        await expect(page.getByRole('heading', { name: `repo-${i}`, exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Verifica repository', exact: true }).click();
         await expect(page.getByText('Osservazione salvata. Disponibilità ed eventuali errori sono riportati sopra.', { exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Modifica progetto', exact: true }).click();
@@ -130,7 +115,7 @@ test('twenty complete UI import verify update remove sequences agree with CLI an
         results.push({ sequence: i + 1, configRevision: list[0].configRevision, filesPreserved: true });
         await page.getByRole('button', { name: 'Rimuovi dal registro', exact: true }).click();
         await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
-        await expect(page.getByRole('heading', { name: 'Nessun progetto registrato', exact: true })).toBeVisible();
+        await expect(page.getByText('Nessun repository recente.', { exact: true })).toBeVisible();
         expect((await f.cli(['project', 'list'])).result.data.projects).toHaveLength(0);
         expect(await f.snapshot(repository.path)).toEqual(before);
       }

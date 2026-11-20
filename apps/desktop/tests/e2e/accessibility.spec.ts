@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import type { Page, Locator } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createScratch, repositoryRoot } from '../fixtures/desktop.ts';
+import { createScratch } from '../fixtures/desktop.ts';
 import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
 async function activate(page:Page,target:Locator){await expect(target).toBeEnabled();await target.focus();await expect(target).toBeFocused();await page.keyboard.press('Enter');}
 async function type(page:Page,target:Locator,value:string){await target.focus();await page.keyboard.press('Meta+A');await page.keyboard.insertText(value);}
@@ -16,24 +16,21 @@ async function contrast(page:Page){return page.evaluate(()=>{
   if(!bg)bg='rgb(22, 24, 27)';const a=lum(style.color),b=lum(bg),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);checked++;if(ratio<4.5)failures.push({text:e.textContent!.trim().slice(0,60),ratio});
  }return{checked,failures};
 });}
-test('primary flows accept keyboard activation, dialog trap/focus return, inert text, labels and contrast at 1280x800',async()=>{
- test.setTimeout(120000);const f=await createScratch(),screens=join(repositoryRoot,'specs/003-desktop-core-ui/reports/screenshots');await mkdir(screens,{recursive:true});
+test('primary flows accept keyboard activation, dialog trap/focus return, inert text, labels and contrast at 1280x800',async({},testInfo)=>{
+ test.setTimeout(120000);const f=await createScratch(),screens=testInfo.outputPath('screenshots');await mkdir(screens,{recursive:true});
  try{const repo=await f.repository('tastiera');const {app,page}=await launchDesktop(f);try{
   const bounds=await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0]!.getBounds());expect([bounds.width,bounds.height]).toEqual([1280,800]);
-  await chooseDirectory(app,f.archive);await activate(page,page.getByRole('button',{name:'Apri archivio',exact:true}));await activate(page,page.getByRole('button',{name:'Servizio',exact:true}));
+  await activate(page,page.getByRole('button',{name:'Servizio',exact:true}));
   const start=page.getByRole('button',{name:'Avvia servizio',exact:true});await activate(page,start);await expect(page.getByRole('button',{name:'Annulla',exact:true})).toBeFocused();
   await page.keyboard.press('Shift+Tab');await expect(page.getByRole('button',{name:'Conferma operazione',exact:true})).toBeFocused();await page.keyboard.press('Escape');await expect(start).toBeFocused();
   await activate(page,start);await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByText('Attivo',{exact:true})).toBeVisible();
-  await activate(page,page.getByRole('button',{name:'Progetti',exact:true}));await activate(page,page.getByRole('button',{name:'Importa progetto',exact:true}));
-  await chooseDirectory(app,repo.path);await activate(page,page.getByRole('button',{name:'Scegli repository',exact:true}));
-  const name=page.getByLabel('Nome progetto (facoltativo)',{exact:true}),base=page.getByLabel('Branch base locale (facoltativo)',{exact:true});await type(page,name,'Tastiera');await type(page,base,'invalid branch');
-  await activate(page,page.getByRole('button',{name:'Rivedi importazione',exact:true}));await expect(name).toHaveAttribute('aria-invalid','true');expect(await name.getAttribute('aria-describedby')).toBe('import-error');await expect(page.locator('#import-error')).toBeVisible();await expect(name).toHaveValue('Tastiera');
-  await type(page,base,'main');await activate(page,page.getByRole('button',{name:'Rivedi importazione',exact:true}));await page.screenshot({path:join(screens,'confirmation.png')});
-  await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByRole('heading',{name:'Tastiera',exact:true})).toBeVisible();
+  await activate(page,page.getByRole('button',{name:'Repository',exact:true}));
+  await chooseDirectory(app,repo.path);await activate(page,page.getByRole('button',{name:'Apri repository',exact:true}));
+  await expect(page.getByRole('heading',{name:'tastiera',exact:true})).toBeVisible();
   await activate(page,page.getByRole('button',{name:'Verifica repository',exact:true}));await expect(page.getByText('Osservazione salvata. Disponibilità ed eventuali errori sono riportati sopra.',{exact:true})).toBeVisible();
   await activate(page,page.getByRole('button',{name:'Modifica progetto',exact:true}));await type(page,page.getByLabel('Nome progetto',{exact:true}),'<img src=x onerror=alert(1)>');await activate(page,page.getByRole('button',{name:'Rivedi modifica',exact:true}));await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByRole('heading',{name:'<img src=x onerror=alert(1)>',exact:true})).toBeVisible();expect(await page.locator('.detail img').count()).toBe(0);
   await page.screenshot({path:join(screens,'projects.png')});const results=[{view:'projects',...await contrast(page)}];
-  await activate(page,page.getByRole('button',{name:'Rimuovi dal registro',exact:true}));await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Rimuovi dal registro',exact:true})).toBeFocused();await activate(page,page.getByRole('button',{name:'Rimuovi dal registro',exact:true}));await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByRole('heading',{name:'Nessun progetto registrato',exact:true})).toBeVisible();
+  await activate(page,page.getByRole('button',{name:'Rimuovi dal registro',exact:true}));await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Rimuovi dal registro',exact:true})).toBeFocused();await activate(page,page.getByRole('button',{name:'Rimuovi dal registro',exact:true}));await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByText('Nessun repository recente.',{exact:true})).toBeVisible();
   await activate(page,page.getByRole('button',{name:'Attività',exact:true}));await expect(page.locator('.event-row').first()).toBeVisible();await activate(page,page.getByRole('button',{name:'Segui attività',exact:true}));await activate(page,page.getByRole('button',{name:'Interrompi osservazione',exact:true}));await activate(page,page.getByRole('button',{name:'Riconnetti',exact:true}));await expect(page.getByText('Osservazione live',{exact:true})).toBeVisible();await page.screenshot({path:join(screens,'activity.png')});results.push({view:'activity',...await contrast(page)});
   await activate(page,page.getByRole('button',{name:'Diagnostica',exact:true}));await expect(page.locator('.diagnostics-data')).toBeVisible();results.push({view:'diagnostics',...await contrast(page)});
   await activate(page,page.getByRole('button',{name:'Servizio',exact:true}));await activate(page,page.getByRole('button',{name:'Riavvia servizio',exact:true}));await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByText('Attivo',{exact:true})).toBeVisible();await activate(page,page.getByRole('button',{name:'Arresta servizio',exact:true}));await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByText('Fermo',{exact:true})).toBeVisible();results.push({view:'service',...await contrast(page)});

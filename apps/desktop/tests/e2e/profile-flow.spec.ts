@@ -4,7 +4,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {createScratch} from '../fixtures/desktop.ts';
-import {chooseDirectory,launchDesktop} from '../fixtures/electron.ts';
+import {chooseDirectory,launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
 
 test('agent profiles create revisioned catalogue entries with confirmed receipts and offline history',async()=>{
  const f=await createScratch(),other=await createScratch();
@@ -12,7 +12,6 @@ test('agent profiles create revisioned catalogue entries with confirmed receipts
    expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
    const {app,page}=await launchDesktop(f);
    try{
-     await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
      await page.getByRole('button',{name:'Profili agente',exact:true}).click();
      const panel=page.getByRole('region',{name:'Catalogo profili agente'});
      await expect(panel.getByRole('button',{name:'project-architect',exact:true})).toBeVisible();
@@ -33,7 +32,7 @@ test('agent profiles create revisioned catalogue entries with confirmed receipts
      await expect(panel.getByText(/Ultimo stato noto/)).toBeVisible();
      await expect(panel.getByRole('button',{name:'fixture-review',exact:true})).toBeVisible();
      await expect(panel.getByRole('button',{name:'Nuovo profilo'})).toBeDisabled();
-     await chooseDirectory(app,other.directory);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
+     await switchArchiveForRegression(app,page,other.directory);
      await expect(panel.getByRole('button',{name:'fixture-review',exact:true})).toHaveCount(0);
    }finally{await app.close();}
  }finally{await Promise.all([f.cleanup(),other.cleanup()]);}
@@ -47,7 +46,6 @@ test('desktop previews and binds a local skill after explicit review',async()=>{
    expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
    const {app,page}=await launchDesktop(f);
    try{
-     await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
      await page.getByRole('button',{name:'Profili agente',exact:true}).click();
      const panel=page.getByRole('region',{name:'Catalogo profili agente'});
      await panel.getByRole('button',{name:'Skill',exact:true}).click();
@@ -81,7 +79,6 @@ test('desktop reviews, enables and revokes a local tool manifest as catalogue da
    expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
    const {app,page}=await launchDesktop(f);
    try{
-     await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
      await page.getByRole('button',{name:'Profili agente',exact:true}).click();
      const panel=page.getByRole('region',{name:'Catalogo profili agente'}),confirm=page.getByRole('button',{name:'Conferma operazione',exact:true});
      await panel.getByRole('button',{name:'Tool',exact:true}).click();

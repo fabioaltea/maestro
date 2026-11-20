@@ -1,80 +1,109 @@
-import type {WorkspaceSource} from './Workspaces.tsx';
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { WorkspaceSource } from './Workspaces.tsx';
 import type { Desktop } from '../state/desktop.ts';
-import type { PublicResult } from '../../shared/bridge-contract.ts';
-import { decodeProject, initialProjectView, projectViewReducer } from '../state/project-view.ts';
-import { ImportProject } from './ImportProject.tsx';
-import { ProjectDetail, dateLabel } from './ProjectDetail.tsx';
-export function Projects({ desktop,onWorkspace }: { desktop: Desktop;onWorkspace(source:WorkspaceSource):void }) {
-  const { context, core, setNotice } = desktop;
-  const epoch = context?.selectionEpoch ?? 0;
-  const [view, dispatch] = useReducer(projectViewReducer, initialProjectView);
-  const [loading, setLoading] = useState(false), [detailLoading, setDetailLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [mutationNotice, setMutationNotice] = useState<string | null>(null);
-  const [readError, setReadError] = useState<string | null>(null);
-  const [status, setStatus] = useState<PublicResult | null>(null), [freshness, setFreshness] = useState('');
-  const [currentCursor, setCurrentCursor] = useState<string | undefined>(undefined);
-  const listGeneration = useRef(0);
-  const detailGeneration = useRef(0);
-  const selectedId = useRef<string | null>(null);
-  const [history, setHistory] = useState<(string | undefined)[]>([]);
-  const polling = useRef(false);
-  const updateStatus = useCallback(async () => {
-    if (polling.current) return;
-    polling.current = true;
-    try { const result = await core('status'); if (result) setStatus(result); } finally { polling.current = false; }
-  }, [core]);
-  const loadPage = useCallback(async (cursor?: string, restart = true) => {
-    const generation = ++listGeneration.current;
-    setLoading(true);
-    setReadError(null);
-    setCurrentCursor(cursor);
-    try {
-      const result = await core('listProjects', cursor ? { cursor, limit: 25 } : { limit: 25 });
-      if (!result || generation !== listGeneration.current) return;
-      if (result.error?.code === 'REGISTRY_CHANGED') {
-        dispatch({ type: 'invalidated', epoch }); setHistory([]); setCurrentCursor(undefined);
-        if (restart) {
-          const first = await core('listProjects', { limit: 25 });
-          if (generation === listGeneration.current && first?.result === 'OK') dispatch({ type: 'page', epoch, projects: (first.data.projects as unknown[]).map(decodeProject), cursor: typeof first.data.nextCursor === 'string' ? first.data.nextCursor : null });
-        }
-        return;
-      }
-      if (result.result !== 'OK') { setReadError(result.error?.message ?? 'Registro non disponibile.'); setFreshness('LAST_KNOWN'); return; }
-      dispatch({ type: 'page', epoch, projects: (result.data.projects as unknown[]).map(decodeProject), cursor: typeof result.data.nextCursor === 'string' ? result.data.nextCursor : null });
-      setFreshness(result.freshness);
-    } catch { setReadError('Il registro ha restituito dati non utilizzabili.'); setNotice('Il registro ha restituito dati non utilizzabili. Aggiorna la vista.'); }
-    finally { if (generation === listGeneration.current) setLoading(false); }
-  }, [core, epoch, setNotice]);
-  useEffect(() => {
-    dispatch({ type: 'context', epoch, storeId: context?.storeId ?? null }); detailGeneration.current++; listGeneration.current++; selectedId.current = null; setMutationNotice(null); setStatus(null); setImporting(false); setReadError(null); setFreshness(''); setHistory([]); setCurrentCursor(undefined);
+import { record } from '../../shared/validation.ts';
+import { decodeProject, type Project } from '../state/project-view.ts';
+import { ProjectDetail } from './ProjectDetail.tsx';
+
+function recentIds(): string[] {
+  try {
+    const ids: unknown = JSON.parse(localStorage.getItem('maestro.recent-projects') ?? '[]');
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string').slice(0, 25) : [];
+  } catch { return []; }
+}
+function remember(projectId: string) {
+  try { localStorage.setItem('maestro.recent-projects', JSON.stringify([projectId, ...recentIds().filter(id => id !== projectId)].slice(0, 25))); }
+  catch { /* Recent registry data remains available if preferences are unavailable. */ }
+}
+
+export function Projects({ desktop, onWorkspace }: { desktop: Desktop; onWorkspace(source: WorkspaceSource): void }) {
+  const { context, core, invoke, setNotice } = desktop, projectId = context?.activeProjectId;
+  const [projects, setProjects] = useState<Project[]>([]), [project, setProject] = useState<Project | null>(null);
+  const [live, setLive] = useState(false), [cursor, setCursor] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const refresh = useCallback(async () => {
     if (!context) return;
-    void updateStatus(); void loadPage();
-    const timer = setInterval(() => { if (document.visibilityState === 'visible') void updateStatus(); }, 5000);
-    return () => clearInterval(timer);
-  }, [epoch, core, loadPage, updateStatus]);
-  async function select(projectId: string, quiet = false) {
-    selectedId.current = projectId;
-    const generation = ++detailGeneration.current;
-    if (!quiet) setDetailLoading(true);
+    const status = await invoke('status');
+    if (!status) return;
+    setLive(record(status).liveness === 'LIVE_VERIFIED');
+    if (record(status).result !== 'OK') {
+      setNotice('Dati locali di Maestro non disponibili. Riprova o consulta Diagnostica.');
+      return;
+    }
+    if (record(record(status).data).status === 'ABSENT') return;
+    if (projectId) {
+      const detail = await core('getProject', {projectId});
+      if (detail?.result === 'OK') setProject(decodeProject(detail.data.project));
+    }
+    const page = await core('listProjects', {limit: 25});
+    if (page?.result === 'OK') {
+      const first = (page.data.projects as unknown[]).map(decodeProject);
+      setProjects(first);
+      setCursor(typeof page.data.nextCursor === 'string' ? page.data.nextCursor : null);
+      for (const id of recentIds().filter(id => !first.some(item => item.projectId === id)).slice(0, 10)) {
+        const detail = await invoke('getProject', {projectId: id}) as import('../../shared/bridge-contract.ts').PublicResult | null;
+        if (!detail) break;
+        if (detail.result === 'OK') setProjects(items => items.some(item => item.projectId === id) ? items : [...items, decodeProject(detail.data.project)]);
+      }
+    }
+  }, [context, core, invoke, projectId, setNotice]);
+  useEffect(() => {
+    setProject(null);
+    setProjects([]);
+    setCursor(null);
+    if (projectId) remember(projectId);
+    void refresh();
+  }, [refresh]);
+  async function select(method: 'openRepository' | 'createRepository' | 'selectProject', selected?: string) {
+    setBusy(true);
+    setNotice(null);
     try {
-      const result = await core('getProject', { projectId });
-      if (!result || generation !== detailGeneration.current) return;
-      if (result.error?.code === 'PROJECT_REMOVED') { selectedId.current = null; dispatch({ type: 'detail', epoch, project: null }); await loadPage(); return; }
-      if (result.result === 'OK') dispatch({ type: 'detail', epoch, project: decodeProject(result.data.project) });
-    } catch { setNotice('Dettaglio non disponibile. Aggiorna il registro.'); }
-    finally { if (!quiet && generation === detailGeneration.current) setDetailLoading(false); }
+      const value = await invoke(method, selected ? {projectId: selected} : {});
+      if (!value) return;
+      const reply = record(value);
+      if (!reply.result) return;
+      const result = record(reply.result);
+      if (result.error) {
+        const error = record(result.error);
+        const recovery = method === 'createRepository' && typeof reply.path === 'string'
+          ? ` Percorso scelto: ${reply.path}. Puoi riaprirlo con «Apri repository» se Git è già stato inizializzato.` : '';
+        setNotice(`${String(error.message)} ${String(error.nextAction)}${recovery}`);
+      }
+    } finally { setBusy(false); }
   }
-  if (!context) return null;
-  if (importing) return <ImportProject desktop={desktop} live={status?.liveness === 'LIVE_VERIFIED'} onClose={() => setImporting(false)} onImported={async (id, existing) => { setImporting(false); setMutationNotice(existing ? 'Repository già registrato: aperto il progetto esistente senza cambiarne la configurazione.' : 'Progetto registrato.'); setHistory([]); await loadPage(); await select(id); }} />;
-  const labels: Record<string, string> = { LIVE_VERIFIED: 'Servizio attivo', ABSENT_VERIFIED: 'Servizio fermo', UNKNOWN: 'Servizio non verificato' };
-  return <section aria-label="Registro progetti">
-    <p className="hint">Ogni progetto è un repository Git. Questo archivio Maestro può raccogliere più progetti.</p>
-    <div className="status-strip"><div><span className="badge">{status ? labels[status.liveness] : 'Verifica stato…'}</span><p className="muted">{freshness === 'LAST_KNOWN' ? 'Ultimo stato noto · dati salvati localmente' : freshness === 'LIVE' ? 'Registro live · le osservazioni Git restano datate' : 'Consultazione del registro locale'}</p></div><button className="button subtle" disabled={loading} onClick={() => { setHistory([]); void updateStatus(); void loadPage(); }}>Aggiorna registro</button></div>
-    <div className="toolbar"><button className="button primary" disabled={status?.liveness !== 'LIVE_VERIFIED'} onClick={() => setImporting(true)}>Importa progetto</button><p className="muted">{loading ? 'Caricamento progetti…' : `${view.projects.length} progetti in questa pagina`}</p>{history.length > 0 && <span className="hint">Pagina {history.length + 1}</span>}</div>
-    {mutationNotice && <p role="status" className="hint">{mutationNotice}</p>}
-    {view.notice && <p role="status" className="hint">{view.notice}</p>}
-    {!loading && !view.projects.length ? <div className="empty-state"><h3>{readError ? 'Registro non disponibile' : 'Nessun progetto registrato'}</h3><p>{readError ?? (status?.data.status === 'ABSENT' ? 'Archivio non inizializzato. L’avvio esplicito del servizio creerà lo stato locale.' : 'Questo archivio non contiene progetti. Usa Importa progetto per collegare un repository Git locale.')}</p></div> : <div className="project-grid"><div className="project-list"><div aria-label="Progetti registrati">{view.projects.map(project => <button key={project.projectId} className="project-row" aria-current={view.detail?.projectId === project.projectId} onClick={() => void select(project.projectId)}><strong>{project.displayName}</strong><small>{project.referenceCheckout}</small><small>Aggiornato {dateLabel(project.updatedAt)}</small></button>)}</div><div className="pagination"><button className="button subtle" disabled={loading || history.length === 0} onClick={() => { const previous = history.at(-1); setHistory(h => h.slice(0, -1)); void loadPage(previous); }}>Precedente</button><button className="button subtle" disabled={loading || !view.cursor} onClick={() => { const cursor = view.cursor; if (cursor) { setHistory(h => [...h, currentCursor]); void loadPage(cursor); } }}>Successiva</button></div></div><ProjectDetail onWorkspace={onWorkspace} project={view.detail} loading={detailLoading} desktop={desktop} live={status?.liveness === 'LIVE_VERIFIED'} onUpdated={async id => { if (selectedId.current === id) { setHistory([]); await loadPage(); await select(id, true); } }} onRemoved={async id => { setMutationNotice('Registrazione rimossa. Repository e file conservati.'); if (selectedId.current === id) { selectedId.current = null; dispatch({type:'detail',epoch,project:null}); } setHistory([]); await loadPage(); }} /></div>}
+  async function more() {
+    if (!cursor) return;
+    const page = await core('listProjects', {limit: 25, cursor});
+    if (page?.result === 'OK') {
+      setProjects(old => [...old, ...(page.data.projects as unknown[]).map(decodeProject).filter(item => !old.some(previous => previous.projectId === item.projectId))]);
+      setCursor(typeof page.data.nextCursor === 'string' ? page.data.nextCursor : null);
+    }
+  }
+  const order = recentIds();
+  const rank = (id: string) => order.includes(id) ? order.indexOf(id) : order.length;
+  const ordered = [...projects].sort((a, b) => rank(a.projectId) - rank(b.projectId));
+  return <section aria-label="Repository locali">
+    <div className="row-actions toolbar">
+      <button className="button primary" disabled={busy || !context} onClick={() => void select('openRepository')}>Apri repository</button>
+      <button className="button subtle" disabled={busy || !context} onClick={() => void select('createRepository')}>Crea repository</button>
+      {ordered.length > 0 && <button className="text-button" disabled={busy} onClick={() => void refresh()}>Aggiorna repository</button>}
+      {projectId && <button className="text-button" disabled={busy} onClick={() => void invoke('closeProject')}>Chiudi repository</button>}
+    </div>
+    {busy && <p role="status">Apertura repository…</p>}
+    {!context && desktop.runtimeReady && <p role="status">Dati locali di Maestro non disponibili. Consulta Diagnostica.</p>}
+    {context && !busy && ordered.length === 0 && <p className="hint">Nessun repository recente.</p>}
+    <div className={ordered.length > 0 ? 'project-grid' : undefined}>
+      {ordered.length > 0 && <aside className="project-list" aria-label="Repository recenti">
+        <h3>Recenti</h3>
+        {ordered.map(item => <button key={item.projectId} disabled={busy} className="project-row" aria-current={item.projectId === projectId}
+          onClick={() => void select('selectProject', item.projectId)}><strong>{item.displayName}</strong><small>{item.referenceCheckout}</small></button>)}
+        {cursor && <button className="button subtle" onClick={() => void more()}>Altri repository</button>}
+      </aside>}
+      {project?.projectId === projectId && project && <div className="project-detail-column">
+        {!live && <p className="hint">Ultimo stato noto · servizio fermo</p>}
+        <ProjectDetail project={project} loading={false} desktop={desktop} live={live} onWorkspace={onWorkspace}
+          onUpdated={refresh} onRemoved={async () => { await invoke('closeProject'); }} />
+      </div>}
+    </div>
   </section>;
 }

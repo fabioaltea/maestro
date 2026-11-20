@@ -22,7 +22,7 @@ import type { Runtime } from './runtime.ts';
 import { buildDiscoveryCliArgs, discoveryCliInput } from './discovery-cli.ts';
 import { DISCOVERY_MUTATIONS, validateDiscoveryData } from '../shared/discovery-contract.ts';
 export type { CliCommand } from './ports.ts';
-export function isMutation(c: CliCommand) { return c.namespace==='review'?(REVIEW_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='execution'?(EXECUTION_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='profile'?(PROFILE_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='environment'?(ENVIRONMENT_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='workspace'?(WORKSPACE_MUTATIONS as readonly string[]).includes(c.action):c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
+export function isMutation(c: CliCommand) { return c.namespace==='review'?(REVIEW_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='execution'?(EXECUTION_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='profile'?(PROFILE_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='environment'?(ENVIRONMENT_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='workspace'?(WORKSPACE_MUTATIONS as readonly string[]).includes(c.action):c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'open', 'create', 'verify', 'update', 'remove'].includes(c.action); }
 export function reviewCliInput(c:CliCommand){
   if(c.namespace!=='review'||c.action!=='prepare')return null;
   const {action,input:{projectId:_project,stateRevision,...intent}}=reviewBridgeAction(c.params);
@@ -64,14 +64,14 @@ export function buildCliArgs(c: CliCommand): string[] {
   if(c.namespace==='environment')return buildEnvironmentCliArgs(c);
   if (c.namespace === 'workspace') return buildWorkspaceCliArgs(c);
   if (c.namespace === 'discovery') return buildDiscoveryCliArgs(c);
-  const allowed = c.namespace === 'daemon' ? ['start', 'stop', 'restart', 'status', 'diagnostics', 'events', 'operation'] : c.namespace === 'project' ? ['register', 'list', 'get', 'verify', 'update', 'remove', 'operation'] : [];
+  const allowed = c.namespace === 'daemon' ? ['start', 'stop', 'restart', 'status', 'diagnostics', 'events', 'operation'] : c.namespace === 'project' ? ['register', 'open', 'create', 'list', 'get', 'verify', 'update', 'remove', 'operation'] : [];
   if (!allowed.includes(c.action)) throw new Error('INVALID_INPUT');
   const p = c.params ?? {}, args = [c.namespace, c.action === 'register' ? 'add' : c.action === 'get' ? 'show' : c.action, `--state-dir=${c.archive}`, '--json'];
   const positional: string[] = [];
   if (isMutation(c)) args.push(`--request-id=${uuid(c.requestId)}`); else if (c.requestId !== undefined) throw new Error('INVALID_INPUT');
   const val = (k: string) => text(p[k], 2048);
   if (c.namespace === 'project') {
-    if (c.action === 'register') { keys(p, ['path', 'name', 'baseBranch']); const path = val('path'); if (!isAbsolute(path)) throw new Error('INVALID_INPUT'); positional.push(path); }
+    if (['register', 'open', 'create'].includes(c.action)) { keys(p, c.action === 'register' ? ['path', 'name', 'baseBranch'] : ['path']); const path = val('path'); if (!isAbsolute(path)) throw new Error('INVALID_INPUT'); positional.push(path); }
     else if (c.action === 'list') { keys(p, ['cursor', 'limit']); args.push('--limit=25'); if (p.cursor !== undefined) args.push(`--cursor=${val('cursor')}`); }
     else if (c.action === 'operation') { keys(p, ['requestId']); positional.push(uuid(p.requestId)); }
     else { keys(p, c.action === 'update' ? ['projectId', 'expectedRevision', 'patch'] : c.action === 'remove' ? ['projectId', 'expectedRevision'] : ['projectId']); positional.push(uuid(p.projectId)); }
@@ -186,7 +186,7 @@ export class CoreCli {
     if (mutation) this.mutations++; else this.reads++;
     const generation=this.viewGeneration,previous=this.readTail;let releaseRead:(()=>void)|undefined;
     if(!mutation)this.readTail=new Promise<void>(resolve=>{releaseRead=resolve;});
-    const timeout = ['feature','profile'].includes(command.namespace) ? (command.action.startsWith('artifact.import')?30_000:3_000) : ['discovery','workspace','environment','execution','review'].includes(command.namespace) ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
+    const timeout = command.namespace === 'project' && ['open', 'create'].includes(command.action) ? 64_000 : ['feature','profile'].includes(command.namespace) ? (command.action.startsWith('artifact.import')?30_000:3_000) : ['discovery','workspace','environment','execution','review'].includes(command.namespace) ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
     try {
       if(!mutation){await previous;if(this.closed)throw new Error('CLIENT_READ_CANCELLED');if(command.scope==='view'&&generation!==this.viewGeneration)throw new Error('CLIENT_READ_CANCELLED');}
       const stdout = await new Promise<string>((resolve, reject) => {

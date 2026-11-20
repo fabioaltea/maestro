@@ -1,12 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop } from '../fixtures/electron.ts';
 test('service controls require a visible confirmation and expose original operation outcomes', async () => {
   const f = await createScratch();
   try {
     const { app, page } = await launchDesktop(f);
     try {
-      await chooseDirectory(app, f.archive); await page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
       await page.getByRole('button', { name: 'Servizio', exact: true }).click();
       await page.getByRole('button', { name: 'Avvia servizio', exact: true }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
@@ -33,8 +32,6 @@ test('ten start close reopen stop cycles preserve daemon independence and finish
     for (let cycle = 0; cycle < 10; cycle++) {
       let session = await launchDesktop(f);
       try {
-        await chooseDirectory(session.app, f.archive);
-        await session.page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
         await session.page.getByRole('button', { name: 'Servizio', exact: true }).click();
         await session.page.getByRole('button', { name: 'Avvia servizio', exact: true }).click();
         await session.page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
@@ -43,8 +40,6 @@ test('ten start close reopen stop cycles preserve daemon independence and finish
       expect((await f.cli(['daemon', 'status'])).result.liveness).toBe('LIVE_VERIFIED');
       session = await launchDesktop(f);
       try {
-        await chooseDirectory(session.app, f.archive);
-        await session.page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
         await session.page.getByRole('button', { name: 'Servizio', exact: true }).click();
         await session.page.getByRole('button', { name: 'Arresta servizio', exact: true }).click();
         const started = performance.now();
@@ -64,7 +59,6 @@ test('actual main SIGKILL after service acceptance leaves the daemon and origina
   const f = await createScratch();
   try {
     const first = await launchDesktop(f);
-    await chooseDirectory(first.app, f.archive); await first.page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
     await first.page.getByRole('button', { name: 'Servizio', exact: true }).click();
     await first.page.getByRole('button', { name: 'Avvia servizio', exact: true }).click();
     const { readdir, readFile } = await import('node:fs/promises');
@@ -95,8 +89,7 @@ test('real reply lost while main is stopped and killed reconciles the original d
   const { readdir, readFile } = await import('node:fs/promises'); const { join } = await import('node:path');
   const first = await launchDesktop(f); let killed = false;
   try {
-    await chooseDirectory(first.app, f.archive); await first.page.getByRole('button', { name: 'Apri archivio', exact: true }).click();
-    await expect(first.page.getByText('Servizio fermo', { exact: true })).toBeVisible();
+    await expect(first.page.getByRole('button', { name: 'Apri repository', exact: true })).toBeVisible();
     const prepared = await first.page.evaluate(async () => {
       const c = await window.maestro.context({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:0});
       return await window.maestro.prepareAction({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:c.selectionEpoch,action:'daemon.start',params:{}});

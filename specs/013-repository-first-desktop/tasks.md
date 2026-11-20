@@ -17,28 +17,28 @@
 - [x] T003 [P] [US1] Scrivere prove per bootstrap esplicito, deduplicazione, destinazione vuota, retry e rifiuto su cartella occupata in `tests/integration/repository-entry.test.ts`.
 - [x] T004 [US1] Collegare `project open/create` al lifecycle e al ledger in `src/cli/projects.ts`, `src/client/local-client.ts`, `src/protocol/validation.ts` e `src/core/projects/dispatch.ts`.
 - [x] T005 [US1] Implementare l’effetto Git con intento distinto e probe supervisionato in `src/core/projects/register.ts`, `src/domain/projects/intent.ts` e `src/platform/macos/git/probe-main.ts`.
-- [ ] T006 [US1] Collegare picker, conferma di creazione, aperture e stato iniziale in `apps/desktop/src/main/project-actions.ts`, `apps/desktop/src/renderer/App.tsx` e `apps/desktop/src/renderer/views/Projects.tsx`. Aggiornare il bridge e aggiungere E2E in `apps/desktop/tests/e2e/repository-entry.spec.ts`.
+- [x] T006 [US1] Collegare picker, conferma di creazione, aperture e stato iniziale in `apps/desktop/src/main/project-actions.ts`, `apps/desktop/src/renderer/App.tsx` e `apps/desktop/src/renderer/views/Projects.tsx`. Aggiornare il bridge e aggiungere E2E in `apps/desktop/tests/e2e/repository-entry.spec.ts`.
 
 ## Phase 4: US2 · Analizzare e creare una feature (P1)
 
 **Independent Test** Aprire Discovery del progetto, approvare la fixture e raggiungere la nuova feature dello stesso progetto. Provare il blocco senza approvazione corrente.
 
-- [ ] T007 [US2] Definire le prove di eleggibilità, percorso e blocco in `apps/desktop/tests/e2e/repository-entry.spec.ts` usando le fixture 004 e 005.
-- [ ] T008 [US2] Collegare «Analizza codebase», stato Discovery, aggiornamento dopo approvazione e «Nuova feature» in `apps/desktop/src/renderer/views/{ProjectDetail,Discovery,FeaturePlanning}.tsx`, mantenendo consenso e gate correnti.
+- [x] T007 [US2] Definire le prove di eleggibilità, percorso e blocco in `apps/desktop/tests/e2e/repository-entry.spec.ts` usando le fixture 004 e 005.
+- [x] T008 [US2] Collegare «Analizza codebase», stato Discovery, aggiornamento dopo approvazione e «Nuova feature» in `apps/desktop/src/renderer/views/{ProjectDetail,Discovery,FeaturePlanning}.tsx`, mantenendo consenso e gate correnti.
 
 ## Phase 5: US3 · Riaprire e recuperare (P2)
 
 **Independent Test** Alternare due repository, rileggere lo storico dopo riavvio e recuperare uno store precedente compatibile con fonte preservata.
 
-- [ ] T009 [P] [US3] Scrivere prove di isolamento progetto, risposta tardiva, riapertura e recupero in `tests/integration/archive-adoption.test.ts` e `apps/desktop/tests/contract/repository-scope.test.ts`.
-- [ ] T010 [US3] Collegare recenti, viste del progetto, ricevute originali e scope delle conferme in `apps/desktop/src/main/{archive-context,action-handlers,lifecycle}.ts` e `apps/desktop/src/renderer/{App.tsx,views/}`.
-- [ ] T011 [US3] Implementare il recupero verificato del default vuoto con CLI e Diagnostica in `src/cli/archive.ts`, `src/platform/macos/paths.ts` e `apps/desktop/src/renderer/views/Diagnostics.tsx`.
-- [ ] T012 [US3] Adattare fixture Desktop e prove pregresse alla selezione del progetto e coprire la riapertura in `apps/desktop/tests/fixtures/electron.ts` e `apps/desktop/tests/e2e/`.
+- [x] T009 [P] [US3] Scrivere prove di isolamento progetto, risposta tardiva, riapertura e recupero in `tests/integration/archive-adoption.test.ts` e `apps/desktop/tests/contract/repository-scope.test.ts`.
+- [x] T010 [US3] Collegare recenti, viste del progetto, ricevute originali e scope delle conferme in `apps/desktop/src/main/{archive-context,action-handlers,lifecycle}.ts` e `apps/desktop/src/renderer/{App.tsx,views/}`.
+- [x] T011 [US3] Implementare il recupero verificato del default vuoto con CLI e Diagnostica in `src/cli/archive.ts`, `src/platform/macos/paths.ts` e `apps/desktop/src/renderer/views/Diagnostics.tsx`.
+- [x] T012 [US3] Adattare fixture Desktop e prove pregresse alla selezione del progetto e coprire la riapertura in `apps/desktop/tests/fixtures/electron.ts` e `apps/desktop/tests/e2e/`.
 
 ## Phase 6: Verifica finale
 
-- [ ] T013 Eseguire build, typecheck, lint, suite mirate e checkpoint SC-001–004. Registrare esiti e limiti in `specs/013-repository-first-desktop/reports/validation.md`.
-- [ ] T014 Concludere review locale, registrare SC-005 e review umana come verificati o pendenti secondo evidenza e riportare gate ereditati in `specs/013-repository-first-desktop/reports/readiness.md`.
+- [x] T013 Eseguire build, typecheck, lint, suite mirate e checkpoint SC-001–004. Registrare esiti e limiti in `specs/013-repository-first-desktop/reports/validation.md`.
+- [x] T014 Concludere review locale, registrare SC-005 e review umana come verificati o pendenti secondo evidenza e riportare gate ereditati in `specs/013-repository-first-desktop/reports/readiness.md`.
 
 ## Dependencies & Execution Order
 

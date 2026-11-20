@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { realpath, lstat } from 'node:fs/promises';
 import type { DialogPort, CliCommand } from './ports.ts';
 import type { Params } from '../shared/bridge-contract.ts';
-import { validateAction, uuid } from '../shared/validation.ts';
+import { record, validateAction, uuid } from '../shared/validation.ts';
 import { ArchiveContext } from './archive-context.ts';
 import type { BridgeRouter } from './bridge.ts';
 import type { ActionService } from './action-handlers.ts';
@@ -43,5 +43,41 @@ export function installProjectActions(router: BridgeRouter, context: ArchiveCont
   const projects = new ProjectActions(context, router.services.dialogs);
   if (actions) actions.resolveProject = (action, params) => projects.resolve(action, params);
   router.register('chooseRepository', async () => ({ repository: await projects.chooseRepository() }));
+  let entering = false;
+  for (const action of ['open', 'create'] as const) {
+    router.register(action === 'open' ? 'openRepository' : 'createRepository', async () => {
+      if (!actions) throw new Error('RUNTIME_UNAVAILABLE');
+      if (entering) throw new Error('LOCAL_BUSY');
+      const selected = context.capture();
+      entering = true;
+      try {
+        const path = await router.services.dialogs.chooseDirectory(action === 'open' ? 'Apri repository locale' : 'Scegli o crea una cartella vuota');
+        if (!path) return { context: router.context, canceled: true };
+        if (action === 'create' && !await router.services.dialogs.confirmSelection?.('Creare un repository Git in questa cartella?', path)) {
+          return { context: router.context, canceled: true };
+        }
+        const result = await actions.enterRepository(action, path, selected);
+        context.apply(selected, result);
+        if (result.outcome === 'SUCCEEDED') context.activateProject(uuid(result.data.projectId));
+        router.setContext(context.capture().view);
+        return { context: router.context, canceled: false, result, path };
+      } finally { entering = false; }
+    });
+  }
+  router.register('selectProject', async request => {
+    if (entering) throw new Error('LOCAL_BUSY');
+    if (!router.services.core) throw new Error('RUNTIME_UNAVAILABLE');
+    const selected = context.capture(), projectId = uuid(request.projectId);
+    const result = await router.services.core.call({ namespace: 'project', action: 'get', archive: selected.path, params: { projectId } });
+    context.apply(selected, result);
+    if (result.result === 'OK' && record(result.data.project).projectId === projectId) context.activateProject(projectId);
+    router.setContext(context.capture().view);
+    return { context: router.context, result };
+  });
+  router.register('closeProject', () => {
+    if (entering) throw new Error('LOCAL_BUSY');
+    router.setContext(context.activateProject(null));
+    return { context: router.context };
+  });
   return projects;
 }

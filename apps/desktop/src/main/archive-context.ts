@@ -3,6 +3,13 @@ import { realpath, lstat } from 'node:fs/promises';
 import { dirname, basename, isAbsolute, join } from 'node:path';
 import type { ArchiveView, PublicResult } from '../shared/bridge-contract.ts';
 export interface ArchiveSelection { path: string; view: ArchiveView }
+async function resolveMissingAncestors(path: string): Promise<string> {
+  try { return await realpath(path); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT' || path === dirname(path)) throw error;
+    return join(await resolveMissingAncestors(dirname(path)), basename(path));
+  }
+}
 export class ArchiveContext {
   private epoch = 0;
   private listeners = new Set<() => void>();
@@ -19,7 +26,7 @@ export class ArchiveContext {
       canonical = await realpath(path);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      canonical = join(await realpath(dirname(path)), basename(path));
+      canonical = join(await resolveMissingAncestors(dirname(path)), basename(path));
     }
     // UI location hint only: no Git command, repair or permission change. Core validates archive storage.
     const hasEntry = async (name: string) => lstat(join(canonical, name)).then(() => true, error => {
@@ -32,6 +39,15 @@ export class ArchiveContext {
   capture(): ArchiveSelection {
     if (!this.selection) throw new Error('STALE_CONTEXT');
     return { path: this.selection.path, view: { ...this.selection.view } };
+  }
+  activateProject(projectId: string | null) {
+    if (!this.selection) throw new Error('STALE_CONTEXT');
+    if ((this.selection.view.activeProjectId ?? null) !== projectId) {
+      const { activeProjectId: _previous, ...view } = this.selection.view;
+      this.selection = { path: this.selection.path, view: { ...view, ...(projectId ? {activeProjectId: projectId} : {}), selectionEpoch: ++this.epoch } };
+      this.changed();
+    }
+    return this.selection.view;
   }
   apply(captured: ArchiveSelection, result: PublicResult) {
     if (!this.selection || captured.view.selectionEpoch !== this.selection.view.selectionEpoch) throw new Error('STALE_CONTEXT');

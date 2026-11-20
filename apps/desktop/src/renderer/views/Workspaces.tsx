@@ -8,9 +8,7 @@ export interface WorkspaceSource {projectId:string;featureId:string;envelopeId:s
 
 export function Workspaces({desktop,source,onProjects,onOperations,onEnvironment}:{desktop:Desktop;source:WorkspaceSource|null;onProjects():void;onOperations():void;onEnvironment(workspaceId:string):void}){
  const {core,invoke}=desktop;
- const [projectId,setProjectId]=useState(source?.projectId??'');
- const [projects,setProjects]=useState<Params[]>([]);
- const [projectCursor,setProjectCursor]=useState<string|null>(null);
+ const projectId=desktop.context?.activeProjectId??'';
  const [items,setItems]=useState<Params[]>([]);
  const [cursor,setCursor]=useState<string|null>(null);
  const [loaded,setLoaded]=useState(false);
@@ -23,26 +21,12 @@ export function Workspaces({desktop,source,onProjects,onOperations,onEnvironment
  const [receipt,setReceipt]=useState<Params|null>(null);
  const latestReceipt=useRef<Params|null>(null);
  const current=useRef(0),active=useRef(false),trigger=useRef<HTMLButtonElement|null>(null);
- const project=useRef(projectId);
-
  useEffect(()=>{
    active.current=true;
-   const generation=++current.current;
-   async function load(){
-     await loadProjects();
-     if(!active.current||generation!==current.current)return;
-     if(project.current)await refresh(project.current);
-   }
-   void load();
+   if(projectId)void refresh(projectId);
    return()=>{active.current=false;current.current++;};
- },[core]);
+ },[core,projectId]);
 
- async function loadProjects(next?:string){
-   const result=await core('listProjects',{limit:25,...(next?{cursor:next}:{})});
-   if(!active.current||result?.result!=='OK')return;
-   setProjects(old=>next?[...old,...result.data.projects as Params[]]:result.data.projects as Params[]);
-   setProjectCursor(result.data.nextCursor as string|null);
- }
  async function refresh(id:string,next?:string){
    const generation=++current.current;
    const pending=latestReceipt.current;
@@ -70,12 +54,6 @@ export function Workspaces({desktop,source,onProjects,onOperations,onEnvironment
      setCursor(page.data.nextCursor as string|null);
      setLoaded(true);
    }
- }
- function select(id:string){
-   project.current=id;current.current++;
-   latestReceipt.current=null;
-   setProjectId(id);setItems([]);setCursor(null);setLoaded(false);setReceipt(null);setCleanup(null);
-   if(id)void refresh(id);
  }
  async function prepare(params:Params,button:HTMLButtonElement){
    trigger.current=button;
@@ -113,12 +91,6 @@ export function Workspaces({desktop,source,onProjects,onOperations,onEnvironment
 
  return <section aria-label="Worktree Git" className="workspace-panel">
    <div className="row-actions">
-     <label>Progetto <select aria-label="Progetto workspace" value={projectId} disabled={busy||!!prepared} onChange={event=>select(event.target.value)}>
-       <option value="">Seleziona progetto</option>
-       {source&&!projects.some(item=>item.projectId===source.projectId)&&<option value={source.projectId}>{source.projectId}</option>}
-       {projects.map(item=><option key={String(item.projectId)} value={String(item.projectId)}>{String(item.displayName)}</option>)}
-     </select></label>
-     {projectCursor&&<button className="button subtle" disabled={busy||!!prepared} onClick={()=>void loadProjects(projectCursor)}>Altri progetti</button>}
      <button className="button subtle" disabled={!projectId||busy||!!prepared} onClick={()=>void refresh(projectId)}>Aggiorna elenco</button>
    </div>
    {loaded&&!live&&<p role="status">Ultimo stato noto. La creazione richiede il servizio attivo.</p>}

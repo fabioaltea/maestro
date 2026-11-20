@@ -25,9 +25,10 @@ export class ArchiveReader {
     throw new Error('LOCAL_BUSY');
   }
 }
-export function installReads(router: BridgeRouter, context = new ArchiveContext()) {
+export function installReads(router: BridgeRouter, context = new ArchiveContext(), allowArchiveSelection = true) {
   let choosing = false;
   router.register('chooseArchive', async request => {
+    if (!allowArchiveSelection) throw new Error('INVALID_INPUT');
     if (choosing) throw new Error('LOCAL_BUSY');
     choosing = true;
     try {

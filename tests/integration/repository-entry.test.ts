@@ -20,6 +20,11 @@ test('repository entry bootstraps explicitly, creates a local checkout and prese
  assert.equal((await call('open',path,id)).error.code,'IDEMPOTENCY_CONFLICT');
  const reopened=await call('open',path);
  assert.equal(reopened.data.projectId,created.data.projectId);
+ const shared=join(f.directory,'concurrent');
+ await mkdir(shared);
+ const contenders=await Promise.all([call('create',shared),call('create',shared)]);
+ assert.equal(contenders.filter(result=>result.outcome==='SUCCEEDED').length,1);
+ assert.equal(contenders.find(result=>result.outcome!=='SUCCEEDED')?.error?.code,'REPOSITORY_DESTINATION_OCCUPIED');
  const occupied=join(f.directory,'occupied');
  await mkdir(occupied);
  const work=join(occupied,'work.txt');
