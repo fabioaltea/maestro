@@ -1,6 +1,7 @@
+import {uploadWorkflowBytes} from './workflow-upload.js';
 import {parseArgs} from 'node:util';
 import {isAbsolute} from 'node:path';
-import {createHash,randomUUID} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import {requireUuid} from '../domain/identifiers.js';
 import {featureText,validateFeatureBundle} from '../domain/features/bundle.js';
 import {FEATURE_PLANNING_ACTIONS,FEATURE_PLANNING_LIMITS} from '../domain/features/planning.js';
@@ -35,8 +36,6 @@ Testi soltanto da file o stdin. Bundle <=256KiB; envelope <=32KiB, chunk <=8KiB.
 Import: UUID originale identifica seal; i sotto-UUID sono deterministici e recuperabili.
 Mutazioni: admission non equivale a completamento. Recuperare con operation UUID originale.
 `;
-/** Stable subordinate UUIDs make a whole upload retryable without duplicating its objects. */
-function uploadId(root:string,part:string){const h=createHash('sha256').update(`${root}:${part}`).digest('hex');return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;}
 export async function runFeatureCli(args:readonly string[]):Promise<number>{
  let json=args.includes('--json'),requestId:string|null=null,result:PublicResult;
  try{
@@ -74,13 +73,7 @@ export async function runFeatureCli(args:readonly string[]):Promise<number>{
  const maxBytes=answer?6*FEATURE_PLANNING_LIMITS.answerBytes+2:262144;
  const raw=inputStdin?await jsonStdin(maxBytes):await jsonFile(inputFile,maxBytes);
  const bytes=Buffer.from(answer?featureText(raw,FEATURE_PLANNING_LIMITS.answerBytes,true):JSON.stringify(validateFeatureBundle(raw)));
- const sha256=createHash('sha256').update(bytes).digest('hex'),root=requestId!,artifactId=uploadId(root,'reserve');
- result=await client.runFeature('feature.artifact.reserve',{kind:importing,expectedBytes:bytes.length,sha256,...(targetId?{targetId}:{})},{...options,requestId:artifactId});
- const good=(r:PublicResult)=>r.result==='OK'&&r.data.operation!==undefined&&(r.data.operation as {outcome?:string}).outcome==='SUCCEEDED';
- if(good(result)){
- for(let offset=0;offset<bytes.length;offset+=8192){const chunk=bytes.subarray(offset,offset+8192);result=await client.runFeature('feature.artifact.append',{uploadId:artifactId,offset,chunkSha256:createHash('sha256').update(chunk).digest('hex'),base64:chunk.toString('base64')},{...options,requestId:uploadId(root,`append:${offset}`)});if(!good(result))break;}
- if(good(result))result=await client.runFeature('feature.artifact.seal',{uploadId:artifactId,expectedBytes:bytes.length,sha256},{...options,requestId:root});
- }
+ result=await uploadWorkflowBytes(client,options,requestId!,importing,bytes,targetId);
  }else result=await client.runFeature(method,params,{...options,...(mutation?{requestId:requestId!}:{})});
  }catch(error){result=failureResult(classifyError(error),requestId);}
  await new Promise<void>((resolve,reject)=>process.stdout.write((json?JSON.stringify(result):(result.requestId?`requestId: ${result.requestId}\n`:'')+(result.error?`${result.error.code}: ${result.error.message}\n${result.error.nextAction}`:JSON.stringify(result.data,null,2)))+'\n',e=>e?reject(e):resolve()));

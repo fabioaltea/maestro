@@ -53,6 +53,7 @@ async function follow(client: LocalClient, json: boolean, options: import('../cl
 }
 
 export async function runCli(args: readonly string[]): Promise<number> {
+  if (args[0] === 'profile') return (await import('./profile.js')).runProfileCli(args.slice(1));
   if (args[0] === 'environment') return (await import('./environment.js')).runEnvironmentCli(args.slice(1));
   if (args[0] === 'workspace') return (await import('./workspace.js')).runWorkspaceCli(args.slice(1));
   if (args[0] === 'feature') return (await import('./feature.js')).runFeatureCli(args.slice(1));
@@ -67,7 +68,7 @@ export async function runCli(args: readonly string[]): Promise<number> {
     } });
     json = values.json ?? false;
     if (values.help) {
-      await write('maestro daemon start|status|stop|restart|diagnostics [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon events [--limit 1..1000 | --follow] [--after CURSOR] [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\nmaestro project add|list|show|verify|update|remove|operation (maestro project --help)\nmaestro feature --help\nmaestro workspace --help\nmaestro environment --help\n');
+      await write('maestro daemon start|status|stop|restart|diagnostics [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon operation REQUEST_ID [--state-dir ABSOLUTE_PATH] [--json]\nmaestro daemon events [--limit 1..1000 | --follow] [--after CURSOR] [--state-dir ABSOLUTE_PATH] [--json]\n--request-id UUID --timeout-ms MILLISECONDS\nmaestro project add|list|show|verify|update|remove|operation (maestro project --help)\nmaestro feature --help\nmaestro workspace --help\nmaestro environment --help\nmaestro profile --help\n');
       return 0;
     }
     if (values.version) { await write(VERSION + '\n'); return 0; }
