@@ -1,3 +1,4 @@
+import {EXECUTION_BRIDGE_METHODS,validateExecutionBridge} from './execution-contract.ts';
 import {PROFILE_BRIDGE_METHODS,validateProfileBridge} from './profile-contract.ts';
 import {ENVIRONMENT_BRIDGE_METHODS,validateEnvironmentBridge} from './environment-contract.ts';
 import {FEATURE_BRIDGE_METHODS,validateFeatureBridge} from './feature-contract.ts';
@@ -47,7 +48,8 @@ const extras: Record<string, readonly string[]> = {
 export function validateRequest(method: string, input: unknown): BridgeRequest {
   if (!(METHODS as readonly string[]).includes(method)) throw new Error('INVALID_INPUT');
   const p = record(input);
-  if ((PROFILE_BRIDGE_METHODS as readonly string[]).includes(method))validateProfileBridge(method,p);
+  if ((EXECUTION_BRIDGE_METHODS as readonly string[]).includes(method))validateExecutionBridge(method,p);
+  else if ((PROFILE_BRIDGE_METHODS as readonly string[]).includes(method))validateProfileBridge(method,p);
   else if ((ENVIRONMENT_BRIDGE_METHODS as readonly string[]).includes(method))validateEnvironmentBridge(method,p);
   else if ((WORKSPACE_BRIDGE_METHODS as readonly string[]).includes(method)) validateWorkspaceBridge(method,p);
   else if ((FEATURE_BRIDGE_METHODS as readonly string[]).includes(method)) validateFeatureBridge(method,p);

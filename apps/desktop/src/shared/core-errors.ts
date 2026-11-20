@@ -1,5 +1,11 @@
 // Public core v1 safe error catalog; no runtime dependency on core adapters.
 export const CORE_ERRORS = {
+  "EXECUTION_NOT_INITIALIZED": {"code": "EXECUTION_NOT_INITIALIZED", "message": "Archivio esecuzione non inizializzato.", "nextAction": "Avviare il servizio per aggiornare l’archivio."},
+  "EXECUTION_UNSUPPORTED": {"code": "EXECUTION_UNSUPPORTED", "message": "Capability di esecuzione non qualificata.", "nextAction": "Consultare le capacità verificate del provider."},
+  "EXECUTION_APPROVAL_STALE": {"code": "EXECUTION_APPROVAL_STALE", "message": "Approvazione esecuzione scaduta o superata.", "nextAction": "Riesaminare il contesto corrente."},
+  "CHECKPOINT_STALE": {"code": "CHECKPOINT_STALE", "message": "Il checkpoint non corrisponde al workspace corrente.", "nextAction": "Riesaminare il checkpoint e il workspace."},
+  "PROCESS_UNKNOWN": {"code": "PROCESS_UNKNOWN", "message": "Prova di uscita del processo assente.", "nextAction": "Consultare il run originale e riconciliare."},
+  "TOOL_PERMISSION_REQUIRED": {"code": "TOOL_PERMISSION_REQUIRED", "message": "Permesso del tool assente.", "nextAction": "Riesaminare profilo e autorizzazioni."},
   "PROFILE_NOT_INITIALIZED": {
     "code": "PROFILE_NOT_INITIALIZED",
     "message": "Catalogo profili non inizializzato.",

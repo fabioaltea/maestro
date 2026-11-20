@@ -1,3 +1,4 @@
+import {installExecution} from './execution.ts';
 import {installProfile} from './profile.ts';
 import { app, BrowserWindow, dialog, protocol, session } from 'electron';
 import { fileURLToPath } from 'node:url';
@@ -56,6 +57,7 @@ else {
     installWorkspace(router,archiveContext,lifecycle.actions);
     installEnvironment(router,archiveContext,lifecycle.actions);
     installProfile(router,archiveContext,lifecycle.actions);
+    installExecution(router,archiveContext,lifecycle.actions);
     installActivityHistory(router, archiveContext);
     clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
     archiveContext.onChange(() => clients?.archiveChanged());

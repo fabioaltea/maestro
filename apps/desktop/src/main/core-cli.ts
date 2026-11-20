@@ -1,3 +1,5 @@
+import {EXECUTION_MUTATIONS,validateExecutionData} from '../shared/execution-contract.ts';
+import {buildExecutionCliArgs,executionCliInput} from './execution-cli.ts';
 import {PROFILE_MUTATIONS,validateProfileData} from '../shared/profile-contract.ts';
 import {buildProfileCliArgs,profileCliInput} from './profile-cli.ts';
 import {ENVIRONMENT_MUTATIONS,validateEnvironmentData} from '../shared/environment-contract.ts';
@@ -18,10 +20,11 @@ import type { Runtime } from './runtime.ts';
 import { buildDiscoveryCliArgs, discoveryCliInput } from './discovery-cli.ts';
 import { DISCOVERY_MUTATIONS, validateDiscoveryData } from '../shared/discovery-contract.ts';
 export type { CliCommand } from './ports.ts';
-export function isMutation(c: CliCommand) { return c.namespace==='profile'?(PROFILE_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='environment'?(ENVIRONMENT_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='workspace'?(WORKSPACE_MUTATIONS as readonly string[]).includes(c.action):c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
+export function isMutation(c: CliCommand) { return c.namespace==='execution'?(EXECUTION_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='profile'?(PROFILE_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='environment'?(ENVIRONMENT_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='workspace'?(WORKSPACE_MUTATIONS as readonly string[]).includes(c.action):c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
 export function buildCliArgs(c: CliCommand): string[] {
   if (!isAbsolute(c.archive) || c.archive.includes('\0')) throw new Error('INVALID_INPUT');
   if (c.namespace === 'feature') return buildFeatureCliArgs(c);
+  if(c.namespace==='execution')return buildExecutionCliArgs(c);
   if(c.namespace==='profile')return buildProfileCliArgs(c);
   if(c.namespace==='environment')return buildEnvironmentCliArgs(c);
   if (c.namespace === 'workspace') return buildWorkspaceCliArgs(c);
@@ -51,7 +54,7 @@ export function buildCliArgs(c: CliCommand): string[] {
   if (positional.length) args.push('--', ...positional);
   return args;
 }
-const safeFields = new Set(('protocolVersion capabilities profileVersion profileMethods entityId environmentVersion environmentMethods workspaceVersion workspaceMethods featureVersion featureMethods discoveryVersion discoveryMethods projectRegistryVersion scope from to generation correlationId redactedFields resourceIssues resourceIssuesTruncated referencePath checkoutAvailability repositoryIdentityStatus hasCommits headKind currentBranch headOid objectFormat baseOid fileStatusScope limitations freshness observedInstanceId startedAt identityState checkoutState referenceState status lifecycle ready observedAt requestedAt completedAt accepted effect action requestId storeId instanceId operationId projectId displayName referenceCheckout baseBranch baseState configRevision expectedRevision observedConfigRevision observationRevision registryRevision createdAt updatedAt removedAt observation availability identity trackedChanges untrackedChanges conflicts error code category cause message nextAction retryable persisted operation result outcome phase projects project tombstone count nextCursor cursor versions package node protocol schema platform os arch health observability resources resourcesTruncated resourceId kind releaseState projectRegistry activeProjects tombstones operations queue active pending capacity oldestWaitMs maxQueueWaitMs fenced total busy blocked failures limits highWater firstAvailable nextAfter records truncated events eventId seq occurredAt type payload pendingBytes degraded errorCode usage journalBytes logBytes walBytes shmBytes outboxMetadataBytes totalBytes temporaryBytes logLimitBytes journalLimitBytes').split(' '));
+const safeFields = new Set(('protocolVersion capabilities executionVersion executionMethods profileVersion profileMethods entityId environmentVersion environmentMethods workspaceVersion workspaceMethods featureVersion featureMethods discoveryVersion discoveryMethods projectRegistryVersion scope from to generation correlationId redactedFields resourceIssues resourceIssuesTruncated referencePath checkoutAvailability repositoryIdentityStatus hasCommits headKind currentBranch headOid objectFormat baseOid fileStatusScope limitations freshness observedInstanceId startedAt identityState checkoutState referenceState status lifecycle ready observedAt requestedAt completedAt accepted effect action requestId storeId instanceId operationId projectId displayName referenceCheckout baseBranch baseState configRevision expectedRevision observedConfigRevision observationRevision registryRevision createdAt updatedAt removedAt observation availability identity trackedChanges untrackedChanges conflicts error code category cause message nextAction retryable persisted operation result outcome phase projects project tombstone count nextCursor cursor versions package node protocol schema platform os arch health observability resources resourcesTruncated resourceId kind releaseState projectRegistry activeProjects tombstones operations queue active pending capacity oldestWaitMs maxQueueWaitMs fenced total busy blocked failures limits highWater firstAvailable nextAfter records truncated events eventId seq occurredAt type payload pendingBytes degraded errorCode usage journalBytes logBytes walBytes shmBytes outboxMetadataBytes totalBytes temporaryBytes logLimitBytes journalLimitBytes').split(' '));
 export function projectSafe(value: unknown, depth = 0): unknown {
   if (depth > 12) throw new Error('CLIENT_PROTOCOL_ERROR');
   if (value === null || typeof value === 'boolean' || typeof value === 'number') return value;
@@ -73,7 +76,20 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
       || (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome)))) throw new Error();
     for (const k of ['requestId', 'storeId', 'instanceId']) if (p[k] !== null) uuid(p[k]);
     if (c.requestId && p.requestId !== c.requestId) throw new Error();
-    const data = c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    const data = c.namespace==='execution'?validateExecutionData(c.action,p.data):c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    if(c.namespace==='execution'){
+      if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
+      if(c.action==='get'&&p.result==='OK'&&record(data.session).sessionId!==c.params?.sessionId)throw new Error();
+      if(c.action==='provider.get'&&p.result==='OK'&&record(data.provider).providerId!==c.params?.providerId)throw new Error();
+      if(c.action==='list'&&Array.isArray(data.items)&&data.items.some(item=>record(item).projectId!==c.params?.projectId))throw new Error();
+      if(c.action==='output.list'&&p.result==='OK'&&data.runId!==c.params?.runId)throw new Error();
+      if(c.action==='artifact'&&p.result==='OK'&&data.artifactId!==c.params?.artifactId)throw new Error();
+      if(data.operation!==undefined){
+        const operation=record(data.operation);
+        if(operation.requestId!==p.requestId||operation.outcome!=='UNKNOWN'&&operation.outcome!==p.outcome||
+           c.action!=='operation'&&operation.action!==c.action)throw new Error();
+      }
+    }
     if(c.namespace==='profile'){
       if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
       if(c.action==='get'&&p.result==='OK'&&record(data.record).entityId!==c.params?.entityId)throw new Error();
@@ -132,11 +148,11 @@ export class CoreCli {
     if (mutation) this.mutations++; else this.reads++;
     const generation=this.viewGeneration,previous=this.readTail;let releaseRead:(()=>void)|undefined;
     if(!mutation)this.readTail=new Promise<void>(resolve=>{releaseRead=resolve;});
-    const timeout = ['feature','profile'].includes(command.namespace) ? (command.action.startsWith('artifact.import')?30_000:3_000) : ['discovery','workspace','environment'].includes(command.namespace) ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
+    const timeout = ['feature','profile'].includes(command.namespace) ? (command.action.startsWith('artifact.import')?30_000:3_000) : ['discovery','workspace','environment','execution'].includes(command.namespace) ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
     try {
       if(!mutation){await previous;if(this.closed)throw new Error('CLIENT_READ_CANCELLED');if(command.scope==='view'&&generation!==this.viewGeneration)throw new Error('CLIENT_READ_CANCELLED');}
       const stdout = await new Promise<string>((resolve, reject) => {
-        const input = featureCliInput(command) ?? discoveryCliInput(command) ?? workspaceCliInput(command) ?? environmentCliInput(command) ?? profileCliInput(command);
+        const input = featureCliInput(command) ?? discoveryCliInput(command) ?? workspaceCliInput(command) ?? environmentCliInput(command) ?? profileCliInput(command) ?? executionCliInput(command);
         const child = spawn(this.runtime.node, [this.runtime.cli, ...args], { env: this.runtime.env, shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
         this.children.add(child); if (!mutation && command.scope === 'view') this.viewChildren.add(child);
         const chunks: Buffer[] = []; let bytes = 0, stderr = 0, failed = false;

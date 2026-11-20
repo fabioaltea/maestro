@@ -1,3 +1,4 @@
+import {EXECUTION_MUTATIONS} from '../shared/execution-contract.ts';
 import {PROFILE_MUTATIONS} from '../shared/profile-contract.ts';
 import {ENVIRONMENT_MUTATIONS} from '../shared/environment-contract.ts';
 import { mkdir, lstat, open, rename, unlink, opendir } from 'node:fs/promises';
@@ -9,8 +10,8 @@ import { CORE_ERRORS } from '../shared/core-errors.ts';
 import { FEATURE_MUTATIONS } from '../shared/feature-contract.ts';
 import { WORKSPACE_MUTATIONS } from '../shared/workspace-contract.ts';
 export interface ReceiptMeta {
-  requestId: string; namespace: 'foundation' | 'project' | 'discovery' | 'feature' | 'workspace' | 'environment' | 'profile'; action: string; archivePath: string; storeId: string | null;
-  featureId?: string; workspaceId?: string; profileId?: string; projectId: string | null; expectedRevision: string | null; intentHash: string;
+  requestId: string; namespace: 'foundation' | 'project' | 'discovery' | 'feature' | 'workspace' | 'environment' | 'profile' | 'execution'; action: string; archivePath: string; storeId: string | null;
+  featureId?: string; workspaceId?: string; profileId?: string; executionTarget?:string|null; projectId: string | null; expectedRevision: string | null; intentHash: string;
 }
 export interface Receipt extends ReceiptMeta {
   receiptVersion: 1; createdAt: string; updatedAt: string; phase: 'PREPARED' | 'RECONCILING' | 'TERMINAL' | 'UNKNOWN';
@@ -18,15 +19,17 @@ export interface Receipt extends ReceiptMeta {
 }
 export function validateReceipt(value: unknown): Receipt {
   const p = record(value);
-  keys(p, ['requestId', 'namespace', 'action', 'archivePath', 'storeId', 'projectId', 'expectedRevision', 'intentHash', 'featureId', 'workspaceId', 'profileId', 'receiptVersion', 'createdAt', 'updatedAt', 'phase', 'outcome', 'errorCode']);
+  keys(p, ['requestId', 'namespace', 'action', 'archivePath', 'storeId', 'projectId', 'expectedRevision', 'intentHash', 'featureId', 'workspaceId', 'profileId', 'executionTarget', 'receiptVersion', 'createdAt', 'updatedAt', 'phase', 'outcome', 'errorCode']);
   uuid(p.requestId); if(p.featureId!==undefined)uuid(p.featureId); if (p.storeId !== null) uuid(p.storeId); if (p.projectId !== null) uuid(p.projectId); if (p.expectedRevision !== null) revision(p.expectedRevision);
   if (!isAbsolute(text(p.archivePath, 2048)) || !/^[a-f0-9]{64}$/.test(text(p.intentHash, 64)) || p.receiptVersion !== 1) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
-  if (!['foundation', 'project', 'discovery', 'feature','workspace','environment','profile'].includes(String(p.namespace))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+  if (!['foundation', 'project', 'discovery', 'feature','workspace','environment','profile','execution'].includes(String(p.namespace))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if(p.namespace==='workspace'||p.namespace==='environment'){uuid(p.workspaceId);uuid(p.projectId);uuid(p.storeId);}
   else if(p.workspaceId!==undefined)throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
+  if(p.namespace==='execution'){uuid(p.storeId);if(p.executionTarget!==null)uuid(p.executionTarget);}
+  else if(p.executionTarget!==undefined)throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if(p.namespace==='profile'){uuid(p.profileId);uuid(p.storeId);}
   else if(p.profileId!==undefined)throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
-  const actions: readonly string[] = p.namespace === 'foundation' ? ['start', 'stop', 'restart'] : p.namespace === 'project' ? ['register', 'verify', 'update', 'remove'] : p.namespace === 'feature' ? FEATURE_MUTATIONS : p.namespace==='workspace'?WORKSPACE_MUTATIONS:p.namespace==='environment'?ENVIRONMENT_MUTATIONS:p.namespace==='profile'?PROFILE_MUTATIONS:['configure', 'check', 'preview', 'discard', 'start', 'answer', 'correct', 'approve', 'cancel'];
+  const actions: readonly string[] = p.namespace === 'foundation' ? ['start', 'stop', 'restart'] : p.namespace === 'project' ? ['register', 'verify', 'update', 'remove'] : p.namespace === 'feature' ? FEATURE_MUTATIONS : p.namespace==='workspace'?WORKSPACE_MUTATIONS:p.namespace==='environment'?ENVIRONMENT_MUTATIONS:p.namespace==='profile'?PROFILE_MUTATIONS:p.namespace==='execution'?EXECUTION_MUTATIONS:['configure', 'check', 'preview', 'discard', 'start', 'answer', 'correct', 'approve', 'cancel'];
   if (!actions.includes(String(p.action)) || !['PREPARED', 'RECONCILING', 'TERMINAL', 'UNKNOWN'].includes(String(p.phase))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');
   if (p.errorCode !== null && (typeof p.errorCode !== 'string' || !Object.hasOwn(CORE_ERRORS, p.errorCode))) throw new Error('RECEIPT_STORAGE_UNAVAILABLE');

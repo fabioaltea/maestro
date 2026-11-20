@@ -1,3 +1,4 @@
+import {executionBridgeAction,validateExecutionData} from '../shared/execution-contract.ts';
 import {profileBridgeAction,validateProfileData} from '../shared/profile-contract.ts';
 import {validateFeatureAction,validateFeatureData} from '../shared/feature-contract.ts';
 import {validateWorkspaceAction,validateWorkspaceData} from '../shared/workspace-contract.ts';
@@ -15,6 +16,21 @@ import { validateDiscoveryAction, discoveryReceiptAction } from '../shared/disco
 import { settleDiscoveryReceipt } from './discovery-receipts.ts';
 interface Options { context: ArchiveContext; receipts: ReceiptStore; core: CorePort; owner(): { owner: number; frame: number }; confirmations?: Confirmations }
 export async function settleReceipt(store: ReceiptStore, receipt: Receipt, result: PublicResult) {
+  if(receipt.namespace==='execution'){
+    const unknown=()=>store.update(receipt.requestId,{phase:'UNKNOWN',errorCode:'UNKNOWN_OUTCOME'});
+    if(result.requestId!==receipt.requestId||result.storeId!==receipt.storeId||result.result==='UNKNOWN_OUTCOME')return unknown();
+    try{
+      const data=validateExecutionData(receipt.action,result.data),op=data.operation===undefined?null:record(data.operation);
+      if(op){
+        if(op.requestId!==receipt.requestId||op.action!==receipt.action||op.targetId!==receipt.executionTarget||op.outcome!==result.outcome)return unknown();
+        return store.update(receipt.requestId,{phase:op.phase==='FINALIZED'?'TERMINAL':'RECONCILING',outcome:result.outcome,errorCode:result.error?.code??null});
+      }
+      if(result.liveness==='LIVE_VERIFIED'&&['APPROVAL_REQUIRED','APPROVAL_STALE','EXECUTION_APPROVAL_STALE','EXECUTION_UNSUPPORTED','CHECKPOINT_STALE',
+        'WORKSPACE_IN_USE','PROCESS_UNKNOWN','INVALID_REQUEST','RESOURCE_LIMIT','BUSY'].includes(result.error?.code??''))
+        return store.update(receipt.requestId,{phase:'TERMINAL',outcome:'BLOCKED',errorCode:result.error!.code});
+      return unknown();
+    }catch{return unknown();}
+  }
   if(['workspace','environment','profile'].includes(receipt.namespace)){
     const unknown=()=>store.update(receipt.requestId,{phase:'UNKNOWN',errorCode:'UNKNOWN_OUTCOME'});
     if(result.requestId!==receipt.requestId||result.storeId!==receipt.storeId||result.result==='UNKNOWN_OUTCOME')return unknown();
@@ -61,6 +77,7 @@ export class ActionService {
   resolveDiscovery: ((action: string, params: Params) => Promise<{ command: CliCommand; summary: string[] }>) | null = null;
   resolveFeature: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveWorkspace: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
+  resolveExecution: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveProfile: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveEnvironment: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   private confirming = false;
@@ -86,6 +103,16 @@ export class ActionService {
         const workspace=await this.options.core.call({namespace:'workspace',action:'get',archive:c.path,params:{workspaceId:command.workspaceId}});
         this.options.context.apply(c,workspace);
         if(workspace.result!=='OK'||record(workspace.data.workspace).stateRevision!==command.expectedStateRevision)throw new Error('REVISION_CONFLICT');
+      }
+    }
+    if(command.namespace==='execution'){
+      const cap=record(status.data.capabilities);
+      if(cap.executionVersion!==1||!Array.isArray(cap.executionMethods)||!cap.executionMethods.includes(`execution.${command.action}`))
+        throw new Error('EXECUTION_UNSUPPORTED');
+      if(command.executionTarget&&command.expectedStateRevision&&['pause','cancel','checkpoint','resume'].includes(command.action)){
+        const current=await this.options.core.call({namespace:'execution',action:'get',archive:c.path,params:{sessionId:command.executionTarget}});
+        this.options.context.apply(c,current);
+        if(current.result!=='OK'||record(current.data.session).stateRevision!==command.expectedStateRevision)throw new Error('EXECUTION_APPROVAL_STALE');
       }
     }
     if(command.namespace==='profile'){
@@ -138,13 +165,14 @@ export class ActionService {
     return { status, project };
   }
   async prepare(action: string, params: Params) {
-    if(action.startsWith('profile.'))profileBridgeAction({...params,action:action.slice('profile.'.length)});
+    if(action.startsWith('execution.'))executionBridgeAction({...params,action:action.slice('execution.'.length)});
+    else if(action.startsWith('profile.'))profileBridgeAction({...params,action:action.slice('profile.'.length)});
     else if(action.startsWith('environment.'))environmentBridgeAction({...params,action:action.slice('environment.'.length)});
     else if(action.startsWith('workspace.'))validateWorkspaceAction(action,params);
     else if (action.startsWith('feature.')) validateFeatureAction(action,params); else if (action.startsWith('discovery.')) validateDiscoveryAction(action, params); else validateAction(action, params);
     if (this.confirming) throw new Error('LOCAL_BUSY');
     const c = this.options.context.capture(), owner = canonical(this.options.owner());
-    const resolver=action.startsWith('profile.')?this.resolveProfile:action.startsWith('environment.')?this.resolveEnvironment:action.startsWith('workspace.')?this.resolveWorkspace:action.startsWith('feature.')?this.resolveFeature:
+    const resolver=action.startsWith('execution.')?this.resolveExecution:action.startsWith('profile.')?this.resolveProfile:action.startsWith('environment.')?this.resolveEnvironment:action.startsWith('workspace.')?this.resolveWorkspace:action.startsWith('feature.')?this.resolveFeature:
       action.startsWith('discovery.')?this.resolveDiscovery:undefined;
     if(resolver===null)throw new Error('CONFIRMATION_REQUIRED');
     const resolved=resolver?await resolver(action,params):null;
@@ -169,7 +197,7 @@ export class ActionService {
       const projectId = token.command.projectId ?? (typeof token.command.params?.projectId === 'string' ? token.command.params.projectId : null);
       if (blocksMutation(await this.options.receipts.list(), c.path, namespace, receiptAction, projectId ?? undefined)) throw new Error('OPERATION_UNCERTAIN');
       const receipt = await this.options.receipts.create({ requestId: token.requestId, namespace, action: receiptAction, archivePath: c.path, storeId: c.view.storeId,
-        projectId, ...(token.command.featureId?{featureId:token.command.featureId}:{}), ...(token.command.profileId?{profileId:token.command.profileId}:{}), ...(token.command.workspaceId?{workspaceId:token.command.workspaceId}:{}), expectedRevision: token.command.expectedRevision ?? token.command.expectedStateRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
+        projectId, ...(token.command.executionTarget!==undefined?{executionTarget:token.command.executionTarget}:{}), ...(token.command.featureId?{featureId:token.command.featureId}:{}), ...(token.command.profileId?{profileId:token.command.profileId}:{}), ...(token.command.workspaceId?{workspaceId:token.command.workspaceId}:{}), expectedRevision: token.command.expectedRevision ?? token.command.expectedStateRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
       try {
         if (canonical(this.scope()) !== canonical(scope)) throw new Error('STALE_CONTEXT');
         const result = await this.options.core.call(token.command);
