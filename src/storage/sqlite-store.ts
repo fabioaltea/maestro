@@ -1,8 +1,9 @@
 import {reviewEvents} from '../core/review/events.js';
 import {REVIEW_SCHEMA_VERSION,REVIEW_TABLES} from './review-schema.js';
 import {commitReviewState,readReviewState} from './review-store.js';
-import type {IntegrationChange,ReviewChange,ReviewQuery,ReviewRecovery} from '../ports/review.js';
+import type {IntegrationChange,ReviewChange,ReviewCompletionChange,ReviewQuery,ReviewRecovery} from '../ports/review.js';
 import {commitIntegrationState} from './integration-store.js';
+import {commitReviewCompletion} from './review-completion.js';
 import {schedulerChanged} from '../core/scheduler/events.js';
 import {commitSchedulerState,readSchedulerState} from './scheduler-store.js';
 import type {SchedulerChange,SchedulerQuery} from '../ports/scheduler.js';
@@ -242,6 +243,11 @@ export class SQLiteStore {
             const id=op.result?.reviewId;
             const value=typeof id==='string'?readReviewState(this.database!,{kind:'review',id}).review:null;
             if(value)drafts.push(...reviewEvents(op,String(owner.owning_instance_id),value));
+            if(value&&op.action==='complete'&&typeof op.result?.discoveryId==='string'){
+              const account=this.database!.prepare("SELECT session_id FROM discoveries WHERE discovery_id=? AND state='STALE'").get(op.result.discoveryId) as Row|undefined;
+              if(account)drafts.push({type:'discovery.changed',instanceId:String(owner.owning_instance_id),operationId:requestId,
+                payload:{scope:'discovery',discoveryId:op.result.discoveryId,projectId:value.projectId,sessionId:String(account.session_id),state:'STALE'}});
+            }
             continue;
           }
           if(op.namespace==='SCHEDULER'){
@@ -295,11 +301,12 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
-  commitReviewState(change:ReviewChange|ReviewRecovery|IntegrationChange) {
+  commitReviewState(change:ReviewChange|ReviewRecovery|IntegrationChange|ReviewCompletionChange) {
     const db=this.writable(),store=this.workflowStore(),verify=(id:string)=>{
       try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
     };
     switch(change.kind){
+      case 'complete':return commitReviewCompletion(db,change,store);
       case 'create':case 'request-changes':case 'recover-snapshot':case 'validate-admit':case 'validate-finish':
         return commitReviewState(db,change,store,verify);
       default:return commitIntegrationState(db,change,store,verify);

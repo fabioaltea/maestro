@@ -27,6 +27,12 @@ export interface GitCandidate {
  readonly candidateOid:string;
  readonly treeOid:string;
 }
+export interface GitCompletionObservation {
+ readonly targetOid:string;
+ readonly treeOid:string;
+ readonly changedPaths:readonly string[];
+ readonly documentation:readonly {readonly path:string;readonly blobOid:string|null}[];
+}
 export interface GitIntegrationPort {
  qualification():Promise<WorkspaceGitPin>;
  preflight(input:GitIntegrationScope,deadline:Deadline):Promise<GitIntegrationPreflight>;
@@ -38,6 +44,7 @@ export interface GitIntegrationPort {
  publishCandidate(input:GitCandidateScope,guard:IntegrationGuard,candidate:GitCandidate,requestId:string,deadline:Deadline):Promise<RefAttribution>;
  observePublication(input:GitIntegrationScope,guard:IntegrationGuard,expected:RefAttribution,deadline:Deadline):Promise<
    {readonly targetOid:string;readonly proof:RefAttribution|null}>;
+ inspectCompletion(input:GitIntegrationScope,proof:RefAttribution,deadline:Deadline):Promise<GitCompletionObservation>;
  publishFastForward(input:GitIntegrationScope,guard:IntegrationGuard,deadline:Deadline):Promise<{readonly resultingOid:string}>;
  syncGuard(input:GitIntegrationScope,guard:IntegrationGuard,deadline:Deadline,candidateOid?:string):Promise<void>;
 }

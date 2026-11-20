@@ -5,7 +5,7 @@ import {requireIntegrationCandidate} from '../../domain/review/integration.js';
 import {makeDeadline,systemClock,type Deadline} from '../../ports/clock.js';
 import type {GitCandidateScope,GitIntegrationPort,GitIntegrationScope,IntegrationGuard} from '../../ports/git-integration.js';
 import type {CandidatePreparationScope,IntegrationApprovalScope,ReviewRecord} from '../../ports/review.js';
-import type {OwnedWorkspaceFilesPort,WorkspaceClaim,WorkspaceRecord} from '../../ports/workspace.js';
+import type {OwnedWorkspaceFilesPort,WorkspaceClaim,WorkspacePort,WorkspaceRecord} from '../../ports/workspace.js';
 import type {WorkflowIntent} from '../../ports/workflow.js';
 import {publicReviewOperation} from '../../protocol/review.js';
 import {classifyError} from '../control-main.js';
@@ -16,7 +16,7 @@ import {inspectReviewSource,type ReviewServicesOptions} from './snapshot.js';
 import type {ReviewAction} from './dispatch.js';
 import {settlePublishedIntegration} from './recovery.js';
 
-export interface ReviewIntegrationPorts {readonly git:GitIntegrationPort;readonly files:OwnedWorkspaceFilesPort}
+export interface ReviewIntegrationPorts {readonly git:GitIntegrationPort;readonly files:OwnedWorkspaceFilesPort;readonly workspaceGit?:WorkspacePort}
 export function createReviewIntegration(options:ReviewServicesOptions&{
  readonly integration:ReviewIntegrationPorts;schedule(work:()=>Promise<void>):void;
 }){

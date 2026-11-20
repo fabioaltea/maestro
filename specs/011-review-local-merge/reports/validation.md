@@ -56,6 +56,10 @@ Cinque contratti CLI/client PASS. L’help espone candidate, approvazione e inte
 
 Build e typecheck Desktop, cinque contratti Review e due E2E Electron PASS. Il bridge prepara candidate, approvazione e integrazione con scope chiuso su stdin e grant conservati nel main. Electron conferma la preparazione Git del candidate su fixture, verifica ricevuta e UUID con la CLI e mostra il candidate offline. Senza approvazione l’integrazione è disabilitata. I fault e il CAS sono provati nelle integrazioni core.
 
+## Ripresa T029
+
+Cinque integrazioni 011/006 PASS. Il fault prima del commit lascia la Discovery e il ledger invariati. Il reply loss dopo il commit restituisce con l’UUID originale una sola ricevuta, il commit integrato e i blob dei documenti. La prova porta a STALE la Discovery toccata dal merge. Il commit aggiunto successivamente nel worktree blocca sia l’anteprima sia un cleanup 006 già autorizzato, preservando il file.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

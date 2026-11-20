@@ -13,9 +13,10 @@ import {createWorkflowAuthorization} from '../workflow/authorization.js';
 import {workspaceFence} from './leases.js';
 import type {WorkspaceProvisionOptions} from './provision.js';
 
-export function createWorkspaceCleanup(options:Omit<WorkspaceProvisionOptions,'currentEligibility'>){
- const {storage,instanceId,files,mutator}=options,authorization=createWorkflowAuthorization(options);
- async function cleanupProof(storeId:string,workspace:WorkspaceRecord,integrated:WorkspaceCleanupTarget,deadline:Deadline,requestId?:string){
+export async function inspectWorkspaceCleanup(options:Pick<WorkspaceProvisionOptions,'storage'|'files'|'mutator'>,
+ storeId:string,workspace:WorkspaceRecord,integrated:WorkspaceCleanupTarget,deadline:Deadline,requestId?:string){
+   const {storage,files,mutator}=options;
+   if(workspace.target.integration)throw new Error('WORKSPACE_NOT_FOUND');
    const {workspaceId,target}=workspace;
    requireCleanupTarget(integrated,workspaceBranchRef(workspace.featureId,workspaceId));
    const [{lease},{effect}]=await Promise.all([
@@ -29,8 +30,11 @@ export function createWorkspaceCleanup(options:Omit<WorkspaceProvisionOptions,'c
    const ancestor=await mutator.verifyIntegration(target,worktree.headOid,integrated,deadline);
    requireCleanupConditions({state:workspace.state,holder:false,effect:false,targetOid:integrated.targetOid,
      observedTargetOid:integrated.targetOid,status,integrated:ancestor});
-   return worktree;
- }
+   return{worktree,status};
+}
+
+export function createWorkspaceCleanup(options:Omit<WorkspaceProvisionOptions,'currentEligibility'>){
+ const {storage,instanceId,files,mutator}=options,authorization=createWorkflowAuthorization(options);
 
  async function prepare(params:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer){
    const {store}=await authorization.guard(peer),workspaceId=String(params.workspaceId);
@@ -39,7 +43,7 @@ export function createWorkspaceCleanup(options:Omit<WorkspaceProvisionOptions,'c
    const project=(await storage.getProject(workspace.projectId))?.project;
    if(!project||project.removedAt!==null)throw new Error('PROJECT_REMOVED');
    const target={targetRef:String(params.targetRef),targetOid:String(params.targetOid)};
-   const worktree=await cleanupProof(store.storeId,workspace,target,makeDeadline(systemClock,30000));
+   const {worktree}=await inspectWorkspaceCleanup(options,store.storeId,workspace,target,makeDeadline(systemClock,30000));
    const checkedAt=new Date().toISOString(),pin=await mutator.qualification();
    const intent:WorkflowIntent={version:1,storeId:store.storeId,ownerUid:store.ownerUid,namespace:'WORKSPACE',
      action:'remove',targetId:workspaceId,projectId:project.projectId,configRevision:project.configRevision,expectedRevision:workspace.stateRevision,
@@ -62,7 +66,7 @@ export function createWorkspaceCleanup(options:Omit<WorkspaceProvisionOptions,'c
      lease=await files.claim(claim);
      const pin=await mutator.qualification(),expected=intent.payload.pin as WorkspaceGitPin;
      if(pin.version!==expected.version||pin.sha256!==expected.sha256||pin.profileSha256!==expected.profileSha256)throw new Error('WORKSPACE_UNSAFE');
-     const worktree=await cleanupProof(intent.storeId,workspace,target,deadline,requestId);
+     const {worktree}=await inspectWorkspaceCleanup(options,intent.storeId,workspace,target,deadline,requestId);
      if(worktree.headOid!==intent.payload.headOid)throw new Error('UNINTEGRATED_WORK');
      if(!options.accepting())throw new Error('INTERRUPTED');
      await commit({...scope,kind:'cleanup-step',stage:'REMOVE_INTENT'});

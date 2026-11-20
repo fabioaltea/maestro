@@ -1,5 +1,6 @@
 import {reviewOid,reviewTargetRef} from '../../../domain/review/state.js';
 import type {RefAttribution} from '../../../domain/review/integration.js';
+import {discoverySourceExclusion} from '../../../domain/discovery/context-policy.js';
 import {EXECUTION_LIMITS} from '../../../domain/execution/model.js';
 import {workspaceBranchRef} from '../../../domain/workspaces/provision.js';
 import {requireMatchingWorktree} from '../../../domain/workspaces/ownership.js';
@@ -472,6 +473,38 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       if(expected.old!==input.targetOid)throw new Error('INVALID_REQUEST');
       const result=await integration(input,deadline,guard,false,true);
       return{targetOid:result.targetOid,proof:result.targetOid===expected.candidate?await refProof(result.candidateScope,expected):null};
+    },
+    async inspectCompletion(input,proof,deadline){
+      requireUuid(proof.requestId);reviewTargetRef(input.targetRef);reviewOid(proof.candidate);reviewOid(proof.old);
+      if(input.targetOid!==proof.old)throw new Error('INTEGRATION_UNKNOWN');
+      const {scope,fingerprint}=await prepare(input.source,deadline);
+      await directoryChain(scope.common,['logs',...input.targetRef.split('/').slice(0,-1)]);
+      const logScope={...scope,branchRef:input.targetRef};
+      const targetOid=await oid(scope,deadline,input.targetRef);
+      if(targetOid!==proof.candidate||!await refProof(logScope,proof))throw new Error('INTEGRATION_UNKNOWN');
+      const read=(args:readonly string[])=>git(scope,deadline,args,'read-only',2097153);
+      const files=await read(['diff','--name-only','-z','--no-renames','--no-ext-diff','--no-textconv',proof.old,targetOid,'--']);
+      const changedPaths=files.stdout.split('\0').filter(Boolean);
+      if(files.code||files.stderr||changedPaths.some(path=>!path.isWellFormed()||path.includes('\uFFFD')||isAbsolute(path)||
+         path.split('/').some(part=>!part||part==='.'||part==='..')))throw new Error('WORKSPACE_UNSAFE');
+      if(changedPaths.length>100)throw new Error('REVIEW_SCOPE_LIMIT');
+      const docPaths=changedPaths.filter(path=>!discoverySourceExclusion(path)&&(/^(?:docs?|documentation)\//i.test(path)||/\.(?:md|rst|adoc)$/i.test(path)));
+      const documentation=[];
+      if(docPaths.length){
+        const objects=await read(['--literal-pathspecs','ls-tree','-r','-z',targetOid,'--',...docPaths]);
+        if(objects.code||objects.stderr)throw new Error('WORKSPACE_UNSAFE');
+        const blobs=new Map<string,string>();
+        for(const line of objects.stdout.split('\0').filter(Boolean)){
+          const tab=line.indexOf('\t'),path=line.slice(tab+1),[,kind,value]=line.slice(0,tab).split(' ');
+          if(tab<0||!docPaths.includes(path)||kind!=='blob'||blobs.has(path))throw new Error('WORKSPACE_UNSAFE');
+          blobs.set(path,reviewOid(value));
+        }
+        for(const path of docPaths)documentation.push({path,blobOid:blobs.get(path)??null});
+      }
+      const tree=await read(['rev-parse','--verify',`${targetOid}^{tree}`]);
+      if(tree.code||tree.stderr||await oid(scope,deadline,input.targetRef)!==targetOid)throw new Error('INTEGRATION_UNKNOWN');
+      await verify(input.source,scope,fingerprint,deadline);
+      return{targetOid,treeOid:reviewOid(tree.stdout.trim()),changedPaths,documentation};
     },
     async publishFastForward(input,guard,deadline){
       const result=await integration(input,deadline,guard),{candidateScope}=result;

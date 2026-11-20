@@ -6,9 +6,9 @@ import {requireFeatureEnvelope} from './feature.js';
 import {workspaceRevision,workspaceUuid} from './workspace.js';
 
 export const requireReviewEnvelope=requireFeatureEnvelope;
-export const REVIEW_READ_METHODS=['review.list','review.get','review.artifact.get','review.operation.get'] as const;
+export const REVIEW_READ_METHODS=['review.list','review.get','review.artifact.get','review.operation.get','review.receipt.get','review.cleanup.preview'] as const;
 export const REVIEW_MUTATIONS=[...REVIEW_GRANTED,'complete'].map(action=>`review.${action}`);
-export const REVIEW_METHODS=[...REVIEW_READ_METHODS,...REVIEW_MUTATIONS,'review.prepare','review.receipt.get','review.cleanup.preview'];
+export const REVIEW_METHODS=[...REVIEW_READ_METHODS,...REVIEW_MUTATIONS,'review.prepare'];
 export const reviewMutation=(method:string)=>REVIEW_MUTATIONS.includes(method);
 function commandIds(value:unknown){
  if(!Array.isArray(value)||!value.length||value.length>8||new Set(value.map(workspaceUuid)).size!==value.length)throw new Error('INVALID_REQUEST');
@@ -67,7 +67,7 @@ export function validateReviewParams(method:string,value:unknown){
  }
  if(p.cursor!==undefined)featureText(p.cursor,1024,true);
 }
-const resultKeys=['reviewId','jobIds','decisionId','candidateId','candidateOid','integrationId','receiptId','digest','stateRevision','resultingOid'] as const;
+const resultKeys=['reviewId','jobIds','decisionId','candidateId','candidateOid','integrationId','receiptId','digest','stateRevision','resultingOid','contextFreshness'] as const;
 export function publicReviewOperation(o:WorkflowOperationRecord){
  const {namespace,action,phase,outcome,requestId,targetId,acceptedAt,completedAt,result,error}=o;
  if(namespace!=='REVIEW')throw new Error('OPERATION_NOT_FOUND');
@@ -92,6 +92,7 @@ export function decodeReviewOperation(value:unknown){
      else if(k==='resultingOid'||k==='candidateOid')reviewOid(v);
      else if(k==='digest'){if(typeof v!=='string'||!/^[a-f0-9]{64}$/.test(v))throw new Error('INVALID_REQUEST');}
      else if(k==='jobIds')commandIds(v);
+     else if(k==='contextFreshness'){if(!['LAST_KNOWN','STALE','UNKNOWN'].includes(String(v)))throw new Error('INVALID_REQUEST');}
      else workspaceUuid(v);
    }
  }

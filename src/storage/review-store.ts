@@ -51,6 +51,10 @@ export function readReviewState(db:Database.Database,q:ReviewQuery):ReviewRead{
      resultingOid:row.resulting_oid as string|null,phase:row.phase as NonNullable<ReviewRead['integration']>['phase'],
      proof:row.proof===null?null:JSON.parse(String(row.proof))}:null};
  }
+ if(q.kind==='receipt'){
+   const row=db.prepare('SELECT metadata FROM review_receipts WHERE integration_id=?').get(requireUuid(q.id)) as FeatureRow|undefined;
+   return{receipt:row?JSON.parse(String(row.metadata)):null};
+ }
  if(q.kind==='review'){
    const row=db.prepare('SELECT * FROM review_records WHERE review_id=?').get(requireUuid(q.id)) as FeatureRow|undefined;
    return{review:row?review(db,row):null};

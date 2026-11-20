@@ -16,7 +16,7 @@ export interface ReviewRecord {
 }
 export type ReviewQuery={readonly kind:'review'|'artifact';readonly id:string}
  |{readonly kind:'pending-snapshots'|'pending-validation'|'pending-integration'}
- |{readonly kind:'evidence'|'feedback'|'candidate'|'current-candidate'|'decision'|'current-decision'|'integration'|'candidate-integration';readonly id:string}
+ |{readonly kind:'evidence'|'feedback'|'candidate'|'current-candidate'|'decision'|'current-decision'|'integration'|'candidate-integration'|'receipt';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number};
 export interface ReviewRead {
  readonly review?:ReviewRecord|null;readonly reviews?:readonly ReviewRecord[];
@@ -27,6 +27,7 @@ export interface ReviewRead {
  readonly candidate?:ReviewCandidateRecord|null;
  readonly decision?:ReviewIntegrationDecision|null;
  readonly integration?:ReviewIntegrationRecord|null;
+ readonly receipt?:ReviewReceiptRecord|null;
 }
 export interface ReviewFeedback {
  readonly decisionId:string;readonly artifactId:string;readonly featureId:string;readonly featureRevisionId:string;
@@ -76,7 +77,7 @@ export type ReviewChange=
 export type ReviewRecovery={readonly kind:'recover-snapshot';readonly instanceId:string;readonly requestId:string};
 export interface ReviewStoragePort {
  readReviewState?(query:ReviewQuery):Promise<ReviewRead>;
- commitReviewState?(change:ReviewChange|ReviewRecovery|IntegrationChange):Promise<{readonly operation:WorkflowOperationRecord;readonly inserted:boolean}>;
+ commitReviewState?(change:ReviewChange|ReviewRecovery|IntegrationChange|ReviewCompletionChange):Promise<{readonly operation:WorkflowOperationRecord;readonly inserted:boolean}>;
 }
 
 export interface IntegrationReceiptScope {
@@ -87,4 +88,16 @@ export interface IntegrationReceiptScope {
 export interface IntegrationReceiptProof extends IntegrationReceiptScope {
  readonly resultingOid:string;readonly contextFreshness:'LAST_KNOWN'|'STALE'|'UNKNOWN';
  readonly publicationGrantRequired:true;
+}
+
+export interface ReviewReceiptRecord extends IntegrationReceiptProof {
+ readonly receiptId:string;readonly treeOid:string;readonly featureRevisionId:string;readonly evidenceDigest:string;
+ readonly documentCount:number;readonly documents:readonly {readonly path:string;readonly blobOid:string|null}[];
+ readonly documentsTruncated:boolean;
+}
+export interface ReviewContextInvalidation {
+ readonly discoveryId:string;readonly discoveryRevision:string;readonly snapshotId:string;readonly approvalRevisionId:string;
+}
+export interface ReviewCompletionChange {
+ readonly kind:'complete';readonly admission:WorkflowAdmission;readonly receipt:ReviewReceiptRecord;readonly invalidate:ReviewContextInvalidation|null;
 }

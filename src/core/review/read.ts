@@ -33,6 +33,11 @@ export function createReviewReader({storage,storeId,offline}:{storage:StoragePor
        const {integration}=await query({kind:'integration',id:requestId});
        if(integration)result.integration={integrationId:requestId,phase:integration.phase,resultingOid:integration.resultingOid,proof:integration.proof};
      }
+   }else if(method==='review.receipt.get'||method==='review.cleanup.preview'){
+     const integrationId=String(p.integrationId),{receipt}=await query({kind:'receipt',id:integrationId});
+     if(!receipt||method==='review.cleanup.preview'&&receipt.workspaceId!==p.workspaceId)throw new Error('OPERATION_NOT_FOUND');
+     result=method==='review.receipt.get'?{receipt}:{integrationId,workspaceId:receipt.workspaceId,eligible:false,reason:'UNKNOWN',
+       checkedAt:null,cleanupGrantRequired:true};
    }else if(method==='review.get'){
      const reviewId=String(p.reviewId),page=cursor(reviewId);
      const {review}=await query({kind:'review',id:reviewId});
@@ -46,6 +51,10 @@ export function createReviewReader({storage,storeId,offline}:{storage:StoragePor
          query({kind:'candidate-integration',id:candidate.candidateId})]);
        data.candidate=candidate;data.evidenceDigest=reviewEvidenceDigest(evidence);data.decisionId=decision?.decisionId??null;
        data.integration=integration?{integrationId:integration.integrationId,phase:integration.phase,resultingOid:integration.resultingOid}:null;
+       if(integration){
+         const {receipt}=await query({kind:'receipt',id:integration.integrationId});
+         data.receiptId=receipt?.receiptId??null;
+       }
      }
      const criteria=[];
      let offset=page?.offset??0,bytes=0;
