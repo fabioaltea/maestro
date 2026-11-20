@@ -1,14 +1,15 @@
 /** Test-only Responses backend. Never imported by production or connected to OpenAI. */
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 export interface SyntheticRequest { readonly path: string; readonly body: Record<string, unknown> }
 export interface SyntheticItem { readonly type: string; readonly [key: string]: unknown }
-export async function createDiscoveryInferenceServer(outputs: readonly SyntheticItem[][] = []) {
+export async function createDiscoveryInferenceServer(outputs: readonly SyntheticItem[][] = [], extension?: (request:IncomingMessage,response:ServerResponse)=>Promise<boolean>) {
   const requests: SyntheticRequest[] = [];
   const errors: string[] = [];
   const server = createServer(async (request, response) => {
     try {
+      if (extension&&await extension(request,response))return;
       if (request.method !== 'POST' || !request.url?.endsWith('/responses') || requests.length >= 12) {
         response.writeHead(400); response.end(); return;
       }
