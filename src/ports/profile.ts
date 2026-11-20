@@ -32,6 +32,7 @@ export interface ProfilePreview {
 }
 export type ProfileQuery=
  {readonly kind:'record'|'revision'|'resolution'|'preview'|'artifact';readonly id:string}
+ |{readonly kind:'aliases';readonly alias:string;readonly projectId:string;readonly ownerProfileId:string}
  |{readonly kind:'list';readonly projectId:string|null;readonly entityKind:ProfileKind;readonly offset?:number;readonly limit?:number};
 export interface ProfileRead {
  readonly record?:ProfileRecord|null;readonly revision?:ProfileRevision|null;readonly resolution?:ProfileResolution|null;
