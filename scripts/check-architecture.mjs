@@ -15,7 +15,7 @@ async function walk(directory) {
 async function inspect(path) {
   const local = relative(root, path).replaceAll('\\', '/');
   const zone = local.split('/')[0];
-  const workflow = local.startsWith('core/features/') || local.startsWith('core/workflow/') || local.startsWith('core/workspaces/') || local.startsWith('core/environments/') || local.startsWith('core/profiles/');
+  const workflow = local.startsWith('core/features/') || local.startsWith('core/workflow/') || local.startsWith('core/workspaces/') || local.startsWith('core/environments/') || local.startsWith('core/profiles/') || local.startsWith('core/execution/');
   if (!['domain', 'client', 'providers'].includes(zone) && !workflow) return;
   // Feature/workflow policies remain inside the existing neutral domain zone.
   const ast = ts.createSourceFile(path, await readFile(path, 'utf8'), ts.ScriptTarget.Latest, true);

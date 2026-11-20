@@ -1,3 +1,4 @@
+import {createExecutionRuntime} from './execution/runtime.js';
 import {createProfileRuntime} from './profiles/runtime.js';
 import {createEnvironmentRuntime,nativeEnvironmentServices} from './environments/runtime.js';
 import {createWorkspaceRuntime,nativeWorkspaceServices} from './workspaces/runtime.js';
@@ -61,12 +62,13 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     let lastSnapshot: StoreSnapshot | null = null;
     let streams: ReturnType<typeof createLiveEvents> | undefined;
     let projects: ReturnType<typeof createProjectOperations> | undefined;
+    let execution:ReturnType<typeof createExecutionRuntime>|undefined;
     let profiles:ReturnType<typeof createProfileRuntime>|undefined;
     let environments:ReturnType<typeof createEnvironmentRuntime>|undefined;
     let workspaces:ReturnType<typeof createWorkspaceRuntime>|undefined;
     let features: ReturnType<typeof createFeatureRuntime> | undefined;
     let discovery: ReturnType<typeof createDiscoveryRuntime> | undefined;
-    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); void projects?.shutdown(); discovery?.fence(); features?.fence(); workspaces?.fence(); environments?.fence(); profiles?.fence(); });
+    storage.onFailure(error => { volatileError = error; streams?.closeAll('PERSISTENCE_UNAVAILABLE'); void projects?.shutdown(); discovery?.fence(); features?.fence(); workspaces?.fence(); environments?.fence(); profiles?.fence(); execution?.fence(); });
     const ticket = await storage.getTicket(intent.ticketId);
     if (!ticket || ticket.instanceId !== intent.instanceId || ticket.generation !== intent.generation
       || !await createOperations(storage, paths.ownerUid).claimLaunch(intent.ticketId, intent.generation, process.pid)) {
@@ -101,7 +103,11 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     }):undefined);
     environments=createEnvironmentRuntime({storage,instanceId:intent.instanceId,...(environmentCompose?{compose:environmentCompose}:{})});
     profiles=createProfileRuntime({storage,paths,instanceId:intent.instanceId,native:true,...dependencies.profiles});
-    const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=8?{profileVersion:1,profileMethods:profiles.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=7?{environmentVersion:1,environmentMethods:environments.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
+    execution=createExecutionRuntime({storage,paths,instanceId:intent.instanceId,
+      currentEligibility:(peer,projectId)=>discovery!.operations.currentEligibility(peer,projectId),
+      ...(workspaces.leases?{lease:workspaces.leases.forConsumer('RUN')}:{}) ,
+      ...(dependencies.execution?{dependencies:dependencies.execution}:{})});
+    const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=9&&storage.readExecutionState?{executionVersion:1,executionMethods:execution.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=8?{profileVersion:1,profileMethods:profiles.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=7?{environmentVersion:1,environmentMethods:environments.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });
     let draining = false;
@@ -130,6 +136,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     }, async (request, peer) => {
       if (volatileError) {
         const base = { protocolVersion: 1 as const, correlationId: request.correlationId };
+        if(request.method==='execution.operation.get'&&lastSnapshot)return execution!.dispatch(request,peer,lastSnapshot);
         if(request.method==='profile.operation.get'&&lastSnapshot)return profiles!.dispatch(request,peer,lastSnapshot);
         if(request.method==='environment.operation.get'&&lastSnapshot)return environments!.dispatch(request,peer,lastSnapshot);
         if (request.method === 'workspace.operation.get' && lastSnapshot) return workspaces!.dispatch(request,peer,lastSnapshot);
@@ -158,6 +165,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
           .filter(resource => resource.releaseState !== 'RELEASED').map(resource => ({ resourceId: resource.resourceId,
             kind: resource.kind, observation: resource.observation, releaseState: resource.releaseState })) : [],
       } };
+      if(request.method.startsWith('execution.'))return execution!.dispatch(request,peer,snapshot);
       if(request.method.startsWith('profile.'))return profiles!.dispatch(request,peer,snapshot);
       if(request.method.startsWith('environment.'))return environments!.dispatch(request,peer,snapshot);
       if (request.method.startsWith('workspace.')) return workspaces!.dispatch(request,peer,snapshot);
@@ -205,13 +213,13 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
         const drainDeadline = makeDeadline(systemClock, 8_000);
         // Fence synchronously before publishing STOPPING; accepted work is independent of the RPC.
         void projects!.shutdown();
-        discovery!.fence(); features!.fence();workspaces!.fence();environments!.fence();profiles!.fence();
+        discovery!.fence(); features!.fence();workspaces!.fence();environments!.fence();profiles!.fence();execution!.fence();
         try { await storage.transitionInstance(intent.instanceId, 'STOPPING'); }
         catch (error) { draining = false; throw error; }
         setImmediate(() => {
           void (async () => {
             await drainProjectOperations(projects!, drainDeadline);
-            await Promise.all([discovery!.stop(drainDeadline), features!.stop(drainDeadline),workspaces!.stop(drainDeadline),environments!.stop(drainDeadline),profiles!.stop(drainDeadline)]);
+            await Promise.all([discovery!.stop(drainDeadline), features!.stop(drainDeadline),workspaces!.stop(drainDeadline),environments!.stop(drainDeadline),profiles!.stop(drainDeadline),execution!.stop(drainDeadline)]);
             await drainFoundationAuxiliaries({ store: storage, instanceId: intent.instanceId, paths,
               identity: createProcessIdentity(), transport: createLocalTransport(), platformPaths: adapter,
               deadline: drainDeadline, excludedPids: [process.pid, attempt!.pid],
@@ -250,6 +258,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     await workspaces.recover();
     await environments.recover();
     profiles.start();
+    await execution.recover();
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
     lastSnapshot = await storage.readSnapshot();
     await checkpoint('daemon.running');

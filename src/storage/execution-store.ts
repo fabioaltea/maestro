@@ -172,7 +172,7 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
        }
        db.prepare(`INSERT INTO execution_runs(run_id,session_id,generation,instance_id,provider_id,config_revision,capability_digest,input_digest,phase,outcome)
         VALUES(?,?,?,?,?,?,?,?,'PREPARED','IN_PROGRESS')`).run(r.runId,e.sessionId,r.generation,r.instanceId,r.providerId,BigInt(r.configRevision),r.capabilityDigest,r.inputDigest);
-       db.prepare("UPDATE workflow_operations SET phase='WORKING',result=? WHERE request_id=?").run(JSON.stringify({sessionId:e.sessionId,runId:r.runId}),a.requestId);
+       db.prepare("UPDATE workflow_operations SET phase='WORKING',result=? WHERE request_id=?").run(JSON.stringify({sessionId:e.sessionId,runId:r.runId,generation:r.generation}),a.requestId);
        return;
      }
      if(c.kind==='answer'){
@@ -208,7 +208,7 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
          i.expectedRevision!==e.stateRevision||p.generation!==r.generation||!['CREATED','RUNNING','WAITING_USER'].includes(e.state))
          throw new Error('EXECUTION_APPROVAL_STALE');
        db.prepare('UPDATE execution_runs SET requested=?,control_request_id=? WHERE run_id=?').run(c.requested,a.requestId,r.runId);
-       db.prepare("UPDATE workflow_operations SET phase='WORKING',result=? WHERE request_id=?").run(JSON.stringify({sessionId:e.sessionId,runId:r.runId}),a.requestId);
+       db.prepare("UPDATE workflow_operations SET phase='WORKING',result=? WHERE request_id=?").run(JSON.stringify({sessionId:e.sessionId,runId:r.runId,generation:r.generation}),a.requestId);
        updateState(e,c.requested==='PAUSE'?'PAUSING':'CANCELLING');
        return;
      }
@@ -249,7 +249,7 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
      if(e.state!==state)updateState(e,state);
      db.prepare('UPDATE execution_runs SET phase=?,outcome=?,proof=? WHERE run_id=?')
        .run(outcome==='UNKNOWN'?r.phase:'FINALIZED',outcome,c.proof?JSON.stringify(c.proof):null,r.runId);
-     ledger.complete(r.runId,{sessionId:e.sessionId,runId:r.runId,state},error,outcome);
+     ledger.complete(r.runId,{sessionId:e.sessionId,runId:r.runId,generation:r.generation,state},error,outcome);
      if(r.controlRequestId)ledger.complete(r.controlRequestId,{sessionId:e.sessionId,runId:r.runId,state},
        outcome==='UNKNOWN'?error:null,outcome==='UNKNOWN'?'UNKNOWN':'SUCCEEDED');
    }else if(c.kind==='output'){
