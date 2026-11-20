@@ -18,6 +18,12 @@ Tre test core mirati (`review-limits.test`, `review-us1.test`), due contratti De
 
 Sette test unitari e di contratto mirati PASS. Il checkpoint rifiuta modifiche staged/unstaged e file untracked, patch fuori schema e incoerenze di tree, digest e piano. Una prova 007 con comando o input discordante, output incompleto, exit non verificata o tree superato resta BLOCKED. Un criterio con prove discordanti resta bloccato anche quando una prova risulta PASS.
 
+## Ripresa T015
+
+La fixture US1 esegue Git e il job host 007 sul worktree posseduto. Prima dell'avvio e dopo l'uscita, il job verifica l'impronta del checkpoint. I criteri provengono dalla revisione 005 sigillata e l'esito riporta job, comando, tree e output. Un edit dopo la preparazione invalida la conferma. I fault prima e dopo il commit dello snapshot verificano rispettivamente il rilascio delle parti senza riferimenti e il recupero dello snapshot con UUID originale. Un fault dopo l'ammissione di una validazione, prima del job, lascia la richiesta interrogabile e il riavvio la chiude con CHECKS_NOT_RUN. Retry concorrenti conservano lo stesso esito. Il feedback arriva al solo host 009 di fixture dopo un nuovo grant di esecuzione.
+
+Build core e test, typecheck Desktop, lint e nove prove mirate 011/007 PASS. Cinque ulteriori prove mirate 011/009 PASS dopo il collegamento del feedback.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

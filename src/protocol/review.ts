@@ -10,6 +10,9 @@ export const REVIEW_READ_METHODS=['review.list','review.get','review.artifact.ge
 export const REVIEW_MUTATIONS=[...REVIEW_GRANTED,'complete'].map(action=>`review.${action}`);
 export const REVIEW_METHODS=[...REVIEW_READ_METHODS,...REVIEW_MUTATIONS,'review.prepare','review.receipt.get','review.cleanup.preview'];
 export const reviewMutation=(method:string)=>REVIEW_MUTATIONS.includes(method);
+function commandIds(value:unknown){
+ if(!Array.isArray(value)||!value.length||value.length>8||new Set(value.map(workspaceUuid)).size!==value.length)throw new Error('INVALID_REQUEST');
+}
 export function validateReviewParams(method:string,value:unknown){
  const p=featureObject(value);requireReviewEnvelope(p);
  if(method==='review.complete'){
@@ -25,7 +28,7 @@ export function validateReviewParams(method:string,value:unknown){
      if(p.limit!==undefined&&(!Number.isInteger(p.limit)||Number(p.limit)<1||Number(p.limit)>20))throw new Error('INVALID_REQUEST');
      break;
    case 'review.get':
-     featureFields(p,['reviewId']);workspaceUuid(p.reviewId);break;
+     featureFields(p,['reviewId'],['cursor']);workspaceUuid(p.reviewId);break;
    case 'review.artifact.get':
      featureFields(p,['artifactId'],['cursor']);workspaceUuid(p.artifactId);break;
    case 'review.operation.get':
@@ -43,6 +46,9 @@ export function validateReviewParams(method:string,value:unknown){
      }else if(p.action==='request-changes'){
        featureFields(i,['reviewId','feedbackArtifactId']);featureFields(r,['stateRevision']);
        workspaceUuid(i.reviewId);workspaceUuid(i.feedbackArtifactId);workspaceRevision(r.stateRevision);
+     }else if(p.action==='validate'){
+       featureFields(i,['reviewId','commandSpecIds']);featureFields(r,['stateRevision']);
+       workspaceUuid(i.reviewId);commandIds(i.commandSpecIds);workspaceRevision(r.stateRevision);
      }else throw new Error('UNSUPPORTED_VERSION');
      break;
    }
@@ -50,7 +56,7 @@ export function validateReviewParams(method:string,value:unknown){
  }
  if(p.cursor!==undefined)featureText(p.cursor,1024,true);
 }
-const resultKeys=['reviewId','decisionId','candidateId','integrationId','receiptId','digest','stateRevision','resultingOid'] as const;
+const resultKeys=['reviewId','jobIds','decisionId','candidateId','integrationId','receiptId','digest','stateRevision','resultingOid'] as const;
 export function publicReviewOperation(o:WorkflowOperationRecord){
  const {namespace,action,phase,outcome,requestId,targetId,acceptedAt,completedAt,result,error}=o;
  if(namespace!=='REVIEW')throw new Error('OPERATION_NOT_FOUND');
@@ -74,6 +80,7 @@ export function decodeReviewOperation(value:unknown){
      if(k==='stateRevision')workspaceRevision(v);
      else if(k==='resultingOid')reviewOid(v);
      else if(k==='digest'){if(typeof v!=='string'||!/^[a-f0-9]{64}$/.test(v))throw new Error('INVALID_REQUEST');}
+     else if(k==='jobIds')commandIds(v);
      else workspaceUuid(v);
    }
  }

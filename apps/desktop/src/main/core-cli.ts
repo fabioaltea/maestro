@@ -30,7 +30,7 @@ export function buildCliArgs(c: CliCommand): string[] {
     const p=c.params??{},selectors:Record<string,string>={list:'projectId',get:'reviewId',artifact:'artifactId'};
     if(!Object.hasOwn(selectors,c.action)||c.requestId!==undefined)throw new Error('INVALID_INPUT');
     const field=selectors[c.action]!;
-    keys(p,[field,...(c.action==='get'?[]:['cursor'])]);
+    keys(p,[field,'cursor']);
     return ['review',c.action,`--state-dir=${c.archive}`,'--json',...(p.cursor===undefined?[]:[`--cursor=${text(p.cursor,1024)}`]),'--',uuid(p[field])];
   }
   if(c.namespace==='scheduler'){

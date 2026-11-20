@@ -6,8 +6,8 @@ import {createEnvironmentRecovery,environmentJobIdentity as jobIdentity} from '.
 import {requireEnvironmentInstall} from '../../domain/environments/jobs.js';
 import {makeDeadline,systemClock} from '../../ports/clock.js';
 import type {AuthenticatedPeer} from '../../ports/platform.js';
-import type {EnvironmentExitEvidence,EnvironmentJob,EnvironmentJobHostPort,EnvironmentLeasePort,EnvironmentPlan,EnvironmentRecord} from '../../ports/environment.js';
-import type {WorkspaceLease} from '../../ports/workspace.js';
+import type {EnvironmentDelegatedCheck,EnvironmentExitEvidence,EnvironmentJob,EnvironmentJobHostPort,EnvironmentLeasePort,EnvironmentPlan,EnvironmentRecord} from '../../ports/environment.js';
+import type {WorkspaceLease,WorkspaceRecord} from '../../ports/workspace.js';
 import type {WorkflowIntent} from '../../domain/workflow/authorization.js';
 import {publicEnvironmentOperation} from '../../protocol/environment.js';
 import {classifyError} from '../control-main.js';
@@ -18,6 +18,7 @@ import {currentEnvironmentPlan,environmentWorkspace,inspectEnvironmentWorkspace,
 
 export interface EnvironmentInstallationOptions extends EnvironmentPlanningOptions{
  readonly lease:EnvironmentLeasePort;readonly host:EnvironmentJobHostPort;
+ readonly readValidationTree?:(workspace:WorkspaceRecord)=>Promise<string>;
 }
 type Params=Readonly<Record<string,unknown>>;
 const digest=(value:unknown)=>value===null?null:createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -112,8 +113,20 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
      ...settlement,...(artifactId?{outputArtifactId:artifactId}:{})};
    return storage.commitEnvironmentState!(args);
  }
- async function checkAfter(environment:EnvironmentRecord,plan:EnvironmentPlan){
-   try{await check(environment,plan);return true;}catch{return false;}
+ async function requireValidationTree(workspace:WorkspaceRecord,intent:WorkflowIntent){
+   if(intent.payload.treeDigest===undefined)return;
+   if(!options.readValidationTree||await options.readValidationTree(workspace)!==intent.payload.treeDigest)throw new Error('REVIEW_STALE');
+ }
+ async function checkAfter(environment:EnvironmentRecord,plan:EnvironmentPlan,job?:EnvironmentJob){
+   try{
+     const {workspace}=await check(environment,plan);
+     if(job){
+       const {operation}=await storage.readFeatureState!({kind:'operation',id:job.requestId});
+       if(!operation)return false;
+       await requireValidationTree(workspace,JSON.parse(operation.canonicalIntent) as WorkflowIntent);
+     }
+     return true;
+   }catch{return false;}
  }
  async function work(job:EnvironmentJob,intent:WorkflowIntent,controller:AbortController){
    let bound:WorkspaceLease|null=null,started=false,hostInvoked=false,proof:EnvironmentExitEvidence|null=null;
@@ -132,6 +145,8 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
        if(job.kind==='VALIDATE'){
          const command=plan.metadata.commands?.find(spec=>spec.id===job.commandSpecId),pin=plan.metadata.pin,profileDigest=plan.metadata.validationProfileDigest;
          if(!command||!pin||!profileDigest)throw new Error('ENVIRONMENT_STALE');
+         await requireValidationTree(current.workspace,intent);
+         if(controller.signal.aborted)throw new Error('CANCELLED');
          hostInvoked=true;
          proof=await host.validate(identity,{workspace:root,command,nodeDigest:pin.nodeDigest,profileDigest},makeDeadline(systemClock,300000),controller.signal);
        }else{
@@ -142,7 +157,7 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
            ...(plan.metadata.managerVersion?{selectedVersion:plan.metadata.managerVersion}:{})},makeDeadline(systemClock,300000),controller.signal);
        }
      }
-     const current=!!proof&&(job.kind==='VALIDATE'||proof.outcome==='SUCCEEDED')&&await checkAfter(environment,plan);
+     const current=!!proof&&(job.kind==='VALIDATE'||proof.outcome==='SUCCEEDED')&&await checkAfter(environment,plan,job);
      const result=await finish(job,environment,proof,current);
      if(result.operation.phase==='FINALIZED'&&proof)await settleLease(result.job??job,environment.workspaceId,bound);
    }catch(error){
@@ -152,16 +167,18 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
        const code=classifyError(error);
        if(started&&!hostInvoked&&currentJob.leaseId&&!proof)
          proof={...jobIdentity(currentJob),verified:true,exitCode:null,outcome:'FAILED',error:code};
-       const current=currentJob.kind==='VALIDATE'&&(!started||!!proof)&&await checkAfter(environment,plan);
+       const current=currentJob.kind==='VALIDATE'&&(!started||!!proof)&&await checkAfter(environment,plan,currentJob);
        const result=await finish(currentJob,environment,proof,current,started?{}:{noLaunchError:code});
        if(result.operation.phase==='FINALIZED'&&(!started||proof))await settleLease(result.job??currentJob,environment.workspaceId,bound);
      }catch{/* A lost proof preserves the durable lease and original job. */}
    }finally{running.delete(job.jobId);}
  }
- async function submit(params:Params,peer:AuthenticatedPeer,action:'prepare'|'validate'){
+ async function submit(params:Params,peer:AuthenticatedPeer,action:'prepare'|'validate',delegated=false){
    await authorization.guard(peer);
    const requestId=String(params.requestId),grantId=String(params.grantId);
    const original=await originalWorkflowGrant(storage,requestId,grantId,action,'ENVIRONMENT');
+   if(delegated?original.intent.payload.delegatedJobId!==requestId:original.intent.payload.delegatedJobId!==undefined)
+     throw new Error('APPROVAL_REQUIRED');
    if(original.operation)return{operation:publicEnvironmentOperation(original.operation)};
    if(!options.accepting())throw new Error('BLOCKED');
    const {intent}=original,result=await storage.commitEnvironmentState!({kind:'job-admit',
@@ -185,8 +202,16 @@ export function createEnvironmentInstallation(options:EnvironmentInstallationOpt
    return{accepted:true,requestId,workspaceId:intent.targetId,jobId,stateRevision:result.job!.stateRevision};
  }
  const validation=createEnvironmentValidation(options,{guard:authorization.guard,loadEnvironment,check,grant});
+ async function delegatedCheck(input:EnvironmentDelegatedCheck,peer:AuthenticatedPeer){
+   if(!options.accepting()||!options.readValidationTree)throw new Error('BLOCKED');
+   const {environment}=await currentEnvironmentPlan(storage,input.workspaceId);
+   const {grantId}=await validation({intent:{environmentId:environment.environmentId,inputDigest:input.inputDigest,
+     commandSpecId:input.commandSpecId},expectedRevisions:{stateRevision:environment.stateRevision}},peer,input);
+   return submit({requestId:input.jobId,grantId},peer,'validate',true);
+ }
  const recovery=createEnvironmentRecovery(options,{guard:authorization.guard,loadJob,active:id=>running.has(id),current:checkAfter,finish,release,cleanup});
  return{
+   ...(options.readValidationTree?{delegatedCheck}:{}),
    actions:{'environment.prepare':(params:Params,peer:AuthenticatedPeer)=>params.action==='prepare'?authorizeInstall(params,peer):
      params.action==='cancel'?authorizeCancel(params,peer):params.action==='validate'?validation(params,peer):
      params.action===undefined?submit(params,peer,'prepare'):Promise.reject(new Error('UNSUPPORTED_VERSION')),

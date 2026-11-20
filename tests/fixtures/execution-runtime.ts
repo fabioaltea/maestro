@@ -8,6 +8,7 @@ import {makeDeadline,systemClock} from '../../src/ports/clock.js';
 import type {ExecutionExitProof,ExecutionIdentity} from '../../src/ports/execution.js';
 import type {ExecutionRuntimePort} from '../../src/ports/execution-runtime.js';
 import type {DiscoveryEligibility} from '../../src/domain/discovery/approval.js';
+import type {FeatureBundle} from '../../src/ports/feature.js';
 import {createExecutionRuntime} from '../../src/core/execution/runtime.js';
 import {createProfileRuntime} from '../../src/core/profiles/runtime.js';
 import {composeProfileServices} from '../../src/core/profiles/registry.js';
@@ -20,8 +21,8 @@ import {createExecutionCommandProfile,runExecutionQualificationProbe} from '../.
 import {workspaceRuntimeFixture} from './workspace-runtime.js';
 import {compileBoundaryProbe} from './discovery-boundary.js';
 
-export async function executionRuntimeFixture(t:TestContext,options:{question?:boolean;output?:string;unknownExit?:boolean;beforeGo?:()=>void}={}){
- const f=await workspaceRuntimeFixture(t),created=await f.prepare(),workspaceId=created.data.summary.workspaceId;
+export async function executionRuntimeFixture(t:TestContext,options:{question?:boolean;output?:string;unknownExit?:boolean;beforeGo?:()=>void;bundle?:FeatureBundle}={}){
+ const f=await workspaceRuntimeFixture(t),created=await f.prepare(options.bundle),workspaceId=created.data.summary.workspaceId;
  assert.equal((await f.submit(created.data.grantId)).operation?.outcome,'SUCCEEDED');
  const workspace=f.store.readWorkspaceState({kind:'get',id:workspaceId}).workspace!,path=workspace.ownership!.root.canonicalPath;
  await chmod(path,0o700);
@@ -62,14 +63,20 @@ export async function executionRuntimeFixture(t:TestContext,options:{question?:b
  await ok(profile,'profile.resolve',{requestId:profileResolutionId,profileId:role.entityId,revisionId:role.revisionId,projectId:f.projectId,providerCapabilityDigest});
  let opens=0,writes=0;
  const receivedAnswers:string[]=[];
+ const receivedFeedback:string[]=[];
  const processProofs=new Map<string,ExecutionExitProof>();
  const host:ExecutionRuntimePort={
-   async input({workspace}){return{treeDigest:(await capture(workspace)).treeDigest,profileBytes:7,bytes:Buffer.from('fixture input')};},
+   reviewFeedback:true,
+   async input({workspace,feedback}){
+     return{treeDigest:(await capture(workspace)).treeDigest,profileBytes:7,bytes:Buffer.from(feedback?JSON.stringify(feedback):'fixture input')};
+   },
    checkpoint:capture,
    async observe(identity){return processProofs.get(identity.runId)??null;},
-   async open({identity,output,question,permissions}){
+   async open({identity,output,question,permissions,input}){
      assert.deepEqual(permissions,['WORKSPACE_READ','WORKSPACE_WRITE']);
      opens++;
+     const body=Buffer.from(input).toString();
+     if(body!=='fixture input')receivedFeedback.push((JSON.parse(body) as {text:string}).text);
      const invocation=await createExecutionCommandProfile({executable:probe,workspace:path,target});
      let stopped=false,done=false,active:Promise<void>|undefined,interactionId:string|undefined;
      const exit=Promise.withResolvers<ExecutionExitProof>();
@@ -127,7 +134,7 @@ export async function executionRuntimeFixture(t:TestContext,options:{question?:b
  assert.equal((await mutate('provider.configure',grant)).operation?.outcome,'SUCCEEDED');
  await ok(runtime,'execution.provider.check',{requestId:randomUUID(),providerId:'codex',expectedConfigRevision:'1'});
  const startIntent={featureId:created.feature.featureId,profileResolutionId,workspaceId,envelopeId:created.feature.envelope.envelopeId};
- return{...f,runtime,host,send,prepare,mutate,target,startIntent,receivedAnswers,role,profile,
+ return{...f,runtime,host,send,prepare,mutate,target,startIntent,receivedAnswers,receivedFeedback,role,profile,
    counts:()=>({opens,writes}),state:(id:string)=>f.store.readExecutionState({kind:'session',id}).session,
    run:(id:string)=>f.store.readExecutionState({kind:'run',id}).run};
 }

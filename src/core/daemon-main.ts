@@ -103,8 +103,10 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       storage,paths,instanceId:intent.instanceId,currentEligibility:(peer,projectId)=>discovery!.operations.currentEligibility(peer,projectId),
       ...(dependencies.workspaceFiles?{files:dependencies.workspaceFiles}:{}),
     }));
+    const reviewGit=dependencies.review??(workspaces.leases?nativeReviewGit(createWorkspaceMutator(),workspaces.leases.owned):undefined);
     const environmentCompose=dependencies.environments??(workspaces.leases?nativeEnvironmentServices({
       storage,instanceId:intent.instanceId,paths,owned:workspaces.leases.owned,lease:workspaces.leases.forConsumer('ENVIRONMENT'),
+      ...(reviewGit?{readValidationTree:async workspace=>(await reviewGit.captureCheckpoint(workspace)).treeDigest}:{}),
     }):undefined);
     environments=createEnvironmentRuntime({storage,instanceId:intent.instanceId,...(environmentCompose?{compose:environmentCompose}:{})});
     profiles=createProfileRuntime({storage,paths,instanceId:intent.instanceId,native:true,...dependencies.profiles});
@@ -114,7 +116,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       ...(dependencies.execution?{dependencies:dependencies.execution}:{})});
     scheduler=createSchedulerRuntime({storage,paths,instanceId:intent.instanceId,...dependencies.scheduler});
     review=createReviewRuntime({storage,paths,instanceId:intent.instanceId,currentEligibility:(peer,projectId)=>discovery!.operations.currentEligibility(peer,projectId),
-      ...(dependencies.review?{readGit:dependencies.review}:workspaces.leases?{readGit:nativeReviewGit(createWorkspaceMutator(),workspaces.leases.owned)}:{})});
+      ...(reviewGit?{readGit:reviewGit}:{}),...(environments.runDelegatedCheck?{runCheck:environments.runDelegatedCheck}:{})});
     const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=11&&storage.readReviewState?{reviewVersion:1,reviewMethods:review.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=10&&storage.readSchedulerState?{schedulerVersion:1,schedulerMethods:scheduler.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=9&&storage.readExecutionState?{executionVersion:1,executionMethods:execution.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=8?{profileVersion:1,profileMethods:profiles.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=7?{environmentVersion:1,environmentMethods:environments.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });

@@ -6,6 +6,7 @@ import type {WorkflowArtifact} from '../ports/workflow.js';
 import {readFeatureState,type FeatureRow} from './features-store.js';
 import type {createWorkflowStore} from './workflow-store.js';
 import {EXECUTION_SCHEMA_VERSION} from './execution-schema.js';
+import {readReviewState} from './review-store.js';
 
 const s=(value:unknown)=>String(value);
 const nullable=(value:unknown)=>value===null?null:s(value);
@@ -129,6 +130,17 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
        BigInt(String(p.workspaceRevision))+(leased?1n:0n),BigInt(String(p.featureRevision)),
        BigInt(String(p.environmentRevision)),p.profileDigest,r.capabilityDigest);
    if(!target)throw new Error('EXECUTION_APPROVAL_STALE');
+   if(p.reviewDecisionId!==undefined){
+     if(i.action!=='start')throw new Error('EXECUTION_APPROVAL_STALE');
+     const {feedback}=readReviewState(db,{kind:'feedback',id:requireUuid(p.reviewDecisionId)});
+     const envelope=readFeatureState(db,{kind:'envelope',id:e.envelopeId}).envelope;
+     if(!feedback||feedback.featureId!==e.featureId||feedback.workspaceId!==e.workspaceId||feedback.featureRevisionId!==envelope?.revisionId||
+        feedback.checkpointTreeDigest!==p.treeDigest||feedback.stateRevision!==p.reviewStateRevision)throw new Error('EXECUTION_APPROVAL_STALE');
+     const {artifact:blob}=readFeatureState(db,{kind:'artifact',id:feedback.artifactId});
+     if(!blob||blob.kind!=='INPUT'||blob.state!=='REFERENCED'||blob.sha256!==p.feedbackDigest||blob.expectedBytes>EXECUTION_LIMITS.interactionBytes)
+       throw new Error('ARTIFACT_CORRUPT');
+     verifyArtifact(feedback.artifactId);
+   }
  }
  if('admission' in c){
    const {admission:a}=c,i=ledger.intent(a.canonicalIntent);

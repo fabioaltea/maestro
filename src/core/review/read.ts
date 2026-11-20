@@ -1,6 +1,9 @@
 import {featureFields,featureObject} from '../../domain/features/bundle.js';
 import type {StoragePort} from '../../ports/storage.js';
 import {publicReviewOperation,requireReviewEnvelope,validateReviewParams} from '../../protocol/review.js';
+import {readReviewCriteria} from './criteria.js';
+
+const CRITERIA_PAGE_BYTES=20000;
 
 const encode=(data:unknown)=>Buffer.from(JSON.stringify(data)).toString('base64url');
 export function createReviewReader({storage,storeId,offline}:{storage:StoragePort;storeId:string;offline:boolean}){
@@ -27,9 +30,30 @@ export function createReviewReader({storage,storeId,offline}:{storage:StoragePor
      if(!operation)throw new Error('OPERATION_NOT_FOUND');
      result={operation:publicReviewOperation(operation)};
    }else if(method==='review.get'){
-     const {review}=await query({kind:'review',id:String(p.reviewId)});
+     const reviewId=String(p.reviewId),page=cursor(reviewId);
+     const {review}=await query({kind:'review',id:reviewId});
      if(!review)throw new Error('OPERATION_NOT_FOUND');
-     result={review,eligibility:'UNKNOWN'};
+     if(page&&page.revision!==review.stateRevision)throw new Error('REVISION_CONFLICT');
+     const [all,{evidence=[]}]=await Promise.all([readReviewCriteria(storage,review),
+       review.state==='CHECKING'?Promise.resolve({evidence:[]}):query({kind:'evidence',id:reviewId})]);
+     const criteria=[];
+     let offset=page?.offset??0,bytes=0;
+     if(page&&offset>=all.length)throw new Error('INVALID_REQUEST');
+     for(const criterion of all.slice(offset,offset+20)){
+       // JSON escaping can expand control characters in a single large criterion.
+       const proof=evidence.find(value=>value.criterionId===criterion.criterionId);
+       const item={criterionId:criterion.criterionId,storyId:criterion.storyId,required:criterion.required,
+         text:criterion.text,verification:criterion.verification,status:proof?.status??'NOT_RUN',...(proof?{evidence:proof}:{})};
+       const size=Buffer.byteLength(JSON.stringify(item))+1;
+       if(bytes+size>CRITERIA_PAGE_BYTES){
+         if(criteria.length)break;
+         criteria.push({...item,text:null,verification:null});
+         offset++;
+         break;
+       }
+       criteria.push(item);bytes+=size;offset++;
+     }
+     result={review,eligibility:'UNKNOWN',criteria,nextCursor:offset<all.length?next(reviewId,review.stateRevision,offset):null};
    }else if(method==='review.list'){
      const projectId=String(p.projectId),page=cursor(projectId),r=await query({kind:'list',projectId,offset:page?.offset??0,limit:Number(p.limit??20)});
      if(page&&page.revision!==r.revision)throw new Error('REVISION_CONFLICT');

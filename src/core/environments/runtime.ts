@@ -1,6 +1,7 @@
 import {createEnvironmentInstallation} from './prepare.js';
 import {createEnvironmentJobHost} from '../../platform/macos/environment/job-host.js';
-import type {EnvironmentLeasePort} from '../../ports/environment.js';
+import type {EnvironmentDelegatedCheck,EnvironmentLeasePort} from '../../ports/environment.js';
+import type {AuthenticatedPeer} from '../../ports/platform.js';
 import {createEnvironmentInspector} from '../../platform/macos/environment/inspect.js';
 import {createEnvironmentPlanning,type EnvironmentPlanningOptions} from './plan.js';
 import type {StoragePort} from '../../ports/storage.js';
@@ -17,9 +18,12 @@ export interface EnvironmentRuntimeServices {
  readonly actions:Readonly<Record<string,EnvironmentRpcAction>>;
  recover?():Promise<void>;
  stop?():void;
+ delegatedCheck?(input:EnvironmentDelegatedCheck,peer:AuthenticatedPeer):Promise<Record<string,unknown>>;
 }
 
-export function nativeEnvironmentServices(options:Omit<EnvironmentPlanningOptions,keyof EnvironmentRuntimeContext|'inspector'>&{lease:EnvironmentLeasePort}){
+export function nativeEnvironmentServices(options:Omit<EnvironmentPlanningOptions,keyof EnvironmentRuntimeContext|'inspector'>&{
+ lease:EnvironmentLeasePort;readValidationTree?:NonNullable<import('./prepare.js').EnvironmentInstallationOptions['readValidationTree']>;
+}){
  return (context:EnvironmentRuntimeContext):EnvironmentRuntimeServices=>{
    const settings={...options,...context,inspector:createEnvironmentInspector()};
    const planning=createEnvironmentPlanning(settings),installation=createEnvironmentInstallation({...settings,host:createEnvironmentJobHost(options.paths)});
@@ -39,6 +43,7 @@ export function createEnvironmentRuntime(options:{storage:StoragePort;instanceId
    void job.finally(()=>jobs.delete(job)).catch(()=>{});
  }
  const service=options.compose?.({accepting:()=>accepting,schedule});
+ async function idle(){while(jobs.size)await Promise.all([...jobs]);}
  const actions:Record<string,EnvironmentRpcAction>={};
  for(const [method,action] of Object.entries(service?.actions??{})){
    actions[method]=async(params,peer)=>{
@@ -48,6 +53,10 @@ export function createEnvironmentRuntime(options:{storage:StoragePort;instanceId
  }
  return{
    jobs:createEnvironmentJobPort(storage),
+   ...(service?.delegatedCheck?{async runDelegatedCheck(input:EnvironmentDelegatedCheck,peer:AuthenticatedPeer){
+     await service.delegatedCheck!(input,peer);
+     await idle();
+   }}:{}),
    methods:[...new Set([...ENVIRONMENT_READ_METHODS,...Object.keys(actions)])],
    dispatch:createEnvironmentDispatch({storage,actions}),
    fence(){accepting=false;},
@@ -60,7 +69,7 @@ export function createEnvironmentRuntime(options:{storage:StoragePort;instanceId
      await service?.recover?.();
      accepting=true;
    },
-   async idle(){while(jobs.size)await Promise.all([...jobs]);},
+   idle,
    async stop(deadline:Deadline){
      accepting=false;service?.stop?.();
      if(!jobs.size)return;

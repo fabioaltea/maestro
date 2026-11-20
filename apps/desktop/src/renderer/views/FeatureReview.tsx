@@ -8,12 +8,14 @@ const stateLabels:Record<string,string>={
  READY_FOR_APPROVAL:'Attende approvazione',BLOCKED:'Bloccata',STALE:'Superata',APPROVED:'Approvata',
 };
 const rows=(v:unknown)=>Array.isArray(v)?v.map(record):[];
+const checkLabels:Record<string,string>={NOT_RUN:'Non verificato',PASS:'Superato',FAIL:'Fallito',BLOCKED:'Bloccato'};
 
 export function FeatureReview({desktop}:{desktop:Desktop}){
  const {core}=desktop;
  const [projects,setProjects]=useState<Params[]>([]),[projectId,setProjectId]=useState('');
  const [items,setItems]=useState<Params[]>([]),[selected,setSelected]=useState('');
  const [nextCursor,setNextCursor]=useState<string|null>(null),[detail,setDetail]=useState<Params|null>(null);
+ const [criteria,setCriteria]=useState<Params[]>([]),[criteriaCursor,setCriteriaCursor]=useState<string|null>(null);
  const [freshness,setFreshness]=useState<string|null>(null),[loading,setLoading]=useState(false);
  const [diff,setDiff]=useState<{id:string;offset:number;text:string;cursor:string|null}|null>(null);
  const generation=useRef(0);
@@ -26,7 +28,7 @@ export function FeatureReview({desktop}:{desktop:Desktop}){
    return()=>{alive=false;generation.current++;};
  },[core]);
  useEffect(()=>{
-   setDetail(null);setDiff(null);setItems([]);setSelected('');setFreshness(null);setNextCursor(null);
+   setDetail(null);setDiff(null);setItems([]);setSelected('');setFreshness(null);setNextCursor(null);setCriteria([]);setCriteriaCursor(null);
    if(projectId)void list(projectId);
  },[projectId]);
  async function list(projectId:string,cursor?:string){
@@ -38,12 +40,17 @@ export function FeatureReview({desktop}:{desktop:Desktop}){
      setNextCursor(typeof result.data.nextCursor==='string'?result.data.nextCursor:null);setFreshness(result.freshness);
    }finally{if(token===generation.current)setLoading(false);}
  }
- async function show(reviewId:string){
+ async function show(reviewId:string,cursor?:string){
    const token=++generation.current;
-   setSelected(reviewId);setDetail(null);setDiff(null);setLoading(true);
+   if(!cursor){setSelected(reviewId);setDetail(null);setDiff(null);setCriteria([]);setCriteriaCursor(null);}
+   setLoading(true);
    try{
-     const r=await core('getFeatureReview',{reviewId});
-     if(token===generation.current&&r?.result==='OK'){setDetail(record(r.data.review));setFreshness(r.freshness);}
+     const r=await core('getFeatureReview',{reviewId,...(cursor?{cursor}:{})});
+     if(token===generation.current&&r?.result==='OK'){
+       setDetail(record(r.data.review));setFreshness(r.freshness);
+       setCriteria(previous=>cursor?[...previous,...rows(r.data.criteria)]:rows(r.data.criteria));
+       setCriteriaCursor(typeof r.data.nextCursor==='string'?r.data.nextCursor:null);
+     }
    }finally{if(token===generation.current)setLoading(false);}
  }
  async function part(id:string,cursor?:string){
@@ -78,6 +85,16 @@ export function FeatureReview({desktop}:{desktop:Desktop}){
        <dl><dt>Stato</dt><dd>{stateLabels[String(detail.state)]??String(detail.state)}</dd>
          <dt>Commit sorgente</dt><dd>{String(detail.sourceOid)}</dd><dt>Commit target</dt><dd>{String(detail.targetOid)}</dd>
          <dt>File modificati</dt><dd>{String(detail.fileCount)}</dd></dl>
+       {criteria.length>0&&<>
+         <h4>Criteri di accettazione</h4>
+         <ul>{criteria.map(item=><li key={String(item.criterionId)}>
+           <strong>{String(item.text??item.criterionId)}</strong> · {checkLabels[String(item.status)]}
+           {item.required===true&&<span className="hint"> · Obbligatorio</span>}
+           {typeof item.verification==='string'&&<p>{item.verification}</p>}
+         </li>)}</ul>
+         {criteriaCursor&&<button className="button subtle" disabled={loading}
+           onClick={()=>void show(String(detail.reviewId),criteriaCursor)}>Altri criteri</button>}
+       </>}
        <div className="row-actions">{rows(detail.parts).map((item,i)=><button type="button" className="button subtle" key={String(item.artifactId)} disabled={loading}
          onClick={()=>void part(String(item.artifactId))}>Apri diff {i+1}</button>)}</div>
        {diff&&<><p className="hint">Offset {diff.offset}</p><pre className="detail-output">{diff.text}</pre>

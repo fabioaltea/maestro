@@ -7,6 +7,7 @@ import {createOwnedWorkspaceFiles} from '../../src/platform/macos/git/workspace-
 import {createWorkspaceProvisioning,type WorkspaceProvisionOptions} from '../../src/core/workspaces/provision.js';
 import type {StoragePort} from '../../src/ports/storage.js';
 import type {WorkspaceChange,WorkspacePort} from '../../src/ports/workspace.js';
+import type {FeatureBundle} from '../../src/ports/feature.js';
 
 export async function workspaceRuntimeFixture(t:Parameters<typeof workspaceAuthoringFixture>[0],mutator:WorkspacePort=createWorkspaceMutator(),compose:(options:WorkspaceProvisionOptions)=>WorkspaceRuntimeServices=createWorkspaceProvisioning,
  beforeCommit?:(change:WorkspaceChange)=>void){
@@ -23,8 +24,8 @@ export async function workspaceRuntimeFixture(t:Parameters<typeof workspaceAutho
  function send(method:string,params:Record<string,unknown>){
    return runtime.dispatch({protocolVersion:1,correlationId:randomUUID(),method,params},f.peer,f.store.readSnapshot()!);
  }
- async function prepare(){
-   const feature=await f.approvedFeature();
+ async function prepare(bundle?:FeatureBundle){
+   const feature=await f.approvedFeature(bundle);
    const response=await send('workspace.prepare',{featureId:feature.featureId,envelopeId:feature.envelope.envelopeId});
    assert.equal(response.result,'OK',JSON.stringify(response));
    return{feature,data:response.data as {grantId:string;summary:{workspaceId:string;baseOid:string;branchRef:string}}};

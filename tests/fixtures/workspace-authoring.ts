@@ -7,6 +7,7 @@ import {featureAuthoringFixture} from './feature-authoring.js';
 import {featureDraft} from './feature-boundary.js';
 import {createFilesystemIdentity} from '../../src/platform/macos/git/filesystem-identity.js';
 import type {WorkspaceMutationTarget} from '../../src/ports/workspace.js';
+import type {FeatureBundle} from '../../src/ports/feature.js';
 
 export async function workspaceAuthoringFixture(t:TestContext){
  const f=await featureAuthoringFixture(t,{baseBranch:'fixture-workspace-base'});
@@ -15,8 +16,8 @@ export async function workspaceAuthoringFixture(t:TestContext){
  const ownedRoot=await createFilesystemIdentity().capture(root,'directory');
  const project=f.store.getProject(f.projectId)!.project;
  const baseOid=(await f.repositories.git(f.repo,['rev-parse','HEAD'])).trim();
- async function approvedFeature(){
-   const artifactId=await f.upload(featureDraft());
+ async function approvedFeature(bundle:FeatureBundle=featureDraft()){
+   const artifactId=await f.upload(bundle);
    const create=await f.prepareFeature('create',{projectId:f.projectId,expectedConfigRevision:'1',bundleArtifactId:artifactId});
    const created=await f.execute('create',String(create.grantId));
    assert.equal(created.operation?.outcome,'SUCCEEDED',JSON.stringify(created.response));

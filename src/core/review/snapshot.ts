@@ -72,7 +72,8 @@ export function createReviewSnapshotServices(options:ReviewServicesOptions):Read
        configRevision:selected.configRevision,payload:{...selected.payload,instanceId}};
    }else if(action==='request-changes'){
      const {review}=await storage.readReviewState!({kind:'review',id:String(input.reviewId)});
-     if(!review||featureObject(p.expectedRevisions).stateRevision!==review.stateRevision)throw new Error('REVIEW_STALE');
+     if(!review||['CHECKING','STALE','APPROVED'].includes(review.state)||featureObject(p.expectedRevisions).stateRevision!==review.stateRevision)
+       throw new Error('REVIEW_STALE');
      const a=await readSealedFeatureArtifact(storage,String(input.feedbackArtifactId),'INPUT',262144,review.featureId);
      i={...base,action,targetId:review.reviewId,projectId:review.projectId,expectedRevision:review.stateRevision,configRevision:null,
        payload:{digest:review.digest,feedbackArtifactId:a.artifact.artifactId,instanceId}};
@@ -80,6 +81,18 @@ export function createReviewSnapshotServices(options:ReviewServicesOptions):Read
    requireAccepting();
    const grant=await auth.prepare(peer,i);
    return{grantId:grant.grantId,canonicalIntentHash:digest(grant.canonicalIntent),summary:grant.summary,expiresAt:grant.expiresAtMs};
+ }
+ async function discardStagedParts(ids:readonly string[],intent:WorkflowIntent){
+   for(const artifactId of ids){
+     try{
+       const {artifact}=await storage.readFeatureState!({kind:'artifact',id:artifactId});
+       if(artifact?.kind!=='BUNDLE'||artifact.targetId!==intent.targetId||artifact.referenceCount!==0||
+          !['RESERVED','SEALED'].includes(artifact.state))continue;
+       await storage.commitFeatureState!({kind:'discard',artifactId,admission:workflowAdmission({requestId:randomUUID(),grantId:null,
+         instanceId,nowMs:Date.now(),intent:{version:1,storeId:intent.storeId,ownerUid:intent.ownerUid,namespace:'ARTIFACT',
+           action:'discard',targetId:null,projectId:null,expectedRevision:null,configRevision:null,payload:{artifactId}}})});
+     }catch{/* Ownership or persistence is uncertain. Keep the artifact available for reconciliation. */}
+   }
  }
  const actions:Record<string,ReviewAction>={'review.prepare':prepare};
  for(const action of ['create','request-changes'] as const){
@@ -98,16 +111,25 @@ export function createReviewSnapshotServices(options:ReviewServicesOptions):Read
      if(r.digest!==intent.payload.digest||selected.feature.stateRevision!==intent.expectedRevision||selected.configRevision!==intent.configRevision)
        throw new Error('REVIEW_STALE');
      const parts:ReviewRecord['parts'][number][]=[];
-     for(const chunk of selected.raw){
+     const stagedIds:string[]=[];
+     try{
+       for(const chunk of selected.raw){
+         requireAccepting();
+         const artifactId=randomUUID();
+         stagedIds.push(artifactId);
+         const art=await publishPlanningArtifact({storage,storeId:snapshot.store.storeId,ownerUid:paths.ownerUid,instanceId,
+           targetId:selected.feature.featureId,artifactId},'BUNDLE',chunk);
+         parts.push({artifactId:art.artifactId,bytes:art.expectedBytes,sha256:art.sha256});
+       }
+       const v:ReviewRecord={...r,reviewId:requestId,projectId:selected.feature.projectId,state:'DRAFT',stateRevision:'1',createdAt:'',parts};
        requireAccepting();
-       const art=await publishPlanningArtifact({storage,storeId:snapshot.store.storeId,ownerUid:paths.ownerUid,instanceId,targetId:selected.feature.featureId},
-         'BUNDLE',chunk);
-       parts.push({artifactId:art.artifactId,bytes:art.expectedBytes,sha256:art.sha256});
+       const {operation:completed,inserted}=await storage.commitReviewState!({kind:action,admission:a,snapshot:v});
+       if(!inserted)await discardStagedParts(stagedIds,intent);
+       return{operation:publicReviewOperation(completed)};
+     }catch(error){
+       await discardStagedParts(stagedIds,intent);
+       throw error;
      }
-     const v:ReviewRecord={...r,reviewId:requestId,projectId:selected.feature.projectId,state:'DRAFT',stateRevision:'1',createdAt:'',parts};
-     requireAccepting();
-     const {operation:completed}=await storage.commitReviewState!({kind:action,admission:a,snapshot:v});
-     return{operation:publicReviewOperation(completed)};
    };
  }
  return actions;

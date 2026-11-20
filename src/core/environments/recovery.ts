@@ -13,7 +13,7 @@ export function createEnvironmentRecovery(options:EnvironmentInstallationOptions
  guard(peer:AuthenticatedPeer):Promise<{store:{storeId:string;ownerUid:number}}>;
  loadJob(id:string):Promise<{job:EnvironmentJob;environment:EnvironmentRecord;plan:EnvironmentPlan}>;
  active(id:string):boolean;
- current(environment:EnvironmentRecord,plan:EnvironmentPlan):Promise<boolean>;
+ current(environment:EnvironmentRecord,plan:EnvironmentPlan,job?:EnvironmentJob):Promise<boolean>;
  finish(job:EnvironmentJob,environment:EnvironmentRecord,proof:EnvironmentExitEvidence|null,current:boolean,
    settlement?:{noLaunchError?:string;recovering?:boolean;reconcileId?:string}):Promise<EnvironmentWrite>;
  release(lease:WorkspaceLease|null):Promise<void>;
@@ -52,7 +52,7 @@ export function createEnvironmentRecovery(options:EnvironmentInstallationOptions
        if(target.phase==='RECONCILING'&&target.leaseId&&!tools.active(jobId)&&target.stateRevision===revision){
          const proof=await host.recover(environmentJobIdentity(target));
          if(proof){
-           const fresh=(target.kind==='VALIDATE'||proof.outcome==='SUCCEEDED')&&await tools.current(current.environment,current.plan);
+           const fresh=(target.kind==='VALIDATE'||proof.outcome==='SUCCEEDED')&&await tools.current(current.environment,current.plan,target);
            const result=await tools.finish(target,current.environment,proof,fresh,{reconcileId:requestId});
            if(result.operation.phase==='FINALIZED')await release(result.job??target,current.environment.workspaceId);
          }
@@ -76,7 +76,7 @@ export function createEnvironmentRecovery(options:EnvironmentInstallationOptions
      const {environment,plan}=await tools.loadJob(job.jobId);
      const proof=job.leaseId?await host.recover(environmentJobIdentity(job)):null;
      if(job.phase==='RECONCILING'&&!proof)continue;
-     const current=(job.kind==='VALIDATE'||proof?.outcome==='SUCCEEDED')&&await tools.current(environment,plan);
+     const current=(job.kind==='VALIDATE'||proof?.outcome==='SUCCEEDED')&&await tools.current(environment,plan,job);
      const result=await tools.finish(job,environment,proof,current,{recovering:true,...(!job.leaseId?{noLaunchError:'INTERRUPTED'}:{})});
      if(result.operation.phase==='FINALIZED'&&(proof||!job.leaseId))await release(result.job??job,environment.workspaceId);
    }

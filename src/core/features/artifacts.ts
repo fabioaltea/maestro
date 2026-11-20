@@ -19,9 +19,9 @@ export async function readSealedFeatureArtifact(storage:Pick<StoragePort,'readFe
 }
 
 /** Trusted workflow output uses the existing quota, seal and fsync path. */
-export async function publishPlanningArtifact(options:{storage:StoragePort;storeId:string;ownerUid:number;instanceId:string;targetId:string},kind:'BUNDLE'|'OUTPUT'|'CHECKPOINT',value:unknown){
- const {storage,storeId,ownerUid,instanceId,targetId}=options;
- const bytes=(value instanceof Uint8Array?Buffer.from(value):Buffer.from(JSON.stringify(value))),artifactId=randomUUID(),sha256=digest(bytes),at=Date.now();
+export async function publishPlanningArtifact(options:{storage:StoragePort;storeId:string;ownerUid:number;instanceId:string;targetId:string;artifactId?:string},kind:'BUNDLE'|'OUTPUT'|'CHECKPOINT',value:unknown){
+ const {storage,storeId,ownerUid,instanceId,targetId,artifactId=randomUUID()}=options;
+ const bytes=(value instanceof Uint8Array?Buffer.from(value):Buffer.from(JSON.stringify(value))),sha256=digest(bytes),at=Date.now();
  if(bytes.length>262144)throw new Error('CONTEXT_LIMIT');
  const admission=(requestId:string,action:string,payload:Record<string,unknown>)=>workflowAdmission({requestId,grantId:null,instanceId,nowMs:Date.now(),
    intent:{version:1,storeId,ownerUid,namespace:'ARTIFACT',action,targetId:null,projectId:null,expectedRevision:null,configRevision:null,payload}});

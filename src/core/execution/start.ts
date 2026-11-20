@@ -17,6 +17,7 @@ import {publishPlanningArtifact,readSealedFeatureArtifact} from '../features/art
 import {classifyError} from '../control-main.js';
 import {executionMonitor} from './monitor.js';
 import {createExecutionRecovery} from './recovery.js';
+import {loadReviewFeedback} from '../review/feedback.js';
 import type {ExecutionContext} from './runtime.js';
 import type {ExecutionAction} from './dispatch.js';
 
@@ -79,15 +80,26 @@ export function createExecutionServices(options:ExecutionContext){
    const profile=await profiles.current(profileId,feature.projectId,config.capabilityDigest);
    const permissions=parseProfilePermissions(profile.snapshot.effectivePermissions);
    if(!permitsProfilePermissions(permissions,['WORKSPACE_READ','WORKSPACE_WRITE']))throw new Error('TOOL_PERMISSION_REQUIRED');
-   const input=await hostPort.input({workspace:worktree,envelopeId:envelope.envelopeId,profileResolutionId:profileId,provider:config});
+   let feedback:Awaited<ReturnType<typeof loadReviewFeedback>>|undefined;
+   if(data.reviewDecisionId!==undefined){
+     if(!hostPort.reviewFeedback)throw new Error('EXECUTION_UNSUPPORTED');
+     feedback=await loadReviewFeedback(storage,String(data.reviewDecisionId),{
+       featureId:feature.featureId,featureRevisionId:envelope.revisionId,workspaceId:worktree.workspaceId,
+     });
+   }
+   const input=await hostPort.input({workspace:worktree,envelopeId:envelope.envelopeId,profileResolutionId:profileId,provider:config,
+     ...(feedback?{feedback:{decisionId:feedback.decisionId,sha256:feedback.sha256,text:feedback.text}}:{})});
    if(!input.bytes.byteLength||input.bytes.byteLength>EXECUTION_LIMITS.runInputBytes||
       !Number.isSafeInteger(input.profileBytes)||input.profileBytes<0||input.profileBytes>EXECUTION_LIMITS.profileBytes)throw new Error('CONTEXT_LIMIT');
    requireCheckpointTree(input.treeDigest);
-   return{feature,worktree,config,input,permissions,resolved:{
+   if(feedback&&feedback.checkpointTreeDigest!==input.treeDigest)throw new Error('EXECUTION_APPROVAL_STALE');
+   return{feature,worktree,config,input,permissions,feedback,resolved:{
      featureId:feature.featureId,workspaceId:worktree.workspaceId,envelopeId:envelope.envelopeId,profileResolutionId:profileId,
      providerId:config.providerId,capabilityDigest:config.capabilityDigest,featureRevision:feature.stateRevision,
      workspaceRevision:worktree.stateRevision,environmentRevision:environment.stateRevision,profileDigest:profile.digest,
-     inputDigest:sha(JSON.stringify({feature:envelope.digest,profile:profile.digest,contents:sha(input.bytes)})),treeDigest:input.treeDigest,
+     inputDigest:sha(JSON.stringify({feature:envelope.digest,profile:profile.digest,contents:sha(input.bytes),
+       ...(feedback?{reviewDecisionId:feedback.decisionId,feedbackDigest:feedback.sha256}:{})})),treeDigest:input.treeDigest,
+     ...(feedback?{reviewDecisionId:feedback.decisionId,feedbackDigest:feedback.sha256,reviewStateRevision:feedback.stateRevision}:{}),
    }};
  }
  async function capture(session:ExecutionSession){
@@ -161,8 +173,12 @@ export function createExecutionServices(options:ExecutionContext){
      if(!options.accepting())throw new Error('INTERRUPTED');
      // Re-read the actual workspace under the exclusive lease before the host
      // receives input. The approved tree and bytes must still match.
+     const original=selected.feedback;
+     const feedback=original?await loadReviewFeedback(storage,original.decisionId,original):undefined;
+     if(original&&(feedback?.sha256!==original.sha256||feedback.stateRevision!==original.stateRevision))throw new Error('EXECUTION_APPROVAL_STALE');
      const checked=await hostPort.input({workspace:selected.worktree,envelopeId:selected.resolved.envelopeId,
-       profileResolutionId:selected.resolved.profileResolutionId,provider:selected.config});
+       profileResolutionId:selected.resolved.profileResolutionId,provider:selected.config,
+       ...(feedback?{feedback:{decisionId:feedback.decisionId,sha256:feedback.sha256,text:feedback.text}}:{})});
      if(checked.treeDigest!==selected.resolved.treeDigest||checked.profileBytes!==selected.input.profileBytes||
         checked.bytes.byteLength!==selected.input.bytes.byteLength||sha(checked.bytes)!==sha(selected.input.bytes))throw new Error('EXECUTION_APPROVAL_STALE');
      identity={runId,generation,leaseId:owned.leaseId,challenge:randomUUID()};

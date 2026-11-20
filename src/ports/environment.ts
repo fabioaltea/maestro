@@ -76,6 +76,10 @@ export interface EnvironmentJobPort {
  get(jobId:string):Promise<EnvironmentJob>;
  output(jobId:string,after:string,limit:number):Promise<readonly EnvironmentOutput[]>;
 }
+export interface EnvironmentDelegatedCheck {
+ readonly jobId:string;readonly workspaceId:string;readonly planId:string;readonly planDigest:string;
+ readonly inputDigest:string;readonly commandSpecId:string;readonly commandDigest:string;readonly treeDigest:string;
+}
 export type EnvironmentQuery=
  |{readonly kind:'workspace'|'environment'|'plan'|'job'|'artifact'|'latest-job';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number}

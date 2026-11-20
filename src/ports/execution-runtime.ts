@@ -20,8 +20,11 @@ export interface ExecutionHost {
  stop():void;
 }
 export interface ExecutionRuntimePort {
+ /** The host can incorporate sealed review feedback as untrusted input. */
+ readonly reviewFeedback?:true;
  /** Reads a bounded, current input and worktree manifest in the trusted compartment. */
- input(options:{workspace:WorkspaceRecord;envelopeId:string;profileResolutionId:string;provider:ExecutionProviderConfig}):Promise<ExecutionInput>;
+ input(options:{workspace:WorkspaceRecord;envelopeId:string;profileResolutionId:string;provider:ExecutionProviderConfig;
+   feedback?:{readonly decisionId:string;readonly sha256:string;readonly text:string}}):Promise<ExecutionInput>;
  /** Must return a WAIT_GO host. No positive effect is authorized by opening it. */
  open(options:{workspace:WorkspaceRecord;identity:ExecutionIdentity;provider:ExecutionProviderConfig;input:Uint8Array;
    permissions:readonly ProfilePermission[];deadline:Deadline;output(text:string):Promise<void>;question(text:string):Promise<string>}):Promise<ExecutionHost>;

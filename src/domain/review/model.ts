@@ -33,9 +33,9 @@ export function reviewCheckStatus(scope:{readonly jobId:string;readonly planId:s
  if(observedTreeOid!==scope.treeOid)return 'BLOCKED';
  if(!job)return 'NOT_RUN';
  if(job.jobId!==scope.jobId||job.kind!=='VALIDATE'||job.planId!==scope.planId||job.commandSpecId!==scope.commandSpecId||
-    job.inputDigest!==scope.inputDigest||!job.completedAt||!job.exitProof?.verified)return 'BLOCKED';
- if(job.phase==='FAILED')return 'FAIL';
- if(job.phase!=='SUCCEEDED'||job.exitProof.code!==0||job.exitProof.reason!==null||job.safeError!==null||job.truncated||job.outputWatermark==='0')return 'BLOCKED';
+    job.inputDigest!==scope.inputDigest||!job.completedAt||!job.exitProof?.verified||job.truncated)return 'BLOCKED';
+ if(job.phase==='FAILED'&&job.exitProof.code!==null&&job.exitProof.code!==0)return 'FAIL';
+ if(job.phase!=='SUCCEEDED'||job.exitProof.code!==0||job.exitProof.reason!==null||job.safeError!==null||job.outputWatermark==='0')return 'BLOCKED';
  return 'PASS';
 }
 

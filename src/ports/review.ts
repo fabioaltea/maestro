@@ -1,5 +1,7 @@
 import type {Deadline} from './clock.js';
 import type {WorkspaceDiskObservation,WorkspaceGitPin,WorkspaceMutationTarget} from './workspace.js';
+import type {EnvironmentDelegatedCheck} from './environment.js';
+import type {ReviewCheckStatus} from '../domain/review/model.js';
 
 export type IntegrationGuard=NonNullable<WorkspaceDiskObservation['worktree']>;
 export interface GitIntegrationScope {
@@ -37,16 +39,33 @@ export interface ReviewRecord {
  readonly parts:readonly {readonly artifactId:string;readonly sha256:string;readonly bytes:number}[];
 }
 export type ReviewQuery={readonly kind:'review'|'artifact';readonly id:string}
- |{readonly kind:'pending-snapshots'}
+ |{readonly kind:'pending-snapshots'|'pending-validation'}
+ |{readonly kind:'evidence'|'feedback';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number};
 export interface ReviewRead {
  readonly review?:ReviewRecord|null;readonly reviews?:readonly ReviewRecord[];
  readonly artifact?:{readonly sha256:string;readonly bytes:number}|null;readonly revision?:string;readonly nextOffset?:number|null;
  readonly operations?:readonly WorkflowOperationRecord[];
+ readonly evidence?:readonly ReviewEvidence[];
+ readonly feedback?:ReviewFeedback|null;
+}
+export interface ReviewFeedback {
+ readonly decisionId:string;readonly artifactId:string;readonly featureId:string;readonly featureRevisionId:string;
+ readonly workspaceId:string;readonly checkpointTreeDigest:string;readonly stateRevision:string;
+}
+export interface ReviewEvidence {
+ readonly criterionId:string;readonly jobId:string|null;readonly commandDigest:string;readonly treeOid:string;
+ readonly status:ReviewCheckStatus;readonly outputId:string|null;readonly checkedAt:string;
+}
+export interface ReviewValidationScope {
+ readonly instanceId:string;readonly reviewDigest:string;readonly treeOid:string;readonly workspaceRevision:string;
+ readonly checks:readonly EnvironmentDelegatedCheck[];
+ readonly criteria:readonly {readonly criterionId:string;readonly required:boolean;readonly commandSpecId:string|null;readonly proofId:string}[];
 }
 export type ReviewChange=
  |{readonly kind:'create';readonly admission:WorkflowAdmission;readonly snapshot:ReviewRecord}
- |{readonly kind:'request-changes';readonly admission:WorkflowAdmission};
+ |{readonly kind:'request-changes'|'validate-admit';readonly admission:WorkflowAdmission}
+ |{readonly kind:'validate-finish';readonly instanceId:string;readonly requestId:string;readonly treeCurrent:boolean;readonly recovering?:true};
 export type ReviewRecovery={readonly kind:'recover-snapshot';readonly instanceId:string;readonly requestId:string};
 export interface ReviewStoragePort {
  readReviewState?(query:ReviewQuery):Promise<ReviewRead>;

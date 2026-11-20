@@ -33,7 +33,7 @@ export function validateExecutionParams(method:string,value:unknown){
    const revision=action==='provider.configure'?'configRevision':action==='start'?null:'stateRevision';
    featureFields(revisions,revision?[revision]:[]);
    if(revision&&(action!=='provider.configure'||revisions[revision]!==null))workspaceRevision(revisions[revision]);
-   body=featureObject(p.intent);featureFields(body,fields[action]);
+   body=featureObject(p.intent);featureFields(body,fields[action],action==='start'?['reviewDecisionId']:[]);
    if((body.expectedRevision??body.expectedStateRevision??revisions.stateRevision)!==revisions.stateRevision)throw new Error('INVALID_REQUEST');
  }else if(method==='execution.provider.check')featureFields(p,['requestId','providerId','expectedConfigRevision']);
  else if(method==='execution.reconcile')featureFields(p,['requestId','sessionId']);

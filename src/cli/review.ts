@@ -11,9 +11,9 @@ import {jsonFile,jsonStdin} from './json-input.js';
 import {projectExitCode} from './projects.js';
 
 const help=`maestro review list PROJECT [--limit 1..20] [--cursor CURSOR]
-maestro review get REVIEW | operation REQUEST | artifact ARTIFACT [--cursor CURSOR]
+maestro review get REVIEW [--cursor CURSOR] | operation REQUEST | artifact ARTIFACT [--cursor CURSOR]
 maestro review prepare --input-file FILE | --input-stdin
-maestro review create|request-changes --grant UUID --request-id UUID
+maestro review create|validate|request-changes --grant UUID --request-id UUID
 --state-dir ABS --json --timeout-ms 1..2000
 `;
 const reads:Record<string,readonly [string,string]>={list:['list','projectId'],get:['get','reviewId'],
@@ -34,7 +34,7 @@ export async function runReviewCli(args:readonly string[]):Promise<number>{
    if(read){
      p={[read[1]]:workspaceUuid(id)};
      if(verb==='operation')requestId=String(p.requestId);
-     if(['list','artifact'].includes(verb))allowed.add('cursor');
+     if(['list','get','artifact'].includes(verb))allowed.add('cursor');
      if(verb==='list')allowed.add('limit');
    }else if(prepare){
      allowed.add('input-file');allowed.add('input-stdin');
