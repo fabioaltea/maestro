@@ -1,3 +1,5 @@
+import {randomUUID} from 'node:crypto';
+
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {test,expect} from '@playwright/test';
@@ -69,6 +71,31 @@ test('desktop previews and binds a local skill after explicit review',async()=>{
      const owner=profiles.find((item:any)=>item.alias==='reviewer');
      const result=(await f.cli(['profile','show',owner.entityId])).result.data;
      expect(result.revision.document.requiredRefs).toHaveLength(1);
+   }finally{await app.close();}
+ }finally{await f.cleanup();}
+});
+
+test('desktop reviews, enables and revokes a local tool manifest as catalogue data',async()=>{
+ const f=await createScratch();
+ try{
+   expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
+   const {app,page}=await launchDesktop(f);
+   try{
+     await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
+     await page.getByRole('button',{name:'Profili agente',exact:true}).click();
+     const panel=page.getByRole('region',{name:'Catalogo profili agente'}),confirm=page.getByRole('button',{name:'Conferma operazione',exact:true});
+     await panel.getByRole('button',{name:'Tool',exact:true}).click();
+     await panel.getByLabel('Manifest JSON').fill(JSON.stringify({alias:'fixture-tool',title:'Tool fixture',version:'1.0.0',
+       kind:'LOCAL_COMMAND',commandSpecId:randomUUID(),argvSchema:[],inputBytes:1024,outputBytes:4096,
+       requiredPermissions:['TOOL_LOCAL'],credentialRequirements:[],networkScope:'OFFLINE'}));
+     await panel.getByRole('button',{name:'Prepara import tool'}).click();
+     await expect(page.getByRole('dialog')).toContainText('TOOL_LOCAL');await confirm.click();
+     const detail=panel.getByRole('region',{name:'Dettaglio profilo'});
+     await expect(detail.getByText('REVIEWED',{exact:true})).toBeVisible();
+     await detail.getByRole('button',{name:'Prepara abilitazione tool'}).click();await confirm.click();
+     await expect(detail.getByText('ENABLED',{exact:true})).toBeVisible();
+     await detail.getByRole('button',{name:'Prepara disabilitazione'}).click();await confirm.click();
+     await expect(detail.getByText('DISABLED',{exact:true})).toBeVisible();
    }finally{await app.close();}
  }finally{await f.cleanup();}
 });

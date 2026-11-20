@@ -6,7 +6,7 @@ import {publicReceipt} from './lifecycle.ts';
 import {record,revision,uuid} from '../shared/input.ts';
 import {PROFILE_QUERIES,profileBridgeAction,validateProfileData} from '../shared/profile-contract.ts';
 
-const labels:Record<string,string>={create:'Crea profilo',revise:'Salva nuova revisione',disable:'Disabilita il profilo',resolve:'Risolvi il profilo',
+const labels:Record<string,string>={create:'Crea profilo',revise:'Salva nuova revisione',disable:'Disabilita la voce di catalogo',resolve:'Risolvi il profilo',
  'skill.import':'Importa la skill','skill.bind':'Aggiorna le skill del profilo','tool.import':'Registra il manifest del tool','tool.enable':'Abilita il tool nel catalogo'};
 export function installProfile(router:BridgeRouter,context:ArchiveContext,actions:ActionService|null){
  const core=router.services.core;
@@ -24,14 +24,15 @@ export function installProfile(router:BridgeRouter,context:ArchiveContext,action
    }
    let intent:Record<string,unknown>;
    if(action==='disable')intent={targetId:entityId,expectedStateRevision};
+   else if(action==='tool.enable')intent={toolId:entityId,revisionId:params.revisionId,permissions:params.permissions};
    else if(action==='skill.import')intent={previewId:params.previewId,sourceDigest:params.sourceDigest};
    else if(action==='skill.bind')intent={profileId:entityId,revisionId:params.revisionId,requiredRefs:params.requiredRefs,recommendedRefs:params.recommendedRefs};
    else{
-     const uploaded=await core.call({namespace:'profile',action:'artifact.import',archive:c.path,requestId:randomUUID(),params:record(params.bundle)});
+     const uploaded=await core.call({namespace:'profile',action:'artifact.import',archive:c.path,requestId:randomUUID(),params:record(action==='tool.import'?params.manifest:params.bundle)});
      context.apply(c,uploaded);
      if(uploaded.result!=='OK'||uploaded.liveness!=='LIVE_VERIFIED')throw new Error(uploaded.error?.code??'ARTIFACT_CORRUPT');
-     const artifactId=uuid(record(uploaded.data.artifact).artifactId);
-     intent=action==='create'?{scope:params.scope,bundleArtifactId:artifactId,...(params.projectId?{projectId:params.projectId}:{})}:
+     const artifact=record(uploaded.data.artifact),artifactId=uuid(artifact.artifactId);
+     intent=action==='tool.import'?{manifestArtifactId:artifactId,sourceDigest:artifact.sha256}:action==='create'?{scope:params.scope,bundleArtifactId:artifactId,...(params.projectId?{projectId:params.projectId}:{})}:
        {profileId:entityId,bundleArtifactId:artifactId};
    }
    const reply=await core.call({namespace:'profile',action:'authorize',archive:c.path,
@@ -44,11 +45,12 @@ export function installProfile(router:BridgeRouter,context:ArchiveContext,action
      params.scope!==undefined&&summary.scope!==params.scope||params.projectId!==undefined&&summary.projectId!==params.projectId||
      params.previewId!==undefined&&summary.previewId!==params.previewId||params.sourceDigest!==undefined&&summary.sourceDigest!==params.sourceDigest||
      params.revisionId!==undefined&&summary.revisionId!==params.revisionId)throw new Error('CLIENT_PROTOCOL_ERROR');
+   if(action==='tool.import'&&summary.sourceDigest!==intent.sourceDigest)throw new Error('CLIENT_PROTOCOL_ERROR');
    const scope=summary.projectId?{projectId:uuid(summary.projectId)}:{};
    const scopeLabel=summary.scope==='GLOBAL'?'Catalogo globale':summary.projectId?`Progetto ${summary.projectId}`:String(summary.scope??'');
    const permission=summary.permissions&&typeof summary.permissions==='object'&&!Array.isArray(summary.permissions)?record(summary.permissions).allow:summary.permissions;
    const lines=[labels[action]!,...(summary.alias?[`Alias ${summary.alias}`]:[]),...(scopeLabel?[scopeLabel]:[]),
-     ...(summary.artifactDigest?[`SHA-256 ${summary.artifactDigest}`]:[]),
+     ...((summary.artifactDigest??summary.sourceDigest)?[`SHA-256 ${summary.artifactDigest??summary.sourceDigest}`]:[]),
      ...(Array.isArray(permission)?[permission.length?`Permessi dichiarati ${permission.join(', ')}`:'Nessun permesso dichiarato']:[])];
    return{command:{namespace:'profile',action,archive:c.path,profileId:id,...scope,...(expectedStateRevision?{expectedStateRevision}:{}),
      params:{grantId:uuid(data.grantId)}},summary:lines};

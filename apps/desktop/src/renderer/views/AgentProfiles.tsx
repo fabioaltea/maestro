@@ -16,13 +16,14 @@ export function AgentProfiles({desktop,onOperations}:{desktop:Desktop;onOperatio
  const [prepared,setPrepared]=useState<PreparedAction|null>(null),[receipt,setReceipt]=useState<Params|null>(null),[resolved,setResolved]=useState<Params|null>(null);
  const [busy,setBusy]=useState(false),[skillPreview,setSkillPreview]=useState<Params|null>(null),[owner,setOwner]=useState('');
  const [editorSkills,setEditorSkills]=useState<Params[]|null>(null),[binding,setBinding]=useState<Record<string,string>>({});
+ const [toolManifest,setToolManifest]=useState(''),[suggestions,setSuggestions]=useState<Params[]|null>(null);
  const [profileChoices,setProfileChoices]=useState<Params[]>([]);
  const generation=useRef(0),current=useRef(true),trigger=useRef<HTMLButtonElement|null>(null);
  useEffect(()=>{current.current=true;return()=>{current.current=false;generation.current++;};},[]);
  useEffect(()=>{
    const token=++generation.current;
    setDetails(null);setResolved(null);setMode(null);setItems([]);setListCursor(null);
-   setSkillPreview(null);setEditorSkills(null);setOwner('');
+   setSkillPreview(null);setEditorSkills(null);setOwner('');setToolManifest('');setSuggestions(null);
    void (async()=>{
      const status=await core('status');
      if(!active(token))return;
@@ -55,7 +56,7 @@ export function AgentProfiles({desktop,onOperations}:{desktop:Desktop;onOperatio
  }
  async function show(id:unknown,token=generation.current){
    const reply=await core('getProfile',{entityId:id});
-   if(active(token)&&reply?.result==='OK'){setDetails(reply.data);setMode(null);setResolved(null);setEditorSkills(null);}
+   if(active(token)&&reply?.result==='OK'){setDetails(reply.data);setMode(null);setResolved(null);setEditorSkills(null);setSuggestions(null);}
  }
  async function prepare(params:Params,button:HTMLButtonElement){
    const token=generation.current;setBusy(true);trigger.current=button;
@@ -154,10 +155,28 @@ export function AgentProfiles({desktop,onOperations}:{desktop:Desktop;onOperatio
      <button className="button primary" disabled={disabled||!available('skill.import')}
        onClick={event=>void prepare({action:'skill.import',previewId:skillPreview.previewId,sourceDigest:skillPreview.sourceDigest},event.currentTarget)}>Prepara import skill</button>
    </section>}
+   {kind==='TOOL'&&available('tool.import')&&<section aria-label="Manifest tool">
+     <label>Manifest JSON <textarea value={toolManifest} disabled={disabled} maxLength={16384} onChange={event=>setToolManifest(event.target.value)}/></label>
+     <button className="button primary" disabled={disabled||!toolManifest.trim()} onClick={event=>{
+       try{void prepare({action:'tool.import',manifest:record(JSON.parse(toolManifest))},event.currentTarget);}
+       catch{desktop.setNotice('Il manifest deve essere un oggetto JSON valido.');}
+     }}>Prepara import tool</button>
+   </section>}
    {selection&&<section aria-label="Dettaglio profilo">
      <h3>{String(document?.title??selection.alias)}</h3>
      <dl><div><dt>Stato</dt><dd>{String(selection.state)}</dd></div><div><dt>Revisione</dt><dd>{String(selection.stateRevision)}</dd></div></dl>
+     {kind==='TOOL'&&document&&<dl><div><dt>Tipo</dt><dd>{String(document.kind)}</dd></div>
+       <div><dt>Permessi richiesti</dt><dd>{Array.isArray(document.requiredPermissions)?document.requiredPermissions.join(', '):''}</dd></div>
+       {document.kind==='MCP'&&<div><dt>Capability</dt><dd>Non disponibile</dd></div>}
+     </dl>}
      <div className="row-actions">
+       {kind==='TOOL'&&selection.state==='REVIEWED'&&document?.kind==='LOCAL_COMMAND'&&<button className="button subtle"
+         disabled={disabled||!available('tool.enable')} onClick={event=>void prepare({action:'tool.enable',entityId:selection.entityId,
+           revisionId:selection.revisionId,stateRevision:selection.stateRevision,permissions:document.requiredPermissions},event.currentTarget)}>Prepara abilitazione tool</button>}
+       {kind==='PROFILE'&&project&&<button className="button subtle" disabled={disabled||!available('suggest')} onClick={()=>void (async()=>{
+         const token=generation.current,r=await core('suggestProfileExtensions',{profileId:selection.entityId,projectId:project});
+         if(active(token)&&r?.result==='OK')setSuggestions(Array.isArray(r.data.suggestions)?r.data.suggestions as Params[]:[]);
+       })()}>Suggerisci estensioni</button>}
        {kind==='PROFILE'&&<button className="button subtle" disabled={disabled||!available('revise')||selection.state!=='ENABLED'} onClick={edit}>Nuova revisione</button>}
        {kind==='PROFILE'&&<button className="button subtle" disabled={disabled||!available('skill.bind')||selection.state!=='ENABLED'}
          onClick={()=>void showSkillEditor()}>Associa skill</button>}
@@ -184,6 +203,8 @@ export function AgentProfiles({desktop,onOperations}:{desktop:Desktop;onOperatio
          {action:'revise',entityId:selection?.entityId,stateRevision:selection?.stateRevision,bundle:{...document,...draft}},event.currentTarget)}>Prepara salvataggio</button>
      <button className="button subtle" disabled={disabled} onClick={()=>setMode(null)}>Chiudi modifica</button>
    </section>}
+   {suggestions&&<section aria-label="Estensioni compatibili">{suggestions.length?
+     <ul>{suggestions.map(value=><li key={String(value.entityId)}>{String(value.alias)} · permessi compatibili</li>)}</ul>:<p>Nessuna estensione compatibile.</p>}</section>}
    {resolved&&<p role="status">Permessi effettivi {String(record(record(resolved.resolution).snapshot).effectivePermissions||'')||'nessuno'}</p>}
    {receipt&&<p role="status">Operazione <span className="mono">{String(receipt.requestId)}</span> · {String(receipt.phase)}
      {' '}<button className="text-button" onClick={onOperations}>Consulta operazioni</button></p>}

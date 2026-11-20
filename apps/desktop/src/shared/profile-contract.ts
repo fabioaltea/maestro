@@ -5,7 +5,7 @@ import {CORE_ERRORS} from './core-errors.ts';
 export const PROFILE_MUTATIONS=['create','revise','disable','resolve','skill.preview','skill.import','skill.bind','tool.import','tool.enable','artifact.import'] as const;
 export const PROFILE_QUERIES={
  listProfiles:'list',getProfile:'get',getProfileResolution:'resolution',getProfileOperation:'operation',getProfileArtifact:'artifact',
- getProfileCapabilities:'capabilities',getSkillPreview:'preview',
+ getProfileCapabilities:'capabilities',getSkillPreview:'preview',suggestProfileExtensions:'suggest',
 } as const;
 export const PROFILE_BRIDGE_METHODS=['prepareProfileAction','confirmProfileAction','cancelProfileAction','chooseProfileSkill',...Object.keys(PROFILE_QUERIES) as (keyof typeof PROFILE_QUERIES)[]] as const;
 const kind=(value:unknown)=>oneOf(value,['PROFILE','SKILL','TOOL']);
@@ -24,6 +24,14 @@ function bundle(value:unknown){
  if(new TextEncoder().encode(JSON.stringify(p)).length>24576)throw new Error('INVALID_INPUT');
  return p;
 }
+const permissionNames=['WORKSPACE_READ','WORKSPACE_WRITE','COMMAND_VALIDATE','TOOL_LOCAL','TOOL_MCP','NETWORK_LOOPBACK'];
+function permissions(raw:unknown){
+ if(!Array.isArray(raw)||raw.length>6||new Set(raw).size!==raw.length)throw new Error('INVALID_INPUT');
+ for(const value of raw)oneOf(value,permissionNames);
+}
+function permissionDocument(raw:unknown){
+ const p=record(raw);fields(p,['allow','deny','required']);permissions(p.allow);permissions(p.deny);permissions(p.required);
+}
 function profileRefs(raw:unknown){
  if(!Array.isArray(raw)||raw.length>20)throw new Error('INVALID_INPUT');
  for(const value of raw){const item=record(value);fields(item,['entityId','revisionId']);uuid(item.entityId);uuid(item.revisionId);}
@@ -39,6 +47,21 @@ export function profileBridgeAction(raw:unknown){
      fields(params,['entityId','stateRevision','bundle']);uuid(params.entityId);revision(params.stateRevision);bundle(params.bundle);break;
    case 'disable':
      fields(params,['entityId','stateRevision']);uuid(params.entityId);revision(params.stateRevision);break;
+   case 'tool.import':{
+     fields(params,['manifest']);
+     const manifest=record(params.manifest);
+     fields(manifest,['alias','title','version','kind','argvSchema','inputBytes','outputBytes','requiredPermissions','credentialRequirements','networkScope'],
+       ['scope','projectId','commandSpecId','endpointRef']);
+     if(manifest.kind==='LOCAL_COMMAND'&&manifest.endpointRef===undefined)uuid(manifest.commandSpecId);
+     else if(manifest.kind==='MCP'&&manifest.commandSpecId===undefined)uuid(manifest.endpointRef);
+     else throw new Error('INVALID_INPUT');
+     permissions(manifest.requiredPermissions);
+     if(new TextEncoder().encode(JSON.stringify(manifest)).length>16384)throw new Error('INVALID_INPUT');
+     break;
+   }
+   case 'tool.enable':
+     fields(params,['entityId','stateRevision','revisionId','permissions']);uuid(params.entityId);uuid(params.revisionId);revision(params.stateRevision);
+     permissions(params.permissions);break;
    case 'skill.import':
      fields(params,['previewId','sourceDigest']);uuid(params.previewId);digest(params.sourceDigest);break;
    case 'skill.bind':
@@ -69,6 +92,7 @@ export function validateProfileBridge(method:string,raw:Params){
    case 'getProfileArtifact':
      fields(p,['artifactId'],['cursor']);uuid(p.artifactId);if(p.cursor!==undefined)text(p.cursor,4096);break;
    case 'getProfileCapabilities':fields(p,[]);break;
+   case 'suggestProfileExtensions':fields(p,['profileId','projectId']);uuid(p.profileId);uuid(p.projectId);break;
    case 'getSkillPreview':fields(p,['previewId']);uuid(p.previewId);break;
    case 'chooseProfileSkill':
      fields(p,['scope'],['projectId','ownerProfileId']);oneOf(p.scope,['GLOBAL','PROJECT','PROFILE']);
@@ -128,12 +152,16 @@ export function validateProfileData(action:string,raw:unknown):Params{
    if(p.record!==undefined)out.record=profileRecord(p.record);
    if(p.revision!==undefined&&p.revision!==null){
      const r=record(p.revision);fields(r,['revisionId','entityId','previousId','digest','artifactId','byteLength','document','createdAt']);
-     uuid(r.revisionId);uuid(r.entityId);digest(r.digest);keys(record(r.document),allowedDocument);
+     uuid(r.revisionId);uuid(r.entityId);digest(r.digest);
+     const doc=record(r.document);keys(doc,allowedDocument);
+     if(doc.permissions!==undefined)permissionDocument(doc.permissions);
+     for(const field of ['requiredPermissions','enabledPermissions'])if(doc[field]!==undefined)permissions(doc[field]);
+     for(const field of ['requiredRefs','recommendedRefs','toolRefs'])if(doc[field]!==undefined)profileRefs(doc[field]);
    }
    if(p.preview!==undefined){
      const view=record(p.preview);fields(view,['previewId','scope','projectId','ownerProfileId','alias','sourceDigest','artifactId','byteLength','files',
        'requiredPermissions','provenance','expiresAtMs']);
-     uuid(view.previewId);uuid(view.artifactId);digest(view.sourceDigest);text(view.alias,64);oneOf(view.provenance,['UNKNOWN','USER_REVIEWED']);
+     permissions(view.requiredPermissions);uuid(view.previewId);uuid(view.artifactId);digest(view.sourceDigest);text(view.alias,64);oneOf(view.provenance,['UNKNOWN','USER_REVIEWED']);
      if(!Array.isArray(view.files)||view.files.length>17)throw new Error('INVALID_INPUT');
      for(const value of view.files){
        const file=record(value);fields(file,['path','sha256','bytes']);text(file.path,120);digest(file.sha256);
@@ -148,6 +176,7 @@ export function validateProfileData(action:string,raw:unknown):Params{
    }
    if(p.capability!==undefined){
      const c=record(p.capability);fields(c,['policyRevision','allow','deny','digest']);digest(c.digest);revision(c.policyRevision);
+     permissions(c.allow);permissions(c.deny);
    }
    if(p.summary!==undefined){
      const summary=record(p.summary);
@@ -156,12 +185,26 @@ export function validateProfileData(action:string,raw:unknown):Params{
      if(summary.projectId!==null)uuid(summary.projectId);
      if(summary.stateRevision!==null)revision(summary.stateRevision);
      if(summary.alias!==undefined)text(summary.alias,64);
+     if(summary.permissions!==undefined){
+       if(Array.isArray(summary.permissions))permissions(summary.permissions);else permissionDocument(summary.permissions);
+     }
+     if(summary.requiredRefs!==undefined)profileRefs(summary.requiredRefs);
+     if(summary.recommendedRefs!==undefined)profileRefs(summary.recommendedRefs);
+   }
+   if(p.suggestions!==undefined){
+     if(!Array.isArray(p.suggestions)||p.suggestions.length>20)throw new Error('INVALID_INPUT');
+     for(const value of p.suggestions){
+       const suggestion=record(value);fields(suggestion,['entityId','revisionId','alias','kind','reason']);
+       uuid(suggestion.entityId);uuid(suggestion.revisionId);text(suggestion.alias,64);oneOf(suggestion.kind,['SKILL','TOOL']);
+       oneOf(suggestion.reason,['PERMISSIONS_COMPATIBLE']);
+     }
    }
    if(p.resolution!==undefined){
      const r=record(p.resolution);fields(r,['resolutionId','profileId','revisionId','projectId','projectRevision','capabilityDigest','digest','snapshot','dependencyVersions','createdAt']);
      uuid(r.resolutionId);uuid(r.profileId);digest(r.digest);
      keys(record(r.snapshot),['schemaVersion','policyRevision','profileId','profileRevisionId','profileDigest','projectId','projectRevision','providerCapabilityDigest',
        'effectivePermissions','skills','tools','omitted','validationRefs','preferredProviders']);
+     permissions(record(r.snapshot).effectivePermissions);
      if(!Array.isArray(r.dependencyVersions)||r.dependencyVersions.length>31)throw new Error('INVALID_INPUT');
    }
    if(p.base64!==undefined){
