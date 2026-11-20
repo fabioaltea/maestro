@@ -15,7 +15,8 @@ async function walk(directory) {
 async function inspect(path) {
   const local = relative(root, path).replaceAll('\\', '/');
   const zone = local.split('/')[0];
-  const workflow = local.startsWith('core/features/') || local.startsWith('core/workflow/') || local.startsWith('core/workspaces/') || local.startsWith('core/environments/') || local.startsWith('core/profiles/') || local.startsWith('core/execution/') || local.startsWith('core/scheduler/') || local.startsWith('core/review/');
+  const review = local.startsWith('core/review/');
+  const workflow = local.startsWith('core/features/') || local.startsWith('core/workflow/') || local.startsWith('core/workspaces/') || local.startsWith('core/environments/') || local.startsWith('core/profiles/') || local.startsWith('core/execution/') || local.startsWith('core/scheduler/') || review;
   if (!['domain', 'client', 'providers'].includes(zone) && !workflow) return;
   // Feature/workflow policies remain inside the existing neutral domain zone.
   const ast = ts.createSourceFile(path, await readFile(path, 'utf8'), ts.ScriptTarget.Latest, true);
@@ -28,10 +29,11 @@ async function inspect(path) {
     let forbidden;
     if (specifier.startsWith('.')) {
       const target = relative(root, resolve(dirname(path), specifier)).replaceAll('\\', '/');
-      const allowed = workflow ? ['domain/', 'ports/', 'protocol/', 'core/', ...(['core/features/runtime.ts','core/workspaces/runtime.ts','core/environments/runtime.ts','core/profiles/runtime.ts','core/review/runtime.ts'].includes(local) ? ['providers/', 'platform/'] : [])] : zone === 'domain' ? ['domain/', 'ports/']
+      const allowed = workflow ? ['domain/', 'ports/', 'protocol/', 'core/', ...(['core/features/runtime.ts','core/workspaces/runtime.ts','core/environments/runtime.ts','core/profiles/runtime.ts'].includes(local) ? ['providers/', 'platform/'] : [])] : zone === 'domain' ? ['domain/', 'ports/']
         : zone === 'providers' ? ['providers/', 'domain/', 'ports/']
         : ['client/', 'domain/', 'ports/', 'protocol/'];
-      forbidden = !allowed.some(prefix => target.startsWith(prefix));
+      forbidden = !allowed.some(prefix => target.startsWith(prefix)) &&
+        !(local === 'core/review/runtime.ts' && target.startsWith('platform/macos/git/'));
     } else {
       forbidden = workflow ? !['node:crypto', 'node:path', 'node:buffer'].includes(specifier) : zone === 'providers'
       ? !specifier.startsWith('node:') || specifier === 'node:sqlite' || specifier.startsWith('node:sqlite/')
@@ -46,6 +48,8 @@ async function inspect(path) {
     } else if (ts.isImportEqualsDeclaration(node)
       && ts.isExternalModuleReference(node.moduleReference) && node.moduleReference.expression) {
       validate(node.moduleReference.expression);
+    } else if (review && ts.isImportTypeNode(node) && ts.isLiteralTypeNode(node.argument)) {
+      validate(node.argument.literal);
     } else if (ts.isCallExpression(node)
       && (node.expression.kind === ts.SyntaxKind.ImportKeyword
         || (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) {

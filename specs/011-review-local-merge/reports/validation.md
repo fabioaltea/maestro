@@ -6,6 +6,10 @@ Base `0f9a9be`, schema 10. La 010 ha concluso 20/36 task e verificato 24 test co
 
 001/T082 NOT_RUN, 001/T085 FAIL/OPEN, 002/T093 BLOCKED, 003/T054 REVIEW_PENDING, 004/T028 e T050 PROVIDER_UNSAFE e 005 G1 BLOCKED. La qualifica G1 di 009 e le review umane restano pendenti. La 011 usa il pin Git esistente e checkout temporanei posseduti dalla suite. Scope locale, nessuna campagna di volume o durata.
 
+## Ripresa T011
+
+`npm run build:test`, `npm run lint` e 4 test di integrazione in `review-store.test` e `review-us1.test` PASS. Le conferme di snapshot e feedback usano grant del daemon corrente. Un retry concorrente con gli stessi identificativi condivide l'operazione in corso. Il drain impedisce di confermare dopo la chiusura dell'ammissione. Il rigetto conserva il grant e la query dei risultati precedenti rimane disponibile. Il recovery marca come interrotto un intento di snapshot pendente e preserva l'esito terminale a un ulteriore riavvio simulato. La riconciliazione del cambio ref è coperta dal task T024.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

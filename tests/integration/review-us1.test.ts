@@ -7,6 +7,7 @@ import {executionRuntimeFixture} from '../fixtures/execution-runtime.js';
 import {verifyOwnedWorktree} from '../../src/core/workspaces/leases.js';
 import {createReviewRuntime,nativeReviewGit} from '../../src/core/review/runtime.js';
 import type {DiscoveryEligibility} from '../../src/domain/discovery/approval.js';
+import {makeDeadline,systemClock} from '../../src/ports/clock.js';
 
 test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit invalidates a second grant',async t=>{
  const f=await executionRuntimeFixture(t);
@@ -22,9 +23,17 @@ test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit in
  const revision=f.state(run.requestId)!.stateRevision;
  const checkpoint=await f.mutate('checkpoint',await f.prepare('checkpoint',{sessionId:run.requestId,expectedStateRevision:revision},{stateRevision:revision}));
  assert.equal(checkpoint.operation?.outcome,'SUCCEEDED');
+ const native=nativeReviewGit(f.mutator,record=>verifyOwnedWorktree(f,f.storeId,record));
+ let pause:ReturnType<typeof Promise.withResolvers<void>>|undefined;
+ const entered=Promise.withResolvers<void>();
+ let comparisons=0;
  const rt=createReviewRuntime({storage:f.storage,paths:f.paths,instanceId:f.instanceId,
    currentEligibility:(peer,projectId)=>f.service.currentEligibility(peer,projectId) as Promise<DiscoveryEligibility>,
-   readGit:nativeReviewGit(f.mutator,record=>verifyOwnedWorktree(f,f.storeId,record)),
+   readGit:{...native,async captureCheckpoint(record){
+     comparisons++;
+     if(pause){entered.resolve();await pause.promise;}
+     return native.captureCheckpoint(record);
+   }},
  });
  rt.start();
  const call=(name:string,params:Record<string,unknown>)=>rt.dispatch({protocolVersion:1,method:`review.${name}`,params,correlationId:randomUUID()},
@@ -33,8 +42,11 @@ test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit in
  const first=await call('prepare',input),second=await call('prepare',input);
  assert.equal(first.result,'OK',JSON.stringify(first));assert.equal(second.result,'OK',JSON.stringify(second));
  const requestId=randomUUID(),params={requestId,grantId:(first.data as {grantId:string}).grantId};
- const created=await call('create',params);
+ const previousComparisons=comparisons;
+ const [created,concurrent]=await Promise.all([call('create',params),call('create',params)]);
  assert.equal(created.result,'OK',JSON.stringify(created));
+ assert.deepEqual(concurrent.data,created.data);
+ assert.equal(comparisons-previousComparisons,1);
  const original=await call('create',params);
  assert.deepEqual(original.data,created.data);
  const {review}=f.store.readReviewState({kind:'review',id:requestId});
@@ -43,6 +55,8 @@ test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit in
  const artifact=await call('artifact.get',{artifactId:review.parts[0].artifactId});
  const diff=Buffer.from((artifact.data as {base64:string}).base64,'base64').toString();
  assert.match(diff,/diff --git a\/approved.txt b\/approved.txt/);
+ const fencedGrant=await call('prepare',input);
+ assert.equal(fencedGrant.result,'OK');
  await writeFile(join(path,'approved.txt'),'late local edit');
  const stale=await call('create',{requestId:randomUUID(),grantId:(second.data as {grantId:string}).grantId});
  assert.equal((stale.data as {code:string}).code,'REVIEW_STALE');
@@ -56,4 +70,14 @@ test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit in
  assert.equal((result.data as {code:string}).code,'ARTIFACT_CORRUPT');
  assert.equal(f.store.readFeatureState({kind:'operation',id:feedbackId}).operation,null);
  assert.equal(f.store.readFeatureState({kind:'grant',id:grantId}).grant?.consumedByRequestId,null);
+ await f.repositories.git(path,['checkout','--','approved.txt']);
+ pause=Promise.withResolvers<void>();
+ const fencedId=randomUUID(),fenced=call('create',{requestId:fencedId,grantId:(fencedGrant.data as {grantId:string}).grantId});
+ await Promise.race([entered.promise,fenced.then(result=>assert.fail(JSON.stringify(result)))]);
+ const stopped=rt.stop(makeDeadline(systemClock,10000));
+ pause.resolve();
+ assert.equal(((await fenced).data as {code:string}).code,'BLOCKED');
+ await stopped;
+ assert.equal(f.store.readFeatureState({kind:'operation',id:fencedId}).operation,null);
+ assert.deepEqual((await call('operation.get',{requestId})).data,{...(created.data as Record<string,unknown>),freshness:'CURRENT'});
 });

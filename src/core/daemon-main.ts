@@ -272,8 +272,9 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
     profiles.start();
     await execution.recover();
     await scheduler.recover();
-    review.start();
+    await review.recover();
     await storage.transitionInstance(intent.instanceId, 'RUNNING');
+    review.start();
     lastSnapshot = await storage.readSnapshot();
     await checkpoint('daemon.running');
     let signalPending = false;

@@ -10,27 +10,47 @@ import {createReviewDispatch,type ReviewAction} from './dispatch.js';
 export function nativeReviewGit(git:WorkspacePort,owned:(workspace:WorkspaceRecord)=>Promise<NonNullable<WorkspaceRecord['ownership']>>){
  return{git:createReviewGitReader(createIntegrationMutator()),captureCheckpoint:createExecutionCheckpointCapture(git,owned)};
 }
-export function createReviewRuntime(options:Omit<ReviewServicesOptions,'git'|'captureCheckpoint'>&{
- readGit?:Pick<ReviewServicesOptions,'git'|'captureCheckpoint'>;
+export type ReviewGitServices=Pick<ReviewServicesOptions,'git'|'captureCheckpoint'>;
+export function createReviewRuntime(options:Omit<ReviewServicesOptions,keyof ReviewGitServices|'requireAccepting'>&{
+ readGit?:ReviewGitServices;
 }){
  const {storage,readGit}=options;
  let accepting=false;
- const running=new Set<Promise<unknown>>();
- const available=readGit&&storage.commitReviewState&&storage.readReviewState?
-   createReviewSnapshotServices({...options,...readGit}):{};
+ const running=new Set<Promise<Record<string,unknown>>>();
+ const admits=new Map<string,{method:string;grantId:unknown;result:Promise<Record<string,unknown>>}>();
+ function requireAccepting(){if(!accepting)throw new Error('BLOCKED');}
+ const available=readGit&&storage.commitReviewState&&storage.readReviewState&&storage.readFeatureState&&
+   storage.commitFeatureState&&storage.readWorkflowArtifact&&storage.readWorkspaceState&&storage.readExecutionState?
+   createReviewSnapshotServices({...options,...readGit,requireAccepting}):{};
  const actions:Record<string,ReviewAction>={};
  for(const [method,action] of Object.entries(available)){
    actions[method]=async(params,peer)=>{
-     if(!accepting)throw new Error('BLOCKED');
+     requireAccepting();
+     const requestId=typeof params.requestId==='string'?params.requestId:null;
+     const previous=requestId?admits.get(requestId):undefined;
+     if(previous){
+       if(previous.method!==method||previous.grantId!==params.grantId)throw new Error('BUSY');
+       return previous.result;
+     }
      if(running.size>=4)throw new Error('BUSY');
-     const result=action(params,peer);running.add(result);
-     try{return await result;}finally{running.delete(result);}
+     const result=action(params,peer);
+     running.add(result);
+     if(requestId)admits.set(requestId,{method,grantId:params.grantId,result});
+     try{return await result;}finally{
+       running.delete(result);
+       if(requestId)admits.delete(requestId);
+     }
    };
  }
  return{
    methods:[...REVIEW_READ_METHODS,...Object.keys(actions)],
    dispatch:createReviewDispatch(storage,actions),
    start(){accepting=true;},
+   async recover(){
+     if(!storage.commitReviewState||!storage.readReviewState||((await storage.readSnapshot())?.store.schemaVersion??0)<11)return;
+     const {operations}=await storage.readReviewState({kind:'pending-snapshots'});
+     for(const {requestId} of operations??[])await storage.commitReviewState({kind:'recover-snapshot',instanceId:options.instanceId,requestId});
+   },
    fence(){accepting=false;},
    async stop(deadline:Deadline){
      accepting=false;

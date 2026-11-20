@@ -1,8 +1,8 @@
 import type Database from 'better-sqlite3';
 import {requireUuid} from '../domain/identifiers.js';
 import {reviewOid,reviewTargetRef} from '../domain/review/state.js';
-import type {ReviewChange,ReviewQuery,ReviewRead,ReviewRecord} from '../ports/review.js';
-import {readFeatureState,type FeatureRow} from './features-store.js';
+import type {ReviewChange,ReviewQuery,ReviewRead,ReviewRecord,ReviewRecovery} from '../ports/review.js';
+import {readFeatureState,workflowOperation,type FeatureRow} from './features-store.js';
 import type {createWorkflowStore} from './workflow-store.js';
 import {REVIEW_SCHEMA_VERSION} from './review-schema.js';
 
@@ -20,6 +20,11 @@ function review(db:Database.Database,r:FeatureRow):ReviewRecord{
 }
 export function readReviewState(db:Database.Database,q:ReviewQuery):ReviewRead{
  schema(db);
+ if(q.kind==='pending-snapshots'){
+   const rows=db.prepare(`SELECT * FROM workflow_operations WHERE namespace='REVIEW'
+     AND action IN ('create','request-changes') AND phase<>'FINALIZED' ORDER BY accepted_at,request_id LIMIT 32`).all() as FeatureRow[];
+   return{operations:rows.map(workflowOperation)};
+ }
  if(q.kind==='review'){
    const row=db.prepare('SELECT * FROM review_records WHERE review_id=?').get(requireUuid(q.id)) as FeatureRow|undefined;
    return{review:row?review(db,row):null};
@@ -39,8 +44,21 @@ export function readReviewState(db:Database.Database,q:ReviewQuery):ReviewRead{
  return{reviews:rows.slice(0,limit).map(r=>review(db,r)),revision:`${rev.count}:${rev.revision}`,nextOffset:rows.length>limit?offset+limit:null};
 }
 
-export function commitReviewState(db:Database.Database,c:ReviewChange,ledger:ReturnType<typeof createWorkflowStore>,verify:(id:string)=>void){
+function requireReviewOwner(db:Database.Database,instanceId:string,lifecycle:'RUNNING'|'RECOVERING'){
+ if(!db.prepare(`SELECT 1 FROM store s JOIN instances i ON i.instance_id=s.current_instance_id
+   WHERE s.singleton=1 AND i.instance_id=? AND i.lifecycle=?`).get(instanceId,lifecycle))throw new Error('STALE_TARGET');
+}
+
+export function commitReviewState(db:Database.Database,c:ReviewChange|ReviewRecovery,ledger:ReturnType<typeof createWorkflowStore>,verify:(id:string)=>void){
  schema(db);
+ if(c.kind==='recover-snapshot'){
+   requireReviewOwner(db,c.instanceId,'RECOVERING');
+   const operation=ledger.operation(c.requestId);
+   if(!operation||operation.namespace!=='REVIEW'||!['create','request-changes'].includes(operation.action))throw new Error('OPERATION_NOT_FOUND');
+   if(operation.phase==='FINALIZED')return{operation,inserted:false};
+   // Snapshot records and decisions commit with the terminal ledger update.
+   return ledger.transaction(()=>({operation:ledger.complete(c.requestId,null,'INTERRUPTED','INTERRUPTED'),inserted:false}),true,{requestIds:[c.requestId]});
+ }
  const a=c.admission,i=ledger.intent(a.canonicalIntent),p=i.payload;
  if(i.namespace!=='REVIEW'||i.action!==c.kind)throw new Error('INVALID_REQUEST');
  function artifact(id:string,kind:'BUNDLE'|'INPUT',target:string,expected?:{sha256:string;bytes:number}){
@@ -51,6 +69,8 @@ export function commitReviewState(db:Database.Database,c:ReviewChange,ledger:Ret
    db.prepare("UPDATE workflow_artifacts SET state='REFERENCED',ref_count=ref_count+1 WHERE artifact_id=?").run(id);
  }
  return ledger.admit(a,()=>{
+   requireReviewOwner(db,a.instanceId,'RUNNING');
+   if(p.instanceId!==a.instanceId)throw new Error('APPROVAL_STALE');
    const at=new Date().toISOString();
    if(c.kind==='create'){
      const r=c.snapshot;

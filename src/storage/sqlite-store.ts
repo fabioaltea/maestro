@@ -1,7 +1,7 @@
 import {reviewChanged} from '../core/review/events.js';
 import {REVIEW_SCHEMA_VERSION,REVIEW_TABLES} from './review-schema.js';
 import {commitReviewState,readReviewState} from './review-store.js';
-import type {ReviewChange,ReviewQuery} from '../ports/review.js';
+import type {ReviewChange,ReviewQuery,ReviewRecovery} from '../ports/review.js';
 import {schedulerChanged} from '../core/scheduler/events.js';
 import {commitSchedulerState,readSchedulerState} from './scheduler-store.js';
 import type {SchedulerChange,SchedulerQuery} from '../ports/scheduler.js';
@@ -294,7 +294,7 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
-  commitReviewState(change:ReviewChange) {
+  commitReviewState(change:ReviewChange|ReviewRecovery) {
     return commitReviewState(this.writable(),change,this.workflowStore(),id=>{
       try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
     });

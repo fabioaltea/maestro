@@ -21,9 +21,10 @@ export interface ReviewServicesOptions {
  readonly git:Pick<GitIntegrationPort,'captureDiff'>;
  readonly currentEligibility:(peer:AuthenticatedPeer,projectId:string)=>Promise<DiscoveryEligibility>;
  readonly captureCheckpoint:(w:WorkspaceRecord)=>Promise<{readonly treeDigest:string;readonly patch:Uint8Array}>;
+ readonly requireAccepting:()=>void;
 }
 export function createReviewSnapshotServices(options:ReviewServicesOptions):Readonly<Record<string,ReviewAction>>{
- const {storage,instanceId,paths,git}=options,auth=createWorkflowAuthorization(options);
+ const {storage,instanceId,paths,git,requireAccepting}=options,auth=createWorkflowAuthorization(options);
  async function inspect(p:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer){
    const targetRef=reviewTargetRef(p.targetRef),targetOid=reviewOid(p.targetOid);
    const {feature}=await storage.readFeatureState!({kind:'feature',id:String(p.featureId)});
@@ -71,14 +72,15 @@ export function createReviewSnapshotServices(options:ReviewServicesOptions):Read
    if(action==='create'){
      const selected=await inspect(input,peer);
      i={...base,action,targetId:selected.feature.featureId,projectId:selected.feature.projectId,expectedRevision:selected.feature.stateRevision,
-       configRevision:selected.configRevision,payload:selected.payload};
+       configRevision:selected.configRevision,payload:{...selected.payload,instanceId}};
    }else if(action==='request-changes'){
      const {review}=await storage.readReviewState!({kind:'review',id:String(input.reviewId)});
      if(!review||featureObject(p.expectedRevisions).stateRevision!==review.stateRevision)throw new Error('REVIEW_STALE');
      const a=await readSealedFeatureArtifact(storage,String(input.feedbackArtifactId),'INPUT',262144,review.featureId);
      i={...base,action,targetId:review.reviewId,projectId:review.projectId,expectedRevision:review.stateRevision,configRevision:null,
-       payload:{digest:review.digest,feedbackArtifactId:a.artifact.artifactId}};
+       payload:{digest:review.digest,feedbackArtifactId:a.artifact.artifactId,instanceId}};
    }else throw new Error('UNSUPPORTED_VERSION');
+   requireAccepting();
    const grant=await auth.prepare(peer,i);
    return{grantId:grant.grantId,canonicalIntentHash:digest(grant.canonicalIntent),summary:grant.summary,expiresAt:grant.expiresAtMs};
  }
@@ -88,6 +90,8 @@ export function createReviewSnapshotServices(options:ReviewServicesOptions):Read
      const snapshot=await auth.guard(peer),requestId=String(p.requestId);
      const {grant,intent,operation}=await originalWorkflowGrant(storage,requestId,String(p.grantId),action,'REVIEW');
      if(operation)return{operation:publicReviewOperation(operation)};
+     requireAccepting();
+     if(intent.payload.instanceId!==instanceId)throw new Error('APPROVAL_STALE');
      const a=workflowAdmission({requestId,grantId:grant.grantId,instanceId,nowMs:Date.now(),intent});
      if(action==='request-changes'){
        const {operation}=await storage.commitReviewState!({kind:action,admission:a});
@@ -98,11 +102,13 @@ export function createReviewSnapshotServices(options:ReviewServicesOptions):Read
        throw new Error('REVIEW_STALE');
      const parts:ReviewRecord['parts'][number][]=[];
      for(const chunk of selected.raw){
+       requireAccepting();
        const art=await publishPlanningArtifact({storage,storeId:snapshot.store.storeId,ownerUid:paths.ownerUid,instanceId,targetId:selected.feature.featureId},
          'BUNDLE',chunk);
        parts.push({artifactId:art.artifactId,bytes:art.expectedBytes,sha256:art.sha256});
      }
      const v:ReviewRecord={...r,reviewId:requestId,projectId:selected.feature.projectId,state:'DRAFT',stateRevision:'1',createdAt:'',parts};
+     requireAccepting();
      const {operation:completed}=await storage.commitReviewState!({kind:action,admission:a,snapshot:v});
      return{operation:publicReviewOperation(completed)};
    };

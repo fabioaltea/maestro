@@ -37,17 +37,20 @@ export interface ReviewRecord {
  readonly parts:readonly {readonly artifactId:string;readonly sha256:string;readonly bytes:number}[];
 }
 export type ReviewQuery={readonly kind:'review'|'artifact';readonly id:string}
+ |{readonly kind:'pending-snapshots'}
  |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number};
 export interface ReviewRead {
  readonly review?:ReviewRecord|null;readonly reviews?:readonly ReviewRecord[];
  readonly artifact?:{readonly sha256:string;readonly bytes:number}|null;readonly revision?:string;readonly nextOffset?:number|null;
+ readonly operations?:readonly WorkflowOperationRecord[];
 }
 export type ReviewChange=
  |{readonly kind:'create';readonly admission:WorkflowAdmission;readonly snapshot:ReviewRecord}
  |{readonly kind:'request-changes';readonly admission:WorkflowAdmission};
+export type ReviewRecovery={readonly kind:'recover-snapshot';readonly instanceId:string;readonly requestId:string};
 export interface ReviewStoragePort {
  readReviewState?(query:ReviewQuery):Promise<ReviewRead>;
- commitReviewState?(change:ReviewChange):Promise<{readonly operation:WorkflowOperationRecord;readonly inserted:boolean}>;
+ commitReviewState?(change:ReviewChange|ReviewRecovery):Promise<{readonly operation:WorkflowOperationRecord;readonly inserted:boolean}>;
 }
 
 export interface IntegrationReceiptScope {
