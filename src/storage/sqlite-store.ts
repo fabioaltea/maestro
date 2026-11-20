@@ -1,3 +1,4 @@
+import {profileEvents} from '../core/profiles/events.js';
 import {commitProfileState,readProfileState} from './profiles-store.js';
 import type {ProfileQuery,ProfileWrite} from '../ports/profile.js';
 import {PROFILE_SCHEMA_VERSION,PROFILE_TABLES} from './profiles-schema.js';
@@ -215,6 +216,11 @@ export class SQLiteStore {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
+          if(op.namespace==='PROFILE'){
+            const profile=op.targetId?readProfileState(this.database!,{kind:'record',id:op.targetId}).record??null:null;
+            drafts.push(...profileEvents(op,String(owner.owning_instance_id),profile));
+            continue;
+          }
           if(op.namespace==='ENVIRONMENT'){
             const environment=op.targetId?readEnvironmentState(this.database!,{kind:'workspace',id:op.targetId}).environment:null;
             const instanceId=String(owner.owning_instance_id);

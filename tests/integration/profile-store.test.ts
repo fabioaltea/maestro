@@ -22,7 +22,7 @@ test('profile writer atomically rejects missing artifacts and replays the exact 
  assert.equal(f.store.readFeatureState({kind:'operation',id:requestId}).operation,null);
  assert.equal(f.store.readFeatureState({kind:'grant',id:grantId}).grant?.consumedByRequestId,null);
  assert.equal(f.store.readProfileState({kind:'record',id:requestId}).record,null);
- const file=await publishPlanningArtifact({storage:f.store as unknown as StoragePort,storeId:f.storeId,ownerUid:process.getuid!(),instanceId:f.instanceId,targetId:requestId},'BUNDLE',{name:'fixture'});
+ const file=await publishPlanningArtifact({storage:{commitFeatureState:f.store.commitFeatureState.bind(f.store)} as unknown as StoragePort,storeId:f.storeId,ownerUid:process.getuid!(),instanceId:f.instanceId,targetId:requestId},'BUNDLE',{name:'fixture'});
  const approved={...intent,payload:{bundleArtifactId:file.artifactId}},nextGrant=randomUUID();
  f.store.commitFeatureState({kind:'grant',grant:{grantId:nextGrant,canonicalIntent:canonicalWorkflowIntent(approved),createdAtMs:now,expiresAtMs:now+30000,consumedByRequestId:null}});
  const apply={...command,admission:workflowAdmission({requestId,grantId:nextGrant,intent:approved,instanceId:f.instanceId,nowMs:now}),

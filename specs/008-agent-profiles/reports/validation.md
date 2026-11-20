@@ -25,3 +25,7 @@ Namespace PROFILE nel ledger comune. La scrittura atomica collega revisioni e pr
 ## T009–T010 — storico confinato
 
 DTO chiusi per metodi, intenti, pagine e chunk. Reader readonly nello stesso archivio con verifica di store, scope e revisione del cursore. Il test di storico conferma file e inventario invariati. Regressione trovata e corretta nell’allowlist schema Discovery, così stop continua a funzionare su 8.
+
+## T011–T012 — runtime ed eventi
+
+Il daemon pubblica le sole capability composte. Runtime fenced prima del drain, massimo otto chiamate in corso, letture storiche separate dalla composizione. Il writer emette metadati profilo nella stessa transazione. **5 PASS** mirati su runtime, redazione, storico, protocollo e replay con conteggio riferimenti.
