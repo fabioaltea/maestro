@@ -1,4 +1,4 @@
-import {validateReviewData} from '../shared/review-contract.ts';
+import {REVIEW_MUTATIONS,reviewBridgeAction,validateReviewData} from '../shared/review-contract.ts';
 import {validateSchedulerQueue} from '../shared/scheduler-contract.ts';
 import {EXECUTION_MUTATIONS,validateExecutionData} from '../shared/execution-contract.ts';
 import {buildExecutionCliArgs,executionCliInput} from './execution-cli.ts';
@@ -22,16 +22,26 @@ import type { Runtime } from './runtime.ts';
 import { buildDiscoveryCliArgs, discoveryCliInput } from './discovery-cli.ts';
 import { DISCOVERY_MUTATIONS, validateDiscoveryData } from '../shared/discovery-contract.ts';
 export type { CliCommand } from './ports.ts';
-export function isMutation(c: CliCommand) { return c.namespace==='execution'?(EXECUTION_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='profile'?(PROFILE_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='environment'?(ENVIRONMENT_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='workspace'?(WORKSPACE_MUTATIONS as readonly string[]).includes(c.action):c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
+export function isMutation(c: CliCommand) { return c.namespace==='review'?(REVIEW_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='execution'?(EXECUTION_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='profile'?(PROFILE_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='environment'?(ENVIRONMENT_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='workspace'?(WORKSPACE_MUTATIONS as readonly string[]).includes(c.action):c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'verify', 'update', 'remove'].includes(c.action); }
+export function reviewCliInput(c:CliCommand){
+  if(c.namespace!=='review'||c.action!=='prepare')return null;
+  const {action,input:{projectId:_project,stateRevision,...intent}}=reviewBridgeAction(c.params);
+  return JSON.stringify({action,intent,expectedRevisions:stateRevision===undefined?{}:{stateRevision}});
+}
 export function buildCliArgs(c: CliCommand): string[] {
   if (!isAbsolute(c.archive) || c.archive.includes('\0')) throw new Error('INVALID_INPUT');
   if (c.namespace === 'feature') return buildFeatureCliArgs(c);
   if(c.namespace==='review'){
-    const p=c.params??{},selectors:Record<string,string>={list:'projectId',get:'reviewId',artifact:'artifactId'};
+    const args=['review',c.action,`--state-dir=${c.archive}`,'--json'];
+    const p=c.params??{},selectors:Record<string,string>={list:'projectId',get:'reviewId',artifact:'artifactId',operation:'requestId'};
+    if(isMutation(c)){
+      keys(p,['grantId']);return [...args,`--request-id=${uuid(c.requestId)}`,`--grant=${uuid(p.grantId)}`];
+    }
+    if(c.action==='prepare'&&c.requestId===undefined){reviewBridgeAction(p);return [...args,'--input-stdin'];}
     if(!Object.hasOwn(selectors,c.action)||c.requestId!==undefined)throw new Error('INVALID_INPUT');
     const field=selectors[c.action]!;
-    keys(p,[field,'cursor']);
-    return ['review',c.action,`--state-dir=${c.archive}`,'--json',...(p.cursor===undefined?[]:[`--cursor=${text(p.cursor,1024)}`]),'--',uuid(p[field])];
+    keys(p,c.action==='operation'?[field]:[field,'cursor']);
+    return [...args,...(p.cursor===undefined?[]:[`--cursor=${text(p.cursor,1024)}`]),'--',uuid(p[field])];
   }
   if(c.namespace==='scheduler'){
     const p=c.params??{};
@@ -92,7 +102,9 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
       || (p.outcome !== null && !['IN_PROGRESS', 'SUCCEEDED', 'FAILED', 'BLOCKED', 'INTERRUPTED'].includes(String(p.outcome)))) throw new Error();
     for (const k of ['requestId', 'storeId', 'instanceId']) if (p[k] !== null) uuid(p[k]);
     if (c.requestId && p.requestId !== c.requestId) throw new Error();
-    const data = c.namespace==='review'?(p.result==='OK'?validateReviewData(c.action,p.data,c.params??{}):{}):c.namespace==='scheduler'?(p.result==='OK'?validateSchedulerQueue(p.data,c.params?.projectId):{}):c.namespace==='execution'?validateExecutionData(c.action,p.data):c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    const reviewResult=c.namespace==='review'&&(p.result==='OK'||c.action==='operation'||isMutation(c));
+    const data = c.namespace==='review'?(reviewResult?validateReviewData(c.action,p.data,{...c.params,...(c.requestId?{requestId:c.requestId}:{})}):{}):c.namespace==='scheduler'?(p.result==='OK'?validateSchedulerQueue(p.data,c.params?.projectId):{}):c.namespace==='execution'?validateExecutionData(c.action,p.data):c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    if(c.namespace==='review'&&c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
     if(c.namespace==='execution'){
       if(c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
       if(c.action==='get'&&p.result==='OK'&&record(data.session).sessionId!==c.params?.sessionId)throw new Error();
@@ -164,11 +176,11 @@ export class CoreCli {
     if (mutation) this.mutations++; else this.reads++;
     const generation=this.viewGeneration,previous=this.readTail;let releaseRead:(()=>void)|undefined;
     if(!mutation)this.readTail=new Promise<void>(resolve=>{releaseRead=resolve;});
-    const timeout = ['feature','profile'].includes(command.namespace) ? (command.action.startsWith('artifact.import')?30_000:3_000) : ['discovery','workspace','environment','execution'].includes(command.namespace) ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
+    const timeout = ['feature','profile'].includes(command.namespace) ? (command.action.startsWith('artifact.import')?30_000:3_000) : ['discovery','workspace','environment','execution','review'].includes(command.namespace) ? 3_000 : mutation ? command.action === 'stop' ? 12_000 : 32_000 : 3_000;
     try {
       if(!mutation){await previous;if(this.closed)throw new Error('CLIENT_READ_CANCELLED');if(command.scope==='view'&&generation!==this.viewGeneration)throw new Error('CLIENT_READ_CANCELLED');}
       const stdout = await new Promise<string>((resolve, reject) => {
-        const input = featureCliInput(command) ?? discoveryCliInput(command) ?? workspaceCliInput(command) ?? environmentCliInput(command) ?? profileCliInput(command) ?? executionCliInput(command);
+        const input = featureCliInput(command) ?? discoveryCliInput(command) ?? workspaceCliInput(command) ?? environmentCliInput(command) ?? profileCliInput(command) ?? executionCliInput(command) ?? reviewCliInput(command);
         const child = spawn(this.runtime.node, [this.runtime.cli, ...args], { env: this.runtime.env, shell: false, stdio: ['pipe', 'pipe', 'pipe'] });
         this.children.add(child); if (!mutation && command.scope === 'view') this.viewChildren.add(child);
         const chunks: Buffer[] = []; let bytes = 0, stderr = 0, failed = false;

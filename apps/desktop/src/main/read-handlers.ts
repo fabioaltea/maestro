@@ -3,7 +3,7 @@ import type { CorePort } from './ports.ts';
 import { ArchiveContext } from './archive-context.ts';
 import type { BridgeRouter } from './bridge.ts';
 import type { Params, BridgeMethod } from '../shared/bridge-contract.ts';
-const reviewActions:Record<string,string>={listFeatureReviews:'list',getFeatureReview:'get',getReviewDiffPart:'artifact'};
+const reviewActions:Record<string,string>={listFeatureReviews:'list',getFeatureReview:'get',getReviewDiffPart:'artifact',getReviewOperation:'operation'};
 export class ArchiveReader {
   private context: ArchiveContext;
   private client: CorePort;

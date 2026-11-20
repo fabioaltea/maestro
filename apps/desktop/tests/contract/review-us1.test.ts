@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {randomUUID} from 'node:crypto';
 import {validateRequest} from '../../src/shared/validation.ts';
-import {buildCliArgs} from '../../src/main/core-cli.ts';
+import {buildCliArgs,reviewCliInput} from '../../src/main/core-cli.ts';
 import {validateReviewData} from '../../src/shared/review-contract.ts';
 
 test('Desktop review bridge permits scoped diff reads and rejects filesystem selectors',()=>{
@@ -16,6 +16,20 @@ test('Desktop review bridge permits scoped diff reads and rejects filesystem sel
  assert.deepEqual(validateReviewData('artifact',p,{artifactId:id}),p);
  assert.throws(()=>validateReviewData('artifact',{...p,artifactId:randomUUID()},{artifactId:id}));
  assert.throws(()=>validateReviewData('artifact',{...p,base64:'data:text/html,<script>'},{artifactId:id}));
+});
+
+test('Desktop review consent keeps the command scope on stdin and retains the original receipt ID',()=>{
+ const requestId=randomUUID(),projectId=randomUUID(),reviewId=randomUUID(),grantId=randomUUID(),commandId=randomUUID();
+ const params={action:'validate',projectId,reviewId,stateRevision:'4',commandSpecIds:[commandId]};
+ const base={bridgeVersion:1,callId:randomUUID(),selectionEpoch:1};
+ validateRequest('prepareReviewAction',{...base,params});
+ assert.throws(()=>validateRequest('prepareReviewAction',{...base,params:{...params,argv:['run']}}));
+ const command={namespace:'review' as const,action:'prepare',archive:'/tmp/archive',params};
+ assert.deepEqual(buildCliArgs(command),['review','prepare','--state-dir=/tmp/archive','--json','--input-stdin']);
+ assert.deepEqual(JSON.parse(reviewCliInput(command)!),{action:'validate',intent:{reviewId,commandSpecIds:[commandId]},expectedRevisions:{stateRevision:'4'}});
+ assert.deepEqual(buildCliArgs({...command,action:'validate',requestId,params:{grantId}}),
+   ['review','validate','--state-dir=/tmp/archive','--json',`--request-id=${requestId}`,`--grant=${grantId}`]);
+ assert.throws(()=>buildCliArgs({...command,action:'validate',requestId,params:{grantId,commandSpecIds:[commandId]}}));
 });
 
 test('activity projection preserves review correlation and removes diff output',async()=>{

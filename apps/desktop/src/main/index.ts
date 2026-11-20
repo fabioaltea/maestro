@@ -61,7 +61,7 @@ else {
     installProfile(router,archiveContext,lifecycle.actions);
     installExecution(router,archiveContext,lifecycle.actions);
     installScheduler(router,archiveContext);
-    installReview(router,archiveContext);
+    installReview(router,archiveContext,lifecycle.actions);
     installActivityHistory(router, archiveContext);
     clients = new ClientLifecycle({ closeClient: () => core?.close(), closeRecovery: lifecycle.close, invalidateConfirmations: () => lifecycle.actions?.confirmations.clear() });
     archiveContext.onChange(() => clients?.archiveChanged());

@@ -42,6 +42,7 @@ export function blocksMutation(receipts: readonly ReceiptScope[], path: string, 
       (projectId===undefined||receipt.projectId===projectId)&&
       (['answer','pause','cancel','reconcile'].includes(action)?receipt.action===action:true);
     if(namespace==='profile')return receipt.namespace==='profile'&&(projectId===undefined||receipt.projectId===projectId);
+    if(namespace==='review')return receipt.namespace==='review'&&(projectId===undefined||receipt.projectId===projectId);
     if(namespace==='environment')return receipt.namespace==='environment'&&(!['cancel','reconcile'].includes(action)||receipt.action===action)
       &&(projectId===undefined||receipt.projectId===projectId);
     if (namespace === 'discovery') {

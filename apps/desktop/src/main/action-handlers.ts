@@ -1,4 +1,5 @@
 import {executionBridgeAction,validateExecutionData} from '../shared/execution-contract.ts';
+import {reviewBridgeAction,validateReviewData} from '../shared/review-contract.ts';
 import {profileBridgeAction,validateProfileData} from '../shared/profile-contract.ts';
 import {validateFeatureAction,validateFeatureData} from '../shared/feature-contract.ts';
 import {validateWorkspaceAction,validateWorkspaceData} from '../shared/workspace-contract.ts';
@@ -16,6 +17,24 @@ import { validateDiscoveryAction, discoveryReceiptAction } from '../shared/disco
 import { settleDiscoveryReceipt } from './discovery-receipts.ts';
 interface Options { context: ArchiveContext; receipts: ReceiptStore; core: CorePort; owner(): { owner: number; frame: number }; confirmations?: Confirmations }
 export async function settleReceipt(store: ReceiptStore, receipt: Receipt, result: PublicResult) {
+  if(receipt.namespace==='review'){
+    const unknown=()=>store.update(receipt.requestId,{phase:'UNKNOWN',errorCode:'UNKNOWN_OUTCOME'});
+    if(result.requestId!==receipt.requestId||result.storeId!==receipt.storeId||result.result==='UNKNOWN_OUTCOME')return unknown();
+    try{
+      const data=validateReviewData('operation',result.data,{requestId:receipt.requestId});
+      if(data.operation){
+        const op=record(data.operation);
+        if(op.action!==receipt.action||op.targetId!==receipt.reviewTarget||op.outcome!==result.outcome)return unknown();
+        return store.update(receipt.requestId,{phase:op.phase==='FINALIZED'?'TERMINAL':'RECONCILING',outcome:result.outcome,errorCode:result.error?.code??null});
+      }
+      if(data.accepted===true&&data.entityId===receipt.reviewTarget&&data.requestId===receipt.requestId)
+        return store.update(receipt.requestId,{phase:'RECONCILING',outcome:'IN_PROGRESS'});
+      if(result.liveness==='LIVE_VERIFIED'&&['APPROVAL_REQUIRED','APPROVAL_STALE','REVIEW_STALE','ENVIRONMENT_STALE',
+        'SOURCE_NOT_QUIESCENT','REVIEW_SCOPE_LIMIT','ARTIFACT_CORRUPT','TARGET_MOVED','INVALID_REQUEST','RESOURCE_LIMIT','EVENT_BACKPRESSURE','BUSY'].includes(result.error?.code??''))
+        return store.update(receipt.requestId,{phase:'TERMINAL',outcome:'BLOCKED',errorCode:result.error!.code});
+      return unknown();
+    }catch{return unknown();}
+  }
   if(receipt.namespace==='execution'){
     const unknown=()=>store.update(receipt.requestId,{phase:'UNKNOWN',errorCode:'UNKNOWN_OUTCOME'});
     if(result.requestId!==receipt.requestId||result.storeId!==receipt.storeId||result.result==='UNKNOWN_OUTCOME')return unknown();
@@ -78,6 +97,7 @@ export class ActionService {
   resolveFeature: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveWorkspace: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveExecution: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
+  resolveReview: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveProfile: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   resolveEnvironment: ((action:string,params:Params)=>Promise<{command:CliCommand;summary:string[]}>)|null=null;
   private confirming = false;
@@ -114,6 +134,17 @@ export class ActionService {
         this.options.context.apply(c,current);
         if(current.result!=='OK'||record(current.data.session).stateRevision!==command.expectedStateRevision)throw new Error('EXECUTION_APPROVAL_STALE');
       }
+    }
+    if(command.namespace==='review'){
+      const cap=record(status.data.capabilities);
+      if(cap.reviewVersion!==1||!Array.isArray(cap.reviewMethods)||!cap.reviewMethods.includes(`review.${command.action}`))throw new Error('UNSUPPORTED_VERSION');
+      const current=await this.options.core.call(command.action==='create'?
+        {namespace:'feature',action:'get',archive:c.path,params:{featureId:command.reviewTarget}}:
+        {namespace:'review',action:'get',archive:c.path,params:{reviewId:command.reviewTarget}});
+      this.options.context.apply(c,current);
+      const key=command.action==='create'?'feature':'review';
+      if(current.result!=='OK'||record(current.data[key]).stateRevision!==command.expectedStateRevision||
+        record(current.data[key]).projectId!==command.projectId)throw new Error('REVIEW_STALE');
     }
     if(command.namespace==='profile'){
       const capability=record(status.data.capabilities);
@@ -165,19 +196,20 @@ export class ActionService {
     return { status, project };
   }
   async prepare(action: string, params: Params) {
-    if(action.startsWith('execution.'))executionBridgeAction({...params,action:action.slice('execution.'.length)});
+    if(action.startsWith('review.'))reviewBridgeAction({...params,action:action.slice('review.'.length)});
+    else if(action.startsWith('execution.'))executionBridgeAction({...params,action:action.slice('execution.'.length)});
     else if(action.startsWith('profile.'))profileBridgeAction({...params,action:action.slice('profile.'.length)});
     else if(action.startsWith('environment.'))environmentBridgeAction({...params,action:action.slice('environment.'.length)});
     else if(action.startsWith('workspace.'))validateWorkspaceAction(action,params);
     else if (action.startsWith('feature.')) validateFeatureAction(action,params); else if (action.startsWith('discovery.')) validateDiscoveryAction(action, params); else validateAction(action, params);
     if (this.confirming) throw new Error('LOCAL_BUSY');
     const c = this.options.context.capture(), owner = canonical(this.options.owner());
-    const resolver=action.startsWith('execution.')?this.resolveExecution:action.startsWith('profile.')?this.resolveProfile:action.startsWith('environment.')?this.resolveEnvironment:action.startsWith('workspace.')?this.resolveWorkspace:action.startsWith('feature.')?this.resolveFeature:
+    const resolver=action.startsWith('review.')?this.resolveReview:action.startsWith('execution.')?this.resolveExecution:action.startsWith('profile.')?this.resolveProfile:action.startsWith('environment.')?this.resolveEnvironment:action.startsWith('workspace.')?this.resolveWorkspace:action.startsWith('feature.')?this.resolveFeature:
       action.startsWith('discovery.')?this.resolveDiscovery:undefined;
     if(resolver===null)throw new Error('CONFIRMATION_REQUIRED');
     const resolved=resolver?await resolver(action,params):null;
     const command: CliCommand = resolved ? resolved.command : action.startsWith('daemon.') ? { namespace: 'daemon', action: action.slice(7), archive: c.path } : this.resolveProject ? await this.resolveProject(action, params) : (() => { throw new Error('CONFIRMATION_REQUIRED'); })();
-    if(command.namespace==='scheduler'||command.namespace==='review')throw new Error('INVALID_INPUT');
+    if(command.namespace==='scheduler')throw new Error('INVALID_INPUT');
     const namespace = command.namespace === 'daemon' ? 'foundation' : command.namespace, receiptAction = command.namespace === 'discovery' ? discoveryReceiptAction(command.action) : command.action;
     if (blocksMutation(await this.options.receipts.list(), c.path, namespace, receiptAction, command.projectId ?? (typeof command.params?.projectId === 'string' ? command.params.projectId : undefined))) throw new Error('OPERATION_UNCERTAIN');
     const checked = await this.preflight(command);
@@ -193,13 +225,13 @@ export class ActionService {
     try {
       await this.preflight(token.command);
       if (canonical(this.scope()) !== canonical(scope)) throw new Error('STALE_CONTEXT');
-      if(token.command.namespace==='scheduler'||token.command.namespace==='review')throw new Error('INVALID_INPUT');
+      if(token.command.namespace==='scheduler')throw new Error('INVALID_INPUT');
       const c = this.options.context.capture(), namespace = token.command.namespace === 'daemon' ? 'foundation' : token.command.namespace;
       const receiptAction = namespace === 'discovery' ? discoveryReceiptAction(token.command.action) : token.command.action;
       const projectId = token.command.projectId ?? (typeof token.command.params?.projectId === 'string' ? token.command.params.projectId : null);
       if (blocksMutation(await this.options.receipts.list(), c.path, namespace, receiptAction, projectId ?? undefined)) throw new Error('OPERATION_UNCERTAIN');
       const receipt = await this.options.receipts.create({ requestId: token.requestId, namespace, action: receiptAction, archivePath: c.path, storeId: c.view.storeId,
-        projectId, ...(token.command.executionTarget!==undefined?{executionTarget:token.command.executionTarget}:{}), ...(token.command.featureId?{featureId:token.command.featureId}:{}), ...(token.command.profileId?{profileId:token.command.profileId}:{}), ...(token.command.workspaceId?{workspaceId:token.command.workspaceId}:{}), expectedRevision: token.command.expectedRevision ?? token.command.expectedStateRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
+        projectId, ...(token.command.executionTarget!==undefined?{executionTarget:token.command.executionTarget}:{}), ...(token.command.reviewTarget?{reviewTarget:token.command.reviewTarget}:{}), ...(token.command.featureId?{featureId:token.command.featureId}:{}), ...(token.command.profileId?{profileId:token.command.profileId}:{}), ...(token.command.workspaceId?{workspaceId:token.command.workspaceId}:{}), expectedRevision: token.command.expectedRevision ?? token.command.expectedStateRevision ?? (typeof token.command.params?.expectedRevision === 'string' ? token.command.params.expectedRevision : null), intentHash: token.intentHash });
       try {
         if (canonical(this.scope()) !== canonical(scope)) throw new Error('STALE_CONTEXT');
         const result = await this.options.core.call(token.command);
