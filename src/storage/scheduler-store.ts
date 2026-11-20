@@ -37,6 +37,11 @@ export function readSchedulerState(db:Database.Database,q:SchedulerQuery):Schedu
      return{job:row?job(row):null};
    }
    case 'reservations':return{reservations:active(db)};
+   case 'pending':{
+     const rows=db.prepare(`SELECT * FROM scheduler_jobs WHERE state IN ('QUEUED','WAITING_RESOURCE','WAITING_PROVIDER')
+       ORDER BY queued_at,job_id LIMIT 21 OFFSET ?`).all(q.offset) as FeatureRow[];
+     return{jobs:rows.slice(0,20).map(job),nextOffset:rows.length>20?q.offset+20:null};
+   }
    case 'queue':{
      const projectId=q.projectId===null?null:requireUuid(q.projectId),offset=q.offset??0,limit=q.limit??20;
      if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>20)throw new Error('INVALID_REQUEST');
@@ -158,19 +163,20 @@ export function commitSchedulerState(db:Database.Database,c:SchedulerChange,ledg
      db.prepare("INSERT INTO scheduler_reservations VALUES(?,?,?,?,'RESERVED',0,NULL)").run(r.generation,r.jobId,r.workspaceId,c.instanceId);
      update(job,'RESERVED',null);
      return{reservation:r,job:find(job.jobId)};
-   });
+   },false,{requestIds:[job.jobId]});
  }
  const job=find(c.jobId),previous=active(db).find(r=>r.generation===c.generation&&r.jobId===c.jobId);
  if(!previous)throw new Error('STALE_TARGET');
  return ledger.transaction(()=>{
-   const next=schedulerReservationTransition(previous,c.event),released=c.event.kind==='release';
    const instance=db.prepare('SELECT instance_id FROM scheduler_reservations WHERE generation=?').get(c.generation) as FeatureRow;
-   if(instance.instance_id!==c.instanceId&&!released)throw new Error('STALE_TARGET');
+   if(instance.instance_id!==c.instanceId&&c.event.kind!=='release')throw new Error('STALE_TARGET');
+   if(c.event.kind==='release'&&c.success&&c.event.proof.kind!=='EXIT')throw new Error('RESERVATION_UNKNOWN');
+   const next=schedulerReservationTransition(previous,c.event);
    db.prepare('UPDATE scheduler_reservations SET state=?,go_authorized=?,proof=? WHERE generation=?')
      .run(next.state,next.goAuthorized?1:0,c.event.kind==='release'?JSON.stringify(c.event.proof):null,next.generation);
    if(c.event.kind==='go')update(job,'RUNNING',null,job.attempts+1);
    else if(c.event.kind==='owner-lost')update(job,'RECONCILING','RESERVATION_UNKNOWN');
    else update(job,c.success?'SUCCEEDED':c.event.proof.kind==='NO_SPAWN'?'WAITING_USER':'FAILED',c.success?null:'INTERRUPTED');
    return{reservation:next,job:find(job.jobId)};
- },true);
+ },true,{requestIds:[job.jobId]});
 }

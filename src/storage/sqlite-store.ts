@@ -1,3 +1,4 @@
+import {schedulerChanged} from '../core/scheduler/events.js';
 import {commitSchedulerState,readSchedulerState} from './scheduler-store.js';
 import type {SchedulerChange,SchedulerQuery} from '../ports/scheduler.js';
 import {SCHEDULER_SCHEMA_VERSION,SCHEDULER_TABLES} from './scheduler-schema.js';
@@ -229,7 +230,11 @@ export class SQLiteStore {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
-          if(op.namespace==='SCHEDULER')continue;
+          if(op.namespace==='SCHEDULER'){
+            const id=op.result?.jobId,job=typeof id==='string'?readSchedulerState(this.database!,{kind:'job',id}).job??null:null;
+            drafts.push(schedulerChanged(op,String(owner.owning_instance_id),job));
+            continue;
+          }
           if(op.namespace==='EXECUTION'){
             const sessionId=op.result?.sessionId,runId=op.result?.runId;
             if(typeof sessionId==='string'&&typeof runId==='string'){
