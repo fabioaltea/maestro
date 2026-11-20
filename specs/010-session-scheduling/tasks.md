@@ -19,7 +19,7 @@
 ## Phase 2: Foundational (Blocking Prerequisites)
 
 - [x] T005 [P] Scrivere unit test di transizioni, scope/versioni dei grant e generazioni in `tests/unit/scheduler-state.test.ts`; coprire invalidazione, terminali, retry e limiti numerici con tempo controllato (FR-011/012).
-- [ ] T006 [P] Scrivere integrazione schema9→10, letture storiche immutabili, crash pre/post commit e ledger UUID cross-namespace in entrambi i versi in `tests/integration/scheduler-schema.test.ts` (FR-011).
+- [x] T006 [P] Scrivere integrazione schema9→10, letture storiche immutabili, crash pre/post commit e ledger UUID cross-namespace in entrambi i versi in `tests/integration/scheduler-schema.test.ts` (FR-011).
 - [ ] T007 Implementare `src/storage/scheduler-schema.ts`, `src/storage/scheduler-upgrade.ts`, `src/storage/scheduler-store.ts` e collegamenti in `src/storage/worker.ts`/`src/storage/readonly-database.ts`: schema10 solo start, version-check storici, integrity/FK, CAS e outbox atomica. Aggiornare reader/driver/upgrade chain esistenti secondo i contratti trasversali, senza alterare SQL storici congelati.
 - [ ] T008 Collegare namespace e reservation del modulo in `src/storage/scheduler-store.ts` e `src/ports/workflow.ts`; estendere collision guard dei ledger Foundation/Registry/Discovery/workflow in `src/storage/workflow-store.ts`, senza secondo writer, e coprire artefatto mancante/quote/reply loss in `tests/integration/scheduler-store.test.ts`.
 - [ ] T009 [P] Scrivere contract API/CLI e reader offline in `tests/contract/scheduler-api.test.ts` e `tests/integration/scheduler-offline.test.ts`: DTO chiusi, envelope32KiB/chunk8KiB, cursori, offline immutabile e nessun effetto da lettura (FR-010/012).
