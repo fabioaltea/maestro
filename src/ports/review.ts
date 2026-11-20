@@ -16,9 +16,11 @@ export interface GitIntegrationPreflight {
  readonly sourceTreeOid:string;
  readonly fastForward:boolean;
 }
+export interface ReviewDiff extends GitIntegrationPreflight {readonly fileCount:number;readonly diff:Uint8Array}
 export interface GitIntegrationPort {
  qualification():Promise<WorkspaceGitPin>;
  preflight(input:GitIntegrationScope,deadline:Deadline):Promise<GitIntegrationPreflight>;
+ captureDiff(input:GitIntegrationScope,deadline:Deadline):Promise<ReviewDiff>;
  reserveGuard(input:GitIntegrationScope,deadline:Deadline):Promise<IntegrationGuard>;
  publishFastForward(input:GitIntegrationScope,guard:IntegrationGuard,deadline:Deadline):Promise<{readonly resultingOid:string}>;
  syncGuard(input:GitIntegrationScope,guard:IntegrationGuard,deadline:Deadline):Promise<void>;
