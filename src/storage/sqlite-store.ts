@@ -1,3 +1,4 @@
+import {reviewChanged} from '../core/review/events.js';
 import {REVIEW_SCHEMA_VERSION,REVIEW_TABLES} from './review-schema.js';
 import {commitReviewState,readReviewState} from './review-store.js';
 import type {ReviewChange,ReviewQuery} from '../ports/review.js';
@@ -236,7 +237,12 @@ export class SQLiteStore {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
-          if(op.namespace==='REVIEW')continue;
+          if(op.namespace==='REVIEW'){
+            const id=op.result?.reviewId;
+            const value=typeof id==='string'?readReviewState(this.database!,{kind:'review',id}).review:null;
+            if(value)drafts.push(reviewChanged(op,String(owner.owning_instance_id),value));
+            continue;
+          }
           if(op.namespace==='SCHEDULER'){
             const id=op.result?.jobId,job=typeof id==='string'?readSchedulerState(this.database!,{kind:'job',id}).job??null:null;
             drafts.push(schedulerChanged(op,String(owner.owning_instance_id),job));
@@ -289,7 +295,9 @@ export class SQLiteStore {
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
   commitReviewState(change:ReviewChange) {
-    return commitReviewState(this.writable(),change,this.workflowStore(),id=>this.workflowArtifacts().read(id,0,1));
+    return commitReviewState(this.writable(),change,this.workflowStore(),id=>{
+      try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
+    });
   }
   readReviewState(query:ReviewQuery) {
     if(!this.database)throw new Error('STATE_ABSENT');
