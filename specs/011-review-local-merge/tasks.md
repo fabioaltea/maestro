@@ -85,7 +85,7 @@
 
 ## Phase 6: Polish & Cross-Cutting Review
 
-- [ ] T034 Eseguire build/typecheck/lint e suite mirate core/desktop per i file modificati, aggiornando `specs/011-review-local-merge/reports/validation.md` con matrice FR/SC, comandi/esiti e limiti; non rilanciare acceptance/bench lunghi né promuovere skip a PASS.
+- [x] T034 Eseguire build/typecheck/lint e suite mirate core/desktop per i file modificati, aggiornando `specs/011-review-local-merge/reports/validation.md` con matrice FR/SC, comandi/esiti e limiti; non rilanciare acceptance/bench lunghi né promuovere skip a PASS.
 - [ ] T035 Verificare le tre storie di `specs/011-review-local-merge/quickstart.md` e i cap del piano; registrare in `specs/011-review-local-merge/reports/qualification.md` prove reali solo se autorizzate e capability effettive, altrimenti NOT_RUN/BLOCKED. Preservare separati gli esiti fixture, provider/login/hosting reali e review umana.
 - [ ] T036 Concludere review degli otto principi, permessi e gate precedenti in `specs/011-review-local-merge/reports/release-readiness.md`, aggiornando `specs/011-review-local-merge/tasks.md` solo per lavoro provato; annotare dipendenze ancora bloccate e nessuna integrazione/pubblicazione implicita.
 

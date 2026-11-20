@@ -5,3 +5,15 @@
 Base `0f9a9be`, schema 10. La 010 ha concluso 20/36 task e verificato 24 test core, 58 Desktop unit/contract e 1 E2E. La coda conserva reservation incerte e usa fixture per il dispatch. 009 fornisce checkpoint portabili e stato di quiescenza di fixture. Il commit core 009 e il runtime di produzione restano aperti.
 
 001/T082 NOT_RUN, 001/T085 FAIL/OPEN, 002/T093 BLOCKED, 003/T054 REVIEW_PENDING, 004/T028 e T050 PROVIDER_UNSAFE e 005 G1 BLOCKED. La qualifica G1 di 009 e le review umane restano pendenti. La 011 usa il pin Git esistente e checkout temporanei posseduti dalla suite. Scope locale, nessuna campagna di volume o durata.
+
+## T034 — verifica locale
+
+- Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.
+- Suite core mirata, 27 PASS, 0 FAIL, 0 SKIP. Include cinque prove native G0, la migrazione 10→11 e regressioni schema 9→10 e lease workspace. Il successivo test unitario su chiusura/cleanup porta il totale a 28 PASS mirati.
+- Desktop unit/contract, 60 PASS, 0 FAIL, 0 SKIP. E2E Electron review e coda, 2 PASS, 0 FAIL, 0 SKIP.
+- FR-001–003. Una fixture 009 con exit proof e checkpoint Git pulito produce un diff sigillato, ricostruibile da CLI e Desktop. Un edit tardivo invalida il grant. La perdita dell'artefatto feedback lascia il grant intatto. Il confronto dei risultati richiesti è legato al tree. La validazione end-to-end 007 sul candidate resta aperta.
+- FR-004–006. G0 nativo verifica guard, fast-forward CAS, sync e fault pre/post CAS. Il port rifiuta target occupato, modificato o divergente. Staging, candidate a due parent, validazione e grant d'integrazione non sono pubblicati.
+- FR-007–009. Gli invarianti di dominio richiedono prova attribuita del CAS, guard sincronizzato e prova cleanup corrente. Un commit nuovo o un file non integrato bloccano il preview. Receipt, ricalcolo Discovery e cleanup delegato end-to-end restano aperti.
+- FR-010–012. DTO chiusi, metadati paginati, chunk fino a 8 KiB, outbox atomica redatta, storico immutabile offline, limiti sui diff e rollback su quota. Il bridge Desktop di review espone consultazione.
+
+Nessuna misura generale di latenza. Acceptance e benchmark Foundation di volume o durata non sono stati rilanciati.
