@@ -13,7 +13,7 @@ export function nativeWorkspaceServices(options:Omit<WorkspaceProvisionOptions,k
  return (runtime:WorkspaceRuntimeContext)=>{
    const settings={...options,...runtime,mutator:createWorkspaceMutator(),files:options.files??createOwnedWorkspaceFiles()};
    const provisioning=createWorkspaceProvisioning(settings),recovery=createWorkspaceRecovery(settings),cleanup=createWorkspaceCleanup(settings);
-   return{actions:{...provisioning.actions,...recovery.actions,...cleanup.actions},leases:recovery.leases,
+   return{actions:{...provisioning.actions,...recovery.actions,...cleanup.actions},leases:recovery.leases,files:settings.files,
      async recover(){await provisioning.recover();await recovery.recover();await cleanup.recover();}};
  };
 }
@@ -23,6 +23,7 @@ export interface WorkspaceRuntimeServices {
  readonly actions:Readonly<Record<string,Action>>;
  recover():Promise<void>;
  readonly leases?:ReturnType<typeof createWorkspaceRecovery>['leases'];
+ readonly files?:WorkspaceProvisionOptions['files'];
 }
 export interface WorkspaceRuntimeContext {
  accepting():boolean;
@@ -51,6 +52,7 @@ export function createWorkspaceRuntime(storage:StoragePort,
  return{
    methods,
    leases:service?.leases,
+   files:service?.files,
    dispatch:createWorkspaceDispatch({storage,composed:actions}),
    fence(){accepting=false;},
    async recover(){

@@ -22,7 +22,7 @@ export interface EnvironmentPlanningOptions extends EnvironmentRuntimeContext {
 }
 export async function environmentWorkspace(storage:StoragePort,workspaceId:string){
  const {workspace}=await storage.readWorkspaceState!({kind:'get',id:workspaceId});
- if(!workspace)throw new Error('WORKSPACE_NOT_FOUND');
+ if(!workspace||workspace.target.integration==='GUARD')throw new Error('WORKSPACE_NOT_FOUND');
  const project=(await storage.getProject(workspace.projectId))?.project;
  if(!project||project.removedAt!==null)throw new Error('PROJECT_REMOVED');
  return{workspace,project};

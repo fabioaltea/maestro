@@ -23,6 +23,18 @@ export interface ReviewServicesOptions {
  readonly captureCheckpoint:(w:WorkspaceRecord)=>Promise<{readonly treeDigest:string;readonly patch:Uint8Array}>;
  readonly requireAccepting:()=>void;
 }
+export async function inspectReviewSource(options:Pick<ReviewServicesOptions,'storage'|'captureCheckpoint'>,review:ReviewRecord){
+ const {storage}=options;
+ const [{workspace},{checkpoint},{feature},project]=await Promise.all([
+   storage.readWorkspaceState!({kind:'get',id:review.workspaceId}),storage.readExecutionState!({kind:'checkpoint',id:review.checkpointId}),
+   storage.readFeatureState!({kind:'feature',id:review.featureId}),storage.getProject(review.projectId),
+ ]);
+ if(!workspace?.ownership||workspace.state!=='READY'||!checkpoint||!feature||feature.state!=='APPROVED'||
+    feature.currentRevisionId!==review.featureRevisionId||!project||project.project.removedAt!==null)throw new Error('REVIEW_STALE');
+ const current=await options.captureCheckpoint(workspace);
+ if(current.treeDigest!==checkpoint.treeDigest||digest(current.patch)!==checkpoint.digest)throw new Error('REVIEW_STALE');
+ return{workspace:{...workspace,ownership:workspace.ownership},checkpoint,project:project.project};
+}
 export function createReviewSnapshotServices(options:ReviewServicesOptions):Readonly<Record<string,ReviewAction>>{
  const {storage,instanceId,paths,git,requireAccepting}=options,auth=createWorkflowAuthorization(options);
  async function inspect(p:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer){

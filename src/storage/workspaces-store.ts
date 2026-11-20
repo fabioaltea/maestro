@@ -42,15 +42,17 @@ export function workspaceRecord(r:Row):WorkspaceRecord{
 }
 function summary(row:Row):WorkspaceSummary{
  const r=workspaceRecord(row);
+ const staging=r.target.integration==='STAGING';
  return{workspaceId:r.workspaceId,featureId:r.featureId,projectId:r.projectId,envelopeId:r.envelopeId,state:r.state,stateRevision:r.stateRevision,
-   baseRef:r.target.baseRef,baseOid:r.target.baseOid,branchRef:workspaceBranchRef(r.featureId,r.workspaceId),
+   baseRef:r.target.baseRef,baseOid:r.target.baseOid,branchRef:staging?'HEAD':workspaceBranchRef(r.featureId,r.workspaceId),
+   ...(staging?{purpose:'INTEGRATION_STAGING' as const}:{}),
    ownership:r.ownership?'RECORDED':'UNKNOWN',createdAt:r.createdAt,updatedAt:r.updatedAt,safeError:r.safeError,observation:r.observation};
 }
 export function readWorkspaceState(database:Database.Database,query:WorkspaceQuery):WorkspaceRead{
  requireWorkspaceSchema(database);
  if(query.kind==='get'||query.kind==='summary'){
    const row=database.prepare('SELECT * FROM workspaces_records WHERE workspace_id=?').get(requireUuid(query.id)) as Row|undefined;
-   return query.kind==='get'?{workspace:row?workspaceRecord(row):null}:{summary:row?summary(row):null};
+   return query.kind==='get'?{workspace:row?workspaceRecord(row):null}:{summary:row&&workspaceRecord(row).target.integration!=='GUARD'?summary(row):null};
  }
  if(query.kind==='interrupted-provisioning'){
    const rows=database.prepare(`SELECT w.*,e.request_id FROM workspaces_records w
@@ -99,7 +101,7 @@ export function readWorkspaceState(database:Database.Database,query:WorkspaceQue
  if(query.kind!=='list')throw new Error('INVALID_REQUEST');
  const projectId=requireUuid(query.projectId),offset=query.offset??0,limit=query.limit??20;
  if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>20)throw new Error('INVALID_REQUEST');
- const rows=database.prepare('SELECT * FROM workspaces_records WHERE project_id=? ORDER BY created_at,workspace_id LIMIT ? OFFSET ?').all(projectId,limit+1,offset) as Row[];
+ const rows=database.prepare("SELECT * FROM workspaces_records WHERE project_id=? AND json_extract(target,'$.integration') IS NULL ORDER BY created_at,workspace_id LIMIT ? OFFSET ?").all(projectId,limit+1,offset) as Row[];
  const revision=database.prepare('SELECT revision FROM store WHERE singleton=1').get() as Row;
  return{items:rows.slice(0,limit).map(summary),nextOffset:rows.length>limit?offset+limit:null,pageRevision:String(revision.revision)};
 }
@@ -312,6 +314,8 @@ export function commitWorkspaceLease(database:Database.Database,change:Workspace
    const held=activeLease(database,workspaceId);
    if(change.kind==='acquire'){
      requireWorkspaceInstance(database,requested.instanceId,'RUNNING');
+     if(workspace.target.integration&&(requested.holderType==='RUN'||workspace.target.integration==='GUARD'&&requested.holderType==='ENVIRONMENT'))
+       throw new Error('WORKSPACE_IN_USE');
      if(held){
        if(held.holderType===requested.holderType&&held.holderId===requested.holderId&&held.generation===requested.generation&&held.instanceId===requested.instanceId)return held;
        throw new Error('WORKSPACE_IN_USE');
@@ -358,6 +362,7 @@ export function settleWorkspaceClaim(database:Database.Database,claim:WorkspaceC
 
 function validateCleanupScope(database:Database.Database,intent:WorkflowIntent,workspace:WorkspaceRecord){
  const p=intent.payload;
+ if(workspace.target.integration)throw new Error('WORKSPACE_NOT_FOUND');
  if(intent.projectId!==workspace.projectId||p.ownerGeneration!==workspace.ownerGeneration||p.markerDigest!==workspace.markerDigest||
    !workspace.markerDigest||!workspace.ownership||typeof p.headOid!=='string'||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(p.headOid))
    throw new Error('OWNERSHIP_UNPROVEN');

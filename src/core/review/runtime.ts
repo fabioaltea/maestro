@@ -1,11 +1,12 @@
 import {makeDeadline,systemClock,type Deadline} from '../../ports/clock.js';
-import type {WorkspacePort,WorkspaceRecord} from '../../ports/workspace.js';
+import type {OwnedWorkspaceFilesPort,WorkspacePort,WorkspaceRecord} from '../../ports/workspace.js';
 import {REVIEW_READ_METHODS} from '../../protocol/review.js';
 import {createReviewGitReader} from '../../platform/macos/git/review-reader.js';
 import {createIntegrationMutator} from '../../platform/macos/git/integration-mutator.js';
 import {createReviewSnapshotServices,type ReviewServicesOptions} from './snapshot.js';
 import {createReviewDispatch,type ReviewAction} from './dispatch.js';
 import {createReviewValidation,type RunReviewCheck} from './validation.js';
+import {createReviewIntegration,type ReviewIntegrationPorts} from './integrate.js';
 
 export function nativeReviewGit(git:WorkspacePort,owned:(workspace:WorkspaceRecord)=>Promise<NonNullable<WorkspaceRecord['ownership']>>){
  return{git:createReviewGitReader(createIntegrationMutator()),async captureCheckpoint(workspace:WorkspaceRecord){
@@ -14,9 +15,11 @@ export function nativeReviewGit(git:WorkspacePort,owned:(workspace:WorkspaceReco
  }};
 }
 export type ReviewGitServices=Pick<ReviewServicesOptions,'git'|'captureCheckpoint'>;
+export const nativeReviewIntegration=(files:OwnedWorkspaceFilesPort):ReviewIntegrationPorts=>({files,git:createIntegrationMutator()});
 export function createReviewRuntime(options:Omit<ReviewServicesOptions,keyof ReviewGitServices|'requireAccepting'>&{
  readGit?:ReviewGitServices;
  runCheck?:RunReviewCheck;
+ integration?:ReviewIntegrationPorts;
 }){
  const {storage,readGit}=options;
  let accepting=false;
@@ -33,12 +36,20 @@ export function createReviewRuntime(options:Omit<ReviewServicesOptions,keyof Rev
    return result;
  }
  const runCheck=options.runCheck;
- const validation=services&&runCheck&&storage.readEnvironmentState?createReviewValidation({...services,runCheck,
-   schedule:work=>{track(Promise.resolve().then(work));}}):null;
+ const schedule=(work:()=>Promise<void>)=>{track(Promise.resolve().then(work));};
+ const validation=services&&runCheck&&storage.readEnvironmentState?createReviewValidation({...services,runCheck,schedule}):null;
  if(validation){
    const prepare=available['review.prepare']!;
    available['review.prepare']=(params,peer)=>params.action==='validate'?validation.prepare(params,peer):prepare(params,peer);
    available['review.validate']=validation.submit;
+ }
+ const integration=services&&validation&&options.integration&&storage.settleWorkspaceClaim?
+   createReviewIntegration({...services,integration:options.integration,schedule}):null;
+ if(integration){
+   const prepare=available['review.prepare']!;
+   available['review.prepare']=(params,peer)=>['candidate.prepare','approve','integrate'].includes(String(params.action))?
+     integration.prepare(params,peer):prepare(params,peer);
+   Object.assign(available,integration.actions);
  }
  const actions:Record<string,ReviewAction>={};
  for(const [method,action] of Object.entries(available)){
@@ -68,6 +79,7 @@ export function createReviewRuntime(options:Omit<ReviewServicesOptions,keyof Rev
      const {operations}=await storage.readReviewState({kind:'pending-snapshots'});
      for(const {requestId} of operations??[])await storage.commitReviewState({kind:'recover-snapshot',instanceId:options.instanceId,requestId});
      await validation?.recover();
+     await integration?.recover();
    },
    fence(){accepting=false;},
    async stop(deadline:Deadline){

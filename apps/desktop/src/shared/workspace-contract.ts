@@ -55,9 +55,12 @@ function enumValue(value:unknown,allowed:readonly string[]){
  if(typeof value!=='string'||!allowed.includes(value))throw new Error('INVALID_INPUT');
 }
 function gitScope(p:Params){
+ const featureId=uuid(p.featureId),workspaceId=uuid(p.workspaceId);
+ const branch=p.purpose==='INTEGRATION_STAGING'?'HEAD':`refs/heads/maestro/feature/${featureId}/${workspaceId}`;
+ if(p.purpose!==undefined&&p.purpose!=='INTEGRATION_STAGING')throw new Error('INVALID_INPUT');
  if(!/^refs\/heads\/[!-~]{1,1024}$/.test(text(p.baseRef,1035))
    ||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(text(p.baseOid,64))
-   ||p.branchRef!==`refs/heads/maestro/feature/${uuid(p.featureId)}/${uuid(p.workspaceId)}`)throw new Error('INVALID_INPUT');
+   ||p.branchRef!==branch)throw new Error('INVALID_INPUT');
 }
 export function cleanupTarget(p:Params){
  if(!/^refs\/heads\/[!-~]{1,1024}$/.test(text(p.targetRef,1035))
@@ -78,7 +81,7 @@ function sanitizedError(value:unknown){return CORE_ERRORS[safeCode(record(value)
 function workspace(value:unknown){
  const p=record(value);
  requireFields(p,['workspaceId','featureId','projectId','envelopeId','state','stateRevision','baseRef','baseOid','branchRef',
-   'ownership','updatedAt','createdAt','safeError'],['observation']);
+   'ownership','updatedAt','createdAt','safeError'],['observation','purpose']);
  uuid(p.projectId);uuid(p.envelopeId);revision(p.stateRevision);gitScope(p);
  enumValue(p.state,states);enumValue(p.ownership,['RECORDED','UNKNOWN']);time(p.updatedAt);time(p.createdAt);
  if(p.safeError!==null)safeCode(p.safeError);

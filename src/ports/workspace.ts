@@ -12,6 +12,7 @@ export interface WorkspaceMutationTarget {
   readonly commonDirectory:FilesystemAnchor;
   readonly baseRef:string;
   readonly baseOid:string;
+  readonly integration?:'GUARD'|'STAGING';
 }
 
 export interface WorkspaceDiskObservation {
@@ -67,6 +68,7 @@ export interface WorkspaceSummary{
  readonly state:WorkspaceState;readonly stateRevision:string;readonly baseRef:string;readonly baseOid:string;
  readonly branchRef:string;readonly ownership:'RECORDED'|'UNKNOWN';readonly updatedAt:string;readonly createdAt:string;readonly safeError:string|null;
  readonly observation:WorkspaceObservation|null;
+ readonly purpose?:'INTEGRATION_STAGING';
 }
 export type WorkspaceQuery={readonly kind:'get'|'summary';readonly id:string}
  |{readonly kind:'list';readonly projectId:string;readonly limit?:number;readonly offset?:number}

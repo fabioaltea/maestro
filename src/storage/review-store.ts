@@ -22,11 +22,34 @@ function review(db:Database.Database,r:FeatureRow):ReviewRecord{
 }
 export function readReviewState(db:Database.Database,q:ReviewQuery):ReviewRead{
  schema(db);
- if(q.kind==='pending-snapshots'||q.kind==='pending-validation'){
-   const actions=q.kind==='pending-snapshots'?"('create','request-changes')":"('validate')";
+ if(q.kind==='pending-snapshots'||q.kind==='pending-validation'||q.kind==='pending-integration'){
+   const actions=q.kind==='pending-snapshots'?"('create','request-changes')":q.kind==='pending-validation'?"('validate')":"('candidate.prepare','integrate')";
    const rows=db.prepare(`SELECT * FROM workflow_operations WHERE namespace='REVIEW'
      AND action IN ${actions} AND phase<>'FINALIZED' ORDER BY accepted_at,request_id LIMIT 32`).all() as FeatureRow[];
    return{operations:rows.map(workflowOperation)};
+ }
+ if(q.kind==='candidate'||q.kind==='current-candidate'){
+   const id=requireUuid(q.id);
+   const row=db.prepare(`SELECT c.*,o.canonical_intent FROM review_candidates c JOIN workflow_operations o ON o.request_id=c.candidate_id
+      WHERE ${q.kind==='candidate'?'c.candidate_id':'c.review_id'}=? ORDER BY o.completed_at DESC,o.rowid DESC LIMIT 1`).get(id) as FeatureRow|undefined;
+   return{candidate:row?{candidateId:String(row.candidate_id),reviewId:String(row.review_id),sourceOid:String(row.source_oid),
+     targetOid:String(row.old_target_oid),candidateOid:String(row.candidate_oid),treeOid:String(row.tree_oid),guardId:String(row.guard_id),
+     stagingId:String(row.staging_id),digest:String(row.digest),authoredAt:String(JSON.parse(String(row.canonical_intent)).payload.authoredAt)}:null};
+ }
+ if(q.kind==='decision'||q.kind==='current-decision'){
+   const row=db.prepare(`SELECT d.*,o.canonical_intent FROM review_decisions d JOIN workflow_operations o ON o.request_id=d.decision_id
+     WHERE ${q.kind==='decision'?'d.decision_id':'d.candidate_id'}=? AND d.kind='APPROVE_INTEGRATION'
+     ORDER BY d.created_at DESC,d.rowid DESC LIMIT 1`).get(requireUuid(q.id)) as FeatureRow|undefined;
+   return{decision:row?{decisionId:String(row.decision_id),reviewId:String(row.review_id),candidateId:String(row.candidate_id),
+     evidenceDigest:String(JSON.parse(String(row.canonical_intent)).payload.evidenceDigest)}:null};
+ }
+ if(q.kind==='integration'||q.kind==='candidate-integration'){
+   const row=db.prepare(`SELECT * FROM review_integrations WHERE ${q.kind==='integration'?'integration_id':'candidate_id'}=? LIMIT 1`)
+     .get(requireUuid(q.id)) as FeatureRow|undefined;
+   return{integration:row?{integrationId:String(row.integration_id),candidateId:String(row.candidate_id),decisionId:String(row.decision_id),
+     repositoryKey:String(row.repository_key),targetRef:String(row.target_ref),targetOid:String(row.expected_target_oid),
+     resultingOid:row.resulting_oid as string|null,phase:row.phase as NonNullable<ReviewRead['integration']>['phase'],
+     proof:row.proof===null?null:JSON.parse(String(row.proof))}:null};
  }
  if(q.kind==='review'){
    const row=db.prepare('SELECT * FROM review_records WHERE review_id=?').get(requireUuid(q.id)) as FeatureRow|undefined;
@@ -39,11 +62,13 @@ export function readReviewState(db:Database.Database,q:ReviewQuery):ReviewRead{
    return{artifact:row?{sha256:String(row.sha256),bytes:Number(row.bytes)}:null};
  }
  if(q.kind==='evidence'){
+   const reviewId=requireUuid(q.id),{candidate}=readReviewState(db,{kind:'current-candidate',id:reviewId});
    const rows=db.prepare(`SELECT e.* FROM (SELECT canonical_intent FROM workflow_operations
        WHERE namespace='REVIEW' AND action='validate' AND target_id=? AND phase='FINALIZED'
+       AND json_extract(canonical_intent,'$.payload.candidateId') IS ?
        ORDER BY completed_at DESC,rowid DESC LIMIT 1) o
        JOIN json_each(o.canonical_intent,'$.payload.criteria') i
-       JOIN review_evidence e ON e.evidence_id=json_extract(i.value,'$.proofId')`).all(requireUuid(q.id)) as FeatureRow[];
+       JOIN review_evidence e ON e.evidence_id=json_extract(i.value,'$.proofId')`).all(reviewId,candidate?.candidateId??null) as FeatureRow[];
    return{evidence:rows.map(r=>({criterionId:String(r.criterion_id),jobId:r.job_id as string|null,commandDigest:String(r.command_digest),
      treeOid:String(r.input_tree_oid),status:r.status as ReviewEvidence['status'],outputId:r.output_id as string|null,checkedAt:String(r.checked_at)}))};
  }
@@ -68,7 +93,7 @@ export function readReviewState(db:Database.Database,q:ReviewQuery):ReviewRead{
  return{reviews:rows.slice(0,limit).map(r=>review(db,r)),revision:`${rev.count}:${rev.revision}`,nextOffset:rows.length>limit?offset+limit:null};
 }
 
-function requireReviewOwner(db:Database.Database,instanceId:string,lifecycle:'RUNNING'|'RECOVERING'|'SETTLING'){
+export function requireReviewOwner(db:Database.Database,instanceId:string,lifecycle:'RUNNING'|'RECOVERING'|'SETTLING'){
  const row=db.prepare(`SELECT i.lifecycle FROM store s JOIN instances i ON i.instance_id=s.current_instance_id
    WHERE s.singleton=1 AND i.instance_id=?`).get(instanceId) as FeatureRow|undefined;
  if(!row||(lifecycle==='SETTLING'?row.lifecycle!=='RUNNING'&&row.lifecycle!=='STOPPING':row.lifecycle!==lifecycle))throw new Error('STALE_TARGET');
@@ -84,11 +109,14 @@ function validateResult(db:Database.Database,c:Extract<ReviewChange,{kind:'valid
    if((p.instanceId===c.instanceId)===!!c.recovering)throw new Error('STALE_TARGET');
    const {review:r}=readReviewState(db,{kind:'review',id:reviewId});
    if(!r||r.state!=='CHECKING'||r.stateRevision!==operation.result?.stateRevision||r.digest!==p.reviewDigest)throw new Error('REVIEW_STALE');
+   const {candidate}=readReviewState(db,{kind:'current-candidate',id:reviewId});
+   const subjectId=candidate?.stagingId??r.workspaceId;
+   if(candidate?.candidateId!==p.candidateId||(candidate?.treeOid??r.sourceTreeOid)!==p.treeOid)throw new Error('REVIEW_STALE');
    const jobs=p.checks.map(check=>{
      const child=ledger.operation(check.jobId);
      if(child){
        const {payload}=ledger.intent(child.canonicalIntent);
-       if(child.namespace!=='ENVIRONMENT'||child.action!=='validate'||child.targetId!==r.workspaceId||payload.treeDigest!==check.treeDigest||
+       if(child.namespace!=='ENVIRONMENT'||child.action!=='validate'||child.targetId!==subjectId||payload.treeDigest!==check.treeDigest||
           payload.delegatedJobId!==check.jobId||payload.planDigest!==check.planDigest||payload.planId!==check.planId||
           payload.commandSpecId!==check.commandSpecId||payload.inputDigest!==check.inputDigest)throw new Error('IDEMPOTENCY_CONFLICT');
      }
@@ -100,7 +128,7 @@ function validateResult(db:Database.Database,c:Extract<ReviewChange,{kind:'valid
      .get(r.featureId,r.featureRevisionId,BigInt(intent.configRevision!));
    const at=new Date().toISOString();
    const results=jobs.map(({check,job})=>{
-     let status=reviewCheckStatus({...check,treeOid:p.treeOid},job,current?r.sourceTreeOid:null);
+     let status=reviewCheckStatus({...check,treeOid:p.treeOid},job,current?p.treeOid:null);
      const outputId=job?readEnvironmentState(db,{kind:'output',id:job.jobId,limit:1}).chunks?.[0]?.artifactId??null:null;
      if(outputId){try{verify(outputId);}catch{status='BLOCKED';}}
      else if(status==='PASS')status='BLOCKED';
@@ -151,16 +179,20 @@ export function commitReviewState(db:Database.Database,c:ReviewChange|ReviewReco
      const scope=p as unknown as ReviewValidationScope;
      const {review:r}=readReviewState(db,{kind:'review',id:requireUuid(i.targetId)});
      if(!r||r.projectId!==i.projectId||r.stateRevision!==i.expectedRevision||r.digest!==scope.reviewDigest||
-        r.sourceTreeOid!==scope.treeOid||!['DRAFT','READY_FOR_APPROVAL','BLOCKED'].includes(r.state))throw new Error('REVIEW_STALE');
+        !['DRAFT','READY_FOR_APPROVAL','BLOCKED'].includes(r.state))throw new Error('REVIEW_STALE');
+     if(db.prepare("SELECT 1 FROM workflow_operations WHERE namespace='REVIEW' AND action='candidate.prepare' AND target_id=? AND phase<>'FINALIZED'")
+       .get(r.reviewId))throw new Error('BUSY');
+     const {candidate}=readReviewState(db,{kind:'current-candidate',id:r.reviewId}),workspaceId=candidate?.stagingId??r.workspaceId;
+     if(candidate?.candidateId!==scope.candidateId||(candidate?.treeOid??r.sourceTreeOid)!==scope.treeOid)throw new Error('REVIEW_STALE');
      if(!db.prepare(`SELECT 1 FROM workspaces_records w JOIN features_records f USING(feature_id) JOIN projects p ON p.project_id=f.project_id
         WHERE w.workspace_id=? AND w.state='READY' AND w.state_revision=? AND f.state='APPROVED' AND f.current_revision_id=?
         AND p.config_revision=? AND p.removed_at IS NULL
         AND NOT EXISTS(SELECT 1 FROM workspaces_leases l WHERE l.workspace_id=w.workspace_id AND l.released_at IS NULL)`)
-       .get(r.workspaceId,BigInt(scope.workspaceRevision),r.featureRevisionId,BigInt(i.configRevision!)))throw new Error('REVIEW_STALE');
-     const {environment}=readEnvironmentState(db,{kind:'workspace',id:r.workspaceId});
+       .get(workspaceId,BigInt(scope.workspaceRevision),r.featureRevisionId,BigInt(i.configRevision!)))throw new Error('REVIEW_STALE');
+     const {environment}=readEnvironmentState(db,{kind:'workspace',id:workspaceId});
      if(!environment?.currentPlanId||environment.state!=='READY')throw new Error('ENVIRONMENT_STALE');
      const {plan}=readEnvironmentState(db,{kind:'plan',id:environment.currentPlanId});
-     if(!plan||!scope.checks.length||scope.checks.some(check=>check.workspaceId!==r.workspaceId||check.inputDigest!==plan.inputDigest||
+     if(!plan||!scope.checks.length||scope.checks.some(check=>check.workspaceId!==workspaceId||check.inputDigest!==plan.inputDigest||
         check.planId!==plan.planId||check.planDigest!==plan.digest||!plan.metadata.commands?.some(spec=>spec.id===check.commandSpecId&&spec.sha256===check.commandDigest)))
        throw new Error('ENVIRONMENT_STALE');
      const revision=String(BigInt(r.stateRevision)+1n);

@@ -99,7 +99,7 @@ function environmentInstance(db:Database.Database,instanceId:string,lifecycle:'R
 }
 function planWorkspace(db:Database.Database,intent:WorkflowIntent){
  const workspace=readWorkspaceState(db,{kind:'get',id:requireUuid(intent.targetId)}).workspace;
- if(!workspace||workspace.projectId!==intent.projectId)throw new Error('WORKSPACE_NOT_FOUND');
+ if(!workspace||workspace.projectId!==intent.projectId||workspace.target.integration==='GUARD')throw new Error('WORKSPACE_NOT_FOUND');
  if(workspace.state!=='READY'||readWorkspaceState(db,{kind:'active-lease',id:workspace.workspaceId}).lease)throw new Error('WORKSPACE_IN_USE');
  if(workspace.stateRevision!==intent.expectedRevision)throw new Error('REVISION_CONFLICT');
  const project=db.prepare('SELECT config_revision,removed_at FROM projects WHERE project_id=?').get(workspace.projectId) as Row|undefined;

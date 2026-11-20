@@ -1,7 +1,7 @@
 import {featureFields,featureObject} from '../../domain/features/bundle.js';
 import type {StoragePort} from '../../ports/storage.js';
 import {publicReviewOperation,requireReviewEnvelope,validateReviewParams} from '../../protocol/review.js';
-import {readReviewCriteria} from './criteria.js';
+import {readReviewCriteria,reviewEvidenceDigest} from './criteria.js';
 
 const CRITERIA_PAGE_BYTES=20000;
 
@@ -34,8 +34,15 @@ export function createReviewReader({storage,storeId,offline}:{storage:StoragePor
      const {review}=await query({kind:'review',id:reviewId});
      if(!review)throw new Error('OPERATION_NOT_FOUND');
      if(page&&page.revision!==review.stateRevision)throw new Error('REVISION_CONFLICT');
-     const [all,{evidence=[]}]=await Promise.all([readReviewCriteria(storage,review),
-       review.state==='CHECKING'?Promise.resolve({evidence:[]}):query({kind:'evidence',id:reviewId})]);
+     const [all,{evidence=[]},{candidate}]=await Promise.all([readReviewCriteria(storage,review),
+       review.state==='CHECKING'?Promise.resolve({evidence:[]}):query({kind:'evidence',id:reviewId}),query({kind:'current-candidate',id:reviewId})]);
+     const data:Record<string,unknown>={};
+     if(candidate){
+       const [{decision},{integration}]=await Promise.all([query({kind:'current-decision',id:candidate.candidateId}),
+         query({kind:'candidate-integration',id:candidate.candidateId})]);
+       data.candidate=candidate;data.evidenceDigest=reviewEvidenceDigest(evidence);data.decisionId=decision?.decisionId??null;
+       data.integration=integration?{integrationId:integration.integrationId,phase:integration.phase,resultingOid:integration.resultingOid}:null;
+     }
      const criteria=[];
      let offset=page?.offset??0,bytes=0;
      if(page&&offset>=all.length)throw new Error('INVALID_REQUEST');
@@ -53,7 +60,8 @@ export function createReviewReader({storage,storeId,offline}:{storage:StoragePor
        }
        criteria.push(item);bytes+=size;offset++;
      }
-     result={review,eligibility:'UNKNOWN',criteria,nextCursor:offset<all.length?next(reviewId,review.stateRevision,offset):null};
+     result={review,eligibility:'UNKNOWN',criteria,...data,
+       nextCursor:offset<all.length?next(reviewId,review.stateRevision,offset):null};
    }else if(method==='review.list'){
      const projectId=String(p.projectId),page=cursor(projectId),r=await query({kind:'list',projectId,offset:page?.offset??0,limit:Number(p.limit??20)});
      if(page&&page.revision!==r.revision)throw new Error('REVISION_CONFLICT');

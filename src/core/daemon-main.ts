@@ -1,5 +1,5 @@
 import {createWorkspaceMutator} from '../platform/macos/git/workspace-mutator.js';
-import {createReviewRuntime,nativeReviewGit} from './review/runtime.js';
+import {createReviewRuntime,nativeReviewGit,nativeReviewIntegration} from './review/runtime.js';
 import {createSchedulerRuntime} from './scheduler/runtime.js';
 import {createExecutionRuntime} from './execution/runtime.js';
 import {createProfileRuntime} from './profiles/runtime.js';
@@ -116,7 +116,8 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       ...(dependencies.execution?{dependencies:dependencies.execution}:{})});
     scheduler=createSchedulerRuntime({storage,paths,instanceId:intent.instanceId,...dependencies.scheduler});
     review=createReviewRuntime({storage,paths,instanceId:intent.instanceId,currentEligibility:(peer,projectId)=>discovery!.operations.currentEligibility(peer,projectId),
-      ...(reviewGit?{readGit:reviewGit}:{}),...(environments.runDelegatedCheck?{runCheck:environments.runDelegatedCheck}:{})});
+      ...(reviewGit?{readGit:reviewGit}:{}),...(environments.runDelegatedCheck?{runCheck:environments.runDelegatedCheck}:{}),
+      ...(workspaces.files?{integration:nativeReviewIntegration(workspaces.files)}:{})});
     const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=11&&storage.readReviewState?{reviewVersion:1,reviewMethods:review.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=10&&storage.readSchedulerState?{schedulerVersion:1,schedulerMethods:scheduler.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=9&&storage.readExecutionState?{executionVersion:1,executionMethods:execution.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=8?{profileVersion:1,profileMethods:profiles.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=7?{environmentVersion:1,environmentMethods:environments.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });

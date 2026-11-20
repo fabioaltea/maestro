@@ -67,7 +67,7 @@ export function validateReviewParams(method:string,value:unknown){
  }
  if(p.cursor!==undefined)featureText(p.cursor,1024,true);
 }
-const resultKeys=['reviewId','jobIds','decisionId','candidateId','integrationId','receiptId','digest','stateRevision','resultingOid'] as const;
+const resultKeys=['reviewId','jobIds','decisionId','candidateId','candidateOid','integrationId','receiptId','digest','stateRevision','resultingOid'] as const;
 export function publicReviewOperation(o:WorkflowOperationRecord){
  const {namespace,action,phase,outcome,requestId,targetId,acceptedAt,completedAt,result,error}=o;
  if(namespace!=='REVIEW')throw new Error('OPERATION_NOT_FOUND');
@@ -89,7 +89,7 @@ export function decodeReviewOperation(value:unknown){
    const result=featureObject(p.result);featureFields(result,[],resultKeys);
    for(const [k,v] of Object.entries(result)){
      if(k==='stateRevision')workspaceRevision(v);
-     else if(k==='resultingOid')reviewOid(v);
+     else if(k==='resultingOid'||k==='candidateOid')reviewOid(v);
      else if(k==='digest'){if(typeof v!=='string'||!/^[a-f0-9]{64}$/.test(v))throw new Error('INVALID_REQUEST');}
      else if(k==='jobIds')commandIds(v);
      else workspaceUuid(v);

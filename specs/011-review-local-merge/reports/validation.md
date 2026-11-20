@@ -40,6 +40,10 @@ Quattro test unitari mirati PASS. Il confronto di candidate, riserva, target e p
 
 Otto test unitari e di contratto mirati PASS. Le richieste prepare di candidate, approvazione e integrazione vincolano revisioni, identificativi e digest. Campi extra come `force` e selettori di ref su confirm sono rifiutati.
 
+## Ripresa T022
+
+Undici test di regressione core PASS. Il percorso Git divergente lascia entrambi i parent e il conflitto resta in staging detached. La fixture completa registra guard e staging in 006, prepara 007 sullo staging, blocca il candidate senza prove, consuma grant distinti per approvazione e integrazione e recupera dopo il CAS. Dieci retry con UUID originale restituiscono l’integrazione già registrata. L’iniezione di un file nel guard blocca il sync e conserva il file.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

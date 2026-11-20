@@ -1,4 +1,5 @@
 import {reviewOid,reviewTargetRef} from '../../../domain/review/state.js';
+import type {RefAttribution} from '../../../domain/review/integration.js';
 import {EXECUTION_LIMITS} from '../../../domain/execution/model.js';
 import {workspaceBranchRef} from '../../../domain/workspaces/provision.js';
 import {requireMatchingWorktree} from '../../../domain/workspaces/ownership.js';
@@ -13,7 +14,7 @@ import {promisify} from 'node:util';
 import {requireUuid} from '../../../domain/identifiers.js';
 import type {Deadline} from '../../../ports/clock.js';
 import type {FilesystemAnchor} from '../../../ports/repository.js';
-import type {GitIntegrationPort,GitIntegrationScope,IntegrationGuard} from '../../../ports/review.js';
+import type {GitCandidate,GitCandidateScope,GitIntegrationPort,GitIntegrationScope,IntegrationGuard} from '../../../ports/git-integration.js';
 import type {WorkspaceCleanupTarget,WorkspaceDiskObservation,WorkspaceGitPin,WorkspaceMutationTarget,WorkspacePort} from '../../../ports/workspace.js';
 import {createFilesystemIdentity} from './filesystem-identity.js';
 import {buildInspectionEnvironment,createGitRunner} from './runner.js';
@@ -85,8 +86,12 @@ async function scopeFor(input:Omit<WorkspaceMutationTarget,'baseOid'>&{baseOid?:
     ||[reference,common,admin].some(path=>nested(root,path)||nested(path,root)))throw new Error('OWNERSHIP_UNPROVEN');
   const checkout=join(root,workspaceId),worktrees=join(common,'worktrees'),worktreeAdmin=join(worktrees,workspaceId);
   const parents=['refs','heads','maestro','feature',featureId];
-  const branchRef=workspaceBranchRef(featureId,workspaceId),ref=join(common,branchRef);
-  await directoryChain(common,parents);
+  const detached=input.integration==='STAGING';
+  if(input.integration!==undefined&&!['GUARD','STAGING'].includes(input.integration))throw new Error('INVALID_REQUEST');
+  if(input.integration)reviewTargetRef(input.baseRef);
+  const branchRef=detached?'HEAD':input.integration==='GUARD'?input.baseRef:workspaceBranchRef(featureId,workspaceId);
+  const ref=detached?join(worktreeAdmin,'HEAD'):join(common,branchRef);
+  await directoryChain(common,input.integration==='GUARD'?branchRef.split('/').slice(0,-1):parents);
   await directoryChain(common,['worktrees',workspaceId]);
   for(const file of [ref,`${ref}.lock`]){
     const info=await pathInfo(file);
@@ -94,7 +99,7 @@ async function scopeFor(input:Omit<WorkspaceMutationTarget,'baseOid'>&{baseOid?:
   }
   const linked=await pathInfo(checkout);
   if(linked&&!linked.isDirectory())throw new Error('OWNERSHIP_UNPROVEN');
-  return{checkout,worktrees,worktreeAdmin,root,reference,common,admin,branchRef,ref,baseRef:input.baseRef,baseOid:input.baseOid,featureId};
+  return{checkout,worktrees,worktreeAdmin,root,reference,common,admin,branchRef,ref,baseRef:input.baseRef,baseOid:input.baseOid,featureId,detached};
 }
 
 async function fingerprint(path:string){
@@ -122,7 +127,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
   }
   const selected=()=>pin??=resolvePin();
   function check(deadline:Deadline){if(deadline.expired())throw new Error('DEADLINE_EXCEEDED');}
-  async function git(scope:Scope,deadline:Deadline,args:readonly string[],effect?:readonly string[]|'delete-branch'|'read-only'|'integration-guard'|'integration-ref',maxOutputBytes=1024*1024){
+  async function git(scope:Scope,deadline:Deadline,args:readonly string[],effect?:readonly string[]|'delete-branch'|'read-only'|'integration-guard'|'integration-ref'|'integration-staging',maxOutputBytes=1024*1024,identityDate?:string){
     check(deadline);
     const {executable,identity,profileSha256}=await selected();
     const body=await readFile(profile);
@@ -131,7 +136,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     const params={EXECUTABLE:executable,REFERENCE:scope.reference,COMMON:scope.common,ADMIN:scope.admin,WORKTREE:scope.checkout,
       WORKTREES:scope.worktrees,WORKTREE_ADMIN:scope.worktreeAdmin,REF:scope.ref,REF_LOCK:scope.ref+'.lock',
       REF_HEADS:join(scope.common,'refs','heads'),REF_MAESTRO:join(scope.common,'refs','heads','maestro'),
-      REF_FEATURE:join(scope.common,'refs','heads','maestro','feature'),REF_FEATURE_ID:dirname(scope.ref)};
+      REF_FEATURE:join(scope.common,'refs','heads','maestro','feature'),REF_FEATURE_ID:dirname(scope.ref),OBJECTS:join(scope.common,'objects')};
     const literals=effect==='delete-branch'?[
       ['PACKED_LOCK',join(scope.common,'packed-refs.lock')],
       ['REFLOG',join(scope.common,'logs',scope.branchRef)],
@@ -142,14 +147,19 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
        (subpath (param "WORKTREE")) (subpath (param "WORKTREE_ADMIN")))))`:
       effect==='integration-ref'?`(allow file-write* (literal (param "TARGET_LOG")))
        (deny file-write* (require-not (require-any (literal "/dev/null") (literal (param "REF"))
-        (literal (param "REF_LOCK")) (literal (param "TARGET_LOG")))))`:null;
+        (literal (param "REF_LOCK")) (literal (param "TARGET_LOG")))))`:
+      effect==='integration-staging'?`(allow file-write* (subpath (param "OBJECTS")))
+       (deny file-write* (require-not (require-any (literal "/dev/null") (subpath (param "OBJECTS"))
+         (subpath (param "WORKTREE")) (subpath (param "WORKTREE_ADMIN")))))`:null;
     const guard=scoped??(effect==='delete-branch'
       ?'(allow file-write-create file-write-unlink (literal (param "PACKED_LOCK")))\n(allow file-write-unlink (literal (param "REFLOG")))'
       :literals?`(deny file-write-unlink (require-all (subpath (param "WORKTREE")) (require-not (require-any ${literals.map(([key])=>`(literal (param "${key}"))`).join(' ')}))))`:null);
     const policy=guard?['-p',body.toString('utf8')+'\n'+guard]:['-f',profile];
     const bindings=[...Object.entries(params),...(literals??[])].flatMap(([k,v])=>['-D',`${k}=${v}`]);
+    const author=identityDate?{GIT_AUTHOR_NAME:'Maestro',GIT_AUTHOR_EMAIL:'maestro@localhost',GIT_AUTHOR_DATE:identityDate,
+      GIT_COMMITTER_NAME:'Maestro',GIT_COMMITTER_EMAIL:'maestro@localhost',GIT_COMMITTER_DATE:identityDate}:{};
     return exec(sandbox,[...bindings,...policy,executable,...prefix,...args],
-      {cwd:scope.reference,env:{...env,GIT_EXEC_PATH:dirname(executable)},timeout:Math.max(1,Math.min(26000,Math.floor(deadline.remainingMs()))),maxBuffer:maxOutputBytes,encoding:'utf8'})
+      {cwd:scope.reference,env:{...env,...author,GIT_EXEC_PATH:dirname(executable)},timeout:Math.max(1,Math.min(26000,Math.floor(deadline.remainingMs()))),maxBuffer:maxOutputBytes,encoding:'utf8'})
       .then(({stdout,stderr})=>({stdout,stderr,code:0}),(error:unknown)=>{
         if(!deadline.expired()&&error instanceof Error&&'code'in error&&typeof error.code==='number'&&'stderr'in error)
           return{stdout:'',stderr:String(error.stderr),code:error.code};
@@ -212,7 +222,9 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     if(records.some(record=>record.includes(`branch ${scope.branchRef}`)&&!matches.includes(record)))throw new Error('OWNERSHIP_UNPROVEN');
     if(matches.length>1)throw new Error('OWNERSHIP_UNPROVEN');
     const [entry]=matches;
-    const baseOid=await oid(scope,deadline,scope.baseRef),branchOid=await oid(scope,deadline,scope.branchRef);
+    const baseOid=await oid(scope,deadline,scope.baseRef);
+    const branchOid=scope.detached?(entry?await stableFile(join(scope.worktreeAdmin,'HEAD'),128).then(bytes=>bytes?.toString().trim()??null):null):
+      await oid(scope,deadline,scope.branchRef);
     if(!entry){
       if(await pathInfo(scope.checkout)||await pathInfo(scope.worktreeAdmin))throw new Error('OWNERSHIP_UNPROVEN');
       return{baseOid,branchOid,worktree:null};
@@ -221,16 +233,18 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     const head=entry.find(v=>v.startsWith('HEAD '))?.slice(5);
     const marker=join(scope.checkout,'.git');
     const [raw,commonLink,reverseLink]=await Promise.all([stableFile(marker),stableFile(join(scope.worktreeAdmin,'commondir')),stableFile(join(scope.worktreeAdmin,'gitdir'))]);
-    if(branch!==scope.branchRef||head!==branchOid||!head||entry.some(text=>/^(locked|prunable)( |$)/.test(text))
+    if((scope.detached?branch!==undefined||!entry.includes('detached'):branch!==scope.branchRef)||head!==branchOid||!head||
+      !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(head)||entry.some(text=>/^(locked|prunable)( |$)/.test(text))
       ||raw?.toString('utf8')!==`gitdir: ${scope.worktreeAdmin}\n`
       ||!commonLink||resolve(scope.worktreeAdmin,commonLink.toString('utf8').trim())!==scope.common||reverseLink?.toString('utf8').trim()!==marker)
       throw new Error('OWNERSHIP_UNPROVEN');
     return{baseOid,branchOid,worktree:{root:await filesystem.capture(scope.checkout,'directory'),
-      adminDirectory:await filesystem.capture(scope.worktreeAdmin,'directory'),gitFile:await filesystem.capture(marker,'file'),branchRef:branch,headOid:head}};
+      adminDirectory:await filesystem.capture(scope.worktreeAdmin,'directory'),gitFile:await filesystem.capture(marker,'file'),branchRef:scope.branchRef,headOid:head}};
   }
 
   async function prepare(input:WorkspaceMutationTarget,deadline:Deadline){
     const scope=await scopeFor(input),fingerprint=await config(scope,deadline);
+    if(input.integration&&await pathInfo(join(scope.worktreeAdmin,'config.worktree')))throw new Error('WORKSPACE_UNSAFE');
     if((await git(scope,deadline,['check-ref-format',scope.baseRef])).code)throw new Error('INVALID_REQUEST');
     return{scope,fingerprint};
   }
@@ -269,7 +283,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     if(allowed.size||directories.size)throw new Error('UNINTEGRATED_WORK');
     return paths;
   }
-  async function integration(input:GitIntegrationScope,deadline:Deadline,guard?:IntegrationGuard,readDiff=false){
+  async function integration(input:GitIntegrationScope,deadline:Deadline,guard?:IntegrationGuard,readDiff=false,preparedSource=false){
     reviewTargetRef(input.targetRef);reviewOid(input.sourceOid);reviewOid(input.targetOid);
     if(input.sourceOid.length!==input.targetOid.length||input.sourceOid===input.targetOid)throw new Error('INVALID_REQUEST');
     const {scope,fingerprint}=await prepare(input.source,deadline),guardId=requireUuid(input.guardId);
@@ -295,7 +309,8 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       if(r.code||r.stderr)throw new Error('WORKSPACE_UNSAFE');
       return r.stdout;
     };
-    if(await status(scope))throw new Error('SOURCE_NOT_QUIESCENT');
+    const sourceStatus=await status(scope);
+    if(sourceStatus&&!(preparedSource&&sourceStatus==='! node_modules/\0'))throw new Error('SOURCE_NOT_QUIESCENT');
     const listed=await git(scope,deadline,['worktree','list','--porcelain','-z'],'read-only');
     if(listed.code||listed.stderr)throw new Error('OWNERSHIP_UNPROVEN');
     const matches=listed.stdout.split('\0\0').map(record=>record.split('\0')).filter(record=>record.includes(`branch ${input.targetRef}`));
@@ -313,6 +328,27 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     if(ancestry.stderr||ancestry.code>1)throw new Error('WORKSPACE_UNSAFE');
     await verify(input.source,scope,fingerprint,deadline);
     return{scope,candidateScope,targetOid,sourceOid:input.sourceOid,sourceTreeOid,fastForward:ancestry.code===0,status};
+  }
+  function stagingTarget(input:GitCandidateScope):WorkspaceMutationTarget{
+    const workspaceId=requireUuid(input.stagingId);
+    if(workspaceId===input.source.workspaceId||workspaceId===input.guardId)throw new Error('INVALID_REQUEST');
+    return{...input.source,workspaceId,baseRef:input.targetRef,baseOid:input.targetOid,integration:'STAGING'};
+  }
+  async function candidateTree(input:GitCandidateScope,scope:Scope,result:Awaited<ReturnType<typeof integration>>,candidate:GitCandidate,deadline:Deadline){
+    const {worktree}=await disk(scope,deadline);
+    requireMatchingWorktree(candidate.staging,worktree);
+    if(worktree.headOid!==candidate.candidateOid)throw new Error('CANDIDATE_CHANGED');
+    const data=await git(scope,deadline,['show','-s','--format=%T%x00%P',candidate.candidateOid],'read-only');
+    const [treeOid,parents]=data.stdout.trim().split('\0');
+    if(data.code||data.stderr||treeOid!==candidate.treeOid||
+      (result.fastForward?candidate.candidateOid!==input.sourceOid:parents!==`${input.targetOid} ${input.sourceOid}`))throw new Error('CANDIDATE_CHANGED');
+    const status=await result.status(scope);
+    if(status&&status!=='! node_modules/\0')throw new Error('CANDIDATE_CHANGED');
+  }
+  async function refProof(scope:Scope,expected:RefAttribution){
+    const log=await stableFile(join(scope.common,'logs',scope.branchRef),1048576);
+    const last=log?.toString('utf8').trimEnd().split('\n').at(-1);
+    return last?.startsWith(`${expected.old} ${expected.candidate} `)&&last.endsWith(`\tmaestro-integration ${expected.requestId}`)?expected:null;
   }
   const integrationPort:Omit<GitIntegrationPort,'qualification'>={
     async preflight(input,deadline){
@@ -353,6 +389,90 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       await integration(input,deadline,guard);
       return guard;
     },
+    async prepareCandidate(input,guard,deadline){
+      const result=await integration(input,deadline,guard,false,true);
+      if(result.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
+      const at=Date.parse(input.authoredAt);
+      if(!Number.isFinite(at)||new Date(at).toISOString()!==input.authoredAt)throw new Error('INVALID_REQUEST');
+      const target=stagingTarget(input),{scope,fingerprint}=await prepare(target,deadline);
+      await directoryChain(scope.common,['objects']);
+      if(await pathInfo(scope.checkout)||await pathInfo(scope.worktreeAdmin))throw new Error('CANDIDATE_CHANGED');
+      const added=await git(scope,deadline,['worktree','add','--detach','--no-checkout','--',scope.checkout,input.targetOid],'integration-guard');
+      if(added.code||added.stderr&&!/^Preparing worktree/.test(added.stderr))throw new Error('INTEGRATION_UNKNOWN');
+      const initial=(await disk(scope,deadline)).worktree;
+      if(!initial||initial.headOid!==input.targetOid||await pathInfo(join(scope.worktreeAdmin,'index')))throw new Error('INTEGRATION_UNKNOWN');
+      for await(const file of await opendir(scope.checkout))if(file.name!=='.git')throw new Error('INTEGRATION_UNKNOWN');
+      const stage=(args:readonly string[],effect:'integration-guard'|'integration-staging'|'read-only'='integration-guard',date?:string)=>
+        git(scope,deadline,['-C',scope.checkout,...args],effect,1048576,date);
+      const indexed=await stage(['read-tree','-u','-m',input.targetOid]);
+      if(indexed.code||indexed.stderr||await result.status(scope))throw new Error('INTEGRATION_UNKNOWN');
+      let next=input.sourceOid;
+      if(!result.fastForward){
+        const merged=await stage(['merge-tree','--write-tree','--no-messages',input.targetOid,input.sourceOid],'integration-staging');
+        const date=`@${Math.floor(at/1000)} +0000`;
+        if(merged.code===1&&!merged.stderr){
+          const conflict=await stage(['merge','--no-ff','--no-commit','--no-edit','--no-autostash',input.sourceOid],'integration-staging',date);
+          const unresolved=await stage(['ls-files','--unmerged','-z','--'],'read-only');
+          if(conflict.code===1&&!unresolved.code&&!unresolved.stderr&&unresolved.stdout){
+            const {worktree}=await disk(scope,deadline);
+            requireMatchingWorktree(initial,worktree);
+            await verify(target,scope,fingerprint,deadline);
+            return{kind:'CONFLICT',staging:worktree};
+          }
+          throw new Error('INTEGRATION_UNKNOWN');
+        }
+        if(merged.code||merged.stderr)throw new Error('INTEGRATION_UNKNOWN');
+        const tree=reviewOid(merged.stdout.trim());
+        const committed=await stage(['commit-tree',tree,'-p',input.targetOid,'-p',input.sourceOid,'-m','Maestro local integration'],
+          'integration-staging',date);
+        if(committed.code||committed.stderr)throw new Error('INTEGRATION_UNKNOWN');
+        next=reviewOid(committed.stdout.trim());
+      }
+      const moved=await stage(['read-tree','-u','-m',input.targetOid,next]);
+      if(moved.code||moved.stderr)throw new Error('INTEGRATION_UNKNOWN');
+      const head=await stage(['update-ref','--no-deref','HEAD',next,input.targetOid]);
+      if(head.code||head.stderr)throw new Error('INTEGRATION_UNKNOWN');
+      const {worktree}=await disk(scope,deadline);
+      requireMatchingWorktree(initial,worktree);
+      const tree=await stage(['rev-parse','--verify','HEAD^{tree}'],'read-only');
+      if(tree.code||tree.stderr)throw new Error('INTEGRATION_UNKNOWN');
+      const candidate={staging:worktree,candidateOid:worktree.headOid,treeOid:reviewOid(tree.stdout.trim())};
+      await candidateTree(input,scope,result,candidate,deadline);
+      await verify(target,scope,fingerprint,deadline);
+      if((await integration(input,deadline,guard,false,true)).targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
+      return{kind:'READY',candidate};
+    },
+    async inspectCandidate(input,guard,candidate,deadline){
+      const result=await integration(input,deadline,guard,false,true);
+      if(result.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
+      if(await result.status(result.candidateScope))throw new Error('INTEGRATION_UNKNOWN');
+      const target=stagingTarget(input),{scope,fingerprint}=await prepare(target,deadline);
+      await candidateTree(input,scope,result,candidate,deadline);
+      await verify(target,scope,fingerprint,deadline);
+    },
+    async publishCandidate(input,guard,candidate,requestId,deadline){
+      requireUuid(requestId);
+      await integrationPort.inspectCandidate(input,guard,candidate,deadline);
+      const {candidateScope}=await integration(input,deadline,guard,false,true);
+      const expected={requestId,old:input.targetOid,candidate:candidate.candidateOid};
+      options.integrationCheckpoint?.('ref.intent');
+      const changed=await git(candidateScope,deadline,['update-ref','--create-reflog','--no-deref','-m',`maestro-integration ${requestId}`,
+        input.targetRef,candidate.candidateOid,input.targetOid],'integration-ref',1048576,'@'+Math.floor(Date.now()/1000)+' +0000');
+      if(changed.code||changed.stderr){
+        if(await oid(candidateScope,deadline,input.targetRef)!==input.targetOid)throw new Error('TARGET_MOVED');
+        throw new Error('INTEGRATION_UNKNOWN');
+      }
+      options.integrationCheckpoint?.('ref.updated');
+      const observed=await integrationPort.observePublication(input,guard,expected,deadline);
+      if(!observed.proof)throw new Error('INTEGRATION_UNKNOWN');
+      return observed.proof;
+    },
+    async observePublication(input,guard,expected,deadline){
+      requireUuid(expected.requestId);reviewOid(expected.candidate);
+      if(expected.old!==input.targetOid)throw new Error('INVALID_REQUEST');
+      const result=await integration(input,deadline,guard,false,true);
+      return{targetOid:result.targetOid,proof:result.targetOid===expected.candidate?await refProof(result.candidateScope,expected):null};
+    },
     async publishFastForward(input,guard,deadline){
       const result=await integration(input,deadline,guard),{candidateScope}=result;
       if(result.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
@@ -369,18 +489,22 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       if(verified.targetOid!==input.sourceOid)throw new Error('INTEGRATION_UNKNOWN');
       return{resultingOid:verified.targetOid};
     },
-    async syncGuard(input,guard,deadline){
-      const result=await integration(input,deadline,guard),{candidateScope}=result;
-      if(result.targetOid!==input.sourceOid)throw new Error('INTEGRATION_UNKNOWN');
+    async syncGuard(input,guard,deadline,candidateOid){
+      const result=await integration(input,deadline,guard,false,candidateOid!==undefined),{candidateScope}=result;
+      const expected=reviewOid(candidateOid??input.sourceOid);
+      if(result.targetOid!==expected)throw new Error('INTEGRATION_UNKNOWN');
       const inGuard=(args:readonly string[],write=false)=>git(candidateScope,deadline,['-C',candidateScope.checkout,...args],write?'integration-guard':'read-only');
+      const flags=await inGuard(['ls-files','-v','-z','--']);
+      if(flags.code||flags.stderr||flags.stdout.split('\0').some(item=>item&&item[0]!=='H'))throw new Error('INTEGRATION_UNKNOWN');
+      if(!await result.status(candidateScope))return;
       const index=await inGuard(['diff-index','--cached','--quiet','--no-ext-diff','--no-textconv',input.targetOid,'--']);
       const work=await inGuard(['diff-files','--quiet','--no-ext-diff','--no-textconv','--']);
       const others=await inGuard(['ls-files','--others','-z','--']);
       if([index,work,others].some(value=>value.code||value.stderr)||others.stdout)throw new Error('INTEGRATION_UNKNOWN');
-      const synced=await inGuard(['read-tree','-u','-m',input.targetOid,input.sourceOid],true);
+      const synced=await inGuard(['read-tree','-u','-m',input.targetOid,expected],true);
       if(synced.code||synced.stderr||await result.status(candidateScope))throw new Error('INTEGRATION_UNKNOWN');
-      const verified=await integration(input,deadline,guard);
-      if(verified.targetOid!==input.sourceOid)throw new Error('INTEGRATION_UNKNOWN');
+      const verified=await integration(input,deadline,guard,false,candidateOid!==undefined);
+      if(verified.targetOid!==expected)throw new Error('INTEGRATION_UNKNOWN');
     },
   };
   return{

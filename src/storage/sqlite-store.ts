@@ -1,7 +1,8 @@
 import {reviewEvents} from '../core/review/events.js';
 import {REVIEW_SCHEMA_VERSION,REVIEW_TABLES} from './review-schema.js';
 import {commitReviewState,readReviewState} from './review-store.js';
-import type {ReviewChange,ReviewQuery,ReviewRecovery} from '../ports/review.js';
+import type {IntegrationChange,ReviewChange,ReviewQuery,ReviewRecovery} from '../ports/review.js';
+import {commitIntegrationState} from './integration-store.js';
 import {schedulerChanged} from '../core/scheduler/events.js';
 import {commitSchedulerState,readSchedulerState} from './scheduler-store.js';
 import type {SchedulerChange,SchedulerQuery} from '../ports/scheduler.js';
@@ -294,10 +295,15 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
-  commitReviewState(change:ReviewChange|ReviewRecovery) {
-    return commitReviewState(this.writable(),change,this.workflowStore(),id=>{
+  commitReviewState(change:ReviewChange|ReviewRecovery|IntegrationChange) {
+    const db=this.writable(),store=this.workflowStore(),verify=(id:string)=>{
       try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
-    });
+    };
+    switch(change.kind){
+      case 'create':case 'request-changes':case 'recover-snapshot':case 'validate-admit':case 'validate-finish':
+        return commitReviewState(db,change,store,verify);
+      default:return commitIntegrationState(db,change,store,verify);
+    }
   }
   readReviewState(query:ReviewQuery) {
     if(!this.database)throw new Error('STATE_ABSENT');

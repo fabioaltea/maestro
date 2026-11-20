@@ -62,7 +62,7 @@ export function createWorkspaceRecovery(options:WorkspaceProvisionOptions){
      return{operation:publicWorkspaceOperation(operation)};
    }
    const {workspace}=await storage.readWorkspaceState!({kind:'get',id:workspaceId});
-   if(!workspace)throw new Error('WORKSPACE_NOT_FOUND');
+   if(!workspace||workspace.target.integration)throw new Error('WORKSPACE_NOT_FOUND');
    const intent:WorkflowIntent={version:1,storeId:store.storeId,ownerUid:store.ownerUid,namespace:'WORKSPACE',
      action:'refresh',targetId:workspaceId,projectId:workspace.projectId,expectedRevision:String(params.expectedStateRevision),configRevision:null,payload:{}};
    if(!options.accepting())throw new Error('BLOCKED');
