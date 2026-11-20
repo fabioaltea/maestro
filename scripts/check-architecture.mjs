@@ -15,7 +15,7 @@ async function walk(directory) {
 async function inspect(path) {
   const local = relative(root, path).replaceAll('\\', '/');
   const zone = local.split('/')[0];
-  const workflow = local.startsWith('core/features/') || local.startsWith('core/workflow/') || local.startsWith('core/workspaces/') || local.startsWith('core/environments/');
+  const workflow = local.startsWith('core/features/') || local.startsWith('core/workflow/') || local.startsWith('core/workspaces/') || local.startsWith('core/environments/') || local.startsWith('core/profiles/');
   if (!['domain', 'client', 'providers'].includes(zone) && !workflow) return;
   // Feature/workflow policies remain inside the existing neutral domain zone.
   const ast = ts.createSourceFile(path, await readFile(path, 'utf8'), ts.ScriptTarget.Latest, true);
@@ -28,7 +28,7 @@ async function inspect(path) {
     let forbidden;
     if (specifier.startsWith('.')) {
       const target = relative(root, resolve(dirname(path), specifier)).replaceAll('\\', '/');
-      const allowed = workflow ? ['domain/', 'ports/', 'protocol/', 'core/', ...(['core/features/runtime.ts','core/workspaces/runtime.ts','core/environments/runtime.ts'].includes(local) ? ['providers/', 'platform/'] : [])] : zone === 'domain' ? ['domain/', 'ports/']
+      const allowed = workflow ? ['domain/', 'ports/', 'protocol/', 'core/', ...(['core/features/runtime.ts','core/workspaces/runtime.ts','core/environments/runtime.ts','core/profiles/runtime.ts'].includes(local) ? ['providers/', 'platform/'] : [])] : zone === 'domain' ? ['domain/', 'ports/']
         : zone === 'providers' ? ['providers/', 'domain/', 'ports/']
         : ['client/', 'domain/', 'ports/', 'protocol/'];
       forbidden = !allowed.some(prefix => target.startsWith(prefix));
