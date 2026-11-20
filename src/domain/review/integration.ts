@@ -1,4 +1,29 @@
 import {reviewOid} from './state.js';
+import {requireUuid} from '../identifiers.js';
+
+interface CandidateScope {
+ readonly targetOid:string;readonly candidateOid:string;readonly treeOid:string;readonly guardId:string;readonly stagingId:string;
+ readonly reviewDigest:string;readonly evidenceDigest:string;
+}
+export function requireIntegrationCandidate(expected:CandidateScope,observed:CandidateScope&{
+ readonly targetReserved:boolean;readonly guardClean:boolean;readonly stagingClean:boolean;readonly conflict:boolean;
+}){
+ if(!observed.targetReserved||observed.guardId!==expected.guardId)throw new Error('TARGET_IN_USE');
+ if(observed.targetOid!==expected.targetOid)throw new Error('TARGET_MOVED');
+ if(observed.conflict)throw new Error('MERGE_CONFLICT');
+ if(!observed.guardClean)throw new Error('INTEGRATION_UNKNOWN');
+ if(!observed.stagingClean||observed.stagingId!==expected.stagingId||observed.candidateOid!==expected.candidateOid||observed.treeOid!==expected.treeOid)
+   throw new Error('CANDIDATE_CHANGED');
+ if(observed.reviewDigest!==expected.reviewDigest||observed.evidenceDigest!==expected.evidenceDigest)throw new Error('APPROVAL_STALE');
+}
+
+export interface RefAttribution {readonly requestId:string;readonly old:string;readonly candidate:string}
+export function requireRefAttribution(expected:RefAttribution,proof:RefAttribution|null):RefAttribution{
+ requireUuid(expected.requestId);reviewOid(expected.old);reviewOid(expected.candidate);
+ if(!proof||proof.requestId!==expected.requestId||proof.old!==expected.old||proof.candidate!==expected.candidate)
+   throw new Error('INTEGRATION_UNKNOWN');
+ return proof;
+}
 
 export function evaluateIntegrationRecovery(input:{
  readonly old:string;readonly candidate:string;readonly observed:string|null;readonly noEffectVerified?:true;

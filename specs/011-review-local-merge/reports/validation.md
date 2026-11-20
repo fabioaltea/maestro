@@ -32,6 +32,10 @@ Build core e test, lint e 12 prove d'integrazione 011 PASS. Copertura di snapsho
 
 Build e typecheck Desktop, lint, 61 test unit/contract e 2 E2E Electron PASS. I comandi review passano da prepare e conferma scoped, con ricevuta salvata prima della mutation. In Electron il feedback è sigillato, Escape ripristina il focus, la conferma produce lo stesso UUID interrogabile dalla CLI e il fermo del daemon disabilita le mutation. La navigazione tra archivi conserva lo scope di consultazione. La fixture E2E prepara lo snapshot nello storico, mentre gli effetti Git e i job 007 sono provati nelle integrazioni core.
 
+## Ripresa T020
+
+Quattro test unitari mirati PASS. Il confronto di candidate, riserva, target e prove di validazione blocca scope alterato, guard sporco e conflitti. Il recovery richiede attribuzione al requestId e agli OID esatti.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.
