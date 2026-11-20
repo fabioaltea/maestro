@@ -41,3 +41,7 @@ Draft e grant passano per stdin e artefatti sigillati. Electron mostra alias, sc
 ## T020–T024 — skill
 
 Preview e import con handle locale, hash, identità della sorgente e tre scope. Una modifica del file invalida il grant. Riferimenti obbligatori e consigliati sono revisionati e la risoluzione richiede la scelta esplicita dell’alias più specifico. **3 PASS** US2 dopo due RED.
+
+## T025–T026 — CLI ed Electron US2
+
+Preview da picker nativo con path privato via stdin, originale interrogabile per UUID e conferma separata per import/associazione. **2 PASS** contract CLI e **1 PASS** E2E skill, oltre alla regressione US1.
