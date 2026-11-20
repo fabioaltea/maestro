@@ -1,3 +1,4 @@
+import {PROFILE_SCHEMA_VERSION,PROFILE_TABLES} from './profiles-schema.js';
 import {environmentEventDrafts,environmentOutputEvent} from '../core/environments/events.js';
 import {commitEnvironmentState,readEnvironmentState} from './environments-store.js';
 import type {EnvironmentChange,EnvironmentQuery} from '../ports/environment.js';
@@ -89,7 +90,7 @@ export class SQLiteStore {
     try {
       if (!existed) initializeSchema(database, options.identity!);
       const version = Number(database.pragma('user_version', { simple: true }));
-      if (![4, 5, 6, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
+      if (![4, 5, 6, 7, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
       if (version >= 4) {
         for (const name of DISCOVERY_TABLES) {
           if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
@@ -101,6 +102,9 @@ export class SQLiteStore {
       }
       if (version >= 7) for (const name of ENVIRONMENT_TABLES) {
         if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
+      }
+      if(version>=PROFILE_SCHEMA_VERSION)for(const name of PROFILE_TABLES){
+        if(!this.database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name))throw new Error('STATE_CORRUPT');
       }
       this.archiveVersion = version;
       if (database.pragma('quick_check', { simple: true }) !== 'ok' || (database.pragma('foreign_key_check') as unknown[]).length !== 0) throw new Error('STATE_CORRUPT');

@@ -13,3 +13,7 @@ Fixture passiva con marker di esecuzione, origine sostituita, link, traversal, a
 ## T003 — reader di import
 
 Reader macOS in processo effimero con policy SBPL default-deny, apertura no-follow e controllo di UID, hard link, identità, UTF-8 e limiti. L’adapter fake restituisce snapshot sostituibili. Il test usa la directory canonica della fixture anche quando TMPDIR contiene l’alias macOS `/var`.
+
+## T005–T007 — stato e migrazione
+
+Grant legati a scope e revisione con scadenza e replay esatto. Upgrade 7→8 sotto lease control/daemon, verifica integrità e FK, compatibilità reader 7 e conservazione del ledger. **10 PASS** su stati, migrazione, fault pre/post commit e regressione schema 7.

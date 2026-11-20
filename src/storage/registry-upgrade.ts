@@ -22,7 +22,7 @@ function validateArchive(paths: ArchivePaths): void {
 }
 function version(database: Database.Database, paths: ArchivePaths): number {
   const version = database.pragma('user_version', { simple: true });
-  if (![2, REGISTRY_SCHEMA_VERSION, 4, 5, 6, SCHEMA_VERSION].includes(Number(version))) throw new Error('STATE_INCOMPATIBLE');
+  if (![2, REGISTRY_SCHEMA_VERSION, 4, 5, 6, 7, SCHEMA_VERSION].includes(Number(version))) throw new Error('STATE_INCOMPATIBLE');
   if (database.pragma('quick_check', { simple: true }) !== 'ok'
     || (database.pragma('foreign_key_check') as unknown[]).length) throw new Error('STATE_CORRUPT');
   const store = database.prepare('SELECT schema_version,owner_uid,canonical_path FROM store WHERE singleton=1').get() as {

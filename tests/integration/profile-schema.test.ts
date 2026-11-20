@@ -63,7 +63,7 @@ test('schema 7 inspection is immutable and upgrading explicitly preserves Enviro
 });
 
 for(const point of ['profiles.upgrade.beforeCommit','profiles.upgrade.committed']){
- test(`schema 7→7 failure at ${point} leaves a complete version`,async t=>{
+ test(`schema 7→8 failure at ${point} leaves a complete version`,async t=>{
    const {upgradeProfiles}=await import(upgradeModule),f=await archive(t);
    assert.throws(()=>upgradeProfiles({...f.options,checkpoint:(wanted:string)=>{if(point===wanted)throw new Error('OWNED_FAULT');}}),/OWNED_FAULT/);
    const db=new Database(f.path);
