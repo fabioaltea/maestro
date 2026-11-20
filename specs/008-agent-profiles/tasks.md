@@ -18,7 +18,7 @@
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-- [ ] T005 [P] Scrivere unit test di transizioni, scope/versioni dei grant e generazioni in `tests/unit/profile-state.test.ts`; coprire invalidazione, terminali, retry e limiti numerici con tempo controllato (FR-011/012).
+- [x] T005 [P] Scrivere unit test di transizioni, scope/versioni dei grant e generazioni in `tests/unit/profile-state.test.ts`; coprire invalidazione, terminali, retry e limiti numerici con tempo controllato (FR-011/012).
 - [ ] T006 [P] Scrivere integrazione schema7→8, letture storiche immutabili, crash pre/post commit e ledger UUID cross-namespace in entrambi i versi in `tests/integration/profile-schema.test.ts` (FR-011).
 - [ ] T007 Implementare `src/storage/profiles-schema.ts`, `src/storage/profiles-upgrade.ts`, `src/storage/profiles-store.ts` e collegamenti in `src/storage/worker.ts`/`src/storage/readonly-database.ts`: schema8 solo start, version-check storici, integrity/FK, CAS e outbox atomica. Aggiornare reader/driver/upgrade chain esistenti secondo i contratti trasversali, senza alterare SQL storici congelati.
 - [ ] T008 Collegare namespace e reservation del modulo in `src/storage/profiles-store.ts` e `src/ports/workflow.ts`; estendere collision guard dei ledger Foundation/Registry/Discovery/workflow in `src/storage/workflow-store.ts`, senza secondo writer, e coprire artefatto mancante/quote/reply loss in `tests/integration/profile-store.test.ts`.
