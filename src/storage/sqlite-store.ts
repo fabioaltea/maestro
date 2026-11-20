@@ -1,3 +1,6 @@
+import {REVIEW_SCHEMA_VERSION,REVIEW_TABLES} from './review-schema.js';
+import {commitReviewState,readReviewState} from './review-store.js';
+import type {ReviewChange,ReviewQuery} from '../ports/review.js';
 import {schedulerChanged} from '../core/scheduler/events.js';
 import {commitSchedulerState,readSchedulerState} from './scheduler-store.js';
 import type {SchedulerChange,SchedulerQuery} from '../ports/scheduler.js';
@@ -101,7 +104,7 @@ export class SQLiteStore {
     try {
       if (!existed) initializeSchema(database, options.identity!);
       const version = Number(database.pragma('user_version', { simple: true }));
-      if (![4, 5, 6, 7, 8, 9, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
+      if (![4, 5, 6, 7, 8, 9, 10, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
       if (version >= 4) {
         for (const name of DISCOVERY_TABLES) {
           if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
@@ -121,6 +124,9 @@ export class SQLiteStore {
         if(!this.database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name))throw new Error('STATE_CORRUPT');
       }
       if(version>=SCHEDULER_SCHEMA_VERSION)for(const name of SCHEDULER_TABLES){
+        if(!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name))throw new Error('STATE_CORRUPT');
+      }
+      if(version>=REVIEW_SCHEMA_VERSION)for(const name of REVIEW_TABLES){
         if(!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name))throw new Error('STATE_CORRUPT');
       }
       this.archiveVersion = version;
@@ -230,6 +236,7 @@ export class SQLiteStore {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
+          if(op.namespace==='REVIEW')continue;
           if(op.namespace==='SCHEDULER'){
             const id=op.result?.jobId,job=typeof id==='string'?readSchedulerState(this.database!,{kind:'job',id}).job??null:null;
             drafts.push(schedulerChanged(op,String(owner.owning_instance_id),job));
@@ -281,6 +288,13 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
+  commitReviewState(change:ReviewChange) {
+    return commitReviewState(this.writable(),change,this.workflowStore(),id=>this.workflowArtifacts().read(id,0,1));
+  }
+  readReviewState(query:ReviewQuery) {
+    if(!this.database)throw new Error('STATE_ABSENT');
+    return this.database.transaction(()=>readReviewState(this.database!,query)).deferred();
+  }
   commitSchedulerState(change:SchedulerChange) {
     return commitSchedulerState(this.writable(),change,this.workflowStore());
   }

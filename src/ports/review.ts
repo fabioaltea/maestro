@@ -23,3 +23,27 @@ export interface GitIntegrationPort {
  publishFastForward(input:GitIntegrationScope,guard:IntegrationGuard,deadline:Deadline):Promise<{readonly resultingOid:string}>;
  syncGuard(input:GitIntegrationScope,guard:IntegrationGuard,deadline:Deadline):Promise<void>;
 }
+
+import type {ReviewState} from '../domain/review/state.js';
+import type {WorkflowAdmission,WorkflowOperationRecord} from './workflow.js';
+
+export interface ReviewRecord {
+ readonly reviewId:string;readonly projectId:string;readonly featureId:string;readonly featureRevisionId:string;
+ readonly workspaceId:string;readonly checkpointId:string;readonly sourceOid:string;readonly sourceTreeOid:string;
+ readonly targetRef:string;readonly targetOid:string;readonly digest:string;readonly state:ReviewState;
+ readonly stateRevision:string;readonly createdAt:string;readonly fileCount:number;readonly diffBytes:number;
+ readonly parts:readonly {readonly artifactId:string;readonly sha256:string;readonly bytes:number}[];
+}
+export type ReviewQuery={readonly kind:'review'|'artifact';readonly id:string}
+ |{readonly kind:'list';readonly projectId:string;readonly offset?:number;readonly limit?:number};
+export interface ReviewRead {
+ readonly review?:ReviewRecord|null;readonly reviews?:readonly ReviewRecord[];
+ readonly artifact?:{readonly sha256:string;readonly bytes:number}|null;readonly revision?:string;readonly nextOffset?:number|null;
+}
+export type ReviewChange=
+ |{readonly kind:'create';readonly admission:WorkflowAdmission;readonly snapshot:ReviewRecord}
+ |{readonly kind:'request-changes';readonly admission:WorkflowAdmission};
+export interface ReviewStoragePort {
+ readReviewState?(query:ReviewQuery):Promise<ReviewRead>;
+ commitReviewState?(change:ReviewChange):Promise<{readonly operation:WorkflowOperationRecord;readonly inserted:boolean}>;
+}
