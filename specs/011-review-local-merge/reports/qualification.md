@@ -18,3 +18,7 @@
 | US3 | PASS per invarianti puri di esito, cambi di documentazione e cleanup. | Workflow reale di ricalcolo Discovery e cleanup delegato NOT_RUN. |
 
 Capability della build standard per consultazione, preparazione e creazione snapshot e richiesta modifiche tramite CLI. Snapshot subordinato a un checkpoint 009 corrente e quiescente. Consultazione e diff Desktop sono disponibili live e offline. Il CAS nativo resta confinato ai test finché manca il workflow di integrazione con attori 006/007 registrati. Nessun nuovo pin, login, hosting o review umana eseguita.
+
+## Ripresa US1
+
+I controlli 007 sul tree sorgente hanno superato la prova con job host macOS e registry di fixture su loopback. Il diff può essere letto con il target in uso, conservando HEAD e contenuto del checkout esterno. La prenotazione Git per l'integrazione continua a richiedere il target libero. Grant `execution.start` distinto per il feedback, provato con host 009 di fixture. L'host di produzione per correzioni resta subordinato alla qualifica 009.

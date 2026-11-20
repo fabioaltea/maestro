@@ -24,6 +24,10 @@ La fixture US1 esegue Git e il job host 007 sul worktree posseduto. Prima dell'a
 
 Build core e test, typecheck Desktop, lint e nove prove mirate 011/007 PASS. Cinque ulteriori prove mirate 011/009 PASS dopo il collegamento del feedback.
 
+## Ripresa T017
+
+Build core e test, lint e 12 prove d'integrazione 011 PASS. Copertura di snapshot con target già in checkout, validazione sul checkpoint, recovery pre-job, sigilli, offline e limiti. Il preflight per la mutazione rifiuta lo stesso target occupato.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

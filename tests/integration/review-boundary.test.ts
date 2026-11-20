@@ -17,9 +17,14 @@ test('G0 preflight rejects dirty, ignored, occupied and moved targets',async t=>
  await writeFile(join(f.cwd,'ignored-for-review'),'private ignored fixture');
  await assert.rejects(git.preflight(current,f.deadline()),/SOURCE_NOT_QUIESCENT/);
  const {unlink}=await import('node:fs/promises');await unlink(join(f.cwd,'ignored-for-review'));
- await f.git(f.repo,['worktree','add',join(f.root,'external-target'),'local-integration']);
+ const external=join(f.root,'external-target');
+ await f.git(f.repo,['worktree','add',external,'local-integration']);
  await assert.rejects(git.preflight(current,f.deadline()),/TARGET_IN_USE/);
- await f.git(f.repo,['worktree','remove',join(f.root,'external-target')]);
+ const diff=await git.captureDiff(current,f.deadline());
+ assert.match(Buffer.from(diff.diff).toString(),/extra\.txt/);
+ assert.equal(await f.git(external,['rev-parse','HEAD']),current.targetOid);
+ assert.equal(await f.git(external,['status','--porcelain']),'');
+ await f.git(f.repo,['worktree','remove',external]);
  await f.git(f.cwd,['update-ref',current.targetRef,sourceOid,current.targetOid]);
  await assert.rejects(git.preflight(current,f.deadline()),/TARGET_MOVED/);
 });

@@ -23,6 +23,10 @@ Ogni metodo è sotto `review.`; sottosezioni mantengono associazione esplicita a
 | `request-changes` | reviewId,feedbackArtifactId,grantId | decisionId |
 | `get` | reviewId | criteria,evidence,diffMetadata |
 
+`get` accepts a cursor for criteria pages. Criteria come from the sealed revision of the feature plan. To bind a required criterion to an automated check, its approved `verification` field is `command:<CommandSpec UUID>`. Free-form verification remains visible with `NOT_RUN` until supported evidence is attached. A check cannot certify a criterion by matching its title or by returning exit code zero alone. Validation requires a ready 007 plan. The job verifies the checkpoint under its workspace lease and publishes bounded evidence.
+
+The feedback decision is a reference for a new, separately granted `execution.start` with `reviewDecisionId`. This requires a qualified host that supports review feedback. The 009 grant binds the decision, current review revision, checkpoint and sealed feedback digest. The host receives the feedback as untrusted input.
+
 ### US2 — Approvare e integrare un candidate locale sicuro
 
 | Metodo / CLI equivalente | Intent canonico / input | Risultato dopo admission o lettura |

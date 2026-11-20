@@ -269,7 +269,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
     if(allowed.size||directories.size)throw new Error('UNINTEGRATED_WORK');
     return paths;
   }
-  async function integration(input:GitIntegrationScope,deadline:Deadline,guard?:IntegrationGuard){
+  async function integration(input:GitIntegrationScope,deadline:Deadline,guard?:IntegrationGuard,readDiff=false){
     reviewTargetRef(input.targetRef);reviewOid(input.sourceOid);reviewOid(input.targetOid);
     if(input.sourceOid.length!==input.targetOid.length||input.sourceOid===input.targetOid)throw new Error('INVALID_REQUEST');
     const {scope,fingerprint}=await prepare(input.source,deadline),guardId=requireUuid(input.guardId);
@@ -303,7 +303,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       if(matches.length!==1||!matches[0]!.includes(`worktree ${candidateScope.checkout}`))throw new Error('INTEGRATION_UNKNOWN');
       const observed=(await disk(candidateScope,deadline)).worktree;
       requireMatchingWorktree(guard,observed);
-    }else if(matches.length)throw new Error('TARGET_IN_USE');
+    }else if(matches.length&&!readDiff)throw new Error('TARGET_IN_USE');
     const targetOid=await oid(scope,deadline,input.targetRef);
     if(targetOid===null)throw new Error('TARGET_MOVED');
     const sourceTree=await git(scope,deadline,['rev-parse','--verify',`${input.sourceOid}^{tree}`],'read-only');
@@ -322,7 +322,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       return{targetOid,sourceOid,sourceTreeOid,fastForward};
     },
     async captureDiff(input,deadline){
-      const before=await integration(input,deadline),{scope}=before;
+      const before=await integration(input,deadline,undefined,true),{scope}=before;
       if(before.targetOid!==input.targetOid)throw new Error('TARGET_MOVED');
       const options=['-C',scope.checkout,'diff','--no-ext-diff','--no-textconv','--no-renames'];
       const names=await git(scope,deadline,[...options,'--name-only','-z',input.targetOid,input.sourceOid,'--'],'read-only',2097153);
@@ -333,7 +333,7 @@ export function createWorkspaceMutator(options:{readonly beforeRemove?:()=>Promi
       if(result.code||result.stderr||!result.stdout.isWellFormed()||result.stdout.includes('\uFFFD'))throw new Error('WORKSPACE_UNSAFE');
       const diff=Buffer.from(result.stdout);
       if(diff.length>2097152)throw new Error('REVIEW_SCOPE_LIMIT');
-      const after=await integration(input,deadline);
+      const after=await integration(input,deadline,undefined,true);
       if(after.targetOid!==before.targetOid||after.sourceTreeOid!==before.sourceTreeOid)throw new Error('REVIEW_STALE');
       return{sourceOid:after.sourceOid,sourceTreeOid:after.sourceTreeOid,targetOid:after.targetOid,fastForward:after.fastForward,fileCount:listed.length,diff};
     },
