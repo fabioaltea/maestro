@@ -127,6 +127,10 @@ function writeRecord(db:Database.Database,change:Extract<ProfileWrite,{kind:'rec
  if(rev){
    if(rev.revisionId!==change.admission.requestId||rev.revisionId!==value.revisionId||rev.entityId!==id||rev.previousId!==(prior?.revisionId??null)||
      !/^[a-f0-9]{64}$/.test(rev.digest)||!Number.isFinite(Date.parse(rev.createdAt)))throw new Error('INVALID_REQUEST');
+   if(['create','revise'].includes(intent.action)&&(rev.artifactId!==intent.payload.bundleArtifactId||
+     intent.payload.artifactDigest!==undefined&&rev.digest!==intent.payload.artifactDigest)||
+     intent.action==='tool.import'&&(rev.artifactId!==intent.payload.manifestArtifactId||rev.digest!==intent.payload.sourceDigest)||
+     intent.action==='tool.enable'&&rev.digest!==intent.payload.sourceDigest)throw new Error('APPROVAL_STALE');
    if(rev.artifactId)reference(db,rev.artifactId,rev.digest,rev.byteLength,verify);
    db.prepare('INSERT INTO profiles_revisions VALUES(?,?,?,?,?,?,?,?)').run(rev.revisionId,id,rev.previousId,rev.digest,rev.artifactId,
      rev.byteLength,JSON.stringify(rev.document),rev.createdAt);
@@ -151,7 +155,8 @@ export function commitProfileState(db:Database.Database,change:ProfileWrite,ledg
    if(change.kind==='preview'){
      const {preview}=change;
      if(intent.action!=='skill.preview'||preview.previewId!==admission.requestId||intent.targetId!==preview.previewId||
-       preview.projectId!==intent.projectId||preview.expiresAtMs<=admission.nowMs||preview.expiresAtMs>admission.nowMs+300000)
+       preview.projectId!==intent.projectId||preview.scope!==intent.payload.scope||preview.ownerProfileId!==intent.payload.ownerProfileId||
+       preview.sourceDigest!==intent.payload.sourceDigest||preview.expiresAtMs<=admission.nowMs||preview.expiresAtMs>admission.nowMs+300000)
        throw new Error('INVALID_REQUEST');
      reference(db,preview.artifactId,preview.artifactDigest,preview.byteLength,verify);
      db.prepare('INSERT INTO profiles_previews VALUES(?,?,?)').run(preview.previewId,preview.artifactId,JSON.stringify(preview));

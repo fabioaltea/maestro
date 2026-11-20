@@ -1,8 +1,10 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {featureObject} from '../../domain/features/bundle.js';
 import {PROFILE_LIMITS,profileTransition} from '../../domain/profiles/model.js';
-import {intersectProfilePermissions,parseProfilePermissions,permitsProfilePermissions,type ProfilePermission} from '../../domain/profiles/permissions.js';
-import {requireSkillSelection} from '../../domain/profiles/skills.js';
+import {intersectProfilePermissions,parseProfilePermissions,permitsProfilePermissions,PROFILE_PERMISSIONS,type ProfilePermission} from '../../domain/profiles/permissions.js';
+import {parseToolManifest,requireToolEnable} from '../../domain/profiles/tools.js';
+import {createProfileTools} from './tools.js';
+import {appliesProfileScope,requireSkillSelection} from '../../domain/profiles/skills.js';
 import {createProfileSkills} from './skills.js';
 import {parseProfileDocument,type ProfileDocument} from '../../domain/profiles/resolve.js';
 import {publicProfileOperation} from '../../protocol/profile.js';
@@ -19,9 +21,16 @@ export const profileHash=(value:unknown)=>createHash('sha256').update(JSON.strin
 const baseCapability={policyRevision:'1',allow:['WORKSPACE_READ'] as readonly ProfilePermission[],deny:[] as readonly ProfilePermission[]};
 export const LOCAL_PROFILE_CAPABILITY={...baseCapability,digest:profileHash(baseCapability)};
 type Params=Readonly<Record<string,unknown>>;
-export function createProfileRegistry(context:ProfileRuntimeContext){
+type PermissionLayer={allow:readonly ProfilePermission[];deny:readonly ProfilePermission[]};
+interface ProfilePolicy {readonly runtime:PermissionLayer;readonly project:PermissionLayer}
+export function createProfileRegistry(context:ProfileRuntimeContext,policy?:ProfilePolicy){
  const {storage,paths,instanceId}=context,authorization=createWorkflowAuthorization(context);
  const query=storage.readProfileState!.bind(storage);
+ const runtime=policy?.runtime??baseCapability,projectLayer=policy?.project??baseCapability;
+ const permissionsLayers=[{allow:PROFILE_PERMISSIONS,deny:[]},projectLayer,runtime];
+ const authorizedCapabilities={policyRevision:baseCapability.policyRevision,allow:intersectProfilePermissions(permissionsLayers),
+   deny:PROFILE_PERMISSIONS.filter(permission=>permissionsLayers.some(layer=>layer.deny.includes(permission)))};
+ const capability={...authorizedCapabilities,digest:profileHash(authorizedCapabilities)};
  async function project(projectId:string|null){
    if(projectId===null)return null;
    const current=(await storage.getProject(projectId))?.project;
@@ -45,6 +54,10 @@ export function createProfileRegistry(context:ProfileRuntimeContext){
    let raw:unknown;
    try{raw=JSON.parse(text);}catch{throw new Error('INVALID_REQUEST');}
    return{artifact,raw};
+ }
+ function effective(profile:ProfileRecord,doc:ProfileDocument){
+   const layers=profile.alias==='project-architect'?[...permissionsLayers,baseCapability]:permissionsLayers;
+   return intersectProfilePermissions([...layers,doc.permissions]);
  }
  function makeIntent(store:{storeId:string;ownerUid:number},action:string,targetId:string,projectId:string|null,
    expectedRevision:string|null,configRevision:string|null,payload:Params):WorkflowIntent{
@@ -119,7 +132,7 @@ export function createProfileRegistry(context:ProfileRuntimeContext){
    const prior=await existing(requestId,'resolve',intent=>intent.targetId===params.profileId&&intent.projectId===params.projectId&&
      intent.payload.revisionId===params.revisionId&&intent.payload.providerCapabilityDigest===params.providerCapabilityDigest);
    if(prior)return prior;
-   if(params.providerCapabilityDigest!==LOCAL_PROFILE_CAPABILITY.digest)throw new Error('CAPABILITY_UNAVAILABLE');
+   if(params.providerCapabilityDigest!==capability.digest)throw new Error('CAPABILITY_UNAVAILABLE');
    const profile=await record(String(params.profileId)),projectId=String(params.projectId),p=await project(projectId);
    if(!p||profile.kind!=='PROFILE'||profile.projectId!==null&&profile.projectId!==projectId)throw new Error('PROFILE_NOT_FOUND');
    const profileRevision=await revision(profile,String(params.revisionId)),doc=parseProfileDocument(profileRevision.document);
@@ -127,18 +140,18 @@ export function createProfileRegistry(context:ProfileRuntimeContext){
      const {artifact}=await readBundle(profileRevision.artifactId);
      if(artifact.sha256!==profileRevision.digest)throw new Error('ARTIFACT_CORRUPT');
    }
-   const effectivePermissions=intersectProfilePermissions([baseCapability,doc.permissions]);
+   const effectivePermissions=effective(profile,doc);
    if(!permitsProfilePermissions(effectivePermissions,doc.permissions.required))throw new Error('CAPABILITY_UNAVAILABLE');
    const selected=await resolveDependencies(doc,effectivePermissions,projectId,profile.entityId);
    if(profileRevision.byteLength+selected.byteLength>PROFILE_LIMITS.resolutionBytes)throw new Error('CONTEXT_LIMIT');
    const snapshot={schemaVersion:1,policyRevision:baseCapability.policyRevision,profileId:profile.entityId,profileRevisionId:profileRevision.revisionId,
-     profileDigest:profileRevision.digest,projectId,projectRevision:p.configRevision,providerCapabilityDigest:LOCAL_PROFILE_CAPABILITY.digest,
+     profileDigest:profileRevision.digest,projectId,projectRevision:p.configRevision,providerCapabilityDigest:capability.digest,
      effectivePermissions,skills:selected.skills,tools:selected.tools,omitted:selected.omitted,validationRefs:doc.validationRefs,preferredProviders:doc.preferredProviders};
    const intent=makeIntent(store,'resolve',profile.entityId,projectId,profile.stateRevision,p.configRevision,
-     {revisionId:profileRevision.revisionId,providerCapabilityDigest:LOCAL_PROFILE_CAPABILITY.digest});
+     {revisionId:profileRevision.revisionId,providerCapabilityDigest:capability.digest});
    return save({kind:'resolution',admission:admit(requestId,intent,null),
      resolution:{resolutionId:requestId,profileId:profile.entityId,revisionId:profileRevision.revisionId,projectId,projectRevision:p.configRevision,
-       capabilityDigest:LOCAL_PROFILE_CAPABILITY.digest,digest:profileHash(snapshot),snapshot,
+       capabilityDigest:capability.digest,digest:profileHash(snapshot),snapshot,
        dependencyVersions:[version(profile,profileRevision),...selected.versions],createdAt:new Date().toISOString()}});
  }
  async function resolveDependencies(doc:ProfileDocument,permissions:readonly ProfilePermission[],projectId:string,profileId:string){
@@ -165,11 +178,23 @@ export function createProfileRegistry(context:ProfileRuntimeContext){
        }
      }
    }
-   if(doc.toolRefs.length)throw new Error('TOOL_DISABLED');
-   return{versions,skills,tools:[] as unknown[],omitted,byteLength};
-
+   const tools=[];
+   for(const ref of doc.toolRefs){
+     const {record:selected}=await query({kind:'record',id:ref.entityId});
+     if(!selected||selected.kind!=='TOOL'||selected.state!=='ENABLED'||selected.revisionId!==ref.revisionId||
+       !appliesProfileScope(selected,projectId,profileId))throw new Error('TOOL_DISABLED');
+     const tool=await revision(selected,ref.revisionId);
+     if(!tool.artifactId)throw new Error('ARTIFACT_CORRUPT');
+     const {artifact,raw}=await readBundle(tool.artifactId);
+     if(artifact.sha256!==tool.digest)throw new Error('ARTIFACT_CORRUPT');
+     const manifest=parseToolManifest(raw),allowed=requireToolEnable(manifest,tool.document.enabledPermissions);
+     if(!permitsProfilePermissions(permissions,allowed))throw new Error('PERMISSION_CONFLICT');
+     byteLength+=tool.byteLength;versions.push(version(selected,tool));
+     tools.push({entityId:selected.entityId,revisionId:tool.revisionId,digest:tool.digest,artifactId:tool.artifactId,permissions:allowed,kind:manifest.kind});
+   }
+   return{versions,skills,tools,omitted,byteLength};
  }
- return{context,authorization,query,project,record,revision,readBundle,makeIntent,grant,admit,save,existing,approve,write,resolve,checkExisting};
+ return{context,authorization,capability,effective,query,project,record,revision,readBundle,makeIntent,grant,admit,save,existing,approve,write,resolve,checkExisting};
 }
 
 export function next(revision:string){return String(BigInt(revision)+1n);}
@@ -180,14 +205,14 @@ export function documentRevision(value:ProfileRecord,previous:ProfileRecord|unde
    artifactId:artifact?.artifactId??null,byteLength:artifact?.expectedBytes??Buffer.byteLength(JSON.stringify(document)),document,createdAt:value.updatedAt};
 }
 export type ProfileRegistry=ReturnType<typeof createProfileRegistry>;
-export function composeProfileServices(context:ProfileRuntimeContext):Readonly<Record<string,ProfileAction>>{
- const registry=createProfileRegistry(context),skills=createProfileSkills(registry);
+export function composeProfileServices(context:ProfileRuntimeContext,policy?:ProfilePolicy):Readonly<Record<string,ProfileAction>>{
+ const registry=createProfileRegistry(context,policy),skills=createProfileSkills(registry),tools=createProfileTools(registry);
  return{
-   'profile.capabilities':async()=>({capability:LOCAL_PROFILE_CAPABILITY}),
+   'profile.capabilities':async()=>({capability:registry.capability}),
    'profile.prepare':(params,peer)=>{
      const intent=featureObject(params.intent),expected=featureObject(params.expectedRevisions).stateRevision;
      const action=String(params.action),stateRevision=typeof expected==='string'?expected:null;
-     return action.startsWith('skill.')?skills.prepare(action,intent,stateRevision,peer):registry.approve(action,intent,stateRevision,peer);
+     return action.startsWith('skill.')?skills.prepare(action,intent,stateRevision,peer):action.startsWith('tool.')?tools.prepare(action,intent,stateRevision,peer):registry.approve(action,intent,stateRevision,peer);
    },
    'profile.create':(params,peer)=>registry.write('create',params,peer),
    'profile.revise':(params,peer)=>registry.write('revise',params,peer),
@@ -197,5 +222,8 @@ export function composeProfileServices(context:ProfileRuntimeContext):Readonly<R
    'profile.skill.preview':skills.preview,
    'profile.skill.import':(params,peer)=>skills.write('skill.import',params,peer),
    'profile.skill.bind':(params,peer)=>skills.write('skill.bind',params,peer),
+   'profile.tool.import':(params,peer)=>tools.write('tool.import',params,peer),
+   'profile.tool.enable':(params,peer)=>tools.write('tool.enable',params,peer),
+   'profile.suggest':tools.suggest,
  };
 }

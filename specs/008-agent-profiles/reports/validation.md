@@ -45,3 +45,7 @@ Preview e import con handle locale, hash, identità della sorgente e tre scope. 
 ## T025–T026 — CLI ed Electron US2
 
 Preview da picker nativo con path privato via stdin, originale interrogabile per UUID e conferma separata per import/associazione. **2 PASS** contract CLI e **1 PASS** E2E skill, oltre alla regressione US1.
+
+## T027–T031 — tool, permessi e revoca
+
+Manifest LOCAL_COMMAND su CommandSpec opaco; MCP registrabile e privo di capability di esecuzione. Grant di enable separato dall’import. Lattice con intersezione di allow e precedenza dei deny. Lo snapshot verificato ricontrolla scope, revisioni, digest e artefatti. La revoca impedisce nuove risoluzioni e rende STALE lo snapshot precedente. **3 PASS** iniziali e verifica finale nel checkpoint T034.

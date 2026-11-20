@@ -1,6 +1,8 @@
+import {createHash} from 'node:crypto';
 import type {StoragePort} from '../../ports/storage.js';
 import type {ProfileKind} from '../../domain/profiles/model.js';
 import type {ProfilePreview,ProfileResolution,ProfileRevision} from '../../ports/profile.js';
+import {readSealedFeatureArtifact} from '../features/artifacts.js';
 import {featureObject} from '../../domain/features/bundle.js';
 import {publicProfileOperation,requireProfileEnvelope,validateProfileParams} from '../../protocol/profile.js';
 
@@ -29,6 +31,26 @@ export async function isCurrentProfileResolution(storage:StoragePort,resolution:
    if(!record||record.state==='DISABLED'||record.revisionId!==dependency.revisionId||record.stateRevision!==dependency.stateRevision)return false;
  }
  return true;
+}
+export function createProfileResolutionPort(storage:StoragePort){
+ return{async current(resolutionId:string,projectId:string,capabilityDigest:string){
+   if(!storage.readProfileState)throw new Error('PROFILE_NOT_INITIALIZED');
+   const {resolution}=await storage.readProfileState({kind:'resolution',id:resolutionId});
+   if(!resolution||resolution.projectId!==projectId||resolution.capabilityDigest!==capabilityDigest||
+     !await isCurrentProfileResolution(storage,resolution))throw new Error('PROFILE_STALE');
+   if(createHash('sha256').update(JSON.stringify(resolution.snapshot)).digest('hex')!==resolution.digest)throw new Error('STATE_CORRUPT');
+   for(const dependency of resolution.dependencyVersions){
+     const {revision}=await storage.readProfileState({kind:'revision',id:dependency.revisionId});
+     if(!revision||revision.entityId!==dependency.entityId)throw new Error('PROFILE_STALE');
+     if(revision.artifactId){
+       const {artifact}=await storage.readFeatureState!({kind:'artifact',id:revision.artifactId});
+       const verified=await readSealedFeatureArtifact(storage,revision.artifactId,'BUNDLE',262144,artifact?.targetId??undefined);
+       if(verified.artifact.sha256!==revision.digest)throw new Error('ARTIFACT_CORRUPT');
+     }
+   }
+   if(!await isCurrentProfileResolution(storage,resolution))throw new Error('PROFILE_STALE');
+   return resolution;
+ }};
 }
 export function createProfileReader(options:{storage:StoragePort;storeId:string;offline:boolean}){
  const {storage,storeId,offline}=options,query=storage.readProfileState?.bind(storage),freshness=offline?'LAST_KNOWN':'CURRENT';

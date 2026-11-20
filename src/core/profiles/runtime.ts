@@ -5,6 +5,7 @@ import type {ProfileImportPort} from '../../ports/profile.js';
 import {PROFILE_READ_METHODS} from '../../protocol/profile.js';
 import {createProfileImportReader} from '../../platform/macos/extensions/import-reader.js';
 import {composeProfileServices} from './registry.js';
+import {createProfileResolutionPort} from './read.js';
 import {createProfileDispatch,type ProfileAction} from './dispatch.js';
 
 export interface ProfileRuntimeContext{
@@ -27,6 +28,7 @@ export function createProfileRuntime(options:Omit<ProfileRuntimeContext,'source'
    };
  }
  return{
+   resolutions:createProfileResolutionPort(options.storage),
    methods:[...PROFILE_READ_METHODS,...Object.keys(actions)],
    dispatch:createProfileDispatch(options.storage,actions),
    start(){accepting=true;},

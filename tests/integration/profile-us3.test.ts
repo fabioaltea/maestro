@@ -29,7 +29,12 @@ test('tool manifests stay inert, MCP remains unavailable, and revoke invalidates
  await f.ok('resolve',params);
  const resolved=(await f.ok('resolution.get',{resolutionId:params.requestId})).resolution as {snapshot:{tools:unknown[]}};
  assert.equal(resolved.snapshot.tools.length,1);
+ const {createProfileResolutionPort}=await import(new URL('../../src/core/profiles/read.js',import.meta.url).href);
+ const port=createProfileResolutionPort(f.storage);
+ assert.equal((await port.current(params.requestId,f.projectId,cap.digest)).resolutionId,params.requestId);
+ await assert.rejects(port.current(params.requestId,f.projectId,'c'.repeat(64)),/PROFILE_STALE/);
  const discard=await f.prepare('disable',{targetId:enabled.entityId,expectedStateRevision:'2'},'2');await f.mutate('disable',discard.grantId);
  assert.equal((await f.ok('resolution.get',{resolutionId:params.requestId})).currentness,'STALE');
+ await assert.rejects(port.current(params.requestId,f.projectId,cap.digest),/PROFILE_STALE/);
  assert.equal(((await f.call('resolve',{...params,requestId:randomUUID()})).data as {code:string}).code,'TOOL_DISABLED');
 });
