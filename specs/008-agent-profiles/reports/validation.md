@@ -49,3 +49,19 @@ Preview da picker nativo con path privato via stdin, originale interrogabile per
 ## T027–T031 — tool, permessi e revoca
 
 Manifest LOCAL_COMMAND su CommandSpec opaco; MCP registrabile e privo di capability di esecuzione. Grant di enable separato dall’import. Lattice con intersezione di allow e precedenza dei deny. Lo snapshot verificato ricontrolla scope, revisioni, digest e artefatti. La revoca impedisce nuove risoluzioni e rende STALE lo snapshot precedente. **3 PASS** iniziali e verifica finale nel checkpoint T034.
+
+## T034 — verifica finale
+
+| Verifica | Esito |
+| --- | --- |
+| Build, build:test, typecheck core e desktop, build desktop e lint | PASS |
+| Profilo unit/contract/integration e regressione API/schema 006–007 | 33 PASS, 0 FAIL, 0 SKIP in 16,3 s |
+| Desktop unit e contract | 54 PASS, 0 FAIL, 0 SKIP |
+| Playwright Electron `profile-flow.spec.ts` | 3 PASS, 0 FAIL, 0 SKIP in 18,6 s |
+
+| Requisiti | Evidenza |
+| --- | --- |
+| FR-001–003 | Sei seed inerti, grant, confronto di capability, revisioni immutabili, snapshot storico. |
+| FR-004–006 | Tre scope, link e traversal rifiutati, sorgente modificata, alias con prevalenza esplicita, associazioni revisionate. |
+| FR-007–009 | Manifest chiuso, permessi negati prima dell’abilitazione, MCP indisponibile, revoca, suggerimenti locali. |
+| FR-010–012 | Query immutabile offline, stesso UUID e CAS, eventi ridotti a metadati, quote e riserva workflow. |
