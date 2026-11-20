@@ -22,3 +22,7 @@ Capability della build standard per consultazione, preparazione e creazione snap
 ## Ripresa US1
 
 I controlli 007 sul tree sorgente hanno superato la prova con job host macOS e registry di fixture su loopback. Il diff può essere letto con il target in uso, conservando HEAD e contenuto del checkout esterno. La prenotazione Git per l'integrazione continua a richiedere il target libero. Grant `execution.start` distinto per il feedback, provato con host 009 di fixture. L'host di produzione per correzioni resta subordinato alla qualifica 009.
+
+## Ripresa US2
+
+Sul pin Git Apple già qualificato, il candidate divergente usa `merge-tree` e `commit-tree` in staging. Il sandbox di staging circoscrive le scritture al worktree posseduto, al suo amministrativo e agli oggetti Git. Il tentativo con il comando completo `git merge` richiedeva `packed-refs.lock` ed era bloccato. Il CAS resta limitato alla ref target e al relativo reflog. Il test locale esercita 006, 007 e il recovery senza replica del CAS.

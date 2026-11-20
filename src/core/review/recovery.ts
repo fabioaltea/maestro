@@ -12,5 +12,6 @@ export async function settlePublishedIntegration(options:{storage:StoragePort;in
  const proof=requireRefAttribution(expected,observed.proof);
  await storage.commitReviewState!({kind:'integration-ref',...command,proof});
  await git.syncGuard(scope,guard,deadline,expected.candidate);
+ await storage.commitReviewState!({kind:'integration-sync',...command});
  return storage.commitReviewState!({kind:'integration-finish',...command});
 }

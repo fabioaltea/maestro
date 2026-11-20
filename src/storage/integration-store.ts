@@ -193,12 +193,22 @@ export function commitIntegrationState(db:Database.Database,c:IntegrationChange,
    const expected={requestId:c.requestId,old:integration.targetOid,candidate:selected.candidateOid};
    if(c.kind==='integration-ref'){
      const proof=requireRefAttribution(expected,c.proof);
+     if(integration.phase==='GUARD_SYNCED'){
+       requireRefAttribution(expected,integration.proof);
+       return{operation,inserted:false};
+     }
      db.prepare("UPDATE review_integrations SET phase='REF_UPDATED',resulting_oid=?,proof=? WHERE integration_id=?")
        .run(proof.candidate,JSON.stringify(proof),c.requestId);
      return{operation,inserted:false};
    }
-   if(integration.phase!=='REF_UPDATED')throw new Error('INTEGRATION_UNKNOWN');
-   requireRefAttribution(expected,integration.proof);
+   const proof=requireRefAttribution(expected,integration.proof);
+   if(c.kind==='integration-sync'){
+     if(integration.phase!=='REF_UPDATED'&&integration.phase!=='GUARD_SYNCED')throw new Error('INTEGRATION_UNKNOWN');
+     db.prepare("UPDATE review_integrations SET phase='GUARD_SYNCED',proof=? WHERE integration_id=?")
+       .run(JSON.stringify({...proof,guardSynced:true}),c.requestId);
+     return{operation,inserted:false};
+   }
+   if(integration.phase!=='GUARD_SYNCED'||integration.proof?.guardSynced!==true)throw new Error('INTEGRATION_UNKNOWN');
    db.prepare("UPDATE review_integrations SET phase='FINALIZED' WHERE integration_id=?").run(c.requestId);
    db.prepare("UPDATE workspaces_effects SET phase='RESOLVED' WHERE request_id=?").run(selected.candidateId);
    return finish(ledger.complete(c.requestId,{...operation.result,resultingOid:expected.candidate}));

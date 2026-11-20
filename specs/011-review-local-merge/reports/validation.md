@@ -44,6 +44,10 @@ Otto test unitari e di contratto mirati PASS. Le richieste prepare di candidate,
 
 Undici test di regressione core PASS. Il percorso Git divergente lascia entrambi i parent e il conflitto resta in staging detached. La fixture completa registra guard e staging in 006, prepara 007 sullo staging, blocca il candidate senza prove, consuma grant distinti per approvazione e integrazione e recupera dopo il CAS. Dieci retry con UUID originale restituiscono l’integrazione già registrata. L’iniezione di un file nel guard blocca il sync e conserva il file.
 
+## Ripresa T024
+
+Build, lint e cinque prove native/contratto mirate PASS. Il writer registra `REF_INTENT`, riconosce il CAS tramite la riga di reflog dell’UUID, persiste `REF_UPDATED` e la prova `GUARD_SYNCED`, quindi finalizza il ledger. La build standard compone il servizio quando sono disponibili il mutatore Git, le risorse possedute 006 e la validazione 007. I conflitti e le attribuzioni incerte conservano i worktree.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

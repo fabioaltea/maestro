@@ -169,7 +169,9 @@ test('candidate ownership, 007 evidence and distinct grants survive daemon loss 
  assert.equal((await f.repositories.git(f.repo,['rev-parse',targetRef])).trim(),candidate.candidateOid);
  const instanceId=startSuccessor(f),successor=createReviewRuntime({...options,instanceId,runCheck:async()=>assert.fail('check replay')});
  await successor.recover();
- assert.equal(f.store.readReviewState({kind:'integration',id:integrationId}).integration?.phase,'FINALIZED');
+ const recovered=f.store.readReviewState({kind:'integration',id:integrationId}).integration;
+ assert.equal(recovered?.phase,'FINALIZED');
+ assert.deepEqual(recovered?.proof,{requestId:integrationId,old:targetOid,candidate:candidate.candidateOid,guardSynced:true});
  f.store.transitionInstance(instanceId,'RUNNING');successor.start();
  const retried=await Promise.all(Array.from({length:10},()=>call(successor,'review.integrate',request)));
  for(const reply of retried)assert.equal((data(reply).operation as {requestId:string;outcome:string}).requestId,integrationId);

@@ -51,7 +51,7 @@ export interface ReviewIntegrationDecision {readonly decisionId:string;readonly 
 export interface ReviewIntegrationRecord {
  readonly integrationId:string;readonly candidateId:string;readonly decisionId:string;readonly repositoryKey:string;
  readonly targetRef:string;readonly targetOid:string;readonly resultingOid:string|null;
- readonly phase:'REF_INTENT'|'REF_UPDATED'|'GUARD_SYNCED'|'FINALIZED'|'RECONCILING';readonly proof:RefAttribution|null;
+ readonly phase:'REF_INTENT'|'REF_UPDATED'|'GUARD_SYNCED'|'FINALIZED'|'RECONCILING';readonly proof:(RefAttribution&{readonly guardSynced?:true})|null;
 }
 export interface CandidatePreparationScope {
  readonly instanceId:string;readonly reviewDigest:string;readonly workspaceRevision:string;
@@ -68,7 +68,7 @@ export type IntegrationChange=
  |{readonly kind:'candidate-finish';readonly requestId:string;readonly instanceId:string;readonly candidateOid:string;readonly treeOid:string}
  |{readonly kind:'candidate-block';readonly requestId:string;readonly instanceId:string;readonly error:string;readonly recovering?:true}
  |{readonly kind:'integration-ref';readonly requestId:string;readonly instanceId:string;readonly proof:RefAttribution;readonly recovering?:true}
- |{readonly kind:'integration-verify'|'integration-finish'|'integration-block';readonly requestId:string;readonly instanceId:string;readonly recovering?:true};
+ |{readonly kind:'integration-verify'|'integration-sync'|'integration-finish'|'integration-block';readonly requestId:string;readonly instanceId:string;readonly recovering?:true};
 export type ReviewChange=
  |{readonly kind:'create';readonly admission:WorkflowAdmission;readonly snapshot:ReviewRecord}
  |{readonly kind:'request-changes'|'validate-admit';readonly admission:WorkflowAdmission}
