@@ -1,5 +1,15 @@
 // Public core v1 safe error catalog; no runtime dependency on core adapters.
 export const CORE_ERRORS = {
+  "SCHEDULER_NOT_INITIALIZED": {"code": "SCHEDULER_NOT_INITIALIZED", "message": "Archivio coda non inizializzato.", "nextAction": "Avviare il servizio per aggiornare lo schema."},
+  "QUEUE_FULL": {"code": "QUEUE_FULL", "message": "La coda locale è piena.", "nextAction": "Consultare i job prima di accodarne altri."},
+  "RESOURCE_WAIT": {"code": "RESOURCE_WAIT", "message": "Risorse locali in attesa.", "nextAction": "Consultare stato e reservation nella coda."},
+  "PROVIDER_WAIT": {"code": "PROVIDER_WAIT", "message": "Disponibilità del provider in attesa.", "nextAction": "Consultare la prossima osservazione autorizzata."},
+  "QUOTA_RESET_UNKNOWN": {"code": "QUOTA_RESET_UNKNOWN", "message": "Reset della quota sconosciuto.", "nextAction": "Scegliere esplicitamente se e quando riprovare."},
+  "NO_COMPATIBLE_PROVIDER": {"code": "NO_COMPATIBLE_PROVIDER", "message": "Provider compatibile non disponibile.", "nextAction": "Verificare capability, scope e consenso."},
+  "COST_UNKNOWN": {"code": "COST_UNKNOWN", "message": "Stima di costo assente o non confrontabile.", "nextAction": "Fornire una stima corrente e comparabile."},
+  "POLICY_REVOKED": {"code": "POLICY_REVOKED", "message": "Policy revocata o superata.", "nextAction": "Rivedere la policy prima di riprendere."},
+  "RETRY_EXHAUSTED": {"code": "RETRY_EXHAUSTED", "message": "Budget di tentativi esaurito.", "nextAction": "Consultare l’operazione e confermare un nuovo intento."},
+  "RESERVATION_UNKNOWN": {"code": "RESERVATION_UNKNOWN", "message": "Esito della reservation non dimostrato.", "nextAction": "Consultare il job originale e la prova di uscita."},
   "EXECUTION_NOT_INITIALIZED": {"code": "EXECUTION_NOT_INITIALIZED", "message": "Archivio esecuzione non inizializzato.", "nextAction": "Avviare il servizio per aggiornare l’archivio."},
   "EXECUTION_UNSUPPORTED": {"code": "EXECUTION_UNSUPPORTED", "message": "Capability di esecuzione non qualificata.", "nextAction": "Consultare le capacità verificate del provider."},
   "EXECUTION_APPROVAL_STALE": {"code": "EXECUTION_APPROVAL_STALE", "message": "Approvazione esecuzione scaduta o superata.", "nextAction": "Riesaminare il contesto corrente."},

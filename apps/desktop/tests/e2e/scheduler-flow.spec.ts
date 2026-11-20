@@ -1,0 +1,21 @@
+import {test,expect} from '@playwright/test';
+import {createScratch} from '../fixtures/desktop.ts';
+import {chooseDirectory,launchDesktop} from '../fixtures/electron.ts';
+
+test('the queue is visible online and offline without pretending an executor is configured',async()=>{
+ const f=await createScratch();
+ try{
+   expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
+   const {app,page}=await launchDesktop(f);
+   try{
+     await chooseDirectory(app,f.archive);await page.getByRole('button',{name:'Apri archivio',exact:true}).click();
+     await page.getByRole('button',{name:'Coda',exact:true}).click();
+     const queue=page.getByRole('region',{name:'Coda sessioni'});
+     await expect(queue.getByText('Nessun job in coda.')).toBeVisible();
+     await expect(queue.getByText(/executor qualificato/)).toBeVisible();
+     expect((await f.cli(['daemon','stop'])).result.outcome).toBe('SUCCEEDED');
+     await queue.getByRole('button',{name:'Aggiorna coda'}).click();
+     await expect(queue.getByText(/Servizio offline/)).toBeVisible();
+   }finally{await app.close();}
+ }finally{await f.cleanup();}
+});
