@@ -5,7 +5,7 @@ import { SQLiteStore, type StorageOptions } from './sqlite-store.js';
 import { foundationError, type SafeError } from '../domain/errors.js';
 import type { StoragePort } from '../ports/storage.js';
 
-export const methods = ['commitProfileState', 'readProfileState', 'commitEnvironmentState', 'readEnvironmentState', 'settleWorkspaceClaim', 'commitWorkspaceLease', 'commitWorkspaceState', 'commitFeatureState', 'readWorkflowArtifact', 'reconcileWorkflowArtifacts', 'readWorkspaceState', 'readFeatureState', 'reserveDiscoveryArtifact', 'publishDiscoveryArtifact', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'reconcileDiscoveryArtifacts', 'getDiscoveryBudget', 'discardDiscoveryPreview', 'readDiscoveryMetadata', 'commitDiscoveryMetadata', 'admitDiscoveryOperation', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'saveDiscoveryGrant', 'captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
+export const methods = ['commitExecutionState', 'readExecutionState', 'commitProfileState', 'readProfileState', 'commitEnvironmentState', 'readEnvironmentState', 'settleWorkspaceClaim', 'commitWorkspaceLease', 'commitWorkspaceState', 'commitFeatureState', 'readWorkflowArtifact', 'reconcileWorkflowArtifacts', 'readWorkspaceState', 'readFeatureState', 'reserveDiscoveryArtifact', 'publishDiscoveryArtifact', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'reconcileDiscoveryArtifacts', 'getDiscoveryBudget', 'discardDiscoveryPreview', 'readDiscoveryMetadata', 'commitDiscoveryMetadata', 'admitDiscoveryOperation', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'saveDiscoveryGrant', 'captureEventState', 'recordEvents', 'drainEvents', 'getEventState', 'listEvents', 'listTickets', 'reopenOperation', 'retireTicket', 'reconcileInstanceAbsent', 'readSnapshot', 'getOperation', 'acceptOperation', 'setOperationPhase',
   'getProject', 'listProjects', 'commitProjectRegistration', 'commitProjectObservation', 'commitProjectUpdate', 'commitProjectRemoval', 'getRequestReservation', 'acceptProjectOperation', 'getProjectOperation', 'listPendingProjectOperations', 'setProjectOperationPhase', 'completeProjectOperation',
   'resumeBlocked', 'cancelIssuedTickets', 'prepareShutdown', 'recordInstanceError', 'blockInstance', 'completeOperation', 'issueTicket', 'claimTicket', 'cancelTicket', 'getTicket', 'recordInstance',
   'transitionInstance', 'saveResource', 'listResources', 'listResourceSummaries', 'recordControllerAttempt', 'getControllerAttempt', 'finishControllerAttempt', 'close'] as const;
@@ -34,7 +34,7 @@ if (!isMainThread) {
     store = new SQLiteStore(workerData as StorageOptions);
     port.postMessage({ ready: true });
     let queue = Promise.resolve();
-    const reads = new Set<Method>(['readProfileState', 'readWorkflowArtifact', 'readEnvironmentState', 'readWorkspaceState', 'readFeatureState', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'listResourceSummaries', 'getControllerAttempt']);
+    const reads = new Set<Method>(['readExecutionState', 'readProfileState', 'readWorkflowArtifact', 'readEnvironmentState', 'readWorkspaceState', 'readFeatureState', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getEventState', 'listEvents', 'getTicket', 'listTickets', 'listResources', 'listResourceSummaries', 'getControllerAttempt']);
     port.on('message', (request: Request) => {
       const execute = async () => {
         if (!Number.isSafeInteger(request.id) || !methods.includes(request.method) || !Array.isArray(request.args)) {
@@ -129,7 +129,7 @@ export async function openStorage(options: StorageOptions, host: { observeWorker
 
   function call<T>(method: Method, args: unknown[]): Promise<T> {
     if (closing || exited) return Promise.reject(new Error('PERSISTENCE_UNAVAILABLE'));
-    if (failure && !['readProfileState', 'readWorkflowArtifact', 'readEnvironmentState', 'readWorkspaceState', 'readFeatureState', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'listResourceSummaries', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
+    if (failure && !['readExecutionState', 'readProfileState', 'readWorkflowArtifact', 'readEnvironmentState', 'readWorkspaceState', 'readFeatureState', 'readDiscoveryManifestPage', 'readDiscoveryArtifact', 'getDiscoveryBudget', 'readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readSnapshot', 'getOperation', 'getProject', 'listProjects', 'getRequestReservation', 'getProjectOperation', 'listPendingProjectOperations', 'getTicket', 'listTickets', 'getEventState', 'listEvents', 'listResources', 'listResourceSummaries', 'getControllerAttempt', 'close'].includes(method)) return Promise.reject(new Error(failure.code));
     const id = ++nextId;
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -155,6 +155,8 @@ export function createStorageProxy(call: <T>(method: Method, args: unknown[]) =>
     settleWorkspaceClaim: claim => call('settleWorkspaceClaim', [claim]),
     commitWorkspaceLease: change => call('commitWorkspaceLease', [change]),
     commitWorkspaceState: change => call('commitWorkspaceState', [change]),
+    commitExecutionState: change => call('commitExecutionState', [change]),
+    readExecutionState: query => call('readExecutionState', [query]),
     commitEnvironmentState: change => call('commitEnvironmentState', [change]),
     commitProfileState: change => call('commitProfileState', [change]),
     readProfileState: query => call('readProfileState', [query]),

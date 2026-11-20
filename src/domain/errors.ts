@@ -1,4 +1,10 @@
 const catalog = {
+  EXECUTION_NOT_INITIALIZED: ['Archivio di esecuzione non inizializzato.', 'Avviare esplicitamente il servizio per aggiornare lo schema.', false],
+  EXECUTION_UNSUPPORTED: ['Capability di esecuzione non qualificata.', 'Consultare le capacità verificate del provider.', false],
+  EXECUTION_APPROVAL_STALE: ['Consenso di esecuzione non più corrente.', 'Rivedere gli input di esecuzione e richiedere un nuovo grant.', false],
+  CHECKPOINT_STALE: ['Checkpoint o worktree non più corrispondenti.', 'Verificare il worktree prima di riprendere.', false],
+  PROCESS_UNKNOWN: ['Prova di uscita del processo assente.', 'Consultare il run originale e riconciliare.', false],
+  TOOL_PERMISSION_REQUIRED: ['Il tool richiede una revisione esplicita.', 'Consultare lo scope della richiesta.', false],
   PROFILE_NOT_INITIALIZED: ['Catalogo profili non inizializzato.', 'Avviare esplicitamente il servizio per aggiornare lo schema.', false],
   PROFILE_NOT_FOUND: ['Profilo o estensione assente.', 'Consultare il catalogo locale.', false],
   PROFILE_CONFLICT: ['Conflitto di alias, scope o dipendenze tra profili.', 'Scegliere le revisioni correlate in modo esplicito.', false],
@@ -111,7 +117,8 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
-  PROFILE_NOT_INITIALIZED:'RUNTIME', PROFILE_NOT_FOUND:'RUNTIME', PROFILE_CONFLICT:'VALIDATION', REQUIRED_SKILL_MISSING:'SAFETY',
+  EXECUTION_NOT_INITIALIZED:'RUNTIME', EXECUTION_UNSUPPORTED:'SAFETY', EXECUTION_APPROVAL_STALE:'AUTHORIZATION', CHECKPOINT_STALE:'SAFETY',
+  PROCESS_UNKNOWN:'SAFETY', TOOL_PERMISSION_REQUIRED:'AUTHORIZATION', PROFILE_NOT_INITIALIZED:'RUNTIME', PROFILE_NOT_FOUND:'RUNTIME', PROFILE_CONFLICT:'VALIDATION', REQUIRED_SKILL_MISSING:'SAFETY',
   EXTENSION_UNTRUSTED:'SAFETY', PERMISSION_CONFLICT:'AUTHORIZATION', CAPABILITY_UNAVAILABLE:'SAFETY', PROFILE_STALE:'AUTHORIZATION', TOOL_DISABLED:'SAFETY',
   ENVIRONMENT_NOT_INITIALIZED:'RUNTIME', ENVIRONMENT_NOT_FOUND:'RUNTIME', ENVIRONMENT_STALE:'AUTHORIZATION', MANAGER_UNSUPPORTED:'SAFETY',
   MANAGER_MISMATCH:'SAFETY', LOCKFILE_CHANGED:'SAFETY', SCRIPT_APPROVAL_REQUIRED:'AUTHORIZATION', CONFIG_UNSAFE:'SAFETY',

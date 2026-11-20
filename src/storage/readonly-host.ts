@@ -65,7 +65,7 @@ export async function openReadonlyStorage(options: StorageOptions): Promise<Stor
   catch (error) { clearTimeout(readyTimer); if (!exited) child.kill('SIGKILL'); await exit; initial.release(); throw error; }
   let serialized = Promise.resolve();
   function perform<T>(method: Method, args: unknown[]): Promise<T> {
-    if (['commitEnvironmentState','commitWorkspaceState','commitWorkspaceLease','settleWorkspaceClaim','commitFeatureState','reconcileWorkflowArtifacts'].includes(method)) return Promise.reject(new Error('UNAUTHORIZED'));
+    if (['commitExecutionState','commitEnvironmentState','commitWorkspaceState','commitWorkspaceLease','settleWorkspaceClaim','commitFeatureState','reconcileWorkflowArtifacts'].includes(method)) return Promise.reject(new Error('UNAUTHORIZED'));
     if (method.includes('Discovery') && !['readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readDiscoveryArtifact', 'readDiscoveryManifestPage', 'getDiscoveryBudget'].includes(method)) return Promise.reject(new Error('UNAUTHORIZED'));
     if (exited || closing || failed) return Promise.reject(new Error(failed?.code ?? 'PERSISTENCE_UNAVAILABLE'));
     const id = ++nextId;

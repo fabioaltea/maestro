@@ -1,3 +1,4 @@
+import type {ExecutionStoragePort} from './execution.js';
 import type {ProfileStoragePort} from './profile.js';
 import type {EnvironmentStoragePort} from './environment.js';
 import type {WorkspaceStoragePort} from './workspace.js';
@@ -92,7 +93,7 @@ export interface ControllerAttemptRecord {
   readonly endedAt: string | null;
   readonly result: string | null;
 }
-export interface StoragePort extends FeatureStoragePort, WorkspaceStoragePort, EnvironmentStoragePort, ProfileStoragePort, DiscoveryArtifactStoragePort, DiscoveryMetadataStoragePort, DiscoveryLedgerStoragePort, EventStoragePort, RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort, RegistryUpdatePort, RegistryRemovalPort {
+export interface StoragePort extends ExecutionStoragePort, FeatureStoragePort, WorkspaceStoragePort, EnvironmentStoragePort, ProfileStoragePort, DiscoveryArtifactStoragePort, DiscoveryMetadataStoragePort, DiscoveryLedgerStoragePort, EventStoragePort, RegistryOperationsPort, RegistryRegistrationPort, RegistryReadPort, RegistryObservationPort, RegistryUpdatePort, RegistryRemovalPort {
   onFailure(callback: (error: SafeError) => void): () => void;
   listTickets(requestId: string): Promise<readonly LaunchTicket[]>;
   reopenOperation(requestId: string): Promise<OperationRecord>;

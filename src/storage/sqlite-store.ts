@@ -1,3 +1,7 @@
+import {EXECUTION_SCHEMA_VERSION,EXECUTION_TABLES} from './execution-schema.js';
+import {executionEvents} from '../core/execution/events.js';
+import {commitExecutionState,readExecutionState} from './execution-store.js';
+import type {ExecutionChange,ExecutionQuery} from '../ports/execution.js';
 import {profileEvents} from '../core/profiles/events.js';
 import {commitProfileState,readProfileState} from './profiles-store.js';
 import type {ProfileQuery,ProfileWrite} from '../ports/profile.js';
@@ -93,7 +97,7 @@ export class SQLiteStore {
     try {
       if (!existed) initializeSchema(database, options.identity!);
       const version = Number(database.pragma('user_version', { simple: true }));
-      if (![4, 5, 6, 7, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
+      if (![4, 5, 6, 7, 8, SCHEMA_VERSION].includes(version) && !(this.readOnly && [2, REGISTRY_SCHEMA_VERSION].includes(version))) throw new Error('STATE_INCOMPATIBLE');
       if (version >= 4) {
         for (const name of DISCOVERY_TABLES) {
           if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
@@ -107,6 +111,9 @@ export class SQLiteStore {
         if (!database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)) throw new Error('STATE_CORRUPT');
       }
       if(version>=PROFILE_SCHEMA_VERSION)for(const name of PROFILE_TABLES){
+        if(!this.database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name))throw new Error('STATE_CORRUPT');
+      }
+      if(version>=EXECUTION_SCHEMA_VERSION)for(const name of EXECUTION_TABLES){
         if(!this.database.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name))throw new Error('STATE_CORRUPT');
       }
       this.archiveVersion = version;
@@ -216,6 +223,15 @@ export class SQLiteStore {
           const op = readFeatureState(this.database!, {kind: 'operation', id: requestId}).operation;
           if (!op) continue;
           const owner = this.database!.prepare('SELECT owning_instance_id FROM workflow_operations WHERE request_id=?').get(requestId) as Row;
+          if(op.namespace==='EXECUTION'){
+            const sessionId=op.result?.sessionId,runId=op.result?.runId;
+            if(typeof sessionId==='string'&&typeof runId==='string'){
+              const session=readExecutionState(this.database!,{kind:'session',id:sessionId}).session;
+              const run=readExecutionState(this.database!,{kind:'run',id:runId}).run;
+              if(session&&run)drafts.push(...executionEvents(op,String(owner.owning_instance_id),session,run,event?.executionOutput===true));
+            }
+            continue;
+          }
           if(op.namespace==='PROFILE'){
             const profile=op.targetId?readProfileState(this.database!,{kind:'record',id:op.targetId}).record??null:null;
             drafts.push(...profileEvents(op,String(owner.owning_instance_id),profile));
@@ -253,6 +269,13 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
+  commitExecutionState(change:ExecutionChange) {
+    return commitExecutionState(this.writable(),change,this.workflowStore(),id=>this.workflowArtifacts().read(id,0,1));
+  }
+  readExecutionState(query:ExecutionQuery) {
+    if(!this.database)throw new Error('STATE_ABSENT');
+    return this.database.transaction(()=>readExecutionState(this.database!,query)).deferred();
+  }
   commitProfileState(change:ProfileWrite) {
     return commitProfileState(this.writable(),change,this.workflowStore(),id=>{
       try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
