@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import {createHash} from 'node:crypto';
 import {requireDecimal,requireUuid} from '../domain/identifiers.js';
+import {requireSkillSelection} from '../domain/profiles/skills.js';
 import {PROFILE_LIMITS,profileTransition} from '../domain/profiles/model.js';
 import type {ProfileKind} from '../domain/profiles/model.js';
 import type {ProfilePreview,ProfileQuery,ProfileRead,ProfileRecord,ProfileResolution,ProfileRevision,ProfileWrite} from '../ports/profile.js';
@@ -53,6 +54,12 @@ export function readProfileState(db:Database.Database,query:ProfileQuery):Profil
        AND (EXISTS(SELECT 1 FROM profiles_revisions WHERE artifact_id=a.artifact_id) OR EXISTS(SELECT 1 FROM profiles_previews WHERE artifact_id=a.artifact_id))`)
        .get(requireUuid(query.id)) as Row|undefined;
      return{artifact:value?{sha256:String(value.sha256),bytes:Number(value.expected_bytes)}:null};
+   }
+   case 'aliases':{
+     const rows=db.prepare(`SELECT * FROM profiles_records WHERE kind='SKILL' AND alias=? AND
+       (scope='GLOBAL' OR scope='PROJECT' AND project_id=? OR scope='PROFILE' AND owner_profile_id=? AND (project_id IS NULL OR project_id=?))`)
+       .all(query.alias,requireUuid(query.projectId),requireUuid(query.ownerProfileId),query.projectId) as Row[];
+     return{records:rows.map(record)};
    }
    case 'list':{
      const projectId=query.projectId===null?null:requireUuid(query.projectId),limit=query.limit??20,offset=query.offset??0;
@@ -156,6 +163,13 @@ export function commitProfileState(db:Database.Database,change:ProfileWrite,ledg
      resolution.capabilityDigest!==intent.payload.providerCapabilityDigest||resolution.digest!==hash(JSON.stringify(resolution.snapshot)))
      throw new Error('INVALID_REQUEST');
    verifyDependencies(db,resolution.dependencyVersions);
+   for(const ref of resolution.dependencyVersions.slice(1)){
+     const {record:dependency}=readProfileState(db,{kind:'record',id:ref.entityId});
+     if(dependency?.kind==='SKILL'){
+       const {records=[]}=readProfileState(db,{kind:'aliases',alias:dependency.alias,projectId:resolution.projectId,ownerProfileId:resolution.profileId});
+       requireSkillSelection(dependency,records,resolution.projectId,resolution.profileId);
+     }
+   }
    const profile=readProfileState(db,{kind:'record',id:resolution.profileId}).record;
    if(!profile||profile.kind!=='PROFILE'||profile.state==='DISABLED'||profile.revisionId!==resolution.revisionId||profile.stateRevision!==intent.expectedRevision)
      throw new Error('PROFILE_STALE');

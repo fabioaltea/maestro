@@ -37,3 +37,7 @@ Sei seed versionati come dati. Le istruzioni non concedono permessi. Risoluzione
 ## T018–T019 — CLI ed Electron US1
 
 Draft e grant passano per stdin e artefatti sigillati. Electron mostra alias, scope e digest prima della conferma, salva la ricevuta e legge il catalogo offline. Conferma, Escape/focus e cambio archivio verificati in **1 E2E PASS**. La prima prova ha corretto il DTO desktop dell’artefatto seal al contratto effettivo.
+
+## T020–T024 — skill
+
+Preview e import con handle locale, hash, identità della sorgente e tre scope. Una modifica del file invalida il grant. Riferimenti obbligatori e consigliati sono revisionati e la risoluzione richiede la scelta esplicita dell’alias più specifico. **3 PASS** US2 dopo due RED.

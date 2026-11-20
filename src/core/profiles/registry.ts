@@ -1,7 +1,9 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {featureObject} from '../../domain/features/bundle.js';
 import {PROFILE_LIMITS,profileTransition} from '../../domain/profiles/model.js';
-import {intersectProfilePermissions,permitsProfilePermissions,type ProfilePermission} from '../../domain/profiles/permissions.js';
+import {intersectProfilePermissions,parseProfilePermissions,permitsProfilePermissions,type ProfilePermission} from '../../domain/profiles/permissions.js';
+import {requireSkillSelection} from '../../domain/profiles/skills.js';
+import {createProfileSkills} from './skills.js';
 import {parseProfileDocument,type ProfileDocument} from '../../domain/profiles/resolve.js';
 import {publicProfileOperation} from '../../protocol/profile.js';
 import type {ProfileRecord,ProfileRevision,ProfileWrite} from '../../ports/profile.js';
@@ -139,11 +141,33 @@ export function createProfileRegistry(context:ProfileRuntimeContext){
        capabilityDigest:LOCAL_PROFILE_CAPABILITY.digest,digest:profileHash(snapshot),snapshot,
        dependencyVersions:[version(profile,profileRevision),...selected.versions],createdAt:new Date().toISOString()}});
  }
- async function resolveDependencies(doc:ProfileDocument,_permissions:readonly ProfilePermission[],_projectId:string,_profileId:string){
-   if(doc.requiredRefs.length)throw new Error('REQUIRED_SKILL_MISSING');
+ async function resolveDependencies(doc:ProfileDocument,permissions:readonly ProfilePermission[],projectId:string,profileId:string){
+   const versions:ReturnType<typeof version>[]=[],skills:Record<string,unknown>[]=[],omitted:Record<string,unknown>[]=[];
+   const aliases=new Set<string>();
+   let byteLength=0;
+   for(const [required,refs] of [[true,doc.requiredRefs],[false,doc.recommendedRefs]] as const){
+     for(const ref of refs){
+       try{
+         const {record:selected}=await query({kind:'record',id:ref.entityId});
+         if(!selected||selected.revisionId!==ref.revisionId)throw new Error('REQUIRED_SKILL_MISSING');
+         const {records=[]}=await query({kind:'aliases',alias:selected.alias,projectId,ownerProfileId:profileId});
+         requireSkillSelection(selected,records,projectId,profileId);
+         if(aliases.has(selected.alias))throw new Error('PROFILE_CONFLICT');
+         const skill=await revision(selected,ref.revisionId);
+         if(!permitsProfilePermissions(permissions,parseProfilePermissions(skill.document.requiredPermissions)))throw new Error('PERMISSION_CONFLICT');
+         if(!skill.artifactId||(await readBundle(skill.artifactId)).artifact.sha256!==skill.digest)throw new Error('ARTIFACT_CORRUPT');
+         aliases.add(selected.alias);byteLength+=skill.byteLength;versions.push(version(selected,skill));
+         skills.push({entityId:ref.entityId,revisionId:ref.revisionId,digest:skill.digest,alias:selected.alias,artifactId:skill.artifactId,required});
+       }catch(error){
+         if(required||(error as Error).message==='PROFILE_CONFLICT')throw error;
+         const reason=['REQUIRED_SKILL_MISSING','PERMISSION_CONFLICT','ARTIFACT_CORRUPT'].includes((error as Error).message)?(error as Error).message:'REQUIRED_SKILL_MISSING';
+         omitted.push({...ref,reason});
+       }
+     }
+   }
    if(doc.toolRefs.length)throw new Error('TOOL_DISABLED');
-   return{versions:[] as {entityId:string;revisionId:string;stateRevision:string}[],skills:[] as unknown[],tools:[] as unknown[],
-     omitted:doc.recommendedRefs.map(ref=>({...ref,reason:'REQUIRED_SKILL_MISSING'})),byteLength:0};
+   return{versions,skills,tools:[] as unknown[],omitted,byteLength};
+
  }
  return{context,authorization,query,project,record,revision,readBundle,makeIntent,grant,admit,save,existing,approve,write,resolve,checkExisting};
 }
@@ -155,17 +179,23 @@ export function documentRevision(value:ProfileRecord,previous:ProfileRecord|unde
  return{revisionId:value.revisionId!,entityId:value.entityId,previousId:previous?.revisionId??null,digest:artifact?.sha256??profileHash(document),
    artifactId:artifact?.artifactId??null,byteLength:artifact?.expectedBytes??Buffer.byteLength(JSON.stringify(document)),document,createdAt:value.updatedAt};
 }
+export type ProfileRegistry=ReturnType<typeof createProfileRegistry>;
 export function composeProfileServices(context:ProfileRuntimeContext):Readonly<Record<string,ProfileAction>>{
- const registry=createProfileRegistry(context);
+ const registry=createProfileRegistry(context),skills=createProfileSkills(registry);
  return{
    'profile.capabilities':async()=>({capability:LOCAL_PROFILE_CAPABILITY}),
    'profile.prepare':(params,peer)=>{
      const intent=featureObject(params.intent),expected=featureObject(params.expectedRevisions).stateRevision;
-     return registry.approve(String(params.action),intent,typeof expected==='string'?expected:null,peer);
+     const action=String(params.action),stateRevision=typeof expected==='string'?expected:null;
+     return action.startsWith('skill.')?skills.prepare(action,intent,stateRevision,peer):registry.approve(action,intent,stateRevision,peer);
    },
    'profile.create':(params,peer)=>registry.write('create',params,peer),
    'profile.revise':(params,peer)=>registry.write('revise',params,peer),
    'profile.disable':(params,peer)=>registry.write('disable',params,peer),
    'profile.resolve':registry.resolve,
+   'profile.skill.source':skills.select,
+   'profile.skill.preview':skills.preview,
+   'profile.skill.import':(params,peer)=>skills.write('skill.import',params,peer),
+   'profile.skill.bind':(params,peer)=>skills.write('skill.bind',params,peer),
  };
 }

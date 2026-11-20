@@ -5,7 +5,7 @@ import {requireFeatureEnvelope} from './feature.js';
 import {workspaceRevision,workspaceUuid} from './workspace.js';
 import type {WorkflowOperationRecord} from '../ports/workflow.js';
 
-export const PROFILE_READ_METHODS=['profile.list','profile.get','profile.resolution.get','profile.artifact.get','profile.operation.get'] as const;
+export const PROFILE_READ_METHODS=['profile.list','profile.get','profile.skill.preview.get','profile.resolution.get','profile.artifact.get','profile.operation.get'] as const;
 export const PROFILE_ACTION_METHODS=[
  'profile.create','profile.revise','profile.disable','profile.resolve','profile.skill.preview','profile.skill.import','profile.skill.bind','profile.tool.import','profile.tool.enable',
 ] as const;
@@ -70,6 +70,7 @@ export function validateProfileParams(method:string,value:unknown){
      featureFields(p,['kind'],['projectId','cursor','limit']);oneOf(PROFILE_KINDS,p.kind);
      if(p.limit!==undefined&&(!Number.isInteger(p.limit)||Number(p.limit)<1||Number(p.limit)>20))throw new Error('INVALID_REQUEST');
      break;
+   case 'profile.skill.preview.get':featureFields(p,['previewId']);break;
    case 'profile.get':featureFields(p,['entityId'],['revisionId']);break;
    case 'profile.resolution.get':featureFields(p,['resolutionId']);break;
    case 'profile.operation.get':featureFields(p,['requestId']);break;

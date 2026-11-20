@@ -12,7 +12,7 @@ function cursor(value:unknown){
 }
 export function profilePreviewSummary(preview:ProfilePreview){
  const {sourcePath:_path,identity:_identity,artifactDigest:_artifactDigest,...summary}=preview;
- return{...summary,provenance:'USER_REVIEWED'};
+ return{...summary,provenance:'UNKNOWN'};
 }
 export function profileRevisionSummary(revision:ProfileRevision){
  const {document,...meta}=revision;
@@ -61,6 +61,11 @@ export function createProfileReader(options:{storage:StoragePort;storeId:string;
        const {resolution}=await query({kind:'resolution',id:String(params.resolutionId)});
        if(!resolution)throw new Error('PROFILE_NOT_FOUND');
        data={resolution,currentness:offline?'UNKNOWN':await isCurrentProfileResolution(storage,resolution)?'CURRENT':'STALE'};break;
+     }
+     case 'profile.skill.preview.get':{
+       const {preview}=await query({kind:'preview',id:String(params.previewId)});
+       if(!preview)throw new Error('PROFILE_NOT_FOUND');
+       data={preview:profilePreviewSummary(preview)};break;
      }
      case 'profile.operation.get':{
        const {operation}=await storage.readFeatureState({kind:'operation',id:String(params.requestId)});
