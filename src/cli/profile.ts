@@ -21,6 +21,7 @@ maestro profile resolve|skill.preview --input-file FILE | --input-stdin --reques
 maestro profile create|revise|disable|skill.import|skill.bind|tool.import|tool.enable --grant UUID --request-id UUID
 maestro profile operation REQUEST
 maestro profile resolution RESOLUTION
+maestro profile preview PREVIEW
 maestro profile suggest PROFILE --project ID
 --state-dir ABS --json --timeout-ms 1..2000
 `;
@@ -49,6 +50,8 @@ export async function runProfileCli(args:readonly string[]):Promise<number>{
      method='profile.get';params={entityId:id,...(v['revision-id']?{revisionId:v['revision-id']}:{})};allowed.add('revision-id');
    }else if(p.length===2&&verb==='operation'){
      method='profile.operation.get';requestId=workspaceUuid(id);params={requestId};
+   }else if(p.length===2&&verb==='preview'){
+     method='profile.skill.preview.get';params={previewId:id};
    }else if(p.length===2&&verb==='resolution'){
      method='profile.resolution.get';params={resolutionId:id};
    }else if(p.length===2&&verb==='artifact'){
