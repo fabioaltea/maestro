@@ -71,7 +71,8 @@ export class LocalClient {
         if(review&&r.data.operationId!==undefined&&workspaceUuid(r.data.operationId)!==requestId)throw new Error('INVALID_REQUEST');
       }
       if(mutate&&succeededOrBusy(r)&&r.data.operation===undefined&&r.data.accepted!==true)throw new Error('INVALID_REQUEST');
-      if(method==='workspace.cleanup.get'&&r.freshness==='LAST_KNOWN'&&r.data.eligible===true)throw new Error('INVALID_REQUEST');
+      if((method==='workspace.cleanup.get'||method==='review.cleanup.preview')&&r.freshness==='LAST_KNOWN'&&r.data.eligible===true)
+        throw new Error('INVALID_REQUEST');
       return r;
     };
     const timeoutResult=():PublicResult=>({protocolVersion:1,requestId,storeId:null,instanceId:null,

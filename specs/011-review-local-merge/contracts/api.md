@@ -44,6 +44,8 @@ The feedback decision is a reference for a new, separately granted `execution.st
 | `receipt.get` | integrationId | source/candidate/target/proofs |
 | `cleanup.preview` | integrationId,workspaceId | eligibility,reason (delegated006) |
 
+Headless uses `review complete INTEGRATION --expected-state-revision REVISION --request-id UUID`, `review receipt INTEGRATION` and `review cleanup.preview INTEGRATION WORKSPACE`. The receipt binds the integrated tree, validation digest and changed documentation blob IDs to the proof of the ref update and guard sync. The document list is bounded and includes a digest and item count. When the merge touches a selector from the approved Discovery snapshot, completion invalidates that specific snapshot's approval in the receipt transaction. The cleanup preview is a fresh 006 observation for the source workspace. Removal uses a separate `workspace cleanup.prepare` and confirmation. The receipt requires a separate future publication grant.
+
 Regole specifiche di transizione, approvazione e recovery: [policy.md](policy.md).
 
 ## Validazione, completion ed errori
