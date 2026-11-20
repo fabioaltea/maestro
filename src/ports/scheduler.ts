@@ -36,6 +36,7 @@ export interface SchedulerPolicy {readonly revision:string;readonly limits:Sched
 export type SchedulerQuery=
  |{readonly kind:'policy'|'reservations'}
  |{readonly kind:'job';readonly id:string}
+ |{readonly kind:'pending';readonly offset:number}
  |{readonly kind:'queue';readonly projectId:string|null;readonly offset?:number;readonly limit?:number};
 export interface SchedulerRead {
  readonly policy?:SchedulerPolicy;readonly jobs?:readonly SchedulerJob[];readonly job?:SchedulerJob|null;
@@ -55,4 +56,12 @@ export interface SchedulerWrite {
 export interface SchedulerStoragePort {
  readSchedulerState?(query:SchedulerQuery):Promise<SchedulerRead>;
  commitSchedulerState?(change:SchedulerChange):Promise<SchedulerWrite>;
+}
+
+export interface SchedulerExecutor {
+ /** Opens the already consented delegate in WAIT_GO. A rejection carries no spawn proof. */
+ open(job:SchedulerJob,reservation:SchedulerReservation):Promise<{
+   go():Promise<{proof:SchedulerReleaseProof;success:boolean}>;
+   stop():void;
+ }>;
 }

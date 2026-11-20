@@ -16,6 +16,7 @@ export interface CoreDependencies {
     readonly files?: import('../ports/provider.js').DiscoveryRunFilesPort;
     readonly onResult?: (identity: import('../ports/agent-runtime.js').AgentProcessIdentity, result: import('../domain/discovery/documents.js').ArchitectResult) => Promise<void>;
   };
+  readonly scheduler?:{readonly executor:import('../ports/scheduler.js').SchedulerExecutor;readonly clock?:import('../ports/clock.js').Clock};
   readonly execution?:import('./execution/runtime.js').ExecutionDependencies;
   readonly profiles?:{
     readonly importPort?:import('../ports/profile.js').ProfileImportPort;
