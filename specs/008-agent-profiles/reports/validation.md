@@ -9,3 +9,7 @@
 ## T002 — casi negativi iniziali
 
 Fixture passiva con marker di esecuzione, origine sostituita, link, traversal, allegati eseguibili e limiti di byte/UTF-8. Verifica RED prima dell’adapter.
+
+## T003 — reader di import
+
+Reader macOS in processo effimero con policy SBPL default-deny, apertura no-follow e controllo di UID, hard link, identità, UTF-8 e limiti. L’adapter fake restituisce snapshot sostituibili. Il test usa la directory canonica della fixture anche quando TMPDIR contiene l’alias macOS `/var`.
