@@ -8,12 +8,13 @@ import type { InspectionCapabilities, InspectionCode, InspectionFailure } from '
 
 const execute = promisify(execFile);
 const PROFILE = fileURLToPath(new URL('./inspection.sb', import.meta.url));
+const INITIALIZE_PROFILE = fileURLToPath(new URL('./initialize.sb', import.meta.url));
 const SANDBOX = '/usr/bin/sandbox-exec';
 const MAX_STDOUT = 1024 * 1024;
 const MAX_STDERR = 16 * 1024;
 
 export type GitQuery = { readonly kind: 'top-level' | 'common-dir' | 'git-dir'
-  | 'object-format' | 'head-symbolic' | 'head-commit' | 'any-commit' | 'status' | 'inventory' }
+  | 'object-format' | 'head-symbolic' | 'head-commit' | 'any-commit' | 'status' | 'inventory' | 'initialize' }
   | { readonly kind: 'check-branch' | 'local-branch' | 'branch-exists'; readonly branch: string }
   | { readonly kind: 'config-file'; readonly path: string };
 
@@ -93,6 +94,7 @@ function argumentsFor(query: unknown): readonly string[] | InspectionFailure {
     case 'head-commit': return ['rev-parse', '--verify', '--quiet', '--end-of-options', 'HEAD^{commit}'];
     case 'any-commit': return ['rev-list', '--max-count=1', '--all'];
     case 'inventory': return ['ls-files', '-z', '--cached', '--others', '--exclude-standard'];
+    case 'initialize': return ['--git-dir=.git', 'init', '--template=', '--initial-branch=main', '--quiet'];
     case 'status': return ['status', '--porcelain=v2', '-z', '--untracked-files=normal', '--ignore-submodules=all'];
     default: return inspectionFailure('INVALID_REQUEST');
   }
@@ -179,7 +181,11 @@ export function createGitRunner(options: { readonly platform?: string } = {}): G
         let error: InspectionCode | undefined;
         let stdoutBytes = 0, stderrBytes = 0;
         const output: Buffer[] = [];
-        const child = spawn(SANDBOX, sandboxArguments(binary, roots, args), {
+        const initialization = (query as GitQuery).kind === 'initialize';
+        const argumentsInSandbox = initialization
+          ? ['-D', `EXECUTABLE=${binary}`, '-D', `CHECKOUT=${cwd}`, '-D', `ADMIN=${cwd}/.git`, '-f', INITIALIZE_PROFILE, binary, ...PREFIX, ...args]
+          : sandboxArguments(binary, roots, args);
+        const child = spawn(SANDBOX, argumentsInSandbox, {
           // Config preflight must not discover a repository and load its includes
           // before --file/--no-includes are processed.
           cwd: (query as GitQuery).kind === 'config-file' ? '/' : cwd,

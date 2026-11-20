@@ -7,7 +7,7 @@ import { createStorageProxy, type Method } from './worker.js';
 import { reserveReadonlyObservation } from './readonly-database.js';
 
 /** Native SQLite is confined too: its C VFS cannot create WAL files during races. */
-export async function openReadonlyStorage(options: StorageOptions): Promise<StoragePort> {
+export async function openReadonlyStorage(options: StorageOptions, retainedFence?: { readonly quiescent: boolean }): Promise<StoragePort> {
   if (process.platform !== 'darwin') throw new Error('UNSUPPORTED_PLATFORM');
   const profile = fileURLToPath(new URL('../platform/macos/storage/readonly.sb', import.meta.url));
   const main = fileURLToPath(new URL('./readonly-main.js', import.meta.url));
@@ -20,7 +20,8 @@ export async function openReadonlyStorage(options: StorageOptions): Promise<Stor
   let failed: SafeError | null = null, closing = false, exited = false, nextId = 0;
   let buffer = Buffer.alloc(0);
   const requests = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout>; release(): void }>();
-  const initial = reserveReadonlyObservation(options.path);
+  const reserve = () => retainedFence ? { quiescent: retainedFence.quiescent, release() {} } : reserveReadonlyObservation(options.path);
+  const initial = reserve();
   let readyResolve!: () => void, readyReject!: (error: Error) => void;
   const ready = new Promise<void>((resolve, reject) => { readyResolve = resolve; readyReject = reject; });
   const exit = new Promise<void>(resolve => { child.once('exit', () => { exited = true; resolve(); }); child.once('error', () => { exited = true; resolve(); }); });
@@ -69,7 +70,7 @@ export async function openReadonlyStorage(options: StorageOptions): Promise<Stor
     if (method.includes('Discovery') && !['readDiscoveryMetadata', 'getDiscoveryRunOwner', 'getDiscoveryOperation', 'readDiscoveryArtifact', 'readDiscoveryManifestPage', 'getDiscoveryBudget'].includes(method)) return Promise.reject(new Error('UNAUTHORIZED'));
     if (exited || closing || failed) return Promise.reject(new Error(failed?.code ?? 'PERSISTENCE_UNAVAILABLE'));
     const id = ++nextId;
-    const reservation = method === 'close' ? { quiescent: false, release() {} } : reserveReadonlyObservation(options.path);
+    const reservation = method === 'close' ? { quiescent: false, release() {} } : reserve();
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => { reject(new Error('DEADLINE_EXCEEDED')); child.kill('SIGKILL'); }, 2_100);
       requests.set(id, { resolve: value => {

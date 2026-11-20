@@ -76,13 +76,14 @@ export function validateProjectParams(method: string, input: unknown): void {
     requireProjectFields(params, [key]); projectUuid(params[key]); return;
   }
   const actions: Readonly<Record<string, ProjectAction>> = {
-    'projects.register': 'REGISTER', 'projects.verify': 'VERIFY', 'projects.update': 'UPDATE', 'projects.remove': 'REMOVE',
+    'projects.register': 'REGISTER', 'projects.create': 'REGISTER', 'projects.verify': 'VERIFY', 'projects.update': 'UPDATE', 'projects.remove': 'REMOVE',
   };
   const action = actions[method];
   if (!action || !Object.hasOwn(params, 'requestId')) throw new Error('INVALID_REQUEST');
   projectUuid(params.requestId);
   const { requestId: _requestId, ...original } = params;
-  normalizeProjectCommand(action, original);
+  if (Object.hasOwn(original, 'initialize')) throw new Error('INVALID_REQUEST');
+  normalizeProjectCommand(action, method === 'projects.create' ? { ...original, initialize: true } : original);
 }
 export function validateProjectAdmission(input: unknown): void {
   const data = projectObject(input);

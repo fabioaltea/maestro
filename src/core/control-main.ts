@@ -1,3 +1,4 @@
+import { reserveDefaultArchiveSlot } from './archive-adoption.js';
 import { needsReviewUpgrade, upgradeReview } from '../storage/review-upgrade.js';
 import { SCHEMA_VERSION } from '../storage/schema.js';
 import type { CoreDependencies } from './runtime.js';
@@ -8,7 +9,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { ArchivePaths, BootstrapIntent, LeaseHandle } from '../ports/platform.js';
 import type { ControllerAttemptRecord, OperationRecord, StoragePort } from '../ports/storage.js';
-import { createPlatformPaths } from '../platform/macos/paths.js';
+import { createPlatformPaths, defaultArchiveDirectory, privateArchiveSlot } from '../platform/macos/paths.js';
 import { createOwnershipLease } from '../platform/macos/lease.js';
 import { createDaemonLauncher } from '../platform/macos/launcher.js';
 import { createProcessIdentity } from '../platform/macos/process-identity.js';
@@ -95,6 +96,7 @@ export async function runControl(intent: BootstrapIntent, dependencies: CoreDepe
   const report = dependencies.report ?? reportBootstrap;
   const deadline = makeDeadline(systemClock, intent.action === 'stop' ? 9_500 : 29_500);
   let lease: LeaseHandle | undefined;
+  let defaultSlotLease: LeaseHandle | undefined;
   let store: StoragePort | undefined;
   let operation: OperationRecord | undefined;
   let attempt: ControllerAttemptRecord | undefined;
@@ -104,6 +106,10 @@ export async function runControl(intent: BootstrapIntent, dependencies: CoreDepe
     requireUuid(intent.requestId);
     const adapter = createPlatformPaths();
     const paths = (await adapter.resolveArchive(intent.canonicalStateDir, 'write'))!;
+    if (paths.directory === privateArchiveSlot()) {
+      defaultSlotLease = await reserveDefaultArchiveSlot();
+      if (defaultArchiveDirectory() !== paths.directory) throw new Error('ARCHIVE_RECOVERY_BLOCKED');
+    }
     const lock = createOwnershipLease().tryAcquire(paths.controlLeaseFile, 'control');
     if (lock.status !== 'HELD') { report(false, lock.status === 'BUSY' ? 'BUSY' : 'BLOCKED'); return lock.status === 'BUSY' ? 3 : 4; }
     lease = lock.handle;
@@ -162,7 +168,7 @@ export async function runControl(intent: BootstrapIntent, dependencies: CoreDepe
     return code === 'BUSY' ? 3 : code === 'BLOCKED' ? 4 : code === 'UNAUTHORIZED' ? 6 : 7;
   } finally {
     try { await store?.close(); }
-    finally { lease?.release(); }
+    finally { lease?.release(); defaultSlotLease?.release(); }
   }
 }
 

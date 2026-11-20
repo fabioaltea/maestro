@@ -8,15 +8,15 @@
 
 ## Phase 2: Foundation
 
-- [ ] T002 Definire il binding Desktop del default privato e la consultazione headless in `src/cli/main.ts`, `src/platform/macos/paths.ts` e `apps/desktop/src/main/archive-context.ts`.
+- [x] T002 Definire il binding Desktop del default privato e la consultazione headless in `src/cli/main.ts`, `src/platform/macos/paths.ts` e `apps/desktop/src/main/archive-context.ts`.
 
 ## Phase 3: US1 · Aprire o creare un repository (P1)
 
 **Independent Test** Aprire un checkout esistente e inizializzare una cartella vuota da un profilo isolato.
 
-- [ ] T003 [P] [US1] Scrivere prove per bootstrap esplicito, deduplicazione, destinazione vuota, retry e rifiuto su cartella occupata in `tests/integration/repository-entry.test.ts`.
-- [ ] T004 [US1] Collegare `project open/create` al lifecycle e al ledger in `src/cli/projects.ts`, `src/client/local-client.ts`, `src/protocol/validation.ts` e `src/core/projects/dispatch.ts`.
-- [ ] T005 [US1] Implementare l’effetto Git con intento distinto e probe supervisionato in `src/core/projects/register.ts`, `src/domain/projects/intent.ts` e `src/platform/macos/git/probe-main.ts`.
+- [x] T003 [P] [US1] Scrivere prove per bootstrap esplicito, deduplicazione, destinazione vuota, retry e rifiuto su cartella occupata in `tests/integration/repository-entry.test.ts`.
+- [x] T004 [US1] Collegare `project open/create` al lifecycle e al ledger in `src/cli/projects.ts`, `src/client/local-client.ts`, `src/protocol/validation.ts` e `src/core/projects/dispatch.ts`.
+- [x] T005 [US1] Implementare l’effetto Git con intento distinto e probe supervisionato in `src/core/projects/register.ts`, `src/domain/projects/intent.ts` e `src/platform/macos/git/probe-main.ts`.
 - [ ] T006 [US1] Collegare picker, conferma di creazione, aperture e stato iniziale in `apps/desktop/src/main/project-actions.ts`, `apps/desktop/src/renderer/App.tsx` e `apps/desktop/src/renderer/views/Projects.tsx`. Aggiornare il bridge e aggiungere E2E in `apps/desktop/tests/e2e/repository-entry.spec.ts`.
 
 ## Phase 4: US2 · Analizzare e creare una feature (P1)

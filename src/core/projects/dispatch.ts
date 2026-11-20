@@ -9,7 +9,8 @@ import type { createProjectOperations } from './operations.js';
 import { readProject, readProjects, ProjectRemovedError } from './read.js';
 
 /** Add methods here only as their story implementation becomes available. */
-export const PROJECT_METHODS: readonly string[] = ['projects.operation.get', 'projects.register', 'projects.get', 'projects.list', 'projects.verify', 'projects.update', 'projects.remove'];
+export const PROJECT_METHODS: readonly string[] = ['projects.operation.get', 'projects.register', 'projects.create', 'projects.get', 'projects.list', 'projects.verify', 'projects.update', 'projects.remove'];
+const projectMutations = ['projects.register', 'projects.create', 'projects.verify', 'projects.update', 'projects.remove'];
 export function projectOperationView(operation: ProjectOperation): ProjectOperationView {
   return { requestId: operation.requestId, action: operation.action, projectId: operation.projectId,
     phase: operation.phase, outcome: operation.outcome, acceptedAt: operation.acceptedAt,
@@ -36,10 +37,11 @@ export function createProjectDispatch(options: {
         return { ...base, result: 'OK', data: { storeId: snapshot.store.storeId,
           project: await readProject(options.storage, request.params.projectId as string) } };
       }
-      if (request.method === 'projects.register' || request.method === 'projects.verify' || request.method === 'projects.update' || request.method === 'projects.remove') {
+      if (projectMutations.includes(request.method)) {
         if (snapshot.instance?.lifecycle !== 'RUNNING') throw new Error('BLOCKED');
         const { requestId, ...params } = request.params;
-        const admission = await options.operations.admit(peer, request.method === 'projects.remove' ? 'REMOVE' : request.method === 'projects.update' ? 'UPDATE' : request.method === 'projects.verify' ? 'VERIFY' : 'REGISTER', requestId as string, params);
+        const admission = await options.operations.admit(peer, request.method === 'projects.remove' ? 'REMOVE' : request.method === 'projects.update' ? 'UPDATE' : request.method === 'projects.verify' ? 'VERIFY' : 'REGISTER', requestId as string,
+          request.method === 'projects.create' ? { ...params, initialize: true } : params);
         if (!admission.accepted) return { ...base, result: admission.error.code === 'BUSY' ? 'BUSY' : 'BLOCKED',
           data: { storeId: snapshot.store.storeId, requestId, accepted: false, outcome: null, code: admission.error.code, error: admission.error } };
         if (admission.operation.outcome === 'IN_PROGRESS') return { ...base, result: 'BUSY', data: {
@@ -59,7 +61,7 @@ export function createProjectDispatch(options: {
     } catch (error) {
       const code = classifyError(error);
       return { ...base, result: ['SAFETY', 'OBSERVABILITY'].includes(foundationError(code).category) ? 'BLOCKED' : 'ERROR',
-        data: { storeId: snapshot.store.storeId, code, error: foundationError(code), ...(error instanceof ProjectRemovedError ? { tombstone: error.tombstone } : {}), ...(['projects.register', 'projects.verify', 'projects.update', 'projects.remove'].includes(request.method)
+        data: { storeId: snapshot.store.storeId, code, error: foundationError(code), ...(error instanceof ProjectRemovedError ? { tombstone: error.tombstone } : {}), ...(projectMutations.includes(request.method)
           ? { requestId: request.params.requestId, accepted: false, outcome: null } : {}) } };
     }
   };

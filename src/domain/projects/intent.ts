@@ -2,7 +2,7 @@ import { requireUuid } from '../identifiers.js';
 import { normalizeProjectName, requireProjectRevision, type ProjectAction } from './model.js';
 
 export interface ProjectPatch { readonly name?: string; readonly baseBranch?: string | null }
-export interface RegisterParams { readonly path: string; readonly name?: string; readonly baseBranch?: string }
+export interface RegisterParams { readonly path: string; readonly name?: string; readonly baseBranch?: string; readonly initialize?: true }
 export interface VerifyParams { readonly projectId: string }
 export interface UpdateParams extends VerifyParams { readonly expectedRevision: string; readonly patch: ProjectPatch }
 export interface RemoveParams extends VerifyParams { readonly expectedRevision: string }
@@ -37,10 +37,12 @@ export function requireLocalBranch(value: unknown): string {
 export function normalizeProjectCommand(action: ProjectAction, input: unknown): ProjectCommand {
   const p = projectObject(input);
   if (action === 'REGISTER') {
-    requireProjectFields(p, ['path'], ['name', 'baseBranch']);
+    requireProjectFields(p, ['path'], ['name', 'baseBranch', 'initialize']);
+    if (Object.hasOwn(p, 'initialize') && (p.initialize !== true || Object.hasOwn(p, 'baseBranch'))) throw new Error('INVALID_REQUEST');
     return { action, params: { path: requireProjectPath(p.path),
       ...(Object.hasOwn(p, 'name') ? { name: normalizeProjectName(p.name) } : {}),
-      ...(Object.hasOwn(p, 'baseBranch') ? { baseBranch: requireLocalBranch(p.baseBranch) } : {}) } };
+      ...(Object.hasOwn(p, 'baseBranch') ? { baseBranch: requireLocalBranch(p.baseBranch) } : {}),
+      ...(p.initialize === true ? { initialize: true } : {}) } };
   }
   if (action !== 'VERIFY' && action !== 'UPDATE' && action !== 'REMOVE') throw new Error('INVALID_REQUEST');
   requireProjectFields(p, action === 'VERIFY' ? ['projectId'] : action === 'REMOVE'

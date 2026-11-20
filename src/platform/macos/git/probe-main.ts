@@ -5,6 +5,7 @@ import { makeDeadline, systemClock } from '../../../ports/clock.js';
 import { createLocalTransport } from '../transport.js';
 import type { ProbeBootstrap } from './probe-supervisor.js';
 import { inspectionFailure } from './runner.js';
+import { initializeRepository } from './initialize.js';
 
 let bootstrap: ProbeBootstrap | undefined;
 let server: LocalServer | undefined;
@@ -86,9 +87,11 @@ async function receive(value: unknown): Promise<void> {
     const inspector = module.createDirectRepositoryInspector();
     const options = { deadline: makeDeadline(systemClock, bootstrap.timeoutMs), signal: abort.signal };
     const request = bootstrap.request;
-    inspection = request.kind === 'CANDIDATE'
-      ? inspector.inspectCandidate(request.path, request.requestedBase, options)
-      : inspector.inspectRegistered(request.identity, request.reference, request.configuredBase, options);
+    inspection = request.kind === 'REGISTERED'
+      ? inspector.inspectRegistered(request.identity, request.reference, request.configuredBase, options)
+      : request.kind === 'INITIALIZE'
+        ? initializeRepository(request.path, inspector, options)
+        : inspector.inspectCandidate(request.path, request.requestedBase, options);
     const result = await inspection;
     if (Buffer.byteLength(JSON.stringify(result)) > 64 * 1024) await finish({ ok: false, error: inspectionFailure('OUTPUT_LIMIT') });
     else await finish(result);

@@ -71,7 +71,7 @@ function workflowBackend(scope:'feature'|'workspace'|'environment'|'profile'|'ex
 
 export function createClientBackend(launcher = createDaemonLauncher()): ClientBackend {
   return {
-    defaultDirectory: defaultArchiveDirectory(),
+    get defaultDirectory() { return defaultArchiveDirectory(); },
     async project(directory, method, params, timeoutMs) {
       validateProjectParams(method, params);
       const reading = ['projects.list', 'projects.get', 'projects.operation.get'].includes(method);

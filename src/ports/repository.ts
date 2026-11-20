@@ -3,7 +3,7 @@ import type { IdentityProof } from './platform.js';
 
 export type InspectionCode =
   | 'INVALID_REQUEST' | 'INVALID_BASE_BRANCH' | 'PATH_ACCESS_DENIED'
-  | 'REPOSITORY_NOT_FOUND' | 'REFERENCE_CHECKOUT_UNAVAILABLE'
+  | 'REPOSITORY_NOT_FOUND' | 'REPOSITORY_DESTINATION_OCCUPIED' | 'REFERENCE_CHECKOUT_UNAVAILABLE'
   | 'REPOSITORY_UNSUPPORTED' | 'REPOSITORY_CHANGED' | 'REPOSITORY_UNSTABLE'
   | 'GIT_UNAVAILABLE' | 'INSPECTION_UNAVAILABLE' | 'INSPECTION_UNSAFE'
   | 'OUTPUT_LIMIT' | 'DEADLINE_EXCEEDED' | 'INTERRUPTED';
@@ -101,7 +101,7 @@ export interface RepositoryInspector {
 }
 
 export type ProbeRequest = {
-  readonly kind: 'CANDIDATE'; readonly path: string; readonly requestedBase?: string;
+  readonly kind: 'CANDIDATE' | 'INITIALIZE'; readonly path: string; readonly requestedBase?: string;
 } | {
   readonly kind: 'REGISTERED'; readonly identity: RepositoryIdentity;
   readonly reference: ReferenceCheckout; readonly configuredBase: string | null;

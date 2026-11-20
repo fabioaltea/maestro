@@ -1,19 +1,47 @@
 import { connect } from 'node:net';
-import { constants } from 'node:fs';
+import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, realpathSync } from 'node:fs';
 import { lstat, mkdir, open, realpath, statfs, unlink } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import type { PlatformPaths, ArchivePaths } from '../../ports/platform.js';
+import { requireUuid } from '../../domain/identifiers.js';
 
 function unauthorized(): never { throw new Error('UNAUTHORIZED'); }
 function isMissing(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }
 let platformChecked = false;
-export function defaultArchiveDirectory(): string {
+export function privateArchiveSlot(): string {
   return join(homedir(), 'Library', 'Application Support', 'Maestro', 'foundation', 'default');
+}
+export function archiveReferenceFile(): string {
+  return join(dirname(privateArchiveSlot()), 'recovered-archive.json');
+}
+export function archiveIdentity(path: string, kind: 'directory' | 'file'): string {
+  const info = lstatSync(path, { bigint: true });
+  const valid = kind === 'directory' ? info.isDirectory() && (info.mode & 0o777n) === 0o700n
+    : info.isFile() && info.nlink === 1n && (info.mode & 0o777n) === 0o600n;
+  if (!valid || info.uid !== BigInt(process.getuid!()) || realpathSync(path) !== path) throw new Error('PERSISTENCE_UNAVAILABLE');
+  return `${info.dev}:${info.ino}:${info.birthtimeNs}`;
+}
+export function defaultArchiveDirectory(): string {
+  const path = archiveReferenceFile();
+  let descriptor: number;
+  try { descriptor = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK); }
+  catch (error) { if (isMissing(error)) return privateArchiveSlot(); throw new Error('PERSISTENCE_UNAVAILABLE'); }
+  try {
+    archiveIdentity(dirname(path), 'directory');
+    const info = fstatSync(descriptor);
+    if (!info.isFile() || info.nlink !== 1 || info.uid !== process.getuid!() || (info.mode & 0o777) !== 0o600 || info.size > 16_384) throw new Error();
+    const value = JSON.parse(readFileSync(descriptor, 'utf8')) as { directory: string; storeId: string; root: string; state: string };
+    requireUuid(value.storeId);
+    if (typeof value.directory !== 'string' || !isAbsolute(value.directory) || archiveIdentity(value.directory, 'directory') !== value.root
+      || archiveIdentity(join(value.directory, 'state.sqlite'), 'file') !== value.state) throw new Error();
+    return value.directory;
+  } catch { throw new Error('PERSISTENCE_UNAVAILABLE'); }
+  finally { closeSync(descriptor); }
 }
 
 export function createPlatformPaths(): PlatformPaths {

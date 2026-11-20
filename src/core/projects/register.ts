@@ -22,7 +22,7 @@ export async function registerProject(context: ProjectExecution, storage: Storag
   const command = normalizeProjectCommand('REGISTER', original.params);
   if (command.action !== 'REGISTER') throw new Error('INVALID_REQUEST');
   const params = command.params;
-  const candidate = await context.probe({ kind: 'CANDIDATE', path: params.path,
+  const candidate = await context.probe({ kind: params.initialize ? 'INITIALIZE' : 'CANDIDATE', path: params.path,
     ...(params.baseBranch === undefined ? {} : { requestedBase: params.baseBranch }) });
   if (!candidate.ok) throw new Error(candidate.error.code);
   const configuration = registrationConfiguration(params, candidate.value);

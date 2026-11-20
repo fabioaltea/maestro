@@ -53,6 +53,7 @@ async function follow(client: LocalClient, json: boolean, options: import('../cl
 }
 
 export async function runCli(args: readonly string[]): Promise<number> {
+  if (args[0] === 'archive') return (await import('./archive.js')).runArchiveCli(args.slice(1));
   if (args[0] === 'review') return (await import('./review.js')).runReviewCli(args.slice(1));
   if (args[0] === 'scheduler') return (await import('./scheduler.js')).runSchedulerCli(args.slice(1));
   if (args[0] === 'execution') return (await import('./execution.js')).runExecutionCli(args.slice(1));

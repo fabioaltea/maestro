@@ -231,10 +231,31 @@ export class LocalClient {
       return await Promise.race([observe(), expired]);
     } finally { clearTimeout(timer); }
   }
-  async runProject(command: 'register' | 'list' | 'get' | 'verify' | 'update' | 'remove' | 'operation',
+  async runProjectEntry(command: 'open' | 'create', params: Readonly<Record<string, unknown>>, options: CommandOptions = {}): Promise<PublicResult> {
+    const requestId = requireUuid(options.requestId ?? randomUUID());
+    const timeout = options.timeoutMs ?? 30_000;
+    if (!Number.isFinite(timeout) || timeout <= 0 || timeout > 30_000 || options.limit !== undefined || options.after !== undefined) {
+      throw new Error('INVALID_REQUEST');
+    }
+    const method = command === 'open' ? 'register' : 'create';
+    validateProjectParams(`projects.${method}`, { ...params, requestId });
+    const selection = options.stateDirectory === undefined ? {} : { stateDirectory: options.stateDirectory };
+    let status = await this.run('status', selection);
+    if (status.result === 'OK' && status.liveness === 'ABSENT_VERIFIED') {
+      const started = await this.run('start', selection);
+      if (started.outcome !== 'SUCCEEDED' && started.result !== 'BUSY') {
+        return { ...started, requestId, outcome: null, data: {} };
+      }
+      status = await this.run('status', selection);
+    }
+    if (status.result !== 'OK') return { ...status, requestId };
+    if (status.liveness !== 'LIVE_VERIFIED') return { ...status, requestId, result: 'BLOCKED', outcome: null, data: {}, error: foundationError('DAEMON_UNAVAILABLE') };
+    return this.runProject(method, params, { ...options, requestId });
+  }
+  async runProject(command: 'register' | 'create' | 'list' | 'get' | 'verify' | 'update' | 'remove' | 'operation',
     params: Readonly<Record<string, unknown>>, options: CommandOptions = {}): Promise<PublicResult> {
     const method = command === 'operation' ? 'projects.operation.get' : `projects.${command}`;
-    const mutation = ['register', 'verify', 'update', 'remove'].includes(command);
+    const mutation = ['register', 'create', 'verify', 'update', 'remove'].includes(command);
     const maximum = mutation ? 30_000 : 2_000;
     const timeout = options.timeoutMs ?? maximum;
     if (!Number.isFinite(timeout) || timeout <= 0 || timeout > maximum || options.limit !== undefined || options.after !== undefined
