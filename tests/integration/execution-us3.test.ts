@@ -1,0 +1,60 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFile,writeFile} from 'node:fs/promises';
+import {setTimeout as wait} from 'node:timers/promises';
+import {startSuccessor} from '../fixtures/workspace-runtime.js';
+import {createExecutionRuntime} from '../../src/core/execution/runtime.js';
+import {executionRuntimeFixture} from '../fixtures/execution-runtime.js';
+import {makeDeadline,systemClock} from '../../src/ports/clock.js';
+
+test('paused run has a reviewed checkpoint and resumes only on the recorded tree, with a new generation',async t=>{
+ const f=await executionRuntimeFixture(t,{question:true});
+ const {requestId}=await f.mutate('start',await f.prepare('start',f.startIntent));
+ for(let attempts=0;attempts<200&&f.state(requestId)?.state!=='WAITING_USER';attempts++)await wait(25);
+ const revision=f.state(requestId)!.stateRevision;
+ const parameters={sessionId:requestId,expectedStateRevision:revision};
+ assert.equal((await f.mutate('pause',await f.prepare('pause',parameters,{stateRevision:revision}))).operation?.action,'pause');
+ await f.runtime.idle();
+ assert.equal(f.state(requestId)?.state,'PAUSED');
+ const paused=f.state(requestId)!.stateRevision;
+ const checkpoint=await f.mutate('checkpoint',await f.prepare('checkpoint',{sessionId:requestId,expectedStateRevision:paused},{stateRevision:paused}));
+ assert.equal(checkpoint.operation?.outcome,'SUCCEEDED',JSON.stringify(checkpoint.reply));
+ const stored=f.store.readExecutionState({kind:'checkpoint',id:checkpoint.requestId}).checkpoint!;
+ const artifact=await f.send('artifact.get',{artifactId:stored.patchArtifactId});
+ const patch=JSON.parse(Buffer.from(String((artifact.data as {base64:string}).base64),'base64').toString());
+ assert.equal(Buffer.from(patch.untracked.find((file:{path:string})=>file.path==='approved.txt').base64,'base64').toString(),'x');
+ const before=f.run(requestId),expectedRevisions={stateRevision:f.state(requestId)!.stateRevision};
+ const data={sessionId:requestId,checkpointId:checkpoint.requestId,providerId:'codex'};
+ const stale=await f.prepare('resume',data,expectedRevisions);
+ const original=await readFile(f.target);
+ await writeFile(f.target,'unreviewed edit');
+ assert.equal((await f.mutate('resume',stale)).operation,null);
+ await writeFile(f.target,original);
+ const resume=await f.mutate('resume',await f.prepare('resume',data,expectedRevisions));
+ assert.equal(resume.operation?.outcome,'IN_PROGRESS',JSON.stringify(resume.reply));
+ assert.notEqual(f.run(resume.requestId)?.generation,before?.generation);
+ assert.deepEqual(f.run(requestId),before);
+ await f.runtime.stop(makeDeadline(systemClock,4000));
+ assert.equal(f.run(resume.requestId)?.phase,'FINALIZED');
+});
+
+test('uncertain native exit keeps the workspace fenced and never retries the effect',async t=>{
+ const f=await executionRuntimeFixture(t,{unknownExit:true});
+ const grant=await f.prepare('start',f.startIntent),first=await f.mutate('start',grant);
+ await f.runtime.idle();
+ assert.equal(f.state(first.requestId)?.state,'RECONCILING');
+ assert.equal(f.run(first.requestId)?.outcome,'UNKNOWN');
+ assert.ok(f.store.readWorkspaceState({kind:'active-lease',id:f.startIntent.workspaceId}).lease);
+ const observed=await f.send('reconcile',{sessionId:first.requestId,requestId:randomUUID()});
+ assert.equal(observed.result,'BLOCKED',JSON.stringify(observed));
+ assert.equal((await f.mutate('start',grant,first.requestId)).operation?.outcome,'UNKNOWN');
+ const next=startSuccessor(f);
+ const recovered=createExecutionRuntime({storage:f.storage,paths:f.paths,instanceId:next,
+   currentEligibility:()=>Promise.reject(new Error('NO_EFFECT_EXPECTED'))});
+ await recovered.recover();
+ assert.equal(f.state(first.requestId)?.state,'RECONCILING');
+ assert.equal(f.run(first.requestId)?.instanceId,f.instanceId);
+ assert.ok(f.store.readWorkspaceState({kind:'active-lease',id:f.startIntent.workspaceId}).lease);
+ assert.equal(f.counts().writes,1);
+});
