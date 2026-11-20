@@ -26,6 +26,8 @@ export function isMutation(c: CliCommand) { return c.namespace==='review'?(REVIE
 export function reviewCliInput(c:CliCommand){
   if(c.namespace!=='review'||c.action!=='prepare')return null;
   const {action,input:{projectId:_project,stateRevision,...intent}}=reviewBridgeAction(c.params);
+  if(action==='integrate')delete intent.reviewId;
+  if(action==='candidate.prepare')intent.expectedStateRevision=stateRevision;
   return JSON.stringify({action,intent,expectedRevisions:stateRevision===undefined?{}:{stateRevision}});
 }
 export function buildCliArgs(c: CliCommand): string[] {

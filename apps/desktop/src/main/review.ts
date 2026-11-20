@@ -17,10 +17,25 @@ export function installReview(router:BridgeRouter,context:ArchiveContext,actions
    const reply=await core.call({namespace:'review',action:'prepare',archive:c.path,params:{action,...input}});
    context.apply(c,reply);
    if(reply.result!=='OK'||reply.liveness!=='LIVE_VERIFIED')throw new Error(reply.error?.code??'DAEMON_UNAVAILABLE');
-   const summary=record(reply.data.summary),target=uuid(input.reviewId??input.featureId),projectId=uuid(input.projectId);
+   const summary=record(reply.data.summary),target=uuid(action==='integrate'?input.candidateId:input.reviewId??input.featureId),projectId=uuid(input.projectId);
    if(summary.action!==action)throw new Error('CLIENT_PROTOCOL_ERROR');
    let preview:string[],stateRevision:string;
-   if(action==='validate'){
+   if(action==='candidate.prepare'||action==='approve'||action==='integrate'){
+     if(summary.targetId!==target||summary.projectId!==projectId||summary.stateRevision!==input.stateRevision)
+       throw new Error('CLIENT_PROTOCOL_ERROR');
+     stateRevision=revision(summary.stateRevision);
+     const targetRef=text(summary.targetRef,266),targetOid=text(summary.targetOid,64);
+     if(action==='candidate.prepare'){
+       if(!['FAST_FORWARD','MERGE_COMMIT'].includes(String(summary.strategy)))throw new Error('CLIENT_PROTOCOL_ERROR');
+       preview=['Prepara il candidate',`Target ${targetRef} · ${targetOid}`,`Sorgente ${text(summary.sourceOid,64)}`,
+         summary.strategy==='FAST_FORWARD'?'Strategia fast-forward':`Merge commit · ${text(summary.author,120)}`];
+     }else{
+       if(summary.reviewId!==input.reviewId||action==='approve'&&summary.evidenceDigest!==input.evidenceDigest||
+          action==='integrate'&&targetOid!==input.expectedTargetOid)throw new Error('CLIENT_PROTOCOL_ERROR');
+       preview=[action==='approve'?'Approva il candidate':'Integra localmente il candidate',`Target ${targetRef} · ${targetOid}`,
+         `Candidate ${text(summary.candidateOid,64)}`,`Tree ${text(summary.treeOid,64)}`,`Prove ${text(summary.evidenceDigest,64)}`];
+     }
+   }else if(action==='validate'){
      const expected=input.commandSpecIds as string[],checks=Array.isArray(summary.checks)?summary.checks.map(record):[];
      if(summary.reviewId!==target||summary.stateRevision!==input.stateRevision||checks.length!==expected.length||
        checks.some((check,index)=>check.commandSpecId!==expected[index]||!/^[0-9a-f]{64}$/.test(text(check.commandDigest,64))))
@@ -43,7 +58,7 @@ export function installReview(router:BridgeRouter,context:ArchiveContext,actions
      }
    }
    const command:CliCommand={namespace:'review',action,archive:c.path,reviewTarget:target,projectId,expectedStateRevision:stateRevision,
-     params:{grantId:uuid(reply.data.grantId)}};
+     ...(input.reviewId?{reviewId:uuid(input.reviewId)}:{}),params:{grantId:uuid(reply.data.grantId)}};
    return{command,summary:[...preview,`Versione ${stateRevision}`]};
  };
  for(const method of REVIEW_QUERIES)router.register(method,async request=>{

@@ -52,6 +52,10 @@ Build, lint e cinque prove native/contratto mirate PASS. Il writer registra `REF
 
 Cinque contratti CLI/client PASS. L’help espone candidate, approvazione e integrazione. La consultazione dell’UUID originale riporta la fase del cambio ref e la relativa prova. Un reply loss porta a una query dell’operazione senza ripetere `integrate`.
 
+## Ripresa T026
+
+Build e typecheck Desktop, cinque contratti Review e due E2E Electron PASS. Il bridge prepara candidate, approvazione e integrazione con scope chiuso su stdin e grant conservati nel main. Electron conferma la preparazione Git del candidate su fixture, verifica ricevuta e UUID con la CLI e mostra il candidate offline. Senza approvazione l’integrazione è disabilitata. I fault e il CAS sono provati nelle integrazioni core.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.

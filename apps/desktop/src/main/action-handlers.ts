@@ -30,7 +30,8 @@ export async function settleReceipt(store: ReceiptStore, receipt: Receipt, resul
       if(data.accepted===true&&data.entityId===receipt.reviewTarget&&data.requestId===receipt.requestId)
         return store.update(receipt.requestId,{phase:'RECONCILING',outcome:'IN_PROGRESS'});
       if(result.liveness==='LIVE_VERIFIED'&&['APPROVAL_REQUIRED','APPROVAL_STALE','REVIEW_STALE','ENVIRONMENT_STALE',
-        'SOURCE_NOT_QUIESCENT','REVIEW_SCOPE_LIMIT','ARTIFACT_CORRUPT','TARGET_MOVED','INVALID_REQUEST','RESOURCE_LIMIT','EVENT_BACKPRESSURE','BUSY'].includes(result.error?.code??''))
+        'SOURCE_NOT_QUIESCENT','REVIEW_SCOPE_LIMIT','ARTIFACT_CORRUPT','TARGET_IN_USE','TARGET_MOVED','CANDIDATE_CHANGED','CHECKS_NOT_RUN',
+        'INVALID_REQUEST','RESOURCE_LIMIT','EVENT_BACKPRESSURE','BUSY'].includes(result.error?.code??''))
         return store.update(receipt.requestId,{phase:'TERMINAL',outcome:'BLOCKED',errorCode:result.error!.code});
       return unknown();
     }catch{return unknown();}
@@ -140,7 +141,7 @@ export class ActionService {
       if(cap.reviewVersion!==1||!Array.isArray(cap.reviewMethods)||!cap.reviewMethods.includes(`review.${command.action}`))throw new Error('UNSUPPORTED_VERSION');
       const current=await this.options.core.call(command.action==='create'?
         {namespace:'feature',action:'get',archive:c.path,params:{featureId:command.reviewTarget}}:
-        {namespace:'review',action:'get',archive:c.path,params:{reviewId:command.reviewTarget}});
+        {namespace:'review',action:'get',archive:c.path,params:{reviewId:command.reviewId??command.reviewTarget}});
       this.options.context.apply(c,current);
       const key=command.action==='create'?'feature':'review';
       if(current.result!=='OK'||record(current.data[key]).stateRevision!==command.expectedStateRevision||

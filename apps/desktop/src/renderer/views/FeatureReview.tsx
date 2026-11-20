@@ -12,7 +12,7 @@ const stateLabels:Record<string,string>={
 const rows=(v:unknown)=>Array.isArray(v)?v.map(record):[];
 const checkLabels:Record<string,string>={NOT_RUN:'Non verificato',PASS:'Superato',FAIL:'Fallito',BLOCKED:'Bloccato'};
 
-export function FeatureReview({desktop}:{desktop:Desktop}){
+export function FeatureReview({desktop,onEnvironment}:{desktop:Desktop;onEnvironment(workspaceId:string):void}){
  const {core,invoke}=desktop;
  const [projects,setProjects]=useState<Params[]>([]),[projectId,setProjectId]=useState('');
  const [items,setItems]=useState<Params[]>([]),[selected,setSelected]=useState('');
@@ -20,6 +20,7 @@ export function FeatureReview({desktop}:{desktop:Desktop}){
  const [criteria,setCriteria]=useState<Params[]>([]),[criteriaCursor,setCriteriaCursor]=useState<string|null>(null);
  const [freshness,setFreshness]=useState<string|null>(null),[loading,setLoading]=useState(false);
  const [diff,setDiff]=useState<{id:string;offset:number;text:string;cursor:string|null}|null>(null);
+ const [candidateDetail,setCandidateDetail]=useState<{candidate:Params;decisionId:string|null;integration:Params|null;evidenceDigest:string}|null>(null);
  const [methods,setMethods]=useState<string[]>([]),[creating,setCreating]=useState(false);
  const [commands,setCommands]=useState<Params[]>([]),[checked,setChecked]=useState<string[]>([]);
  const [prepared,setPrepared]=useState<PreparedAction|null>(null),[receipt,setReceipt]=useState<Params|null>(null),[busy,setBusy]=useState(false);
@@ -35,7 +36,7 @@ export function FeatureReview({desktop}:{desktop:Desktop}){
  },[core]);
  useEffect(()=>{
    setDetail(null);setDiff(null);setItems([]);setSelected('');setFreshness(null);setNextCursor(null);setCriteria([]);setCriteriaCursor(null);
-   setCreating(false);setReceipt(null);
+   setCreating(false);setReceipt(null);setCandidateDetail(null);
    if(projectId)void list(projectId);
  },[projectId]);
  async function list(projectId:string,cursor?:string){
@@ -54,16 +55,19 @@ export function FeatureReview({desktop}:{desktop:Desktop}){
  }
  async function show(reviewId:string,cursor?:string){
    const token=++generation.current;
-   if(!cursor){setSelected(reviewId);setDetail(null);setDiff(null);setCriteria([]);setCriteriaCursor(null);setCommands([]);setChecked([]);}
+   if(!cursor){setSelected(reviewId);setDetail(null);setDiff(null);setCriteria([]);setCriteriaCursor(null);setCommands([]);setChecked([]);setCandidateDetail(null);}
    setLoading(true);
    try{
      const r=await core('getFeatureReview',{reviewId,...(cursor?{cursor}:{})});
      if(token===generation.current&&r?.result==='OK'){
        setDetail(record(r.data.review));setFreshness(r.freshness);
+       const candidate=r.data.candidate?record(r.data.candidate):null;
+       setCandidateDetail(candidate?{candidate,decisionId:typeof r.data.decisionId==='string'?r.data.decisionId:null,
+         integration:r.data.integration?record(r.data.integration):null,evidenceDigest:String(r.data.evidenceDigest)}:null);
        setCriteria(previous=>cursor?[...previous,...rows(r.data.criteria)]:rows(r.data.criteria));
        setCriteriaCursor(typeof r.data.nextCursor==='string'?r.data.nextCursor:null);
        if(!cursor&&r.freshness==='LIVE'&&methods.includes('review.validate')){
-         const environment=await core('getEnvironment',{workspaceId:record(r.data.review).workspaceId});
+         const environment=await core('getEnvironment',{workspaceId:candidate?.stagingId??record(r.data.review).workspaceId});
          const plan=environment?.result==='OK'&&environment.data.plan?record(environment.data.plan):null;
          if(token===generation.current)setCommands(plan?rows(plan.commands):[]);
        }
@@ -153,6 +157,23 @@ export function FeatureReview({desktop}:{desktop:Desktop}){
        <dl><dt>Stato</dt><dd>{stateLabels[String(detail.state)]??String(detail.state)}</dd>
          <dt>Commit sorgente</dt><dd>{String(detail.sourceOid)}</dd><dt>Commit target</dt><dd>{String(detail.targetOid)}</dd>
          <dt>File modificati</dt><dd>{String(detail.fileCount)}</dd></dl>
+       {candidateDetail&&<>
+         <dl><dt>Commit candidate</dt><dd>{String(candidateDetail.candidate.candidateOid)}</dd>
+           <dt>Tree</dt><dd>{String(candidateDetail.candidate.treeOid)}</dd>
+           {candidateDetail.integration&&<><dt>Integrazione locale</dt><dd>{String(candidateDetail.integration.phase)}</dd></>}
+         </dl>
+         <div className="row-actions">
+           <button className="button subtle" disabled={busy||loading} onClick={()=>onEnvironment(String(candidateDetail.candidate.stagingId))}>Apri ambiente candidate</button>
+           {can('approve')&&<button className="button subtle" disabled={busy||loading||detail.state!=='READY_FOR_APPROVAL'}
+             onClick={e=>void prepare({action:'approve',projectId,reviewId:detail.reviewId,candidateId:candidateDetail.candidate.candidateId,
+               evidenceDigest:candidateDetail.evidenceDigest,stateRevision:detail.stateRevision},e.currentTarget)}>Prepara approvazione candidate</button>}
+           {can('integrate')&&<button className="button primary" disabled={busy||loading||!candidateDetail.decisionId||!!candidateDetail.integration}
+             onClick={e=>void prepare({action:'integrate',projectId,reviewId:detail.reviewId,candidateId:candidateDetail.candidate.candidateId,
+               decisionId:candidateDetail.decisionId,expectedTargetOid:detail.targetOid,stateRevision:detail.stateRevision},e.currentTarget)}>Prepara integrazione locale</button>}
+         </div>
+       </>}
+       {!candidateDetail&&can('candidate.prepare')&&<button className="button subtle" disabled={busy||loading||!['DRAFT','READY_FOR_APPROVAL','BLOCKED','CHANGES_REQUESTED'].includes(String(detail.state))}
+         onClick={e=>void prepare({action:'candidate.prepare',projectId,reviewId:detail.reviewId,stateRevision:detail.stateRevision},e.currentTarget)}>Prepara candidate</button>}
        {criteria.length>0&&<>
          <h4>Criteri di accettazione</h4>
          <ul>{criteria.map(item=><li key={String(item.criterionId)}>

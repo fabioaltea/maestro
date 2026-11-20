@@ -3,7 +3,7 @@ import {keys,record,revision,text,uuid} from './input.ts';
 import {CORE_ERRORS} from './core-errors.ts';
 
 export const REVIEW_QUERIES=['listFeatureReviews','getFeatureReview','getReviewDiffPart','getReviewOperation'] as const;
-export const REVIEW_MUTATIONS=['create','validate','request-changes'] as const;
+export const REVIEW_MUTATIONS=['create','validate','request-changes','candidate.prepare','approve','integrate'] as const;
 export const REVIEW_BRIDGE_METHODS=[...REVIEW_QUERIES,'prepareReviewAction','confirmReviewAction','cancelReviewAction'] as const;
 const ids=['reviewId','projectId','featureId','featureRevisionId','workspaceId','checkpointId'];
 const statuses=['DRAFT','CHECKING','CHANGES_REQUESTED','READY_FOR_APPROVAL','BLOCKED','STALE','APPROVED'];
@@ -33,6 +33,14 @@ export function reviewBridgeAction(value:unknown){
  }else if(action==='request-changes'){
    keys(input,['projectId','reviewId','stateRevision','feedbackArtifactId']);
    uuid(input.reviewId);revision(input.stateRevision);uuid(input.feedbackArtifactId);
+ }else if(action==='candidate.prepare'){
+   keys(input,['projectId','reviewId','stateRevision']);uuid(input.reviewId);revision(input.stateRevision);
+ }else if(action==='approve'){
+   keys(input,['projectId','reviewId','candidateId','stateRevision','evidenceDigest']);
+   uuid(input.reviewId);uuid(input.candidateId);revision(input.stateRevision);digest(input.evidenceDigest);
+ }else if(action==='integrate'){
+   keys(input,['projectId','reviewId','candidateId','decisionId','stateRevision','expectedTargetOid']);
+   uuid(input.reviewId);uuid(input.candidateId);uuid(input.decisionId);revision(input.stateRevision);oid(input.expectedTargetOid);
  }else throw new Error('INVALID_INPUT');
  uuid(input.projectId);
  return{action,input};
@@ -82,9 +90,9 @@ function reviewOperation(value:unknown){
  for(const at of [p.acceptedAt,...(final?[p.completedAt]:[])])
    if(!Number.isFinite(Date.parse(text(at,64))))throw new Error('CLIENT_PROTOCOL_ERROR');
  if(p.result!==null){
-   const result=record(p.result);keys(result,['reviewId','decisionId','digest','stateRevision','jobIds']);
-   if(result.reviewId!==undefined)uuid(result.reviewId);
-   if(result.decisionId!==undefined)uuid(result.decisionId);
+   const result=record(p.result);keys(result,['reviewId','decisionId','digest','stateRevision','jobIds','candidateId','candidateOid','integrationId','resultingOid']);
+   for(const key of ['reviewId','decisionId','candidateId','integrationId'])if(result[key]!==undefined)uuid(result[key]);
+   for(const key of ['candidateOid','resultingOid'])if(result[key]!==undefined)oid(result[key]);
    if(result.digest!==undefined)digest(result.digest);
    if(result.stateRevision!==undefined)revision(result.stateRevision);
    if(result.jobIds!==undefined)commandIds(result.jobIds);
@@ -93,6 +101,19 @@ function reviewOperation(value:unknown){
  const error=record(p.error),code=text(error.code,64);
  if(!Object.hasOwn(CORE_ERRORS,code))throw new Error('CLIENT_PROTOCOL_ERROR');
  return{...p,error:CORE_ERRORS[code as keyof typeof CORE_ERRORS]};
+}
+function integrationView(value:unknown,requestId?:unknown){
+ const p=record(value);keys(p,['integrationId','phase','resultingOid','proof']);
+ const id=uuid(p.integrationId);
+ if(requestId!==undefined&&id!==requestId||!['REF_INTENT','REF_UPDATED','GUARD_SYNCED','FINALIZED','RECONCILING'].includes(String(p.phase)))
+   throw new Error('CLIENT_PROTOCOL_ERROR');
+ if(p.resultingOid!==null)oid(p.resultingOid);
+ if(p.proof!==undefined&&p.proof!==null){
+   const proof=record(p.proof);keys(proof,['requestId','old','candidate','guardSynced']);
+   if(uuid(proof.requestId)!==id||proof.candidate!==p.resultingOid||proof.guardSynced!==undefined&&proof.guardSynced!==true)throw new Error('CLIENT_PROTOCOL_ERROR');
+   oid(proof.old);oid(proof.candidate);
+ }
+ return p;
 }
 export function validateReviewData(action:string,value:unknown,params:Params){
  const p=record(value);
@@ -104,16 +125,19 @@ export function validateReviewData(action:string,value:unknown,params:Params){
    integer(p.expiresAt,1,Number.MAX_SAFE_INTEGER);record(p.summary);return p;
  }
  if(action==='operation'||(REVIEW_MUTATIONS as readonly string[]).includes(action)){
-   keys(p,[...meta,'operation','accepted','requestId','entityId','stateRevision','jobIds','code','error']);
+   keys(p,[...meta,'operation','accepted','requestId','entityId','stateRevision','jobIds','operationId','integration','code','error']);
    if(p.operation!==undefined){
      const operation=reviewOperation(p.operation);
      if(params.requestId!==undefined&&operation.requestId!==params.requestId||action!=='operation'&&operation.action!==action)
        throw new Error('CLIENT_PROTOCOL_ERROR');
-     return{...(p.storeId?{storeId:p.storeId}:{}),operation};
+     return{...(p.storeId?{storeId:p.storeId}:{}),operation,...(p.integration===undefined?{}:{integration:integrationView(p.integration,operation.requestId)})};
    }
    if(p.accepted===true){
-     uuid(p.requestId);uuid(p.entityId);revision(p.stateRevision);commandIds(p.jobIds);
-     return{accepted:true,requestId:p.requestId,entityId:p.entityId,stateRevision:p.stateRevision,jobIds:p.jobIds};
+     uuid(p.requestId);uuid(p.entityId);revision(p.stateRevision);
+     if(p.jobIds!==undefined)commandIds(p.jobIds);
+     if(p.operationId!==undefined&&uuid(p.operationId)!==p.requestId)throw new Error('CLIENT_PROTOCOL_ERROR');
+     return{accepted:true,requestId:p.requestId,entityId:p.entityId,stateRevision:p.stateRevision,
+       ...(p.jobIds!==undefined?{jobIds:p.jobIds}:{}),...(p.operationId!==undefined?{operationId:p.operationId}:{})};
    }
    return{};
  }
@@ -122,8 +146,19 @@ export function validateReviewData(action:string,value:unknown,params:Params){
    keys(p,[...meta,'items','nextCursor']);
    if(!Array.isArray(p.items)||p.items.length>20||p.items.some(item=>review(item,false).projectId!==params.projectId))throw new Error('CLIENT_PROTOCOL_ERROR');
  }else if(action==='get'){
-   keys(p,[...meta,'review','eligibility','criteria','nextCursor']);
-   if(review(p.review,true).reviewId!==params.reviewId||p.eligibility!=='UNKNOWN')throw new Error('CLIENT_PROTOCOL_ERROR');
+   keys(p,[...meta,'review','eligibility','criteria','nextCursor','candidate','evidenceDigest','decisionId','integration']);
+   const selected=review(p.review,true);
+   if(selected.reviewId!==params.reviewId||p.eligibility!=='UNKNOWN')throw new Error('CLIENT_PROTOCOL_ERROR');
+   if(p.candidate!==undefined){
+     const candidate=record(p.candidate);keys(candidate,['candidateId','reviewId','sourceOid','targetOid','candidateOid','treeOid','guardId','stagingId','digest','authoredAt']);
+     for(const id of ['candidateId','reviewId','guardId','stagingId'])uuid(candidate[id]);
+     for(const key of ['sourceOid','targetOid','candidateOid','treeOid'])oid(candidate[key]);
+     if(candidate.reviewId!==selected.reviewId||candidate.sourceOid!==selected.sourceOid||candidate.targetOid!==selected.targetOid)
+       throw new Error('CLIENT_PROTOCOL_ERROR');
+     digest(candidate.digest);digest(p.evidenceDigest);text(candidate.authoredAt,64);
+     if(p.decisionId!==null)uuid(p.decisionId);
+     if(p.integration!==null)integrationView(p.integration);
+   }
    if(p.criteria!==undefined){
      if(!Array.isArray(p.criteria)||p.criteria.length>20)throw new Error('CLIENT_PROTOCOL_ERROR');
      for(const value of p.criteria){

@@ -4,6 +4,9 @@ import {chooseDirectory,launchDesktop} from '../fixtures/electron.ts';
 import {createHash,randomUUID} from 'node:crypto';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {fileURLToPath} from 'node:url';
 import Database from 'better-sqlite3';
 import {openOwnedWorktree} from '../fixtures/owned-worktree.ts';
 
@@ -40,16 +43,27 @@ test('review feedback confirms the original receipt and restores focus',async()=
      expect(stopped.result.outcome).toBe('SUCCEEDED');
      const at=new Date().toISOString(),instanceId=stopped.result.instanceId;
      const ids={profile:randomUUID(),session:randomUUID(),checkpoint:randomUUID(),artifact:randomUUID(),review:randomUUID()};
-     const oid='a'.repeat(40),patch=JSON.stringify({version:1,baseOid:oid,trackedDiff:'',untracked:[]}),hash=createHash('sha256').update(patch).digest('hex');
      const objects=join(f.archive,'workflow','objects');
      await mkdir(objects,{recursive:true,mode:0o700});
-     await writeFile(join(objects,ids.artifact),patch,{mode:0o600,flag:'wx'});
      const db=new Database(join(f.archive,'state.sqlite'));
+     let oid:string,targetOid:string;
      try{
        db.pragma('foreign_keys=ON');
-       const w=db.prepare(`SELECT w.feature_id,w.project_id,w.envelope_id,f.current_revision_id FROM workspaces_records w
+       const w=db.prepare(`SELECT w.feature_id,w.project_id,w.envelope_id,w.ownership,f.current_revision_id FROM workspaces_records w
          JOIN features_records f USING(feature_id) WHERE w.workspace_id=?`).get(workspaceId) as
-         {feature_id:string;project_id:string;envelope_id:string;current_revision_id:string};
+         {feature_id:string;project_id:string;envelope_id:string;current_revision_id:string;ownership:string};
+       const worktree=(JSON.parse(w.ownership) as {root:{canonicalPath:string}}).root.canonicalPath;
+       expect(worktree.startsWith(`${f.directory}/`)).toBeTruthy();
+       const git=async(...args:string[])=>(await promisify(execFile)('/usr/bin/git',[
+         '-c','core.hooksPath=/dev/null','-c','user.name=Maestro Fixture','-c','user.email=fixture@example.invalid',...args,
+       ],{cwd:worktree,timeout:5000,env:{PATH:'/usr/bin:/bin',GIT_CONFIG_GLOBAL:'/dev/null',GIT_CONFIG_NOSYSTEM:'1'}})).stdout.trim();
+       targetOid=await git('rev-parse','HEAD');
+       await git('branch','review-target',targetOid);
+       await writeFile(join(worktree,'review-content.txt'),'Contenuto approvato.\n');
+       await git('add','--','review-content.txt');await git('commit','-m','synthetic review source');
+       oid=await git('rev-parse','HEAD');const treeOid=await git('rev-parse','HEAD^{tree}');
+       const patch=JSON.stringify({version:1,baseOid:oid,trackedDiff:'',untracked:[]}),hash=createHash('sha256').update(patch).digest('hex');
+       await writeFile(join(objects,ids.artifact),patch,{mode:0o600,flag:'wx'});
        const role=db.prepare("SELECT entity_id,revision_id FROM profiles_records WHERE alias='backend'").get() as {entity_id:string;revision_id:string};
        db.transaction(()=>{
          function done(id:string,namespace:string,action:string,target:string){
@@ -72,10 +86,11 @@ test('review feedback confirms the original receipt and restores focus',async()=
          db.prepare('UPDATE execution_sessions SET checkpoint_id=? WHERE session_id=?').run(ids.checkpoint,ids.session);
          done(ids.review,'REVIEW','create',w.feature_id);
          db.prepare(`INSERT INTO review_records VALUES(?,?,?,?,?,?,?,?,?,?,?,'DRAFT',1,?,0,0)`)
-           .run(ids.review,w.project_id,w.feature_id,w.current_revision_id,workspaceId,ids.checkpoint,oid,oid,'refs/heads/review-target','b'.repeat(40),hash,at);
+           .run(ids.review,w.project_id,w.feature_id,w.current_revision_id,workspaceId,ids.checkpoint,oid,treeOid,'refs/heads/review-target',targetOid,hash,at);
        })();
      }finally{db.close();}
-     expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
+     const actor=fileURLToPath(new URL('../fixtures/workspace-daemon.ts',import.meta.url));
+     await promisify(execFile)(process.execPath,[actor,f.archive],{timeout:35000,maxBuffer:16384});
      await page.getByRole('button',{name:'Revisioni',exact:true}).click();
      const panel=page.getByRole('region',{name:'Revisioni delle feature'});
      await panel.getByRole('button',{name:/review-target/}).click();
@@ -93,10 +108,23 @@ test('review feedback confirms the original receipt and restores focus',async()=
      expect(requestId).toBeTruthy();
      const queried=await f.cli(['review','operation',requestId!]);
      expect(queried.result.data.operation).toMatchObject({requestId,targetId:ids.review,outcome:'SUCCEEDED'});
+     const candidate=panel.getByRole('button',{name:'Prepara candidate',exact:true});
+     await candidate.click();
+     await expect(page.getByRole('dialog')).toContainText(targetOid);
+     await page.keyboard.press('Escape');await expect(candidate).toBeFocused();
+     await candidate.click();await page.getByRole('button',{name:'Conferma operazione',exact:true}).click();
+     await expect(receipt).toBeVisible();
+     const candidateId=(await receipt.textContent())?.match(/[a-f0-9-]{36}/)?.[0];
+     expect(candidateId).toBeTruthy();
+     await expect.poll(async()=>(await f.cli(['review','operation',candidateId!])).result.outcome).toBe('SUCCEEDED');
+     await panel.getByRole('button',{name:'Aggiorna dettaglio'}).click();
+     await expect(panel.getByText('Commit candidate',{exact:true})).toBeVisible();
+     await expect(panel.getByRole('button',{name:'Prepara integrazione locale'})).toBeDisabled();
      expect((await f.cli(['daemon','stop'])).result.outcome).toBe('SUCCEEDED');
      await panel.getByRole('button',{name:'Aggiorna dettaglio'}).click();
      await expect(panel.getByText(/Servizio offline/)).toBeVisible();
      await expect(prepare).toHaveCount(0);
+     await expect(panel.getByText('Commit candidate',{exact:true})).toBeVisible();
    }finally{await app.close();}
  }finally{await f.cleanup();}
 });
