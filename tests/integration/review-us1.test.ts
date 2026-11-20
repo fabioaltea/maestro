@@ -52,6 +52,12 @@ test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit in
  const {review}=f.store.readReviewState({kind:'review',id:requestId});
  assert.equal(review?.fileCount,3);
  assert.ok(review?.parts[0]);
+ const events=f.store.listEvents({limit:1000}).records.filter(event=>event.operationId===requestId);
+ const changes=events.filter(event=>event.type.startsWith('review.'));
+ assert.deepEqual(changes.map(event=>event.type),['review.changed','review.output.available']);
+ assert.equal(changes[0]?.payload.reviewId,requestId);
+ assert.equal(changes[1]?.payload.watermark,String(review.parts.length));
+ assert.ok(changes.every(event=>event.instanceId===f.instanceId&&!JSON.stringify(event).includes(targetRef)));
  const artifact=await call('artifact.get',{artifactId:review.parts[0].artifactId});
  const diff=Buffer.from((artifact.data as {base64:string}).base64,'base64').toString();
  assert.match(diff,/diff --git a\/approved.txt b\/approved.txt/);
@@ -64,8 +70,16 @@ test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit in
  const feedbackArtifactId=await f.uploadInput('Aggiungere una verifica.',f.startIntent.featureId);
  const feedback=await call('prepare',{action:'request-changes',intent:{reviewId:requestId,feedbackArtifactId},expectedRevisions:{stateRevision:'1'}});
  assert.equal(feedback.result,'OK',JSON.stringify(feedback));
- await unlink(join(f.paths.directory,'workflow','objects',feedbackArtifactId));
  const feedbackId=randomUUID(),grantId=(feedback.data as {grantId:string}).grantId;
+ const backlog=f.database.prepare('SELECT records FROM event_outbox WHERE singleton=1').get() as {records:string};
+ f.database.prepare("UPDATE event_outbox SET records='[{}]' WHERE singleton=1").run();
+ try{
+   const blocked=await call('request-changes',{requestId:feedbackId,grantId});
+   assert.equal((blocked.data as {code:string}).code,'EVENT_BACKPRESSURE');
+   assert.equal((await call('operation.get',{requestId})).result,'OK');
+   assert.equal(f.store.readFeatureState({kind:'grant',id:grantId}).grant?.consumedByRequestId,null);
+ }finally{f.database.prepare('UPDATE event_outbox SET records=? WHERE singleton=1').run(backlog.records);}
+ await unlink(join(f.paths.directory,'workflow','objects',feedbackArtifactId));
  const result=await call('request-changes',{requestId:feedbackId,grantId});
  assert.equal((result.data as {code:string}).code,'ARTIFACT_CORRUPT');
  assert.equal(f.store.readFeatureState({kind:'operation',id:feedbackId}).operation,null);

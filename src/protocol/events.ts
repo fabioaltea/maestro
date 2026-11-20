@@ -38,7 +38,7 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
     phase: [...(workflow ? ['WORKING'] : []), 'ACCEPTED', 'PRECHECK', 'SPAWN_INTENT', 'WAIT_READY', 'STOP_REQUESTED', 'DRAINING', 'WAIT_EXIT', 'FINALIZED'],
   };
   for (const [key, value] of Object.entries(draft.payload)) {
-    if(review&&!['scope','reviewId','featureId','projectId','state','stateRevision','action','phase','outcome','code'].includes(key)){redacted++;continue;}
+    if(review&&!['scope','reviewId','featureId','projectId','state','stateRevision','action','phase','outcome','code','watermark'].includes(key)){redacted++;continue;}
     if(scheduler&&!['scope','jobId','projectId','state','stateRevision','action','phase','outcome','code'].includes(key)){redacted++;continue;}
     if(execution&&!['scope','sessionId','runId','workspaceId','state','stateRevision','action','phase','outcome','code','watermark','truncated'].includes(key)){
       redacted++;continue;
@@ -73,6 +73,7 @@ export function redactEventDraft(draft: EventDraft): EventDraft {
   }
   const required: Readonly<Record<string, readonly string[]>> = {
     'review.changed':['reviewId','state','stateRevision'],
+    'review.output.available':['reviewId','stateRevision','watermark'],
     'scheduler.changed':['action'],
     'execution.changed':['sessionId','runId','state','stateRevision'],'execution.output.available':['sessionId','runId','watermark'],
     'profile.changed':['entityId'],'workspace.changed':['workspaceId'],'environment.changed':['workspaceId'],'environment.output.available':['workspaceId','jobId','watermark'],

@@ -26,4 +26,6 @@ test('activity projection preserves review correlation and removes diff output',
  const event=decodeUiEvent(projectSafe(raw),storeId);
  assert.equal(event.operationId,operationId);
  assert.deepEqual(event.payload,{scope:'review',reviewId,stateRevision:'1',state:'DRAFT'});
+ const output=decodeUiEvent(projectSafe({...raw,type:'review.output.available',payload:{scope:'review',reviewId,stateRevision:'1',watermark:'2',base64:'private'}}),storeId);
+ assert.deepEqual(output.payload,{scope:'review',reviewId,stateRevision:'1',watermark:'2'});
 });

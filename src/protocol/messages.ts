@@ -47,7 +47,7 @@ export interface PublicResult {
 export const MAX_EVENT_BYTES = 16 * 1024;
 export const MAX_OUTBOX_BYTES = 64 * 1024;
 export const MAX_EVENT_PAGE_BYTES = 60 * 1024;
-export const EVENT_TYPES = ['review.changed','scheduler.changed','execution.changed','execution.output.available','profile.changed','environment.changed','environment.output.available','workspace.changed','feature.changed','feature.output.available','feature.revision.changed','feature.approval.changed','artifact.changed', 'discovery.changed', 'discovery.output.available', 'discovery.question.available', 'discovery.document.changed', 'discovery.approval.changed', 'lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed',
+export const EVENT_TYPES = ['review.changed','review.output.available','scheduler.changed','execution.changed','execution.output.available','profile.changed','environment.changed','environment.output.available','workspace.changed','feature.changed','feature.output.available','feature.revision.changed','feature.approval.changed','artifact.changed', 'discovery.changed', 'discovery.output.available', 'discovery.question.available', 'discovery.document.changed', 'discovery.approval.changed', 'lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed',
   'operation.blocked', 'recovery.started', 'recovery.completed', 'resource.blocked', 'authorization.denied', 'diagnostics.degraded'] as const;
 export type EventType = typeof EVENT_TYPES[number];
 export interface EventDraft {

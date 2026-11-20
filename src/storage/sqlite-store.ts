@@ -1,4 +1,4 @@
-import {reviewChanged} from '../core/review/events.js';
+import {reviewEvents} from '../core/review/events.js';
 import {REVIEW_SCHEMA_VERSION,REVIEW_TABLES} from './review-schema.js';
 import {commitReviewState,readReviewState} from './review-store.js';
 import type {ReviewChange,ReviewQuery,ReviewRecovery} from '../ports/review.js';
@@ -240,7 +240,7 @@ export class SQLiteStore {
           if(op.namespace==='REVIEW'){
             const id=op.result?.reviewId;
             const value=typeof id==='string'?readReviewState(this.database!,{kind:'review',id}).review:null;
-            if(value)drafts.push(reviewChanged(op,String(owner.owning_instance_id),value));
+            if(value)drafts.push(...reviewEvents(op,String(owner.owning_instance_id),value));
             continue;
           }
           if(op.namespace==='SCHEDULER'){

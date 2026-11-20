@@ -10,6 +10,10 @@ Base `0f9a9be`, schema 10. La 010 ha concluso 20/36 task e verificato 24 test co
 
 `npm run build:test`, `npm run lint` e 4 test di integrazione in `review-store.test` e `review-us1.test` PASS. Le conferme di snapshot e feedback usano grant del daemon corrente. Un retry concorrente con gli stessi identificativi condivide l'operazione in corso. Il drain impedisce di confermare dopo la chiusura dell'ammissione. Il rigetto conserva il grant e la query dei risultati precedenti rimane disponibile. Il recovery marca come interrotto un intento di snapshot pendente e preserva l'esito terminale a un ulteriore riavvio simulato. La riconciliazione del cambio ref è coperta dal task T024.
 
+## Ripresa T012
+
+Tre test core mirati (`review-limits.test`, `review-us1.test`), due contratti Desktop e typecheck Desktop PASS. Il commit dello snapshot emette `review.changed` e, se il diff ha parti sigillate, `review.output.available` con il numero delle parti. Il journal e Desktop ricevono solo metadati. A outbox saturo la conferma del feedback lascia intatti grant e ledger, con query dello snapshot precedente disponibile. Alla quota ordinaria il nuovo grant è rifiutato, mentre il discard del feedback ancora senza riferimenti e il recovery dello snapshot usano la riserva terminale.
+
 ## T034 — verifica locale
 
 - Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.
