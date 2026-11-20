@@ -49,3 +49,13 @@ export interface ReviewStoragePort {
  readReviewState?(query:ReviewQuery):Promise<ReviewRead>;
  commitReviewState?(change:ReviewChange):Promise<{readonly operation:WorkflowOperationRecord;readonly inserted:boolean}>;
 }
+
+export interface IntegrationReceiptScope {
+ readonly integrationId:string;readonly reviewId:string;readonly workspaceId:string;readonly projectId:string;
+ readonly sourceOid:string;readonly targetRef:string;readonly expectedTargetOid:string;readonly candidateOid:string;
+ readonly documentationDigest:string;
+}
+export interface IntegrationReceiptProof extends IntegrationReceiptScope {
+ readonly resultingOid:string;readonly contextFreshness:'LAST_KNOWN'|'STALE'|'UNKNOWN';
+ readonly publicationGrantRequired:true;
+}
