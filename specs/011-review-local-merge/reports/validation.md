@@ -62,7 +62,7 @@ Cinque integrazioni 011/006 PASS. Il fault prima del commit lascia la Discovery 
 
 ## Ripresa T031
 
-La ricevuta identifica il blob esatto della documentazione nel commit integrato. La transazione aggiorna l'approvazione Discovery interessata e conserva il numero di run e corpus. Stesso UUID e revisione recuperano la ricevuta dopo un reply loss, mentre lo stesso UUID con revisione diversa è rifiutato. Build test, lint e quattro prove US3 core PASS.
+La ricevuta identifica il blob esatto della documentazione nel commit integrato. La transazione porta a STALE la Discovery interessata e conserva il numero di run e corpus. Stesso UUID e intento recuperano la ricevuta dopo un reply loss. Lo stesso UUID con un'integrazione diversa è rifiutato. Build test, lint e quattro prove US3 core PASS.
 
 ## Ripresa T032
 
@@ -74,12 +74,19 @@ Tre contratti Desktop e due E2E Electron PASS. Electron recupera l'esito asincro
 
 ## T034 — verifica locale
 
-- Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS.
-- Suite core mirata, 27 PASS, 0 FAIL, 0 SKIP. Include cinque prove native G0, la migrazione 10→11 e regressioni schema 9→10 e lease workspace. Il successivo test unitario su chiusura/cleanup porta il totale a 28 PASS mirati.
-- Desktop unit/contract, 60 PASS, 0 FAIL, 0 SKIP. E2E Electron review e coda, 2 PASS, 0 FAIL, 0 SKIP.
-- FR-001–003. Una fixture 009 con exit proof e checkpoint Git pulito produce un diff sigillato, ricostruibile da CLI e Desktop. Un edit tardivo invalida il grant. La perdita dell'artefatto feedback lascia il grant intatto. Il confronto dei risultati richiesti è legato al tree. La validazione end-to-end 007 sul candidate resta aperta.
-- FR-004–006. G0 nativo verifica guard, fast-forward CAS, sync e fault pre/post CAS. Il port rifiuta target occupato, modificato o divergente. Staging, candidate a due parent, validazione e grant d'integrazione non sono pubblicati.
-- FR-007–009. Gli invarianti di dominio richiedono prova attribuita del CAS, guard sincronizzato e prova cleanup corrente. Un commit nuovo o un file non integrato bloccano il preview. Receipt, ricalcolo Discovery e cleanup delegato end-to-end restano aperti.
-- FR-010–012. DTO chiusi, metadati paginati, chunk fino a 8 KiB, outbox atomica redatta, storico immutabile offline, limiti sui diff e rollback su quota. Il bridge Desktop di review espone consultazione.
+Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS. La suite mirata `node --test --test-concurrency=1 dist-tests/tests/{unit,contract,integration}/review-*.test.js` ha dato 37 PASS prima dell'ultimo contratto headless T032. Desktop unit/contract ha dato 66 PASS e Playwright `review-flow.spec.ts` ha dato 2 PASS. Zero failure o skip in queste esecuzioni.
+
+Il ricontrollo finale di 12 casi tra US1–US3, contratto US3 e cleanup 006 ha dato 11 PASS e un errore nell'ordine della fixture US1. Dopo l'installazione 007, gli ignored rendevano la sorgente non quiescente per creare altri snapshot. Gli snapshot sono ora creati prima dell'installazione. Il rerun US1 ha dato 1 PASS e ha letto tutti e dieci gli snapshot. Le regressioni 006 includono la rimozione effettiva di un worktree pulito e integrato e il recovery dopo un esito incerto.
+
+| Requisito | Evidenza locale |
+| --- | --- |
+| FR-001–003 | Checkpoint 009 pulito, snapshot sigillato e criteri 005. Un edit invalida il grant e la prova 007 è attribuita al tree. Il feedback è consegnato al solo host di fixture dopo un nuovo grant `execution.start`. |
+| FR-004–006 | Guard/staging registrati in 006, fast-forward, merge a due parent, conflitto conservato, check 007 sul candidate, approvazione e integrazione con grant distinti, CAS e guard sync durevoli. |
+| FR-007–009 | Ricevuta con OID e prove, blob della documentazione, Discovery STALE per il selettore toccato e cleanup 006 con prova corrente. Un nuovo commit blocca anche il cleanup già autorizzato. |
+| FR-010–012 | DTO chiusi, pagine, chunk fino a 8 KiB, outbox atomica con metadati, rollback su quota, UUID originale tramite CLI e Desktop, storico offline e risposte tardive scartate. |
+| SC-001 | Criteri letti dai dieci snapshot locali. Il criterio con prova 007 sul tree corretto risulta PASS e i nove senza prova risultano NOT_RUN. L'approvazione candidate senza prova risulta CHECKS_NOT_RUN. |
+| SC-002 | Le prove con target sporco/in uso, sorgente mutata e conflitto preservano checkout e commit di fixture. |
+| SC-003 | Fault prima e dopo il CAS, ripresa del daemon e dieci retry dell'UUID originale. Una sola voce di reflog attribuita all'integrazione. |
+| SC-004 | Electron e CLI mostrano l'OID integrato e i documenti. L'anteprima live delega a una conferma 006 distinta. Il caso con lavoro sopravvenuto preserva il file e blocca la rimozione. |
 
 Nessuna misura generale di latenza. Acceptance e benchmark Foundation di volume o durata non sono stati rilanciati.

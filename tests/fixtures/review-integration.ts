@@ -114,7 +114,12 @@ export async function reviewIntegrationFixture(t:TestContext){
  assert.deepEqual(recovered?.proof,{requestId:integrationId,old:targetOid,candidate:candidate.candidateOid,guardSynced:true});
  f.store.transitionInstance(instanceId,'RUNNING');successor.start();
  const retried=await Promise.all(Array.from({length:10},()=>call(successor,'review.integrate',request)));
- for(const reply of retried)assert.equal((data(reply).operation as {requestId:string;outcome:string}).requestId,integrationId);
+ for(const reply of retried){
+   const operation=data(reply).operation as {requestId:string;outcome:string};
+   assert.equal(operation.requestId,integrationId);assert.equal(operation.outcome,'SUCCEEDED');
+ }
+ const reflog=await f.repositories.git(f.repo,['reflog','show','--format=%gs',targetRef]);
+ assert.equal(reflog.split('\n').filter(line=>line===`maestro-integration ${integrationId}`).length,1);
  assert.equal(f.store.readFeatureState({kind:'operation',id:integrationId}).operation?.outcome,'SUCCEEDED');
  const guard=f.store.readWorkspaceState({kind:'get',id:candidate.guardId}).workspace!;
  assert.equal((await f.repositories.git(guard.ownership!.root.canonicalPath,['status','--porcelain'])).trim(),'');

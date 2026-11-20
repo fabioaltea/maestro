@@ -7,17 +7,19 @@
 - Osservazione di source sporca e ignored, target in uso o spostato. Le letture usano il profilo Git con scritture negate.
 - Guard creato senza force. Il pin prova ad aprire il lock sulla ref durante checkout implicito. Il percorso qualificato prenota con `worktree add --no-checkout` e materializza il tree con `read-tree` dopo verifica di directory e indice iniziali. Hook ostile non eseguito.
 - Fast-forward tramite CAS sulla sola ref target, poi verifica distinta di indice e file del guard. Fault prima del CAS conserva l'OID precedente, fault dopo CAS osserva il nuovo OID e rifiuta la sincronizzazione se il guard ha lavoro aggiunto.
-- Un target divergente resta intatto. Candidate a due parent, staging registrato nello store, validazioni 007 sul candidate e l'uso del port in un'integrazione reale restano da qualificare.
+- Un target divergente resta intatto nel caso di fast-forward. Il percorso a due parent è verificato nella ripresa US2.
 
 ## T035 — scenari del quickstart
 
-| Scenario | Esito locale | Limite |
+| Scenario | Esito locale | Ambito della prova |
 | --- | --- | --- |
-| US1 | PASS per checkpoint pulito, diff sigillato, replay, invalidazione del grant e archivio offline. | Prove dei check 007 sul candidate NOT_RUN. |
-| US2 | PASS per fast-forward confinato su fixture e i fault di ref/guard coperti da G0. | Merge a due parent e pubblicazione con receipt durevole NOT_RUN. |
-| US3 | PASS per invarianti puri di esito, cambi di documentazione e cleanup. | Workflow reale di ricalcolo Discovery e cleanup delegato NOT_RUN. |
+| US1 | PASS per checkpoint, diff sigillato, criteri, check, replay, invalidazione del grant e archivio offline. | Checkpoint 009 di fixture, Git nativo, job 007 e registro locale in loopback. |
+| US2 | PASS per fast-forward, merge divergente con due parent, conflitto, staging registrato, check 007, CAS e recovery. | Ref su repository temporanei posseduti dalla suite. |
+| US3 | PASS per ricevuta, freshness Discovery, documenti, prova cleanup e rifiuto della rimozione quando compare un nuovo commit. | Approvazione Discovery e integrazione pregresse di fixture. Chiusura CLI/Desktop attraverso il daemon. |
 
-Capability della build standard per consultazione, preparazione e creazione snapshot e richiesta modifiche tramite CLI. Snapshot subordinato a un checkpoint 009 corrente e quiescente. Consultazione e diff Desktop sono disponibili live e offline. Il CAS nativo resta confinato ai test finché manca il workflow di integrazione con attori 006/007 registrati. Nessun nuovo pin, login, hosting o review umana eseguita.
+La build standard compone il percorso Git con ownership 006 e check 007. L'avvio di uno snapshot dipende da un checkpoint 009 corrente e quiescente. Lo storico è leggibile anche a daemon fermo. Per il collegamento automatico al check 007, un criterio 005 usa `command:<UUID CommandSpec>` nel campo `verification`. Le descrizioni libere restano visibili con esito NOT_RUN.
+
+Limiti verificati sul diff di 100 file e 2 MiB, chunk di lettura fino a 8 KiB e una reservation attiva per repository durante l'integrazione. Candidate/preflight e singoli check usano i budget del piano. La verifica locale non fornisce una misura generale di latenza. Qualifica del reviewer assistito, login, hosting, review umana e campagna su repository operativi sono NOT_RUN.
 
 ## Ripresa US1
 

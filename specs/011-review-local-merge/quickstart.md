@@ -1,24 +1,26 @@
 # Quickstart — Review, Validation & Safe Local Merge
 
-Questa è una procedura di futura verifica, non prova già eseguita. Usare copia di archivio/checkout temporanei e fixture sintetiche; non usare il repository utente come banco di mutazione. Prima leggere [plan.md](plan.md), [contracts/api.md](contracts/api.md) e [gate precedenti](../../docs/missing-features-brief.md).
+La procedura usa archivi e checkout temporanei con fixture sintetiche. Esiti e gate sono nei report di [validazione](reports/validation.md) e [qualifica](reports/qualification.md). [Piano](plan.md) · [API](contracts/api.md) · [Gate precedenti](../../docs/missing-features-brief.md)
 
 ## Prerequisiti
 
 Schema precedente10 con feature cumulative e test fixture controllate; Node e tool pin del repository. Lo start esplicito deve migrare a11; una lettura offline prima dello start deve lasciare l’archivio invariato. Nessuna installazione o login implicito. Port/provider fake nella suite ordinaria; binari reali solo per il gate qualificato.
 
-## Verifica mirata prevista
+## Verifica mirata
 
 ```sh
 npm run build
 npm run build:test
-node --test dist-tests/tests/unit/review-state.test.js
-node --test dist-tests/tests/contract/review-api.test.js
-node --test dist-tests/tests/integration/review-schema.test.js
+npm run typecheck
+npm run lint
+node --test --test-concurrency=1 dist-tests/tests/{unit,contract,integration}/review-*.test.js
 npm run typecheck:desktop
 npm run build:desktop
+npm run test:desktop:unit
+node_modules/.bin/playwright test -c apps/desktop/playwright.config.ts review-flow.spec.ts
 ```
 
-I file sono proposti nei task; non dichiarare disponibili prima della loro creazione. Gli altri casi `tests/integration/review-usN.test.ts` sono eseguiti compilati con lo stesso runner; Playwright seleziona `apps/desktop/tests/e2e/review-flow.spec.ts`. Usare invocazioni mirate, non acceptance/bench lunghi. `npm run lint` e typecheck core fanno parte del checkpoint.
+Per il controllo della rimozione delegata eseguire `node --test dist-tests/tests/integration/workspace-us3.test.js` dopo il build test. Le campagne acceptance e benchmark Foundation hanno checkpoint propri.
 
 ## Scenari
 
@@ -37,4 +39,4 @@ Atteso locale: tutte le verifiche degli invarianti pertinenti PASS, oppure blocc
 
 ## Evidenze
 
-`reports/validation.md`: comandi/versioni/esiti e matrice FR/SC. `reports/qualification.md`: pin/hash/policy/capability e differenza fixture/reale. `reports/release-readiness.md`: review e tutti i gate esterni ancora aperti. Questi report verranno creati dai task; non sono attestazioni nel planning.
+Comandi, esiti e matrice FR/SC sono in [validazione](reports/validation.md). Pin, profili OS e perimetro delle fixture sono in [qualifica](reports/qualification.md). I gate aperti sono in [readiness](reports/release-readiness.md).

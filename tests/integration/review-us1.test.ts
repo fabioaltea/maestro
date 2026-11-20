@@ -113,6 +113,16 @@ test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit in
  assert.deepEqual((detail.data as {criteria:unknown}).criteria,[{
    criterionId:'AC1',storyId:'US1',text:'Status is visible offline',verification,required:true,status:'NOT_RUN',
  }]);
+ const snapshots=[requestId,retryId];
+ for(let index=2;index<10;index++){
+   const branch=`review-fixture-${index}`,reviewId=randomUUID();
+   await f.repositories.git(path,['branch',branch,targetOid]);
+   const grant=await call('prepare',{...input,intent:{...input.intent,targetRef:`refs/heads/${branch}`}});
+   assert.equal(grant.result,'OK',JSON.stringify(grant));
+   const saved=await call('create',{requestId:reviewId,grantId:(grant.data as {grantId:string}).grantId});
+   assert.equal(saved.result,'OK',JSON.stringify(saved));
+   snapshots.push(reviewId);
+ }
  const fencedGrant=await call('prepare',input);
  assert.equal(fencedGrant.result,'OK');
  pause=Promise.withResolvers<void>();
@@ -156,6 +166,14 @@ test('a reviewed clean checkpoint yields a sealed exact diff, and a late edit in
  const spec=f.store.readEnvironmentState({kind:'job',id:proof.criteria[0]!.evidence.jobId}).job;
  assert.equal(spec?.commandSpecId,commandSpecId);
  assert.equal((await call('artifact.get',{artifactId:proof.criteria[0]!.evidence.outputId})).result,'OK');
+ assert.equal(new Set(snapshots).size,10);
+ for(const [index,reviewId] of snapshots.entries()){
+   const detail=await call('get',{reviewId});
+   assert.equal(detail.result,'OK',JSON.stringify(detail));
+   const {criteria}=detail.data as {criteria:{criterionId:string;required:boolean;status:string}[]};
+   assert.deepEqual(criteria.map(({criterionId,required,status})=>({criterionId,required,status})),
+     [{criterionId:'AC1',required:true,status:index===0?'PASS':'NOT_RUN'}]);
+ }
  const comment='Aggiungere una prova sul risultato.';
  const changeArtifactId=await f.uploadInput(comment,f.startIntent.featureId);
  const correction=await call('prepare',{action:'request-changes',intent:{reviewId:retryId,feedbackArtifactId:changeArtifactId},expectedRevisions:{stateRevision:'1'}});
