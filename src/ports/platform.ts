@@ -91,6 +91,7 @@ export interface LocalTransport {
 import type { PublicResult } from '../protocol/messages.js';
 
 export interface ClientBackend {
+  profile?(directory:string, method:string, params:Readonly<Record<string,unknown>>, timeoutMs:number):Promise<PublicResult>;
   environment?(directory:string, method:string, params:Readonly<Record<string,unknown>>, timeoutMs:number):Promise<PublicResult>;
   workspace?(directory: string, method: string, params: Readonly<Record<string, unknown>>, timeoutMs: number): Promise<PublicResult>;
   feature?(directory: string, method: string, params: Readonly<Record<string, unknown>>, timeoutMs: number): Promise<PublicResult>;

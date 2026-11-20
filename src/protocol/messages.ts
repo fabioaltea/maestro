@@ -1,3 +1,4 @@
+import {PROFILE_METHODS} from './profile.js';
 import {ENVIRONMENT_METHODS} from './environment.js';
 import {WORKSPACE_METHODS} from './workspace.js';
 import { FEATURE_METHODS } from './feature.js';
@@ -5,7 +6,7 @@ import { DISCOVERY_READ_METHODS, DISCOVERY_ADMISSION_METHODS } from './discovery
 export const MAX_FRAME_BYTES = 64 * 1024;
 export const HANDSHAKE_TIMEOUT_MS = 1_000;
 export const MAX_CLIENT_BUFFER_BYTES = 1024 * 1024;
-export const METHODS = [...ENVIRONMENT_METHODS,...WORKSPACE_METHODS, ...FEATURE_METHODS, ...DISCOVERY_READ_METHODS, ...DISCOVERY_ADMISSION_METHODS, 'discovery.prepare', 'status.get', 'diagnostics.get', 'operation.get', 'events.list',
+export const METHODS = [...PROFILE_METHODS,...ENVIRONMENT_METHODS,...WORKSPACE_METHODS, ...FEATURE_METHODS, ...DISCOVERY_READ_METHODS, ...DISCOVERY_ADMISSION_METHODS, 'discovery.prepare', 'status.get', 'diagnostics.get', 'operation.get', 'events.list',
   'events.subscribe', 'subscription.close', 'internal.prepareStop', 'internal.readiness',
   'projects.register', 'projects.list', 'projects.get', 'projects.verify', 'projects.update', 'projects.remove', 'projects.operation.get'] as const;
 
@@ -43,7 +44,7 @@ export interface PublicResult {
 export const MAX_EVENT_BYTES = 16 * 1024;
 export const MAX_OUTBOX_BYTES = 64 * 1024;
 export const MAX_EVENT_PAGE_BYTES = 60 * 1024;
-export const EVENT_TYPES = ['environment.changed','environment.output.available','workspace.changed','feature.changed','feature.output.available','feature.revision.changed','feature.approval.changed','artifact.changed', 'discovery.changed', 'discovery.output.available', 'discovery.question.available', 'discovery.document.changed', 'discovery.approval.changed', 'lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed',
+export const EVENT_TYPES = ['profile.changed','environment.changed','environment.output.available','workspace.changed','feature.changed','feature.output.available','feature.revision.changed','feature.approval.changed','artifact.changed', 'discovery.changed', 'discovery.output.available', 'discovery.question.available', 'discovery.document.changed', 'discovery.approval.changed', 'lifecycle.changed', 'operation.accepted', 'operation.completed', 'operation.failed',
   'operation.blocked', 'recovery.started', 'recovery.completed', 'resource.blocked', 'authorization.denied', 'diagnostics.degraded'] as const;
 export type EventType = typeof EVENT_TYPES[number];
 export interface EventDraft {

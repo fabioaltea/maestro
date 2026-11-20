@@ -1,3 +1,4 @@
+import {requireProfileEnvelope,validateProfileParams} from './profile.js';
 import {requireEnvironmentEnvelope,validateEnvironmentParams} from './environment.js';
 import {validateWorkspaceParams,requireWorkspaceEnvelope} from './workspace.js';
 import {validateFeatureParams,requireFeatureEnvelope} from './feature.js';
@@ -35,6 +36,7 @@ export function decodeRequest(frame: string | Uint8Array): RpcRequest {
     || !parsed.params || typeof parsed.params !== 'object' || Array.isArray(parsed.params)) throw new Error('INVALID_REQUEST');
   try { requireUuid(parsed.correlationId); }
   catch { throw new Error('INVALID_REQUEST'); }
+  if(parsed.method.startsWith('profile.')){requireProfileEnvelope(parsed);validateProfileParams(parsed.method,parsed.params);}
   if(parsed.method.startsWith('environment.')){requireEnvironmentEnvelope(parsed);validateEnvironmentParams(parsed.method,parsed.params);}
   if (parsed.method.startsWith('workspace.')) { requireWorkspaceEnvelope(parsed); validateWorkspaceParams(parsed.method, parsed.params); }
   if (parsed.method.startsWith('feature.')) { requireFeatureEnvelope(parsed); validateFeatureParams(parsed.method, parsed.params); }

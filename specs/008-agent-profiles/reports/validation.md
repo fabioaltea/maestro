@@ -21,3 +21,7 @@ Grant legati a scope e revisione con scadenza e replay esatto. Upgrade 7→8 sot
 ## T008 — writer e quota
 
 Namespace PROFILE nel ledger comune. La scrittura atomica collega revisioni e preview agli artefatti sigillati e addebita la stessa quota del workflow. Le verifiche includono rollback senza consumo del grant se manca il file.
+
+## T009–T010 — storico confinato
+
+DTO chiusi per metodi, intenti, pagine e chunk. Reader readonly nello stesso archivio con verifica di store, scope e revisione del cursore. Il test di storico conferma file e inventario invariati. Regressione trovata e corretta nell’allowlist schema Discovery, così stop continua a funzionare su 8.

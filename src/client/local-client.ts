@@ -1,3 +1,4 @@
+import {PROFILE_METHODS,profileMutation,validateProfileParams,decodeProfileOperation} from '../protocol/profile.js';
 import {ENVIRONMENT_METHODS,environmentMutation,validateEnvironmentParams,decodeEnvironmentOperation} from '../protocol/environment.js';
 import {WORKSPACE_METHODS,WORKSPACE_MUTATION_METHODS,validateWorkspaceParams,decodeWorkspaceOperation,requireWorkspaceEnvelope,workspaceRevision,workspaceUuid} from '../protocol/workspace.js';
 import { FEATURE_READ_METHODS, FEATURE_ADMISSION_METHODS,validateFeatureParams,validateFeatureAdmission,decodeFeatureOperationView,requireFeatureEnvelope } from '../protocol/feature.js';
@@ -28,15 +29,18 @@ export class LocalClient {
   runEnvironment(method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions={}):Promise<PublicResult>{
     return this.runScopedWorkflow('environment',method,params,options);
   }
-  private async runScopedWorkflow(scope:'workspace'|'environment',method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions):Promise<PublicResult>{
-    const environment=scope==='environment',backend=this.backend[scope];
-    if(!((environment?ENVIRONMENT_METHODS:WORKSPACE_METHODS) as readonly string[]).includes(method)||!backend)throw new Error('UNSUPPORTED_VERSION');
-    const mutate=environment?environmentMutation(method,params):(WORKSPACE_MUTATION_METHODS as readonly string[]).includes(method);
+  runProfile(method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions={}):Promise<PublicResult>{
+    return this.runScopedWorkflow('profile',method,params,options);
+  }
+  private async runScopedWorkflow(scope:'workspace'|'environment'|'profile',method:string,params:Readonly<Record<string,unknown>>,options:CommandOptions):Promise<PublicResult>{
+    const environment=scope==='environment',profile=scope==='profile',backend=this.backend[scope];
+    if(!((environment?ENVIRONMENT_METHODS:profile?PROFILE_METHODS:WORKSPACE_METHODS) as readonly string[]).includes(method)||!backend)throw new Error('UNSUPPORTED_VERSION');
+    const mutate=profile?profileMutation(method):environment?environmentMutation(method,params):(WORKSPACE_MUTATION_METHODS as readonly string[]).includes(method);
     if(options.limit!==undefined||options.after!==undefined||mutate&&Object.hasOwn(params,'requestId')||!mutate&&options.requestId!==undefined)throw new Error('INVALID_REQUEST');
     const requestId=mutate?workspaceUuid(options.requestId):method===`${scope}.operation.get`?workspaceUuid(params.requestId):null;
     const succeededOrBusy=(r:PublicResult)=>r.result==='OK'||r.result==='BUSY'&&r.error===null;
     const supplied=mutate?{...params,requestId}:{...params};
-    (environment?validateEnvironmentParams:validateWorkspaceParams)(method,supplied);
+    (environment?validateEnvironmentParams:profile?validateProfileParams:validateWorkspaceParams)(method,supplied);
     const original=JSON.parse(JSON.stringify(supplied)) as Record<string,unknown>;
     const directory=options.stateDirectory??this.backend.defaultDirectory,timeout=options.timeoutMs??2000;
     if(!Number.isInteger(timeout)||timeout<1||timeout>2000)throw new Error('INVALID_REQUEST');
@@ -45,12 +49,12 @@ export class LocalClient {
       requireWorkspaceEnvelope(r);
       if(r.requestId!==requestId)throw new Error('INVALID_REQUEST');
       if(r.data.operation!==undefined){
-        const op=(environment?decodeEnvironmentOperation:decodeWorkspaceOperation)(r.data.operation);
-        if(op.requestId!==requestId||op.outcome!=='UNKNOWN'&&op.outcome!==r.outcome||mutate&&op.action!==method.split('.').at(-1))throw new Error('INVALID_REQUEST');
+        const op=(environment?decodeEnvironmentOperation:profile?decodeProfileOperation:decodeWorkspaceOperation)(r.data.operation);
+        if(op.requestId!==requestId||op.outcome!=='UNKNOWN'&&op.outcome!==r.outcome||mutate&&op.action!==method.slice(scope.length+1))throw new Error('INVALID_REQUEST');
       }
       if(r.data.accepted!==undefined){
         if(!mutate||r.data.accepted!==true||r.data.requestId!==requestId)throw new Error('INVALID_REQUEST');
-        workspaceUuid(r.data.workspaceId);
+        workspaceUuid(profile?r.data.entityId:r.data.workspaceId);
         if(r.data.stateRevision!==undefined)workspaceRevision(r.data.stateRevision);
       }
       if(mutate&&succeededOrBusy(r)&&r.data.operation===undefined&&r.data.accepted!==true)throw new Error('INVALID_REQUEST');
