@@ -11,3 +11,11 @@ test('tool import and enable reject raw endpoint, executable, credentials and ex
    assert.throws(()=>validateProfileParams('profile.prepare',{...prep,intent:{...intent,...extra}}),/INVALID_REQUEST/);
  assert.throws(()=>validateProfileParams('profile.tool.import',{requestId:randomUUID(),manifestArtifactId:randomUUID()}),/INVALID_REQUEST/);
 });
+
+test('headless suggestions without the live composed capability have a safe error',async t=>{
+ const {spawnSync}=await import('node:child_process');
+ const {createRegistryStore}=await import('../fixtures/registry-store.js');
+ const fixture=await createRegistryStore(t);
+ const result=spawnSync(process.execPath,['dist/cli/main.js','profile','suggest',randomUUID(),'--project',randomUUID(),'--state-dir',fixture.directory,'--json'],{encoding:'utf8'});
+ assert.equal(JSON.parse(result.stdout).error.code,'DAEMON_UNAVAILABLE');
+});
