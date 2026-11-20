@@ -103,6 +103,33 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
    db.prepare("UPDATE workflow_artifacts SET state='REFERENCED',ref_count=ref_count+1 WHERE artifact_id=?").run(id);
    return value;
  }
+ function checkTuple(e:ExecutionSession,r:ExecutionRun,i:ReturnType<typeof ledger.intent>,leased:boolean){
+   const p=i.payload,config=read({kind:'provider',id:r.providerId}).provider;
+   if(!config||config.configRevision!==r.configRevision||config.capabilityDigest!==r.capabilityDigest||config.status!=='QUALIFIED')
+     throw new Error('EXECUTION_APPROVAL_STALE');
+   const target=db.prepare(`SELECT 1 FROM workspaces_records w JOIN features_records f ON f.feature_id=w.feature_id
+     JOIN projects p ON p.project_id=w.project_id JOIN profiles_resolutions pr ON pr.resolution_id=?
+     JOIN features_envelopes v ON v.envelope_id=w.envelope_id
+     JOIN discovery_approvals a ON a.approval_id=v.discovery_approval_id
+     JOIN discoveries d ON d.discovery_id=a.discovery_id
+     JOIN environments_records n ON n.workspace_id=w.workspace_id
+     WHERE w.workspace_id=? AND w.feature_id=? AND w.project_id=? AND w.envelope_id=? AND w.state=?
+     AND w.state_revision=? AND f.current_revision_id=v.revision_id AND f.state='APPROVED' AND f.state_revision=?
+     AND d.state='APPROVED' AND d.latest_document_revision_id=a.revision_id AND d.config_revision=v.config_revision
+     AND p.config_revision=v.config_revision AND n.state IN ('READY','MANUAL_VERIFIED') AND n.state_revision=?
+     AND n.workspace_generation=w.owner_generation AND pr.digest=?
+     AND NOT EXISTS (SELECT 1 FROM json_each(pr.dependencies) dep
+       LEFT JOIN profiles_records item ON item.entity_id=json_extract(dep.value,'$.entityId')
+       WHERE item.entity_id IS NULL OR item.state='DISABLED'
+       OR item.revision_id IS NOT json_extract(dep.value,'$.revisionId')
+       OR CAST(item.state_revision AS TEXT) IS NOT json_extract(dep.value,'$.stateRevision'))
+     AND EXISTS(SELECT 1 FROM json_each(pr.snapshot,'$.effectivePermissions') WHERE value='WORKSPACE_WRITE')
+     AND p.removed_at IS NULL AND p.config_revision=pr.project_revision AND pr.project_id=p.project_id AND pr.capability_digest=?`)
+     .get(e.profileResolutionId,e.workspaceId,e.featureId,e.projectId,e.envelopeId,leased?'IN_USE':'READY',
+       BigInt(String(p.workspaceRevision))+(leased?1n:0n),BigInt(String(p.featureRevision)),
+       BigInt(String(p.environmentRevision)),p.profileDigest,r.capabilityDigest);
+   if(!target)throw new Error('EXECUTION_APPROVAL_STALE');
+ }
  if('admission' in c){
    const {admission:a}=c,i=ledger.intent(a.canonicalIntent);
    const action=c.kind==='begin'?(c.session.sessionId===a.requestId?'start':'resume'):
@@ -138,21 +165,7 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
        const config=read({kind:'provider',id:r.providerId}).provider;
        if(!config||config.configRevision!==i.configRevision||config.configRevision!==r.configRevision||config.status!=='QUALIFIED'||config.capabilityDigest!==r.capabilityDigest)
          throw new Error('EXECUTION_APPROVAL_STALE');
-       const target=db.prepare(`SELECT 1 FROM workspaces_records w JOIN features_records f ON f.feature_id=w.feature_id
-        JOIN projects p ON p.project_id=w.project_id JOIN profiles_resolutions pr ON pr.resolution_id=?
-        JOIN features_envelopes v ON v.envelope_id=w.envelope_id
-        JOIN environments_records n ON n.workspace_id=w.workspace_id
-        WHERE w.workspace_id=? AND w.feature_id=? AND w.project_id=? AND w.envelope_id=? AND w.state='READY'
-        AND w.state_revision=? AND f.current_revision_id=v.revision_id AND f.state='APPROVED'
-        AND p.config_revision=v.config_revision AND n.state IN ('READY','MANUAL_VERIFIED') AND n.state_revision=?
-        AND NOT EXISTS (SELECT 1 FROM json_each(pr.dependencies) dep
-          LEFT JOIN profiles_records d ON d.entity_id=json_extract(dep.value,'$.entityId')
-          WHERE d.entity_id IS NULL OR d.state='DISABLED'
-          OR d.revision_id<>json_extract(dep.value,'$.revisionId')
-          OR CAST(d.state_revision AS TEXT)<>json_extract(dep.value,'$.stateRevision'))
-        AND p.removed_at IS NULL AND p.config_revision=pr.project_revision AND pr.project_id=p.project_id AND pr.capability_digest=?`)
-         .get(e.profileResolutionId,e.workspaceId,e.featureId,e.projectId,e.envelopeId,BigInt(String(p.workspaceRevision)),BigInt(String(p.environmentRevision)),r.capabilityDigest);
-       if(!target)throw new Error('EXECUTION_APPROVAL_STALE');
+       checkTuple(e,r,i,false);
        requireUuid(r.generation);
        if(read({kind:'active'}).run||db.prepare("SELECT 1 FROM features_turns WHERE phase IN ('ACCEPTED','RUNNING','RECONCILING')").get()||
           db.prepare('SELECT 1 FROM discovery_slot WHERE discovery_id IS NOT NULL').get())throw new Error('BUSY');
@@ -181,7 +194,7 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
        if(!q||!r||!e||q.status!=='OPEN'||q.type!=='QUESTION'||q.generation!==r.generation||r.phase!=='RUNNING'||r.requested||
           e.runId!==r.runId||e.state!=='WAITING_USER'||e.stateRevision!==q.expectedRevision||i.expectedRevision!==q.expectedRevision||
           i.targetId!==q.interactionId||p.answerArtifactId!==c.answerArtifactId||p.generation!==r.generation)throw new Error('EXECUTION_APPROVAL_STALE');
-       artifact(c.answerArtifactId,'INPUT',e.sessionId,EXECUTION_LIMITS.interactionBytes);
+       artifact(c.answerArtifactId,'INPUT',e.featureId,EXECUTION_LIMITS.interactionBytes);
        db.prepare("UPDATE execution_interactions SET status='ANSWERED',answer_artifact_id=? WHERE interaction_id=?").run(c.answerArtifactId,q.interactionId);
        updateState(e,'RUNNING');
        ledger.complete(a.requestId,{sessionId:e.sessionId,runId:r.runId,answerId:c.answerArtifactId});
@@ -192,6 +205,7 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
        if(!e||!r||v.checkpointId!==a.requestId||i.targetId!==v.sessionId||e.runId!==r.runId||e.stateRevision!==i.expectedRevision||
           p.treeDigest!==v.treeDigest||p.patchArtifactId!==v.patchArtifactId||p.digest!==v.digest||r.inputDigest!==v.inputDigest||r.phase!=='FINALIZED'||
           !['PAUSED','INTERRUPTED','CANCELLED','READY_FOR_REVIEW'].includes(e.state)||
+          !db.prepare("SELECT 1 FROM workspaces_records WHERE workspace_id=? AND state='READY' AND state_revision=?").get(e.workspaceId,BigInt(String(p.workspaceRevision)))||
           db.prepare('SELECT 1 FROM workspaces_leases WHERE workspace_id=? AND released_at IS NULL').get(e.workspaceId))throw new Error('CHECKPOINT_STALE');
        const blob=artifact(v.patchArtifactId,'CHECKPOINT',e.sessionId,EXECUTION_LIMITS.checkpointBytes);
        if(blob.sha256!==v.digest)throw new Error('ARTIFACT_CORRUPT');
@@ -236,6 +250,7 @@ export function commitExecutionState(db:Database.Database,c:ExecutionChange,ledg
        AND holder_id=? AND generation=? AND instance_id=? AND released_at IS NULL`).get(requireUuid(id.leaseId),e.workspaceId,r.runId,r.generation,r.instanceId);
      if(!lease)throw new Error('OWNERSHIP_UNPROVEN');
      const next=executionTransition(r.phase,c.event);
+     if(c.event!=='ready')checkTuple(e,r,ledger.intent(ledger.operation(r.runId)!.canonicalIntent),true);
      db.prepare('UPDATE execution_runs SET phase=?,identity=?,lease_id=? WHERE run_id=?').run(next,JSON.stringify(id),id.leaseId,r.runId);
      if(c.event==='go')updateState(e,'RUNNING');
    }else if(c.kind==='end'){

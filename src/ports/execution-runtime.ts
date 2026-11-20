@@ -1,5 +1,6 @@
 import type {ExecutionExitProof,ExecutionIdentity,ExecutionProviderConfig} from './execution.js';
 import type {WorkspaceRecord} from './workspace.js';
+import type {ProfilePermission} from '../domain/profiles/permissions.js';
 import type {Deadline} from './clock.js';
 
 export interface ExecutionInput {
@@ -23,7 +24,7 @@ export interface ExecutionRuntimePort {
  input(options:{workspace:WorkspaceRecord;envelopeId:string;profileResolutionId:string;provider:ExecutionProviderConfig}):Promise<ExecutionInput>;
  /** Must return a WAIT_GO host. No positive effect is authorized by opening it. */
  open(options:{workspace:WorkspaceRecord;identity:ExecutionIdentity;provider:ExecutionProviderConfig;input:Uint8Array;
-   deadline:Deadline;output(text:string):Promise<void>;question(text:string):Promise<string>}):Promise<ExecutionHost>;
+   permissions:readonly ProfilePermission[];deadline:Deadline;output(text:string):Promise<void>;question(text:string):Promise<string>}):Promise<ExecutionHost>;
  /** Missing or uncertain ownership is signalled with null, never a PID lookup. */
  observe(identity:ExecutionIdentity):Promise<ExecutionExitProof|null>;
  checkpoint?(workspace:WorkspaceRecord):Promise<ExecutionCheckpointInput>;

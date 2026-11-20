@@ -2,6 +2,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {EXECUTION_LIMITS,requireExecutionIdentity} from '../../domain/execution/model.js';
 import {executionInteractionText} from '../../domain/execution/interaction.js';
 import {requireCheckpointTree,validateCheckpointPatch} from '../../domain/execution/checkpoint.js';
+import {parseProfilePermissions,permitsProfilePermissions} from '../../domain/profiles/permissions.js';
 import {featureObject} from '../../domain/features/bundle.js';
 import {makeDeadline,systemClock} from '../../ports/clock.js';
 import {executionProviderId,publicExecutionOperation} from '../../protocol/execution.js';
@@ -76,24 +77,26 @@ export function createExecutionServices(options:ExecutionContext){
    const config=candidates.find((item):item is ExecutionProviderConfig=>item?.status==='QUALIFIED'&&item.capabilityDigest===resolution.capabilityDigest);
    if(!config?.capabilityDigest)throw new Error('EXECUTION_UNSUPPORTED');
    const profile=await profiles.current(profileId,feature.projectId,config.capabilityDigest);
+   const permissions=parseProfilePermissions(profile.snapshot.effectivePermissions);
+   if(!permitsProfilePermissions(permissions,['WORKSPACE_READ','WORKSPACE_WRITE']))throw new Error('TOOL_PERMISSION_REQUIRED');
    const input=await hostPort.input({workspace:worktree,envelopeId:envelope.envelopeId,profileResolutionId:profileId,provider:config});
    if(!input.bytes.byteLength||input.bytes.byteLength>EXECUTION_LIMITS.runInputBytes||
       !Number.isSafeInteger(input.profileBytes)||input.profileBytes<0||input.profileBytes>EXECUTION_LIMITS.profileBytes)throw new Error('CONTEXT_LIMIT');
    requireCheckpointTree(input.treeDigest);
-   return{feature,worktree,config,input,resolved:{
+   return{feature,worktree,config,input,permissions,resolved:{
      featureId:feature.featureId,workspaceId:worktree.workspaceId,envelopeId:envelope.envelopeId,profileResolutionId:profileId,
      providerId:config.providerId,capabilityDigest:config.capabilityDigest,featureRevision:feature.stateRevision,
      workspaceRevision:worktree.stateRevision,environmentRevision:environment.stateRevision,profileDigest:profile.digest,
      inputDigest:sha(JSON.stringify({feature:envelope.digest,profile:profile.digest,contents:sha(input.bytes)})),treeDigest:input.treeDigest,
    }};
  }
- async function capture(session:ExecutionSession,snapshot:Awaited<ReturnType<typeof auth.guard>>){
+ async function capture(session:ExecutionSession){
    const {hostPort}=requireHost(),r=await findRun(session.runId),w=await workspace(session.workspaceId);
    if(!hostPort.checkpoint||!terminal.includes(session.state)||r.phase!=='FINALIZED'||w.state!=='READY'||
       (await storage.readWorkspaceState!({kind:'active-lease',id:w.workspaceId})).lease)throw new Error('CHECKPOINT_STALE');
    const patch=await hostPort.checkpoint(w);
    requireCheckpointTree(patch.treeDigest);validateCheckpointPatch(patch.patch);
-   return{patch,r,storeId:snapshot.store.storeId};
+   return{patch,r,workspaceRevision:w.stateRevision};
  }
  async function intent(action:string,data:Readonly<Record<string,unknown>>,revisions:Record<string,unknown>,peer:AuthenticatedPeer):Promise<WorkflowIntent>{
    const snapshot=await auth.guard(peer);
@@ -125,14 +128,14 @@ export function createExecutionServices(options:ExecutionContext){
      return{...common,configRevision:chosen.config.configRevision,payload:{...chosen.resolved,checkpointId:checkpoint.checkpointId}};
    }
    if(action==='checkpoint'){
-     const {patch}=await capture(session,snapshot);
+     const {patch,workspaceRevision}=await capture(session);
      const artifact=await publishPlanningArtifact({storage,storeId:base.storeId,ownerUid:paths.ownerUid,instanceId,targetId:session.sessionId},'CHECKPOINT',patch.patch);
-     return{...common,payload:{treeDigest:patch.treeDigest,digest:artifact.sha256,patchArtifactId:artifact.artifactId,runId:r.runId}};
+     return{...common,payload:{treeDigest:patch.treeDigest,digest:artifact.sha256,patchArtifactId:artifact.artifactId,runId:r.runId,workspaceRevision}};
    }
    if(action==='answer'){
      if(!q||q.generation!==r.generation||q.expectedRevision!==expectedRevision||r.requested||session.state!=='WAITING_USER'||!openHosts.has(r.runId))
        throw new Error('EXECUTION_APPROVAL_STALE');
-     const artifact=await readSealedFeatureArtifact(storage,String(data.answerArtifactId),'INPUT',EXECUTION_LIMITS.interactionBytes,session.sessionId);
+     const artifact=await readSealedFeatureArtifact(storage,String(data.answerArtifactId),'INPUT',EXECUTION_LIMITS.interactionBytes,session.featureId);
      executionInteractionText(artifact.text);
      return{...common,payload:{generation:r.generation,answerArtifactId:artifact.artifact.artifactId,answerDigest:artifact.artifact.sha256}};
    }
@@ -163,7 +166,7 @@ export function createExecutionServices(options:ExecutionContext){
      if(checked.treeDigest!==selected.resolved.treeDigest||checked.profileBytes!==selected.input.profileBytes||
         checked.bytes.byteLength!==selected.input.bytes.byteLength||sha(checked.bytes)!==sha(selected.input.bytes))throw new Error('EXECUTION_APPROVAL_STALE');
      identity={runId,generation,leaseId:owned.leaseId,challenge:randomUUID()};
-     host=await hostPort.open({workspace:selected.worktree,identity,provider:selected.config,input:checked.bytes,deadline,...monitor});
+     host=await hostPort.open({workspace:selected.worktree,identity,provider:selected.config,input:checked.bytes,permissions:selected.permissions,deadline,...monitor});
      void host.exited.catch(()=>{});
      openHosts.set(runId,host);
      const ready=await host.ready;requireExecutionIdentity(identity,ready);
@@ -181,7 +184,10 @@ export function createExecutionServices(options:ExecutionContext){
    }finally{
      clearTimeout(stopTimer);
      try{
-       if(proof&&identity)requireExecutionIdentity(identity,proof.identity);
+       if(proof&&identity){
+         try{requireExecutionIdentity(identity,proof.identity);}
+         catch{proof=null;error='PROCESS_UNKNOWN';}
+       }
        const result=await commit({kind:'end',runId,instanceId,generation,proof:authorized?proof:null,noLaunch:!authorized&&(!host||proof!==null),error});
        if(result.run?.phase==='FINALIZED')await recovery.release(result.run);
      }finally{openHosts.delete(runId);running.delete(runId);}
@@ -192,6 +198,7 @@ export function createExecutionServices(options:ExecutionContext){
    const snapshot=await auth.guard(peer),e=await findSession(p.sessionId),r=await findRun(e.runId);
    const a=admission(snapshot,p.requestId,{action:'reconcile',targetId:e.sessionId,projectId:e.projectId,expectedRevision:null,configRevision:null,payload:{}});
    const existing=(await storage.readFeatureState!({kind:'operation',id:a.requestId})).operation;
+   if(!existing&&await storage.getRequestReservation(a.requestId))throw new Error('IDEMPOTENCY_CONFLICT');
    if(!existing&&!running.has(r.runId))await recovery.reconcile(r);
    const result=await commit({kind:'reconcile',admission:a,sessionId:e.sessionId});return{operation:publicExecutionOperation(result.operation)};
  };
@@ -260,7 +267,7 @@ export function createExecutionServices(options:ExecutionContext){
          const host=q?openHosts.get(q.runId):undefined;
          if(!q||!host)throw new Error('PROCESS_UNKNOWN');
          const r=await findRun(q.runId),answerArtifactId=String(data.answerArtifactId);
-         const artifact=await readSealedFeatureArtifact(storage,answerArtifactId,'INPUT',EXECUTION_LIMITS.interactionBytes,r.sessionId);
+         const artifact=await readSealedFeatureArtifact(storage,answerArtifactId,'INPUT',EXECUTION_LIMITS.interactionBytes,(await findSession(r.sessionId)).featureId);
          if(artifact.artifact.sha256!==data.answerDigest)throw new Error('EXECUTION_APPROVAL_STALE');
          const answer=executionInteractionText(artifact.text);
          const result=await commit({kind:'answer',admission:a,interactionId,answerArtifactId});
@@ -268,8 +275,8 @@ export function createExecutionServices(options:ExecutionContext){
          return{operation:publicExecutionOperation(result.operation)};
        }
        if(action==='checkpoint'){
-         const e=await findSession(i.targetId),{r,patch}=await capture(e,snapshot);
-         if(patch.treeDigest!==data.treeDigest||sha(patch.patch)!==data.digest||r.runId!==data.runId)throw new Error('CHECKPOINT_STALE');
+         const e=await findSession(i.targetId),{r,patch,workspaceRevision}=await capture(e);
+         if(patch.treeDigest!==data.treeDigest||sha(patch.patch)!==data.digest||r.runId!==data.runId||workspaceRevision!==data.workspaceRevision)throw new Error('CHECKPOINT_STALE');
          const result=await commit({kind:'checkpoint',admission:a,checkpoint:{checkpointId:a.requestId,sessionId:e.sessionId,runId:r.runId,
            inputDigest:r.inputDigest,treeDigest:patch.treeDigest,patchArtifactId:String(data.patchArtifactId),digest:String(data.digest),createdAt:''}});
          return{operation:publicExecutionOperation(result.operation)};
