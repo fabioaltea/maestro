@@ -1,0 +1,10 @@
+# Ricerca 013
+
+| Decisione | Motivazione | Alternative considerate |
+| --- | --- | --- |
+| Riusare il default privato Foundation e la CLI | `src/platform/macos/paths.ts` ha già un percorso per utente e verifica proprietà, permessi e piattaforma. Il binding Desktop iniziale è in sola lettura. | Una seconda cartella Electron duplicherebbe lo stato e separerebbe il client headless. |
+| Comporre status, eventuale start e registro per Apri/Crea | `LocalClient` già verifica liveness e segue l’operazione tramite UUID. Solo una richiesta esplicita può avviare. Un avvio non verificato non autorizza il passo successivo. | Autoavvio a ogni lancio dell’app, oppure passaggio obbligatorio da Servizio. |
+| Inizializzare in un probe supervisionato con intento distinto | `ProjectOperations` registra l’intento prima del probe. Le prove del repository appena creato seguono il commit del registro esistente. La discriminante nell’intento usa il ledger REGISTER e distingue create da open in replay. | Una mutazione nel renderer o un’inizializzazione prima dell’ammissione perderebbe le informazioni necessarie per riconciliare. |
+| Riusare Discovery e Feature Planning | I gate 004/005 esistono nel core. L’idoneità corrente e il progetto attivo determinano l’azione UI. | Duplicazione della verifica o inferenza automatica all’apertura. |
+| Isolare cambio progetto e recupero del risultato | Il Desktop possiede già epoch, scope delle conferme e ricevute. Il cambio invalida la consegna al vecchio pannello. La ricevuta conserva l’esito dell’operazione già inviata. | Selettori indipendenti che ripartono dal primo progetto o sostituzione dello store a ogni cambio. |
+| Adottare in situ un archivio preesistente compatibile | Il percorso canonico è parte dello store e degli intenti. Receipts e worktree dipendono da questa identità. Il recupero verifica proprietario, quiescenza, formato e destinazione vuota prima di pubblicare un riferimento privato e durevole. | Copiare o spostare `state.sqlite` rischia di duplicare i writer e perdere riferimenti. |
