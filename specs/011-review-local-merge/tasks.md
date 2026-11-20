@@ -73,7 +73,7 @@
 
 **Coverage**: FR-007–FR-009; FR-010/011/012 trasversali.
 
-- [ ] T027 [P] [US3] Scrivere policy/transizioni US3 in `tests/unit/review-us3.test.ts`: New commit dopo merge, doc changed, freshness invalidation, no automatic Discovery call, cleanup proof expired e release grant assente; testare grant/revisioni e comportamento sicuro (FR-007–FR-009).
+- [x] T027 [P] [US3] Scrivere policy/transizioni US3 in `tests/unit/review-us3.test.ts`: New commit dopo merge, doc changed, freshness invalidation, no automatic Discovery call, cleanup proof expired e release grant assente; testare grant/revisioni e comportamento sicuro (FR-007–FR-009).
 - [x] T028 [P] [US3] Scrivere contract US3 in `tests/contract/review-us3.test.ts`: metodi della storia in `specs/011-review-local-merge/contracts/api.md`, capability assente, input invalidi e azione/grant di altro ambito rifiutati (FR-007–FR-009, FR-011).
 - [ ] T029 [P] [US3] Scrivere integrazione locale US3 in `tests/integration/review-us3.test.ts` con fixture di repository/processi/clock pertinenti: Integrare fixture, rilevare Discovery stale per cambi rilevanti, richiedere cleanup006 con proof e verificare che lavoro nuovo blocchi la rimozione. Includere crash pre/post effetto, retry e operazioni concorrenti, nessun servizio esterno (FR-007–FR-009, FR-011/012).
 - [ ] T030 [US3] Implementare tipi/invarianti della storia in `src/domain/review/completion.ts` e aggiornare `src/ports/review.ts` con riferimenti neutri, revisioni e prove richieste, senza OS/SQLite nel dominio (FR-007–FR-009).
