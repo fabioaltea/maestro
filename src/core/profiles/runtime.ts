@@ -4,19 +4,20 @@ import type {Deadline} from '../../ports/clock.js';
 import type {ProfileImportPort} from '../../ports/profile.js';
 import {PROFILE_READ_METHODS} from '../../protocol/profile.js';
 import {createProfileImportReader} from '../../platform/macos/extensions/import-reader.js';
+import {composeProfileServices} from './registry.js';
 import {createProfileDispatch,type ProfileAction} from './dispatch.js';
 
 export interface ProfileRuntimeContext{
  readonly storage:StoragePort;readonly paths:ArchivePaths;readonly instanceId:string;readonly source:ProfileImportPort;
 }
 export function createProfileRuntime(options:Omit<ProfileRuntimeContext,'source'>&{
- readonly importPort?:ProfileImportPort;readonly compose?:(context:ProfileRuntimeContext)=>Readonly<Record<string,ProfileAction>>;
+ readonly native?:boolean;readonly importPort?:ProfileImportPort;readonly compose?:(context:ProfileRuntimeContext)=>Readonly<Record<string,ProfileAction>>;
 }){
  let accepting=false;
  const pending=new Set<Promise<unknown>>();
  const actions:Record<string,ProfileAction>={};
  const source=options.importPort??createProfileImportReader();
- for(const [method,action] of Object.entries(options.compose?.({...options,source})??{})){
+ for(const [method,action] of Object.entries((options.compose??(options.native?composeProfileServices:undefined))?.({...options,source})??{})){
    actions[method]=async(params,peer)=>{
      if(!accepting)throw new Error('BLOCKED');
      if(pending.size>=8)throw new Error('BUSY');

@@ -29,3 +29,7 @@ DTO chiusi per metodi, intenti, pagine e chunk. Reader readonly nello stesso arc
 ## T011–T012 — runtime ed eventi
 
 Il daemon pubblica le sole capability composte. Runtime fenced prima del drain, massimo otto chiamate in corso, letture storiche separate dalla composizione. Il writer emette metadati profilo nella stessa transazione. **5 PASS** mirati su runtime, redazione, storico, protocollo e replay con conteggio riferimenti.
+
+## T013–T017 — profili e snapshot
+
+Sei seed versionati come dati. Le istruzioni non concedono permessi. Risoluzione deterministica legata a policy, capability, progetto e revisione. Una revisione successiva rende lo snapshot storico senza mutarne il contenuto. **3 PASS** US1, inclusa revisione concorrente con grant precedente e disabilitazione.

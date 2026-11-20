@@ -1,3 +1,5 @@
+import {createHash} from 'node:crypto';
+import {PROFILE_SEEDS} from '../core/profiles/seeds.js';
 import {WORKFLOW_SCHEMA_V7_SQL,WORKFLOW_OPERATIONS_V7_TABLE,WORKFLOW_OPERATIONS_V7_INDEXES_AND_TRIGGERS} from './environments-schema.js';
 
 export const PROFILE_SCHEMA_VERSION=8;
@@ -6,6 +8,14 @@ export const WORKFLOW_SCHEMA_V8_SQL=addProfile(WORKFLOW_SCHEMA_V7_SQL);
 export const WORKFLOW_OPERATIONS_V8_TABLE=addProfile(WORKFLOW_OPERATIONS_V7_TABLE);
 export const WORKFLOW_OPERATIONS_V8_INDEXES_AND_TRIGGERS=WORKFLOW_OPERATIONS_V7_INDEXES_AND_TRIGGERS;
 export const PROFILE_TABLES=['profiles_records','profiles_revisions','profiles_resolutions','profiles_previews'] as const;
+
+const quote=(value:string)=>`'${value.replaceAll("'","''")}'`;
+const seededAt='2026-11-20T00:00:00.000Z';
+const seedSql=PROFILE_SEEDS.map(({entityId,revisionId,document})=>{
+ const text=JSON.stringify(document),digest=createHash('sha256').update(text).digest('hex');
+ return `INSERT INTO profiles_records VALUES('${entityId}','PROFILE','GLOBAL',NULL,NULL,${quote(document.alias)},'ENABLED',1,'${revisionId}','${seededAt}');
+ INSERT INTO profiles_revisions VALUES('${revisionId}','${entityId}',NULL,'${digest}',NULL,${Buffer.byteLength(text)},${quote(text)},'${seededAt}');`;
+}).join('\n');
 
 export const PROFILES_SCHEMA_SQL=`
 CREATE TABLE profiles_records (
@@ -47,4 +57,5 @@ CREATE TRIGGER profile_resolution_immutable BEFORE UPDATE ON profiles_resolution
 CREATE TRIGGER profile_preview_immutable BEFORE UPDATE ON profiles_previews BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER profile_revision_retained BEFORE DELETE ON profiles_revisions BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
 CREATE TRIGGER profile_resolution_retained BEFORE DELETE ON profiles_resolutions BEGIN SELECT RAISE(ABORT,'INVALID_TRANSITION'); END;
+${seedSql}
 `;

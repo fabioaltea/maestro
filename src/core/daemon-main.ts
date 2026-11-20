@@ -100,7 +100,7 @@ export async function runDaemon(intent: DaemonIntent, dependencies: CoreDependen
       storage,instanceId:intent.instanceId,paths,owned:workspaces.leases.owned,lease:workspaces.leases.forConsumer('ENVIRONMENT'),
     }):undefined);
     environments=createEnvironmentRuntime({storage,instanceId:intent.instanceId,...(environmentCompose?{compose:environmentCompose}:{})});
-    profiles=createProfileRuntime({storage,paths,instanceId:intent.instanceId,...dependencies.profiles});
+    profiles=createProfileRuntime({storage,paths,instanceId:intent.instanceId,native:true,...dependencies.profiles});
     const capabilities = { ...((lastSnapshot?.store.schemaVersion??0)>=8?{profileVersion:1,profileMethods:profiles.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=7?{environmentVersion:1,environmentMethods:environments.methods}:{}), ...((lastSnapshot?.store.schemaVersion??0)>=6?{workspaceVersion:1,workspaceMethods:workspaces.methods}:{}), ...((lastSnapshot?.store.schemaVersion ?? 0) >= 5 ? {featureVersion: 1, featureMethods: features.methods} : {}), discoveryVersion: 1, discoveryMethods: discovery.methods, projectRegistryVersion: 1, projectRegistryMethods: PROJECT_METHODS, gitInspection: inspection };
     const discoveryDispatch = discovery.dispatch;
     const projectDispatch = createProjectDispatch({ operations: projects, storage });
