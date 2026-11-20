@@ -38,3 +38,11 @@ Atteso locale: tutte le verifiche degli invarianti pertinenti PASS, oppure blocc
 ## Evidenze
 
 `reports/validation.md`: comandi/versioni/esiti e matrice FR/SC. `reports/qualification.md`: pin/hash/policy/capability e differenza fixture/reale. `reports/release-readiness.md`: review e tutti i gate esterni ancora aperti. Questi report verranno creati dai task; non sono attestazioni nel planning.
+
+## Flusso locale verificato
+
+Aprire **Profili agente** in Electron. Il catalogo mostra le schede **Profili**, **Skill** e **Tool**. Il selettore Progetto imposta lo scope del catalogo. La creazione del profilo richiede alias, nome, ruolo e istruzioni, poi mostra la conferma e la ricevuta. Per risolvere un profilo scegliere un progetto e l’esatta revisione.
+
+Per provare una skill, creare una directory di fixture con `SKILL.md` di testo. Il manifest opzionale `manifest.json` contiene `alias`, `files` e `requiredPermissions`. Il picker mostra la lista dichiarata e il digest. Confermare l’import e associare la revisione come obbligatoria o consigliata nel dettaglio del profilo.
+
+In CLI, il form equivalente per il picker è `profile skill.preview --input-file FILE --request-id UUID`. Il JSON contiene `source`, `scope` e gli ID di progetto o profilo applicabili. Consultare l’anteprima con `profile preview UUID`. Per create/revise o tool import, caricare il bundle con `profile artifact.import --input-file FILE --request-id UUID`, poi inviare l’intento con `profile prepare --input-file FILE`. Il grant monouso è consumato con `profile <azione> --grant UUID --request-id UUID`. `profile operation UUID` e `profile list PROFILE` sono leggibili anche offline. [Validazione](reports/validation.md)
