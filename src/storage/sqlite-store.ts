@@ -1,3 +1,5 @@
+import {commitProfileState,readProfileState} from './profiles-store.js';
+import type {ProfileQuery,ProfileWrite} from '../ports/profile.js';
 import {PROFILE_SCHEMA_VERSION,PROFILE_TABLES} from './profiles-schema.js';
 import {environmentEventDrafts,environmentOutputEvent} from '../core/environments/events.js';
 import {commitEnvironmentState,readEnvironmentState} from './environments-store.js';
@@ -245,6 +247,15 @@ export class SQLiteStore {
   }
   settleWorkspaceClaim(claim:WorkspaceClaim) { return settleWorkspaceClaim(this.writable(),claim,this.workflowStore()); }
   commitWorkspaceLease(change:WorkspaceLeaseChange) { return commitWorkspaceLease(this.writable(),change,this.workflowStore()); }
+  commitProfileState(change:ProfileWrite) {
+    return commitProfileState(this.writable(),change,this.workflowStore(),id=>{
+      try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}
+    });
+  }
+  readProfileState(query:ProfileQuery) {
+    if(!this.database)throw new Error('STATE_ABSENT');
+    return this.database.transaction(()=>readProfileState(this.database!,query)).deferred();
+  }
   commitEnvironmentState(change:EnvironmentChange) {
     return commitEnvironmentState(this.writable(),change,this.workflowStore(),id=>{
       try{this.workflowArtifacts().read(id,0,1);}catch{throw new Error('ARTIFACT_CORRUPT');}

@@ -1,4 +1,13 @@
 const catalog = {
+  PROFILE_NOT_INITIALIZED: ['Catalogo profili non inizializzato.', 'Avviare esplicitamente il servizio per aggiornare lo schema.', false],
+  PROFILE_NOT_FOUND: ['Profilo o estensione assente.', 'Consultare il catalogo locale.', false],
+  PROFILE_CONFLICT: ['Conflitto di alias, scope o dipendenze tra profili.', 'Scegliere le revisioni correlate in modo esplicito.', false],
+  REQUIRED_SKILL_MISSING: ['Una skill obbligatoria non è disponibile.', 'Selezionare una revisione disponibile della skill.', false],
+  EXTENSION_UNTRUSTED: ['Sorgente estensione fuori dalla policy di import.', 'Selezionare un bundle locale regolare e verificarne il contenuto.', false],
+  PERMISSION_CONFLICT: ['I permessi richiesti superano lo scope autorizzato.', 'Rivedere i vincoli del profilo e della capability.', false],
+  CAPABILITY_UNAVAILABLE: ['Capability richiesta indisponibile.', 'Consultare il profilo e le capacità qualificate.', false],
+  PROFILE_STALE: ['Profilo, sorgente o risoluzione non più correnti.', 'Preparare una nuova risoluzione o conferma.', false],
+  TOOL_DISABLED: ['Tool disabilitato o non abilitato.', 'Consultare il catalogo e le autorizzazioni del tool.', false],
   ENVIRONMENT_NOT_INITIALIZED: ['Archivio ambienti non inizializzato.', 'Avviare esplicitamente il servizio per aggiornare lo schema.', false],
   ENVIRONMENT_NOT_FOUND: ['Ambiente non trovato.', 'Consultare il workspace nell’archivio corrente.', false],
   ENVIRONMENT_STALE: ['Gli input dell’ambiente sono cambiati.', 'Preparare un nuovo piano dagli input correnti.', false],
@@ -102,6 +111,8 @@ const catalog = {
 export type ErrorCode = keyof typeof catalog;
 export type ErrorCategory = 'VALIDATION' | 'AUTHORIZATION' | 'CONCURRENCY' | 'SAFETY' | 'PERSISTENCE' | 'TIMEOUT' | 'OBSERVABILITY' | 'RUNTIME';
 const categories: Record<ErrorCode, ErrorCategory> = {
+  PROFILE_NOT_INITIALIZED:'RUNTIME', PROFILE_NOT_FOUND:'RUNTIME', PROFILE_CONFLICT:'VALIDATION', REQUIRED_SKILL_MISSING:'SAFETY',
+  EXTENSION_UNTRUSTED:'SAFETY', PERMISSION_CONFLICT:'AUTHORIZATION', CAPABILITY_UNAVAILABLE:'SAFETY', PROFILE_STALE:'AUTHORIZATION', TOOL_DISABLED:'SAFETY',
   ENVIRONMENT_NOT_INITIALIZED:'RUNTIME', ENVIRONMENT_NOT_FOUND:'RUNTIME', ENVIRONMENT_STALE:'AUTHORIZATION', MANAGER_UNSUPPORTED:'SAFETY',
   MANAGER_MISMATCH:'SAFETY', LOCKFILE_CHANGED:'SAFETY', SCRIPT_APPROVAL_REQUIRED:'AUTHORIZATION', CONFIG_UNSAFE:'SAFETY',
   DISK_BUDGET:'PERSISTENCE', JOB_RECONCILING:'SAFETY', INSTALL_FAILED:'RUNTIME', VALIDATION_FAILED:'RUNTIME', CANCELLED:'RUNTIME',

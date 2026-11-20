@@ -17,3 +17,7 @@ Reader macOS in processo effimero con policy SBPL default-deny, apertura no-foll
 ## T005–T007 — stato e migrazione
 
 Grant legati a scope e revisione con scadenza e replay esatto. Upgrade 7→8 sotto lease control/daemon, verifica integrità e FK, compatibilità reader 7 e conservazione del ledger. **10 PASS** su stati, migrazione, fault pre/post commit e regressione schema 7.
+
+## T008 — writer e quota
+
+Namespace PROFILE nel ledger comune. La scrittura atomica collega revisioni e preview agli artefatti sigillati e addebita la stessa quota del workflow. Le verifiche includono rollback senza consumo del grant se manca il file.

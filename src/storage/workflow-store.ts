@@ -1,3 +1,5 @@
+import {PROFILE_TABLES} from './profiles-schema.js';
+import {PROFILE_GRANTED,PROFILE_OBSERVED} from '../domain/profiles/model.js';
 import {ENVIRONMENT_TABLES} from './environments-schema.js';
 import {ENVIRONMENT_GRANTED_ACTIONS,ENVIRONMENT_OBSERVATION_ACTIONS} from '../domain/environments/state.js';
 import {WORKSPACE_TABLES} from './workspaces-schema.js';
@@ -25,6 +27,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  const tables=['workflow_operations','workflow_grants','workflow_artifacts','features_records','features_revisions','features_approvals','features_envelopes','features_turns'];
  if(Number(db.pragma('user_version',{simple:true}))>=6)tables.push(...WORKSPACE_TABLES);
  if(Number(db.pragma('user_version',{simple:true}))>=7)tables.push(...ENVIRONMENT_TABLES);
+ if(Number(db.pragma('user_version',{simple:true}))>=8)tables.push(...PROFILE_TABLES);
  let metadata=8192;for(const table of tables){const rows=db.prepare(`SELECT * FROM ${table}`).iterate() as Iterable<FeatureRow>;for(const row of rows)metadata+=Math.ceil(Buffer.byteLength(JSON.stringify(row,(_k,v:unknown)=>typeof v==='bigint'?v.toString():v))/4096)*4096+4096;}
  db.prepare('UPDATE workflow_budget SET metadata_bytes=? WHERE singleton=1 AND metadata_bytes<>?').run(metadata,metadata);
  if(usage.allocatedBytes+usage.reservedBytes+metadata>128*1024*1024-(terminal?0:8*1024*1024)||usage.allocatedFiles>8192)throw new Error('RESOURCE_LIMIT');
@@ -39,7 +42,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  if(identity().current_instance_id!==a.instanceId)throw new Error('STALE_TARGET');
  const pending=Number((db.prepare("SELECT count(*) AS n FROM workflow_operations WHERE phase<>'FINALIZED'").get() as FeatureRow).n);if(pending>=(i.action==='cancel'?32:31))throw new Error('RESOURCE_LIMIT');
  if(db.prepare('SELECT 1 FROM request_catalog WHERE request_id=?').get(a.requestId)||db.prepare('SELECT 1 FROM discovery_operations WHERE request_id=?').get(a.requestId))throw new Error('IDEMPOTENCY_CONFLICT');
- const granted=i.namespace==='FEATURE'||i.namespace==='WORKSPACE'&&['create','remove'].includes(i.action)||i.namespace==='ENVIRONMENT'&&ENVIRONMENT_GRANTED_ACTIONS.includes(i.action);if(granted){if(!a.grantId)throw new Error('APPROVAL_REQUIRED');const g=readFeatureState(db,{kind:'grant',id:a.grantId}).grant;if(!g||validateWorkflowGrant(g,a.canonicalIntent,a.requestId,now())!=='CONSUME')throw new Error('APPROVAL_REQUIRED');}else if(a.grantId!==null||!(i.namespace==='ARTIFACT'&&['reserve','append','seal','discard'].includes(i.action)||i.namespace==='WORKSPACE'&&i.action==='refresh'||i.namespace==='ENVIRONMENT'&&ENVIRONMENT_OBSERVATION_ACTIONS.includes(i.action)))throw new Error('INVALID_REQUEST');
+ const granted=i.namespace==='FEATURE'||i.namespace==='WORKSPACE'&&['create','remove'].includes(i.action)||i.namespace==='ENVIRONMENT'&&ENVIRONMENT_GRANTED_ACTIONS.includes(i.action)||i.namespace==='PROFILE'&&(PROFILE_GRANTED as readonly string[]).includes(i.action);if(granted){if(!a.grantId)throw new Error('APPROVAL_REQUIRED');const g=readFeatureState(db,{kind:'grant',id:a.grantId}).grant;if(!g||validateWorkflowGrant(g,a.canonicalIntent,a.requestId,now())!=='CONSUME')throw new Error('APPROVAL_REQUIRED');}else if(a.grantId!==null||!(i.namespace==='ARTIFACT'&&['reserve','append','seal','discard'].includes(i.action)||i.namespace==='WORKSPACE'&&i.action==='refresh'||i.namespace==='ENVIRONMENT'&&ENVIRONMENT_OBSERVATION_ACTIONS.includes(i.action)||i.namespace==='PROFILE'&&(PROFILE_OBSERVED as readonly string[]).includes(i.action)))throw new Error('INVALID_REQUEST');
  db.prepare("INSERT INTO workflow_operations(request_id,namespace,action,payload_hash,canonical_intent,owner_uid,owning_instance_id,phase,outcome,target_id,accepted_at) VALUES(?,?,?,?,?,?,?,'ACCEPTED','IN_PROGRESS',?,?)").run(a.requestId,i.namespace,i.action,hash,a.canonicalIntent,i.ownerUid,a.instanceId,i.targetId,new Date(now()).toISOString());
  if(granted)db.prepare('UPDATE workflow_grants SET consumed_by_request_id=? WHERE grant_id=?').run(a.requestId,a.grantId);
  setup?.();return{operation:operation(a.requestId)!,inserted:true};
@@ -75,7 +78,7 @@ export function createWorkflowStore(db:Database.Database,mutate:WorkflowMutation
  }
  return{admit,complete,transaction,intent,operation,
  commit(c:WorkflowChange):WorkflowWrite{
- if(c.kind==='grant'){const i=intent(c.grant.canonicalIntent);return transaction(()=>{const g=c.grant;requireUuid(g.grantId);if(!(i.namespace==='FEATURE'&&['create','revise','archive','approve','handoff','generate','answer','cancel'].includes(i.action)||i.namespace==='WORKSPACE'&&['create','remove'].includes(i.action)||i.namespace==='ENVIRONMENT'&&ENVIRONMENT_GRANTED_ACTIONS.includes(i.action))||g.consumedByRequestId!==null||g.createdAtMs>now()||g.createdAtMs<now()-300000)throw new Error('APPROVAL_REQUIRED');validateWorkflowGrant(g,g.canonicalIntent,g.grantId,now());
+ if(c.kind==='grant'){const i=intent(c.grant.canonicalIntent);return transaction(()=>{const g=c.grant;requireUuid(g.grantId);if(!(i.namespace==='FEATURE'&&['create','revise','archive','approve','handoff','generate','answer','cancel'].includes(i.action)||i.namespace==='WORKSPACE'&&['create','remove'].includes(i.action)||i.namespace==='ENVIRONMENT'&&ENVIRONMENT_GRANTED_ACTIONS.includes(i.action)||i.namespace==='PROFILE'&&(PROFILE_GRANTED as readonly string[]).includes(i.action))||g.consumedByRequestId!==null||g.createdAtMs>now()||g.createdAtMs<now()-300000)throw new Error('APPROVAL_REQUIRED');validateWorkflowGrant(g,g.canonicalIntent,g.grantId,now());
  if(i.action==='cancel')db.prepare("DELETE FROM workflow_grants WHERE consumed_by_request_id IS NULL AND json_extract(canonical_intent,'$.action')='cancel'").run();
  const count=Number((db.prepare('SELECT count(*) AS n FROM workflow_grants WHERE consumed_by_request_id IS NULL AND expires_at_ms>?').get(now()) as FeatureRow).n);if(count>=(i.action==='cancel'?32:31))throw new Error('RESOURCE_LIMIT');
  db.prepare('INSERT INTO workflow_grants VALUES(?,?,?,?,NULL)').run(g.grantId,g.canonicalIntent,g.createdAtMs,g.expiresAtMs);return{};},i.action==='cancel');}
