@@ -1,7 +1,9 @@
-import { DashboardIcon, GearIcon, LayersIcon, MagnifyingGlassIcon, PersonIcon } from '@radix-ui/react-icons';
+import { DashboardIcon, GearIcon, LayersIcon, MagnifyingGlassIcon, PersonIcon, CounterClockwiseClockIcon, CodeIcon } from '@radix-ui/react-icons';
 
 const repositorySections = {
   overview: { label: 'Panoramica', Icon: DashboardIcon },
+  history: { label: 'Storico Git', Icon: CounterClockwiseClockIcon },
+  code: { label: 'Codice', Icon: CodeIcon },
   features: { label: 'Feature', Icon: LayersIcon },
   discovery: { label: 'Analizza codebase', Icon: MagnifyingGlassIcon },
   agents: { label: 'Agenti', Icon: PersonIcon },
@@ -11,6 +13,8 @@ const repositorySections = {
 export type RepositorySection = keyof typeof repositorySections;
 export type DetailRoute =
   | { section: 'overview' }
+  | { section: 'history' }
+  | { section: 'code' }
   | { section: 'features'; featureId?: string; conversation?: boolean }
   | { section: 'discovery'; discoveryId?: string }
   | { section: 'agents'; discoveryId?: string };

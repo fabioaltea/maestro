@@ -11,6 +11,8 @@ import type { Desktop } from '../state/desktop.ts';
 import type { PublicResult } from '../../shared/bridge-contract.ts';
 import type { RepositoryDocuments } from '../../shared/repository-documents.ts';
 import { RepositoryReadme } from '../components/RepositoryReadme.tsx';
+import { RepositoryHistory } from './RepositoryHistory.tsx';
+import { RepositoryCode } from './RepositoryCode.tsx';
 
 export function ProjectDetail({ project, desktop, live, onClose, onWorkspace, route, onNavigate }: {
   project: Project; desktop: Desktop; live: boolean;
@@ -77,6 +79,8 @@ export function ProjectDetail({ project, desktop, live, onClose, onWorkspace, ro
       </div>
       {section === 'overview' && <button className="button subtle" onClick={() => void onClose()}>Chiudi repository</button>}
     </header>
+    {section === 'history' && <RepositoryHistory key={`${project.projectId}:${project.configRevision}`} desktop={desktop} projectId={project.projectId} />}
+    {section === 'code' && <RepositoryCode key={`${project.projectId}:${project.configRevision}`} desktop={desktop} projectId={project.projectId} />}
     {section === 'agents' && <ProjectAgents key={route.discoveryId ?? ''}
       desktop={desktop} projectId={project.projectId} initialDiscoveryId={route.discoveryId ?? null}
       onDiscovery={id => onNavigate({ section: 'discovery', discoveryId: id })}

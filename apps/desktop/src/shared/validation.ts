@@ -10,6 +10,8 @@ import { METHODS } from './bridge-contract.ts';
 import type { BridgeRequest, Params } from './bridge-contract.ts';
 import { DISCOVERY_BRIDGE_METHODS, validateDiscoveryBridge } from './discovery-contract.ts';
 import {record,keys,text,uuid,revision} from './input.ts';
+import { historyMethod, validateHistoryRequest } from './repository-history-contract.ts';
+import { codeMethod, validateCodeRequest } from './repository-code-contract.ts';
 export {record,keys,text,uuid,revision} from './input.ts';
 // Client input convenience only: repository state, ownership and Git policy remain in the core.
 export function projectName(value: unknown): string {
@@ -50,7 +52,9 @@ const extras: Record<string, readonly string[]> = {
 export function validateRequest(method: string, input: unknown): BridgeRequest {
   if (!(METHODS as readonly string[]).includes(method)) throw new Error('INVALID_INPUT');
   const p = record(input);
-  if((REVIEW_BRIDGE_METHODS as readonly string[]).includes(method))validateReviewBridge(method,p);
+  if (historyMethod(method)) validateHistoryRequest(method, p);
+  else if (codeMethod(method)) validateCodeRequest(method, p);
+  else if((REVIEW_BRIDGE_METHODS as readonly string[]).includes(method))validateReviewBridge(method,p);
   else if(method==='listScheduledJobs')validateSchedulerBridge(p);
   else if ((EXECUTION_BRIDGE_METHODS as readonly string[]).includes(method))validateExecutionBridge(method,p);
   else if ((PROFILE_BRIDGE_METHODS as readonly string[]).includes(method))validateProfileBridge(method,p);

@@ -15,8 +15,46 @@ import { requireUuid } from '../domain/identifiers.js';
 import { readProject, readProjects, ProjectRemovedError } from './projects/read.js';
 import { makeDeadline, systemClock } from '../ports/clock.js';
 import { readRepositoryDocuments } from '../platform/macos/git/repository-documents.js';
+import { parseRepositoryHistory, readRepositoryHistory } from '../platform/macos/git/repository-history.js';
+import { parseRepositoryCode, readRepositoryCode } from '../platform/macos/git/repository-code.js';
+import { assertRepositoryIdentity } from '../platform/macos/git/repository-identity-check.js';
+import { createGitRunner } from '../platform/macos/git/runner.js';
+import { validateRepositoryReadOutput } from '../domain/projects/repository-read.js';
+import type { ProjectState } from '../ports/registry.js';
+import type { Deadline } from '../ports/clock.js';
 
 export async function inspectProjectDocuments(directory: string, projectId: string, timeoutMs = 2000): Promise<PublicResult> {
+  return inspectRepositoryRead(directory, projectId, readRepositoryDocuments, { timeoutMs, bounded: false });
+}
+
+export function inspectProjectGit(directory: string, projectId: string, view: 'history' | 'code', input: unknown,
+  options: { configRevision?: string; requestId: string; timeoutMs?: number }): Promise<PublicResult> {
+  const query = view === 'history' ? { view, query: parseRepositoryHistory(input) } as const
+    : { view, query: parseRepositoryCode(input) } as const;
+  if (query.query.kind !== 'open' && options.configRevision === undefined) throw new Error('INVALID_REQUEST');
+  return inspectRepositoryRead(directory, projectId, async (state, deadline) => {
+    const { referenceCheckout, repositoryIdentity } = state.project;
+    const anchors = [referenceCheckout.root, referenceCheckout.adminDirectory, repositoryIdentity.commonDirectory];
+    await assertRepositoryIdentity(anchors);
+    const git = createGitRunner();
+    const run = {
+      cwd: referenceCheckout.root.canonicalPath, readRoots: anchors.map(anchor => anchor.canonicalPath), deadline,
+    };
+    const data = query.view === 'history' ? await readRepositoryHistory(git, run, query.query)
+      : await readRepositoryCode(git, run, query.query);
+    await assertRepositoryIdentity(anchors);
+    return data;
+  }, options);
+}
+
+export async function inspectRepositoryRead(
+  directory: string,
+  projectId: string,
+  read: (state: ProjectState, deadline: Deadline) => Promise<Record<string, unknown>>,
+  options: { timeoutMs?: number; bounded?: boolean; configRevision?: string; requestId?: string } = {},
+): Promise<PublicResult> {
+  requireUuid(projectId);
+  const timeoutMs = options.timeoutMs ?? 2000;
   const deadline = makeDeadline(systemClock, timeoutMs);
   const paths = await createPlatformPaths().resolveArchive(directory, 'read');
   if (!paths) throw new Error('STATE_ABSENT');
@@ -27,11 +65,13 @@ export async function inspectProjectDocuments(directory: string, projectId: stri
     const state = await store.getProject(projectId);
     if (!state) throw new Error('PROJECT_NOT_FOUND');
     if (state.project.removedAt !== null) throw new Error('PROJECT_REMOVED');
-    const data = await readRepositoryDocuments(state, deadline);
+    if (options.configRevision !== undefined && options.configRevision !== state.project.configRevision) throw new Error('REVISION_CONFLICT');
+    const data = { ...await read(state, deadline), projectId, configRevision: state.project.configRevision };
     const latest = await store.getProject(projectId);
     if (!latest || latest.project.removedAt !== null || latest.project.configRevision !== data.configRevision) throw new Error('REVISION_CONFLICT');
-    return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: snapshot.instance?.instanceId ?? null,
-      result: 'OK', outcome: null, freshness: 'LIVE', liveness: 'UNKNOWN', data, error: null };
+    return { protocolVersion: 1, requestId: options.requestId ?? null, storeId: snapshot.store.storeId, instanceId: snapshot.instance?.instanceId ?? null,
+      result: 'OK', outcome: null, freshness: 'LIVE', liveness: 'UNKNOWN',
+      data: options.bounded === false ? data : validateRepositoryReadOutput(data, deadline.remainingMs()), error: null };
   } finally { await store.close(); }
 }
 

@@ -18,6 +18,13 @@ export type GitQuery = { readonly kind: 'top-level' | 'common-dir' | 'git-dir'
   | { readonly kind: 'check-branch' | 'local-branch' | 'branch-exists'; readonly branch: string }
   | { readonly kind: 'spec-index'; readonly oid: string }
   | { readonly kind: 'readme-log'; readonly oid: string; readonly name: string }
+  | { readonly kind: 'history-refs' | 'history-worktrees' }
+  | { readonly kind: 'history-log'; readonly roots: readonly string[]; readonly offset: number }
+  | { readonly kind: 'history-member'; readonly roots: readonly string[]; readonly oid: string }
+  | { readonly kind: 'history-detail'; readonly oid: string }
+  | { readonly kind: 'history-files'; readonly oid: string; readonly base: string | null }
+  | { readonly kind: 'code-tree'; readonly oid: string; readonly path?: string }
+  | { readonly kind: 'code-size' | 'code-blob'; readonly oid: string }
   | { readonly kind: 'config-file'; readonly path: string };
 
 export interface GitRunOptions {
@@ -75,6 +82,34 @@ function argumentsFor(query: unknown): readonly string[] | InspectionFailure {
   if (!query || typeof query !== 'object' || Array.isArray(query)) return inspectionFailure('INVALID_REQUEST');
   const q = query as Record<string, unknown>;
   const keys = Object.keys(q).sort().join(',');
+  const isOid = (value: unknown): value is string => typeof value === 'string' && /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(value);
+  const format = '%H%x00%P%x00%aI%x00%an%x00%s';
+  if (q.kind === 'history-log' || q.kind === 'history-member') {
+    if (!Array.isArray(q.roots) || q.roots.length < 1 || q.roots.length > 128 || !q.roots.every(isOid)) return inspectionFailure('INVALID_REQUEST');
+    if (q.kind === 'history-log' && keys === 'kind,offset,roots' && typeof q.offset === 'number'
+        && Number.isSafeInteger(q.offset) && q.offset >= 0 && q.offset <= 1_000_000) {
+      return ['log', '--no-notes', '--no-show-signature', '--topo-order', '-z', `--format=${format}`,
+        '--max-count=51', `--skip=${q.offset}`, ...q.roots, '--'];
+    }
+    if (q.kind === 'history-member' && keys === 'kind,oid,roots' && isOid(q.oid)) {
+      return ['rev-list', '--count', '--max-count=1', q.oid, '--not', ...q.roots, '--'];
+    }
+    return inspectionFailure('INVALID_REQUEST');
+  }
+  if (keys === 'kind,oid' && isOid(q.oid)) {
+    if (q.kind === 'history-detail') return ['log', '-1', '--no-notes', '--no-show-signature', '-z', `--format=${format}%x00%B`, q.oid, '--'];
+    if (q.kind === 'code-size') return ['cat-file', '-s', q.oid];
+    if (q.kind === 'code-blob') return ['cat-file', 'blob', q.oid];
+    if (q.kind === 'code-tree') return ['ls-tree', '-z', q.oid, '--'];
+  }
+  if (q.kind === 'history-files' && keys === 'base,kind,oid' && isOid(q.oid) && (q.base === null || isOid(q.base))) {
+    return ['diff-tree', '--root', '--no-commit-id', '--no-ext-diff', '--no-textconv', '--no-renames',
+      '--name-only', '-r', '-z', ...(q.base === null ? [] : [q.base]), q.oid, '--'];
+  }
+  if (q.kind === 'code-tree' && keys === 'kind,oid,path' && isOid(q.oid) &&
+      typeof q.path === 'string' && q.path.length > 0 && Buffer.byteLength(q.path) <= 4096 && !q.path.includes('\0')) {
+    return ['--literal-pathspecs', 'ls-tree', '-z', `${q.oid}^{commit}`, '--', q.path];
+  }
   if (q.kind === 'spec-index' || q.kind === 'readme-log') {
     if (typeof q.oid !== 'string' || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(q.oid)) return inspectionFailure('INVALID_REQUEST');
     if (q.kind === 'spec-index' && keys === 'kind,oid') return ['ls-tree', '-r', '-z', '--name-only', q.oid, '--', 'specs/'];
@@ -104,6 +139,9 @@ function argumentsFor(query: unknown): readonly string[] | InspectionFailure {
     case 'head-commit': return ['rev-parse', '--verify', '--quiet', '--end-of-options', 'HEAD^{commit}'];
     case 'any-commit': return ['rev-list', '--max-count=1', '--all'];
     case 'inventory': return ['ls-files', '-z', '--cached', '--others', '--exclude-standard'];
+    case 'history-refs': return ['for-each-ref', '--format=%(refname)%00%(objectname)%00%(objecttype)%00%(*objectname)%00%(*objecttype)',
+      'refs/heads', 'refs/tags', 'refs/remotes'];
+    case 'history-worktrees': return ['worktree', 'list', '--porcelain', '-z'];
     case 'initialize': return ['--git-dir=.git', 'init', '--template=', '--initial-branch=main', '--quiet'];
     case 'status': return ['status', '--porcelain=v2', '-z', '--untracked-files=normal', '--ignore-submodules=all'];
     default: return inspectionFailure('INVALID_REQUEST');

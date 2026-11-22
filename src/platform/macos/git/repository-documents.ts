@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import type { Deadline } from '../../../ports/clock.js';
 import type { FilesystemAnchor } from '../../../ports/repository.js';
 import type { ProjectState } from '../../../ports/registry.js';
-import { createFilesystemIdentity } from './filesystem-identity.js';
+import { assertRepositoryIdentity } from './repository-identity-check.js';
 import { createGitRunner } from './runner.js';
 
 const MAX_DOCUMENT_BYTES = 48 * 1024;
@@ -52,15 +52,8 @@ export async function readRepositoryDocuments(state: ProjectState, deadline: Dea
   const { projectId, configRevision, referenceCheckout, repositoryIdentity } = state.project;
   const root = referenceCheckout.root;
   const cwd = root.canonicalPath;
-  const filesystem = createFilesystemIdentity();
   const anchors = [root, referenceCheckout.adminDirectory, repositoryIdentity.commonDirectory];
-  async function checkIdentity() {
-    for (const expected of anchors) {
-      const current = await filesystem.capture(expected.canonicalPath, 'directory');
-      if (filesystem.compare(expected, current) !== 'VERIFIED') throw new Error('REPOSITORY_CHANGED');
-    }
-  }
-  await checkIdentity();
+  await assertRepositoryIdentity(anchors);
   const names = new Map<string, string>();
   const allowed = [...readmeNames, ...analysisNames];
   for await (const entry of await opendir(cwd)) {
@@ -95,6 +88,6 @@ export async function readRepositoryDocuments(state: ProjectState, deadline: Dea
       }
     }
   }
-  await checkIdentity();
+  await assertRepositoryIdentity(anchors);
   return { projectId, configRevision, readme, analysis, lastCommit, specifications };
 }

@@ -12,6 +12,12 @@
     "maestro": "dist/cli/main.js"
   },
   "dependencies": {
+    "@lezer/css": "^1.0.0",
+    "@lezer/highlight": "^1.0.0",
+    "@lezer/html": "^1.0.0",
+    "@lezer/javascript": "^1.0.0",
+    "@lezer/json": "^1.0.0",
+    "@lezer/markdown": "^1.0.0",
     "better-sqlite3": "13.0.3"
   },
   "devDependencies": {

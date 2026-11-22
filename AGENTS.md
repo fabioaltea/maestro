@@ -1,8 +1,10 @@
 # maestro Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-11-18
+Auto-generated from all feature plans. Last updated: 2026-11-22
 
 ## Active Technologies
+
+- 014-repository-history-code: riusa l'ispezione Git locale confinata del Core e il bridge Desktop; parser Lezer a bundle locale per il lettore di sola consultazione. Nessuna nuova persistenza. Consultare specs/014-repository-history-code/plan.md e contracts/.
 
 - 004-project-discovery (implementazione locale fino aT054; qualifica reale BLOCKED): Codex CLI standalone 0.167.0 con login ufficiale Keychain-only; corpus selezionato/sigillato e profilo OS dedicato. Nessun nuovo SDK o pacchetto runtime; G0 sintetico PASS; G1/login reale BLOCKED: precheck PROVIDER_UNSAFE, nessuna inferenza. Consultare reports/provider-qualification.md della004.
 - Schema 4 implementato sul writer SQLite esistente (metadata e letture Discovery; avvio/output/intervista/review/correzioni/approval/freshness/storico UI e headless collegati): ledger/slot/approvazioni Discovery e artefatti privati bounded. Upgrade solo start esplicito; Agent Runtime separato dalla policy Foundation. Consultare specs/004-project-discovery/ e contracts.

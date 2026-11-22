@@ -19,7 +19,7 @@ import { useDesktop } from './state/desktop.ts';
 type Section = Exclude<RepositorySection, 'settings'> | RepositorySetting | GlobalTool;
 const overview: DetailRoute = { section: 'overview' };
 function isDetailSection(section: Section) {
-  return section === 'overview' || section === 'features' || section === 'discovery' || section === 'agents' || section === 'general';
+  return section === 'overview' || section === 'history' || section === 'code' || section === 'features' || section === 'discovery' || section === 'agents' || section === 'general';
 }
 
 export function App() {
@@ -44,7 +44,7 @@ export function App() {
   function openRepositorySection(next: RepositorySection) {
     if (next === 'overview') navigate(next, overview);
     else if (!projectId) return;
-    else if (next === 'features' || next === 'discovery' || next === 'agents') navigate(next, { section: next });
+    else if (next === 'history' || next === 'code' || next === 'features' || next === 'discovery' || next === 'agents') navigate(next, { section: next });
     else navigate('general');
   }
   const openWorkspace = (source: WorkspaceSource) => { setWorkspaceSource({...source, epoch}); navigate('workspaces'); };
