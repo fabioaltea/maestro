@@ -11,7 +11,7 @@ const repositorySections = {
 export type RepositorySection = keyof typeof repositorySections;
 export type DetailRoute =
   | { section: 'overview' }
-  | { section: 'features'; featureId?: string }
+  | { section: 'features'; featureId?: string; conversation?: boolean }
   | { section: 'discovery'; discoveryId?: string }
   | { section: 'agents'; discoveryId?: string };
 

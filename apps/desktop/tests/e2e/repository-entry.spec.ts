@@ -113,7 +113,7 @@ test('routes an approved analysis to a new feature for the same repository',asyn
    try{
      await page.getByRole('button',{name:/Intervista UI/}).click();
      await page.getByRole('button',{name:'Feature',exact:true}).click();
-     const next=page.getByRole('button',{name:'Prepara creazione',exact:true});
+     const next=page.getByRole('button',{name:'Creazione manuale',exact:true});
      await expect(next).toBeDisabled();
      await page.getByRole('button',{name:'Analizza codebase'}).click();
      const review=page.locator('.discovery-review');
@@ -124,6 +124,7 @@ test('routes an approved analysis to a new feature for the same repository',asyn
      await expect(review).toContainText('Approvazione storica:',{timeout:15_000});
      await page.getByRole('button',{name:'Feature',exact:true}).click();
      await expect(next).toBeEnabled({timeout:15_000});
+     await next.click();
      const editor=page.getByLabel('Specifica e piano JSON');
      await expect(editor).toBeVisible();
      await expect(page.getByRole('article',{name:'Dettaglio Intervista UI'})).toContainText(seed.repo.path);

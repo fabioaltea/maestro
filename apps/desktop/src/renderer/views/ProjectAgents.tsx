@@ -7,14 +7,20 @@ import { DiscoveryActivity } from './Agents.tsx';
 import { ExecutionActivity, executionAgentName, executionStatus, type ExecutionActivitySummary } from '../components/ExecutionActivity.tsx';
 
 interface ExecutionEntry { session: ExecutionActivitySummary; agent: ExecutionAgentRun; live: boolean }
+interface PlanningEntry { featureId: string; title: string; status: string }
 type Selection = { discoveryId: string } | ExecutionEntry;
+const planningStatus = new Map([
+  ['PLANNING', 'Attivo'], ['WAITING_USER', 'In attesa di risposta'], ['RECONCILING', 'In verifica'],
+]);
 
-export function ProjectAgents({ desktop, projectId, initialDiscoveryId, onDiscovery }: {
-  desktop: Desktop; projectId: string; initialDiscoveryId: string | null; onDiscovery(id: string): void;
+export function ProjectAgents({ desktop, projectId, initialDiscoveryId, onDiscovery, onFeature }: {
+  desktop: Desktop; projectId: string; initialDiscoveryId: string | null; onDiscovery(id: string): void; onFeature(id: string): void;
 }) {
   const { invoke } = desktop;
   const [history, setHistory] = useState<Awaited<ReturnType<typeof readDiscoveryHistory>>>(null);
   const [execution, setExecution] = useState<ExecutionEntry | null>(null);
+  const [planning, setPlanning] = useState<PlanningEntry[]>([]);
+  const [planningRead, setPlanningRead] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const [selection, setSelection] = useState<Selection | null>(initialDiscoveryId ? { discoveryId: initialDiscoveryId } : null);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
@@ -22,6 +28,41 @@ export function ProjectAgents({ desktop, projectId, initialDiscoveryId, onDiscov
     ? history?.items.find(item => item.discoveryId === selection.discoveryId) : undefined;
   const selectedExecution = selection && 'session' in selection ? selection : null;
   const watching = Boolean(selectedDiscovery || selectedExecution);
+
+  useEffect(() => {
+    if (watching) return;
+    let disposed = false, timer: ReturnType<typeof setTimeout>;
+    async function check() {
+      try {
+        if (document.visibilityState !== 'visible') return;
+        const entries = new Map<string, PlanningEntry>();
+        let cursor: string | undefined;
+        do {
+          const reply = await invoke('listFeatures', { projectId, limit: 20, ...(cursor ? { cursor } : {}) }) as PublicResult | null;
+          if (disposed) return;
+          if (reply?.result !== 'OK') {
+            setPlanning(previous => previous.map(item => ({ ...item, status: 'Ultimo stato noto' })));
+            setPlanningRead('unavailable');
+            return;
+          }
+          const live = reply.liveness === 'LIVE_VERIFIED';
+          for (const item of reply.data.items as Record<string, unknown>[]) {
+            const status = planningStatus.get(String(item.state));
+            if (status && item.projectId === projectId && typeof item.featureId === 'string' && typeof item.title === 'string') {
+              entries.set(item.featureId, { featureId: item.featureId, title: item.title, status: live ? status : 'Ultimo stato noto' });
+            }
+          }
+          cursor = typeof reply.data.nextCursor === 'string' ? reply.data.nextCursor : undefined;
+        } while (cursor);
+        setPlanning([...entries.values()]);
+        setPlanningRead('ready');
+      } finally {
+        if (!disposed) timer = setTimeout(() => void check(), 5000);
+      }
+    }
+    void check();
+    return () => { disposed = true; clearTimeout(timer); };
+  }, [invoke, projectId, watching]);
 
   useEffect(() => {
     if (watching) return;
@@ -56,6 +97,8 @@ export function ProjectAgents({ desktop, projectId, initialDiscoveryId, onDiscov
     discoveryIsRunning(item.state) || ['WAITING_USER', 'RECONCILING'].includes(item.state)) ?? [];
   const discoveryLive = history?.live === true;
   const sessionStatus = execution ? executionStatus(execution.session, execution.agent, execution.live) : null;
+  const readingAgents = loading || planningRead === 'loading';
+  const agentsUnavailable = unavailable || planningRead === 'unavailable';
   return <section className="project-agents" aria-labelledby="project-agents-title">
     <div className="section-heading">
       <h3 id="project-agents-title">{watching ? 'Dettaglio agente' : 'Agenti attivi'}</h3>
@@ -66,10 +109,10 @@ export function ProjectAgents({ desktop, projectId, initialDiscoveryId, onDiscov
       : selectedExecution ? <ExecutionActivity key={selectedExecution.session.sessionId} desktop={desktop}
         summary={selectedExecution.session} agent={selectedExecution.agent} live={selectedExecution.live} />
       : <>
-        {loading && <p className="hint" role="status">Lettura degli agenti…</p>}
-        {unavailable && <p className="hint" role="status">Parte dello stato degli agenti non è disponibile.</p>}
-        {!loading && !unavailable && !discoveries.length && !execution && <p className="hint">Nessun agente attivo per questo repository.</p>}
-        {(discoveries.length > 0 || execution) && <ul className="project-agent-list">
+        {readingAgents && <p className="hint" role="status">Lettura degli agenti…</p>}
+        {agentsUnavailable && <p className="hint" role="status">Parte dello stato degli agenti non è disponibile.</p>}
+        {!readingAgents && !agentsUnavailable && !discoveries.length && !planning.length && !execution && <p className="hint">Nessun agente attivo per questo repository.</p>}
+        {(discoveries.length > 0 || planning.length > 0 || execution) && <ul className="project-agent-list">
           {discoveries.map(item => {
             const status = discoveryAgentStatus(item, discoveryLive);
             return <li key={item.discoveryId}>
@@ -80,6 +123,13 @@ export function ProjectAgents({ desktop, projectId, initialDiscoveryId, onDiscov
               </button>
             </li>;
           })}
+          {planning.map(item => <li key={item.featureId}>
+            <button className="project-agent-row" onClick={() => onFeature(item.featureId)}>
+              <span><strong>Agente di pianificazione</strong><small>Intervista feature</small></span>
+              <span className="agent-task">{item.title}</span>
+              <span className="agent-status" data-active={item.status === 'Attivo'}>{item.status}</span>
+            </button>
+          </li>)}
           {execution && <li>
             <button className="project-agent-row" onClick={() => setSelection(execution)}>
               <span><strong>{executionAgentName(execution.agent)}</strong><small>{execution.agent.modelId ?? 'Modello non disponibile'}</small></span>

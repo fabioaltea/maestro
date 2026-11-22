@@ -32,6 +32,7 @@ test('workspace confirms an exact handoff, keeps the original receipt and reads 
      await page.getByRole('button',{name:'Analizza codebase',exact:true}).click();
      await page.getByRole('button',{name:'Feature',exact:true}).click();
      const panel=page.locator('.feature-planning'),editor=panel.getByLabel('Specifica e piano JSON');
+     await panel.getByRole('button',{name:'Creazione manuale',exact:true}).click();
      const bundle=JSON.parse(await editor.inputValue());
      bundle.title='Workspace fixture';
      await editor.fill(JSON.stringify(bundle));

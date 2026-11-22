@@ -13,7 +13,7 @@ test('G4 desktop shows stale knowledge, preserves approval and requires a fresh 
       const review = page.locator('.discovery-review'); await expect(review.getByRole('checkbox')).toHaveCount(3); for (const box of await review.getByRole('checkbox').all()) await box.check();
       await page.getByRole('button', { name: 'Approva questa revisione', exact: true }).click(); await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click(); await expect(review).toContainText('Approvazione storica:', { timeout: 15000 });
       await page.getByRole('button', { name: 'Feature', exact: true }).click();
-      await expect(page.getByRole('button', { name: 'Prepara creazione', exact: true })).toBeEnabled();
+      await expect(page.getByRole('button', { name: 'Creazione manuale', exact: true })).toBeEnabled();
       await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
       await expect(review).toContainText('Approvazione storica:');
       const old = (await f.cli(['discovery', 'show', seed.discoveryId])).result.data.discovery.latestDocumentRevisionId;

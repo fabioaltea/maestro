@@ -12,8 +12,10 @@ In **Panoramica**, il README occupa la colonna principale e mostra direttamente 
 
 Per rileggere lo stato del repository dopo modifiche esterne, chiudilo da **Panoramica** e riaprilo da **Recenti**.
 
+Nella sezione **Feature**, l’elenco mostra il titolo e lo stato di ogni voce salvata. Il pulsante **+** in alto a destra apre la chat per una nuova feature. La chat occupa tutta l’area di lavoro. Scorrono solo i messaggi e i dettagli della specifica; il campo di risposta resta in basso. La barra laterale rimane disponibile per passare ad **Agenti**.
+
 1. Con un profilo isolato, avviare Desktop e verificare «Apri repository» e «Crea repository». Aprire un checkout locale e verificare il progetto. Ripetere su una cartella vuota con creazione e controllare il checkout senza commit.
-2. Selezionare «Analizza codebase». Con il provider di fixture confermare fonti, svolgere la revisione e approvare. Aprire «Feature» e verificare che «Prepara creazione» sia disponibile. Ripetere con approvazione obsoleta e verificare il blocco.
+2. Selezionare «Analizza codebase». Con il provider di fixture confermare fonti, svolgere la revisione e approvare. In «Feature», «Nuova feature» apre la chat: scrivere la richiesta, salvarla e, con un provider qualificato, confermare «Avvia intervista». Le domande dell’agente compaiono nella conversazione e si risponde dal campo in basso. Il turno attivo o in attesa di risposta è riapribile da «Agenti»; gli scambi già mostrati restano visibili mentre il dettaglio del repository è aperto, ma non costituiscono uno storico persistente della chat. Il documento si trova in «Specifica, piano e approvazione». «Creazione manuale» resta disponibile per il flusso JSON. Ripetere con approvazione obsoleta e verificare il blocco del salvataggio.
 3. Alternare due repository omonimi, riaprire Desktop e confrontare recenti e storico. Interrogare un’operazione anche via CLI. Provare l’annullamento e una risposta tardiva.
 4. Con il default isolato e vuoto, recuperare da Diagnostica un archivio precedente compatibile e inattivo. Verificare stessa identità e stessi esiti. Ripetere con default pieno o archivio sorgente in uso e verificare il blocco.
 

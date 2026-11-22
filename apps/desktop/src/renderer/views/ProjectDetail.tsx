@@ -4,7 +4,7 @@ import type { DetailRoute } from '../components/RepositoryNavigation.tsx';
 import type { Project } from '../state/project-view.ts';
 export { dateLabel, flagLabel } from '../format.ts';
 import { baseStateLabel, dateLabel } from '../format.ts';
-import { FeaturePlanning } from './FeaturePlanning.tsx';
+import { FeaturePlanning, type InterviewExchange } from './FeaturePlanning.tsx';
 import { Discovery } from './Discovery.tsx';
 import { ProjectAgents } from './ProjectAgents.tsx';
 import type { Desktop } from '../state/desktop.ts';
@@ -23,6 +23,7 @@ export function ProjectDetail({ project, desktop, live, onClose, onWorkspace, ro
   const [documents, setDocuments] = useState<RepositoryDocuments | null>(null);
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [eligibility, setEligibility] = useState<{ eligible: boolean; reason: string } | null>(null);
+  const [interviews, setInterviews] = useState<Record<string, InterviewExchange[]>>({});
   const { invoke } = desktop;
   useEffect(() => {
     let current = true;
@@ -79,7 +80,7 @@ export function ProjectDetail({ project, desktop, live, onClose, onWorkspace, ro
     {section === 'agents' && <ProjectAgents key={route.discoveryId ?? ''}
       desktop={desktop} projectId={project.projectId} initialDiscoveryId={route.discoveryId ?? null}
       onDiscovery={id => onNavigate({ section: 'discovery', discoveryId: id })}
-      onFeature={(id: string) => onNavigate({ section: 'features', featureId: id })} />}
+      onFeature={id => onNavigate({ section: 'features', featureId: id, conversation: true })} />}
     {section === 'overview' && <div className="repository-overview">
         <RepositoryReadme documents={documents} loading={documentsLoading} />
         <aside className="repository-summary" aria-labelledby="repository-status-title">
@@ -97,8 +98,12 @@ export function ProjectDetail({ project, desktop, live, onClose, onWorkspace, ro
         </aside>
       </div>}
     {section === 'features' && <FeaturePlanning key={`${project.configRevision}:${route.featureId ?? ''}`} project={project} desktop={desktop} live={live}
-      canCreate={canCreate} creationHint={next} initialFeatureId={route.featureId ?? null} specifications={documents?.specifications ?? null}
-      documentsLoading={documentsLoading} onWorkspace={onWorkspace} />}
+      canCreate={canCreate} creationHint={next} initialFeatureId={route.featureId ?? null} conversation={route.conversation === true}
+      interviews={interviews} onExchange={(id, exchange) => setInterviews(previous => {
+        const exchanges = previous[id] ?? [];
+        return exchanges.some(item => item.turnId === exchange.turnId) ? previous : { ...previous, [id]: [...exchanges, exchange] };
+      })}
+      onConversation={id => onNavigate({section: 'features', featureId: id, conversation: true})} onWorkspace={onWorkspace} />}
     {section === 'discovery' && <Discovery key={`${project.configRevision}:${route.discoveryId ?? ''}`} project={project} desktop={desktop} live={live} onApproved={refreshEligibility}
       localAnalysis={documents?.analysis} documentsLoading={documentsLoading}
       onFollow={id => onNavigate({ section: 'agents', discoveryId: id })}
