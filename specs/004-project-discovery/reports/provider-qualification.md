@@ -123,6 +123,25 @@ Nessun login interattivo, copia/estrazione credenziali, API key, modello alterna
 profilo ampliato o inferenza non confinata. Occorre risolvere e riqualificare la
 compatibilità del login ufficiale con il confine OS prima di ripetere il percorso
 reale; il consenso ricevuto resta valido per questa stessa prova sintetica.
+
+## Verifica del blocco dopo il collegamento da Desktop, 2026-11-22
+
+La CLI nativa 0.167.0 vede la sessione ChatGPT del profilo Maestro e il servizio
+attivo restituisce `UNSAFE / PROVIDER_UNSAFE` per Discovery. Il blocco è
+riproducibile prima di inviare qualunque fonte.
+
+Con rete negata e identità temporanea, il controllo con la home di scratch
+riporta che non trova il Keychain predefinito. Usando la home dell’utente il
+portachiavi predefinito diventa individuabile. La stessa sessione risulta
+collegata fuori dal confinamento e indisponibile dentro, anche con la home
+corretta. Un profilo temporaneo di prova con accesso puntuale al servizio
+`com.apple.SecurityServer`, alle preferenze Keychain e alla memoria condivisa
+di notifica non rende la sessione disponibile. La configurazione di produzione
+mantiene il proprio confine e il gate G1 resta BLOCKED.
+
+Desktop mostra esplicitamente il blocco di sicurezza quando l’account risulta
+collegato. Le verifiche hanno interrogato soltanto lo stato di login e la
+disponibilità locale. Nessuna inferenza avviata.
 T028/T050 restano aperti/BLOCKED. Il PASS sintetico G0 descrive il proprio confine
 e non dimostra il percorso Keychain reale. Gate esterni001/002/review003 invariati.
 

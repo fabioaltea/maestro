@@ -1,7 +1,7 @@
 import { resultLogMetadata } from './safe-log.ts';
 import { ipcMain } from 'electron';
 import type { BrowserWindow } from 'electron';
-import { CHANNEL } from '../shared/bridge-contract.ts';
+import { CHANNEL, CODEX_ACCOUNT_METHODS } from '../shared/bridge-contract.ts';
 import type { ArchiveView, BridgeMethod, BridgeRequest, BridgeResponse } from '../shared/bridge-contract.ts';
 import { safeError, validateRequest, validateSender } from '../shared/validation.ts';
 import { DISCOVERY_BRIDGE_METHODS } from '../shared/discovery-contract.ts';
@@ -32,7 +32,7 @@ export function installBridge(window: BrowserWindow, services: BridgeServices) {
       Object.assign(envelope, { selectionEpoch: context?.selectionEpoch ?? 0, archiveHandle: context?.archiveHandle ?? null, storeId: context?.storeId ?? null });
       const request = validateRequest(method, input);
       envelope.callId = request.callId;
-      if (method !== 'context' && request.selectionEpoch !== (context?.selectionEpoch ?? 0)) throw new Error('STALE_CONTEXT');
+      if (method !== 'context' && !(CODEX_ACCOUNT_METHODS as readonly string[]).includes(method) && request.selectionEpoch !== (context?.selectionEpoch ?? 0)) throw new Error('STALE_CONTEXT');
       if (pending >= 8) throw new Error('LOCAL_BUSY');
       pending++; entered = true;
       const handler = handlers.get(method as BridgeMethod);

@@ -24,7 +24,7 @@ HOME/XDG/TMP per-run privati, CODEX_HOME dedicato e stabile per utente; ambiente
 
 ## Keychain e permessi effettivi
 
-Login ufficiale manuale nel CODEX_HOME dedicato e keyring-only. Maestro non interroga Keychain per ottenere il token e non lo copia: legge soltanto stato normalizzato prodotto dalla CLI. No auth.json, fallback auto, credential helper o riuso presunto di login di un’altra home. Config managed incompatibile → blocco; nessuna policy aziendale modificata o bypassata.
+Maestro verifica il collegamento con `codex login status`. Dopo la scelta esplicita **Collega Codex** avvia `codex login` nel CODEX_HOME dedicato, con il Keychain come unico archivio delle credenziali, e verifica di nuovo lo stato. La CLI gestisce il browser e il flusso di accesso. L’operazione usa un eseguibile verificato, parte fuori dal repository e restituisce a Maestro soltanto uno stato normalizzato. Il percorso rifiuta `auth.json` e configurazioni locali personalizzate nel profilo dedicato. Un esito positivo riguarda il collegamento dell’account. La verifica confinata del runtime resta necessaria per avviare l’analisi.
 
 Profilo OS provider deny-by-default, distinto dal Git inspector: letture soltanto di binario/librerie OS necessarie, schema/istruzioni trusted e runtime non sensibile; API Keychain necessarie esplicitamente qualificate. Nega i file di credenziali, home utente, checkout, archivio Maestro, filesystem esterni e exec di altri programmi. Sorgenti soltanto su stdin. Scratch scrivibile è esclusivamente per-run e non contiene token. Non confondere read-only interna CLI con questo confine.
 

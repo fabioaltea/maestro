@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { record } from '../../shared/validation.ts';
 import type { Desktop } from '../state/desktop.ts';
 import type { Project } from '../state/project-view.ts';
@@ -6,37 +6,66 @@ import { useDiscovery } from '../state/discovery.ts';
 import { DiscoveryLaunch } from '../components/DiscoveryLaunch.tsx';
 import { ConfirmationDialog } from '../components/ConfirmationDialog.tsx';
 import { dateLabel } from '../format.ts';
+import { CodexAccount } from '../components/CodexAccount.tsx';
 import { DiscoveryInterview } from '../components/DiscoveryInterview.tsx';
 export function Discovery({ desktop, project, live, onApproved }: { desktop: Desktop; project: Project; live: boolean; onApproved: () => void }) {
-  const view = useDiscovery(desktop, project.projectId, project.configRevision, onApproved), [binary, setBinary] = useState<{ providerBinaryHandle: string; displayName: string } | null>(null), [model, setModel] = useState(''), [choosing, setChoosing] = useState(false);
-  const configuration = view.provider?.configuration ? record(view.provider.configuration) : null, check = view.provider?.check ? record(view.provider.check) : null;
+  const view = useDiscovery(desktop, project.projectId, project.configRevision, onApproved);
+  const check = view.provider?.check ? record(view.provider.check) : null;
   const labels: Record<string, string> = { RUNNING: 'In corso', WAITING_USER: 'Attende risposta', READY_FOR_REVIEW: 'Da approvare', APPROVED: 'Approvata', STALE: 'Da aggiornare', INTERRUPTED: 'Interrotta', UPDATING: 'Aggiornamento in corso', RECONCILING: 'Esito incerto', FAILED: 'Non riuscita', CANCELLED: 'Annullata', CANCELLING: 'Annullamento in corso' };
   const [selected, setSelected] = useState<string | null>(null);
   const current = view.items.findLast(item => ['RUNNING', 'WAITING_USER', 'READY_FOR_REVIEW', 'RECONCILING'].includes(item.state));
   const selectedId = selected ?? current?.discoveryId ?? view.items.at(-1)?.discoveryId;
-  async function choose() { setChoosing(true); try { const result = await desktop.invoke('chooseProviderBinary'); if (result) setBinary(record(result).provider as typeof binary); } finally { setChoosing(false); } }
+  const { codex, invoke } = desktop;
+  const connected = codex.account?.state === 'CONNECTED';
+  const [checking, setChecking] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const attempted = useRef(false);
+  const { refresh } = view;
+  const { refresh: refreshAccount } = codex;
+  const available = check?.state === 'AVAILABLE';
+  const verify = useCallback(async () => {
+    setChecking(true);
+    setSetupError(null);
+    try {
+      const checked = await invoke('checkCodexDiscovery') as { state: string; code: string | null } | null;
+      setSetupError(checked?.state === 'READY' ? null : checked?.code ?? 'PROVIDER_UNAVAILABLE');
+      if (checked?.code === 'PROVIDER_AUTH_REQUIRED') void refreshAccount();
+      await refresh();
+    } finally { setChecking(false); }
+  }, [invoke, refresh, refreshAccount]);
+  useEffect(() => {
+    if (!connected) attempted.current = false;
+    if (live && connected && !view.loading && !available && !attempted.current) {
+      attempted.current = true;
+      void verify();
+    }
+  }, [live, connected, view.loading, available, verify]);
+  const providerError = setupError ?? check?.code;
+  let availabilityMessage = 'Verifica di Codex per l’analisi in attesa.';
+  if (checking) availabilityMessage = 'Verifica di Codex per l’analisi…';
+  else if (available && !setupError) availabilityMessage = 'Codex è disponibile per l’analisi.';
+  else if (providerError === 'PROVIDER_UNSAFE') {
+    availabilityMessage = connected
+      ? 'Account Codex collegato. Il controllo di sicurezza di Maestro blocca l’analisi.'
+      : 'Il controllo di sicurezza di Maestro blocca l’analisi con Codex.';
+  } else if (providerError === 'PROVIDER_AUTH_REQUIRED' && !connected) {
+    availabilityMessage = 'Collega il tuo account Codex per avviare l’analisi.';
+  } else if (check || setupError) {
+    availabilityMessage = 'Impossibile verificare la disponibilità di Codex per l’analisi. Consulta Diagnostica.';
+  }
   return <section className="discovery-view" aria-labelledby="discovery-title"><div className="section-heading"><h3 id="discovery-title">Discovery del progetto</h3><button className="text-button" disabled={view.busy || view.loading} onClick={() => void view.refresh()}>Aggiorna Discovery</button></div>
     <p className="hint">Analisi in sola lettura per conoscere scopo, architettura e convenzioni di {project.displayName}.</p>
     {project.observation?.hasCommits === false && <p className="hint">Il repository non ha ancora commit. Aggiungi i file da analizzare e includili nell’anteprima delle fonti.</p>}
     {view.loading && <p role="status">Lettura dello stato Discovery…</p>}
     {!live && <p className="hint">Ultimo stato noto. Avvia esplicitamente il servizio per preparare o avviare una Discovery.</p>}
-    <section className="discovery-provider" aria-labelledby="provider-title"><h4 id="provider-title">Provider</h4><p>{configuration ? `Codex · ${configuration.modelId}` : 'Provider non configurato'}</p>
-      {configuration && <p className="hint">Versione: {String(configuration.binaryVersion)} · Revisione {String(configuration.revision)}</p>}
-      <p className="hint">{check ? `Stato: ${check.state} · Verificato: ${dateLabel(String(check.checkedAt))}` : 'Disponibilità e login non ancora verificati.'}</p>
-      {Boolean(check?.code) && <p className="field-error">{String(check?.code)}</p>}
-      <details><summary>Configura Codex e login ufficiale</summary><p className="hint">Seleziona il binario nativo qualificato e il modello del tuo account. Esegui il login nella CLI ufficiale con il CODEX_HOME dedicato a Maestro e archivio credenziali Keychain. Maestro non installa il provider e non richiede token.</p>
-        <p className="hint">Il profilo dedicato è in ~/Library/Application Support/Maestro/providers/codex-discovery/. Un login dell’installazione ordinaria potrebbe non essere disponibile qui.</p>
-        <button className="button subtle" disabled={!live || view.busy || choosing} onClick={() => void choose()}>Scegli binario Codex</button>{binary && <p className="hint">Selezionato: {binary.displayName}</p>}
-        <form onSubmit={e => { e.preventDefault(); if (binary) void view.prepare('discovery.configure', { providerBinaryHandle: binary.providerBinaryHandle, modelId: model, expectedProviderRevision: configuration?.revision ?? null }); }}>
-          <label htmlFor="discovery-model">Modello Codex</label><input id="discovery-model" required maxLength={128} pattern="[a-zA-Z0-9][a-zA-Z0-9._:/-]*" value={model} disabled={view.busy} onChange={e => setModel(e.target.value)} />
-          <button className="button" disabled={!live || view.busy || !binary || !model}>Configura provider</button>
-        </form>
-      </details>
-      <button className="button subtle" disabled={!live || view.busy || !configuration} onClick={() => void view.prepare('discovery.check', { expectedProviderRevision: configuration?.revision })}>Verifica provider e login</button>
-    </section>
+    <CodexAccount codex={codex} />
+    {(connected || check || checking) && <section className="discovery-provider" aria-label="Disponibilità dell’analisi">
+      <p role="status">{availabilityMessage}</p>
+      {connected && !checking && <button className="button subtle" disabled={!live || view.busy || view.loading || codex.pending !== null} onClick={() => void verify()}>Verifica disponibilità</button>}
+    </section>}
     <button className="button subtle" disabled={!live || view.busy} onClick={view.newDiscovery}>Nuova Discovery</button>
     <p className="hint">Una nuova analisi richiede una nuova anteprima e conferma. Le approvazioni storiche restano legate al loro contesto.</p>
-    <DiscoveryLaunch view={view} live={live} projectId={project.projectId} configRevision={project.configRevision} />
+    <DiscoveryLaunch view={view} live={live} checkingProvider={checking || setupError !== null} projectId={project.projectId} configRevision={project.configRevision} />
     <div id="discovery-error" role={view.error ? 'alert' : undefined} className="field-error">{view.error}</div>{view.message && <p role="status" className="hint">{view.message}</p>}{view.requestId && <p className="mono">Richiesta: {view.requestId}</p>}
     <section className="discovery-history" aria-labelledby="discovery-history-title"><h4 id="discovery-history-title">Discovery salvate</h4>{!view.loading && !view.items.length && <p className="muted">Non avviata</p>}
       {view.items.map(item => <article key={item.discoveryId}><p>{labels[item.state] ?? 'Stato non verificato'} · {dateLabel(item.updatedAt)}</p><p className="mono">Discovery: {item.discoveryId}<br />Sessione: {item.sessionId}{item.currentRunId && <><br />Esecuzione: {item.currentRunId}</>}</p>{item.error && <p className="field-error">{item.error}</p>}<button className="text-button" onClick={() => setSelected(item.discoveryId)}>Apri sessione</button></article>)}

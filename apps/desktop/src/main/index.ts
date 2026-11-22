@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { SafeLog } from './safe-log.ts';
 import { join, isAbsolute } from 'node:path';
 import { archiveLocation, recoverArchiveLocation, validateRuntime } from './runtime.ts';
+import { installCodex } from './codex.ts';
 import { CoreCli } from './core-cli.ts';
 import { secureSession, secureWindow } from './security.ts';
 import { installProtocol } from './protocol.ts';
@@ -82,6 +83,7 @@ else {
     const lifecycle = installLifecycle(router, archiveContext, app.getPath('userData'), Boolean(override));
     installProjectActions(router, archiveContext, lifecycle.actions);
     installDiscovery(router, archiveContext, lifecycle.actions);
+    installCodex(router, archiveContext, core?.runtime ?? null);
     installFeature(router,archiveContext,lifecycle.actions);
     installWorkspace(router,archiveContext,lifecycle.actions);
     installEnvironment(router,archiveContext,lifecycle.actions);

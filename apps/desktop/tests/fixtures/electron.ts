@@ -2,12 +2,13 @@ import { _electron } from '@playwright/test';
 import { access, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { repositoryRoot, createScratch } from './desktop.ts';
-export async function launchDesktop(f: Awaited<ReturnType<typeof createScratch>>, archive: string | null = f.archive) {
+export async function launchDesktop(f: Awaited<ReturnType<typeof createScratch>>, archive: string | null = f.archive,
+  options: { home?: string; node?: string } = {}) {
   const appPath = join(repositoryRoot, 'dist-desktop');
   await access(join(appPath, 'main/index.js'));
   const launchStarted = performance.now();
   const app = await _electron.launch({ executablePath: join(repositoryRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'), args: [appPath, `--user-data-dir=${f.userData}`, ...(archive === null ? [] : [`--maestro-state-dir=${archive}`])],
-    env: { HOME: archive === null ? join(f.directory, 'profile') : process.env.HOME ?? '', PATH: '/usr/bin:/bin:/usr/sbin:/sbin', MAESTRO_NODE_BINARY: await realpath(process.execPath) }, timeout: 15_000 });
+    env: { HOME: options.home ?? (archive === null ? join(f.directory, 'profile') : process.env.HOME ?? ''), PATH: '/usr/bin:/bin:/usr/sbin:/sbin', MAESTRO_NODE_BINARY: await realpath(options.node ?? process.execPath) }, timeout: 15_000 });
   const page = await app.firstWindow();
   await page.waitForURL('maestro://app/index.html');
   await page.waitForLoadState('domcontentloaded');

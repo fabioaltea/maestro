@@ -4,11 +4,11 @@ import { record } from '../../shared/validation.ts';
 import { discoveryCanStart, parseDiscoveryScope } from '../state/discovery.ts';
 import type { useDiscovery } from '../state/discovery.ts';
 import { dateLabel } from '../format.ts';
-export function DiscoveryLaunch({ view, live, projectId, configRevision }: { view: ReturnType<typeof useDiscovery>; live: boolean; projectId: string; configRevision: string }) {
+export function DiscoveryLaunch({ view, live, checkingProvider, projectId, configRevision }: { view: ReturnType<typeof useDiscovery>; live: boolean; checkingProvider: boolean; projectId: string; configRevision: string }) {
   const [scope, setScope] = useState('.'), [consent, setConsent] = useState(false), [now, setNow] = useState(Date.now());
   const snapshot = view.snapshot, configuration = view.provider?.configuration ? record(view.provider.configuration) : null;
   useEffect(() => { setConsent(false); if (!snapshot) return; setNow(Date.now()); const timer = setTimeout(() => setNow(Date.now()), Math.max(0, snapshot.expiresAtMs - Date.now()) + 1); return () => clearTimeout(timer); }, [snapshot]);
-  const canStart = discoveryCanStart(view.provider, snapshot, live, configRevision, now);
+  const canStart = !checkingProvider && discoveryCanStart(view.provider, snapshot, live, configRevision, now);
   function preview() { try { void view.preview(parseDiscoveryScope(scope)); } catch (error) { view.setError((error as Error).message); } }
   const source = (p: Params) => <tr key={String(p.sourceId)}><td className="mono">{String(p.relativePath)}</td><td>{String(p.byteLength)} B</td></tr>;
   return <section className="discovery-launch" aria-labelledby="launch-title"><h4 id="launch-title">Ambito dell’analisi</h4>
@@ -26,7 +26,7 @@ export function DiscoveryLaunch({ view, live, projectId, configRevision }: { vie
       <p className="hint">{snapshot.omissions.length ? `Omissioni: ${snapshot.omissions.join(', ')}` : 'Nessuna omissione segnalata nello scope.'}</p>
       <button className="text-button" disabled={!live || view.busy} onClick={() => void view.prepare('discovery.discard', { projectId, snapshotId: snapshot.snapshotId })}>Scarta anteprima</button>
     </div>}
-    <label className="discovery-consent"><input type="checkbox" checked={consent} disabled={!canStart || view.busy} onChange={e => setConsent(e.target.checked)} />Autorizzo l’invio delle fonti selezionate a Codex, con il modello {configuration ? String(configuration.modelId) : 'da configurare'}, per questa Discovery.</label>
+    <label className="discovery-consent"><input type="checkbox" checked={consent} disabled={!canStart || view.busy} onChange={e => setConsent(e.target.checked)} />Autorizzo l’invio delle fonti selezionate a Codex{configuration ? ` (${String(configuration.modelId)})` : ''} per questa Discovery.</label>
     <button className="button primary" disabled={!canStart || !consent || view.busy} onClick={() => snapshot && configuration && void view.prepare('discovery.start', { projectId, snapshotId: snapshot.snapshotId, expectedConfigRevision: configRevision, expectedProviderRevision: configuration.revision, contextDigest: snapshot.contextDigest })}>Avvia Discovery</button>
     {!canStart && <p className="hint">Per avviare servono servizio attivo, anteprima corrente e verifica provider disponibile. Il core rivalida il contesto prima dell’invio.</p>}
   </section>;

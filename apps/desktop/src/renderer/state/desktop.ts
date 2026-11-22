@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { CODEX_ACCOUNT_METHODS } from '../../shared/bridge-contract.ts';
+import { useCodexAccount } from './codex.ts';
 import type { ArchiveView, BridgeMethod, Params, PublicResult } from '../../shared/bridge-contract.ts';
 import { record } from '../../shared/validation.ts';
 export function useDesktop() {
@@ -11,7 +13,7 @@ export function useDesktop() {
     const transitions: readonly BridgeMethod[] = ['chooseArchive', 'selectReceiptArchive', 'context', 'openRepository', 'createRepository', 'selectProject', 'closeProject', 'recoverArchive'];
     try {
       const response = await window.maestro[method]({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch, ...params });
-      if (!transitions.includes(method) && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) {
+      if (!(CODEX_ACCOUNT_METHODS as readonly string[]).includes(method) && !transitions.includes(method) && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) {
         if ((current.current?.selectionEpoch ?? 0) === epoch && response.selectionEpoch !== epoch) {
           const latest = await window.maestro.context({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch });
           if (!latest.error && (current.current?.selectionEpoch ?? 0) === epoch) {
@@ -39,6 +41,7 @@ export function useDesktop() {
     if (result.error) setNotice(`${result.error.message} ${result.error.nextAction}`);
     return result;
   }, [invoke]);
-  return { context, runtimeReady, notice, setNotice, invoke, core };
+  const codex = useCodexAccount(invoke, runtimeReady);
+  return { context, runtimeReady, notice, setNotice, invoke, core, codex };
 }
 export type Desktop = ReturnType<typeof useDesktop>;

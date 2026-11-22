@@ -1,7 +1,5 @@
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { createCodexAdapter } from '../../providers/codex/adapter.js';
-import { createCodexInspection } from '../../platform/macos/discovery/provider-inspection.js';
+import { codexAuthHome, createCodexInspection } from '../../platform/macos/discovery/provider-inspection.js';
 import { createMacOSDiscoveryContext } from '../../platform/macos/discovery/context-reader.js';
 import { createAgentRuntime } from '../../platform/macos/discovery/agent-runtime.js';
 import { createDiscoveryRunFiles } from '../../platform/macos/discovery/runtime-files.js';
@@ -24,7 +22,7 @@ export function createDiscoveryRuntime(storage: StoragePort, paths: ArchivePaths
     reserve: (kind, maximum) => storage.reserveDiscoveryArtifact!(kind, maximum), publish: (id, bytes) => storage.publishDiscoveryArtifact!(id, bytes),
     read: (id, offset, maximum) => storage.readDiscoveryArtifact!(id, offset, maximum), reconcile: () => storage.reconcileDiscoveryArtifacts!(),
   };
-  const inspection = dependencies.inspection ?? createCodexInspection({ authHome: join(homedir(), 'Library/Application Support/Maestro/providers/codex-discovery'),
+  const inspection = dependencies.inspection ?? createCodexInspection({ authHome: codexAuthHome(),
     runtimeRoot: paths.runtimeDirectory, instanceId, onResource: resource => storage.saveResource(resource) });
   const provider = dependencies.provider ?? createCodexAdapter({ inspection }), context = dependencies.context ?? createMacOSDiscoveryContext();
   let launcher: ReturnType<typeof createDiscoveryLauncher>;

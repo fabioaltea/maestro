@@ -2,6 +2,7 @@ import { fork, type ChildProcess } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
 import { lstat, mkdir, mkdtemp, open, readFile, realpath, rm } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { isAbsolute, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CodexInspectionPort } from '../../../ports/provider.js';
@@ -16,10 +17,30 @@ interface Options {
   /** Trusted process-test seam, never a client/renderer option. */
   readonly workerUrl?: URL; readonly observeChild?: (child: ChildProcess) => void;
 }
-async function noFileCredentials(authHome: string) {
+export function codexAuthHome(home = homedir()) {
+  return join(home, 'Library/Application Support/Maestro/providers/codex-discovery');
+}
+export async function noFileCredentials(authHome: string) {
   try { await lstat(join(authHome, 'auth.json')); }
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return; throw error; }
   throw new Error('PROVIDER_UNSAFE'); // Metadata only: never open the file.
+}
+export async function prepareCodexAuthHome(authHome: string) {
+  if (!isAbsolute(authHome) || normalize(authHome) !== authHome) throw new Error('PROVIDER_UNSAFE');
+  await mkdir(authHome, { recursive: true, mode: 0o700 });
+  await privateDirectory(authHome);
+  await noFileCredentials(authHome);
+  let file;
+  try {
+    file = await open(join(authHome, 'installation_id'), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    await file.writeFile(randomUUID());
+    await file.sync();
+  } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
+  finally { await file?.close(); }
+  await verifyInstallationMetadata(authHome);
+  const directory = await open(authHome, constants.O_RDONLY);
+  try { await directory.sync(); } finally { await directory.close(); }
+  return authHome;
 }
 async function qualifiedAssets() {
   for (const [url, expected] of [[new URL('./provider.sb', import.meta.url), CODEX_DISCOVERY_QUALIFICATION.profileSha256],
@@ -41,20 +62,8 @@ export function createCodexInspection(options: Options): CodexInspectionPort {
       } catch (error) { return { ok: false, code: error instanceof Error && error.message === 'PROVIDER_UNSUPPORTED' ? 'PROVIDER_UNSUPPORTED' : 'PROVIDER_UNSAFE' }; }
     },
     async prepareAuthHome() {
-      try {
-        if (!isAbsolute(options.authHome) || normalize(options.authHome) !== options.authHome) throw new Error('PROVIDER_UNSAFE');
-        await mkdir(options.authHome, { recursive: true, mode: 0o700 }); await privateDirectory(options.authHome);
-        await noFileCredentials(options.authHome);
-        let file;
-        try {
-          file = await open(join(options.authHome, 'installation_id'), constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-          await file.writeFile(randomUUID()); await file.sync();
-        } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; }
-        finally { await file?.close(); }
-        await verifyInstallationMetadata(options.authHome);
-        const directory = await open(options.authHome, constants.O_RDONLY); try { await directory.sync(); } finally { await directory.close(); }
-        return { ok: true, value: options.authHome };
-      } catch { return { ok: false, code: 'PROVIDER_UNSAFE' }; }
+      try { return { ok: true, value: await prepareCodexAuthHome(options.authHome) }; }
+      catch { return { ok: false, code: 'PROVIDER_UNSAFE' }; }
     },
     async checkLogin(c) {
       if (active) return 'UNAVAILABLE'; active = true;

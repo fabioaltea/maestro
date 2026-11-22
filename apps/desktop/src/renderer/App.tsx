@@ -10,6 +10,7 @@ import { Operations } from './views/Operations.tsx';
 import { Environments } from './views/Environments.tsx';
 import { Workspaces, type WorkspaceSource } from './views/Workspaces.tsx';
 import { Projects } from './views/Projects.tsx';
+import { CodexAccount } from './components/CodexAccount.tsx';
 import { useDesktop } from './state/desktop.ts';
 
 const sections = [
@@ -50,6 +51,7 @@ export function App() {
     <main className="workspace">
       <header className="workspace-header"><h2>{sections.find(item => item.id === section)?.label}</h2></header>
       {desktop.notice && <div className="notice" role="alert"><p>{desktop.notice}</p><button className="text-button" onClick={() => desktop.setNotice(null)}>Chiudi avviso</button></div>}
+      {section === 'projects' && !projectId && <CodexAccount codex={desktop.codex} />}
       {section === 'activity' ? <Activity desktop={desktop} />
         : section === 'diagnostics' ? <Diagnostics desktop={desktop} />
         : section === 'operations' ? <Operations desktop={desktop} />

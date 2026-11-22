@@ -28,3 +28,11 @@ test('owner, main frame and exact origin required independently', () => {
     assert.throws(() => validateSender({ ...sender, ...patch }, owner));
   }
 });
+test('Codex account and availability actions accept no executable, credentials or archive path', () => {
+  for (const method of ['codexStatus', 'codexLogin', 'cancelCodexLogin', 'checkCodexDiscovery']) {
+    assert.doesNotThrow(() => validateRequest(method, base()));
+    for (const params of [{ binary: '/tmp/codex' }, { authHome: '/tmp' }, { stateDirectory: '/tmp' }, { token: 'fixture' }, { args: ['login'] }]) {
+      assert.throws(() => validateRequest(method, { ...base(), ...params }));
+    }
+  }
+});
