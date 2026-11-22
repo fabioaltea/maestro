@@ -4,9 +4,9 @@ import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createScratch } from '../fixtures/desktop.ts';
 import { seedWaitingDiscovery } from '../fixtures/discovery-session.ts';
-import { launchDesktop, openSetting, openSettings } from '../fixtures/electron.ts';
+import { launchDesktop, openSetting, repositoryNavigation } from '../fixtures/electron.ts';
 
-test('startup restores the open repository and its breadcrumb returns to the separate home', async () => {
+test('restores the repository, navigates from the sidebar and closes from the overview', async () => {
   const f = await createScratch();
   try {
     await f.cli(['daemon', 'start']);
@@ -25,24 +25,37 @@ test('startup restores the open repository and its breadcrumb returns to the sep
       const { page } = reopened;
       const detail = page.getByRole('article', { name: 'Dettaglio Archivio locale' });
       await expect(detail).toBeVisible();
-      const breadcrumb = page.getByRole('navigation', { name: 'Percorso repository' });
-      await expect(breadcrumb.locator('[aria-current="page"]')).toHaveText('Archivio locale');
-      await breadcrumb.getByRole('button', { name: 'Home', exact: true }).press('Enter');
+      const sections = page.getByRole('complementary', { name: 'Navigazione principale' })
+        .getByRole('navigation', { name: 'Sezioni repository' });
+      await expect(sections.getByRole('button')).toHaveCount(5);
+      await expect(sections.locator('button > svg')).toHaveCount(5);
+      await expect(sections.getByRole('button', { name: 'Impostazioni', exact: true })).toHaveCount(0);
+      await expect(sections.getByRole('button', { name: 'Repository', exact: true })).toHaveCount(0);
+      await expect(detail.getByRole('navigation', { name: 'Sezioni repository' })).toHaveCount(0);
+      const overview = sections.getByRole('button', { name: 'Panoramica', exact: true });
+      const feature = sections.getByRole('button', { name: 'Feature', exact: true });
+      const settings = sections.getByRole('button', { name: 'Impostazioni repository', exact: true });
+      const settingsNav = page.getByRole('navigation', { name: 'Impostazioni repository' });
+      const close = detail.getByRole('button', { name: 'Chiudi repository', exact: true });
+      await expect(overview).toHaveAttribute('aria-current', 'page');
+      await feature.press('Enter');
+      await expect(feature).toHaveAttribute('aria-current', 'page');
+      await expect(detail.locator('.feature-planning')).toBeVisible();
+      await expect(close).toHaveCount(0);
+      await overview.press('Enter');
+      await expect(close).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Percorso repository' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Aggiorna repository', exact: true })).toHaveCount(0);
+      await close.press('Enter');
       const recent = page.getByRole('button', { name: /^Archivio locale / });
       await expect(recent).toBeVisible();
       await expect(detail).toHaveCount(0);
-      const navigation = page.getByRole('navigation', { name: 'Sezioni principali' });
-      await expect(navigation.getByRole('button')).toHaveText(['Repository', 'Impostazioni']);
-      const settings = await openSettings(page);
-      await expect(settings.getByRole('button', { name: 'Sessioni', exact: true })).toBeEnabled();
-      const environment = settings.getByRole('button', { name: 'Ambiente', exact: true });
-      await expect(environment).toHaveAccessibleDescription('Dipendenze, installazioni e verifiche del workspace.');
-      await environment.click();
-      await page.getByRole('button', { name: 'Vai ai workspace', exact: true }).click();
-      await expect(page.getByRole('region', { name: 'Worktree Git' })).toBeVisible();
-      await page.getByRole('navigation', { name: 'Percorso impostazioni' }).getByRole('button', { name: 'Impostazioni', exact: true }).click();
-      await expect(settings).toBeVisible();
-      await navigation.getByRole('button', { name: 'Repository', exact: true }).click();
+      const selection = sections.getByRole('button', { name: 'Recenti', exact: true });
+      await expect(sections.locator('button:disabled')).toHaveCount(4);
+      await expect(selection).toBeEnabled();
+      await openSetting(page, 'Diagnostica');
+      await expect(page.getByRole('heading', { name: 'Diagnostica', exact: true, level: 2 })).toBeVisible();
+      await selection.press('Enter');
       await expect(recent).toBeVisible();
       const row = (await recent.boundingBox())!;
       const open = (await page.getByRole('button', { name: 'Apri repository', exact: true }).boundingBox())!;
@@ -51,11 +64,27 @@ test('startup restores the open repository and its breadcrumb returns to the sep
       expect(create.y).toBeGreaterThan(row.y + row.height);
       await recent.click();
       await expect(detail).toBeVisible();
-      await page.getByRole('button', { name: 'Chiudi repository', exact: true }).click();
+      await expect(sections.locator('button:enabled')).toHaveCount(5);
+      await expect(sections.getByRole('button', { name: 'Ambiente', exact: true })).toHaveCount(0);
+      await settings.press('Enter');
+      await expect(settingsNav.getByRole('button')).toHaveText(['Generali', 'Workspace', 'Ambiente', 'Sessioni', 'Coda', 'Revisioni']);
+      await expect(settingsNav.getByRole('button', { name: 'Generali', exact: true })).toHaveAttribute('aria-current', 'page');
+      await settingsNav.getByRole('button', { name: 'Ambiente', exact: true }).press('Enter');
+      await expect(settings).toHaveAttribute('aria-current', 'page');
+      await page.getByRole('button', { name: 'Vai ai workspace', exact: true }).click();
+      await expect(page.getByRole('region', { name: 'Worktree Git' })).toBeVisible();
+      await expect(settingsNav.getByRole('button', { name: 'Workspace', exact: true })).toHaveAttribute('aria-current', 'page');
+      await overview.press('Enter');
+      await close.press('Enter');
       await expect(recent).toBeVisible();
+      await expect(settings).toBeDisabled();
+      await expect(settingsNav).toHaveCount(0);
+      await expect(recent).not.toHaveAttribute('aria-current', 'true');
       await page.reload();
       await expect(recent).toBeVisible();
       await expect(detail).toHaveCount(0);
+      await recent.click();
+      await expect(overview).toHaveAttribute('aria-current', 'page');
     } finally { await reopened.app.close(); }
   } finally { await f.cleanup(); }
 });
@@ -97,6 +126,7 @@ process.exitCode = call.status ?? 1;
     const { app, page } = await launchDesktop(f, f.archive, { node });
     try {
       await page.getByRole('button', { name: /^Intervista UI / }).click();
+      await repositoryNavigation(page).getByRole('button', { name: 'Agenti', exact: true }).click();
       const agents = page.getByRole('region', { name: 'Agenti attivi' });
       const architect = agents.getByRole('button', { name: /Project Architect/ });
       await expect(architect).toContainText('Codex · fixture-model', { timeout: 15_000 });
@@ -109,11 +139,8 @@ process.exitCode = call.status ?? 1;
       await detail.getByRole('button', { name: 'Apri Discovery', exact: true }).click();
       await expect(page.getByLabel('Output Discovery')).toContainText('Analisi sintetica conservata.', { timeout: 15_000 });
       await page.getByRole('main').evaluate(main => { main.scrollTop = main.scrollHeight; });
-      const breadcrumb = page.getByRole('navigation', { name: 'Percorso repository' });
-      await expect(breadcrumb).toBeInViewport();
-      await breadcrumb.getByRole('button', { name: 'Home', exact: true }).click();
-      await expect(page.getByRole('heading', { name: 'Recenti', exact: true })).toBeVisible();
-      await openSetting(page, 'Agenti');
+      await expect(repositoryNavigation(page)).toBeInViewport();
+      await openSetting(page, 'Monitoraggio Discovery');
       const terminal = page.getByRole('region', { name: 'Terminale Discovery' });
       await expect(terminal).toContainText('In diretta');
       await expect(terminal.getByLabel('Output Discovery')).toContainText('Analisi sintetica conservata.');
@@ -167,6 +194,7 @@ if (namespace === 'execution' && Object.hasOwn(replies, action)) {
     const { app, page } = await launchDesktop(f, f.archive, { node });
     try {
       await page.getByRole('button', { name: /^Implementazione locale / }).click();
+      await repositoryNavigation(page).getByRole('button', { name: 'Agenti', exact: true }).click();
       const row = page.getByRole('region', { name: 'Agenti attivi' }).getByRole('button', { name: /Aggiorna la ricerca/ });
       await expect(row).toContainText('Codex', { timeout: 15_000 });
       await expect(row).toContainText('fixture-implementation');

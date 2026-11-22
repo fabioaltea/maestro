@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {lstat,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createScratch} from '../fixtures/desktop.ts';
-import { switchArchiveForRegression, openSettings } from '../fixtures/electron.ts';
+import { switchArchiveForRegression, repositoryNavigation } from '../fixtures/electron.ts';
 import {openOwnedWorktree} from '../fixtures/owned-worktree.ts';
 import {fixtureLock,fixturePackage,startFixtureRegistry} from '../../../../tests/fixtures/environment-registry.ts';
 
@@ -36,8 +36,7 @@ test('environment plan and manual attestation use the original receipt across of
      await expect(env).toContainText('Ultimo stato noto');
      await expect(env).toContainText('MANUAL_VERIFIED');await expect(plan).toBeDisabled();
      await switchArchiveForRegression(app,page,other.directory);
-     const settings = await openSettings(page);
-     await expect(settings.getByRole('button', {name:'Ambiente',exact:true})).toBeDisabled();
+     await expect(repositoryNavigation(page).getByRole('button', {name:'Impostazioni repository',exact:true})).toBeDisabled();
      await expect(env.getByText('MANUAL_VERIFIED',{exact:true})).toHaveCount(0);
    }finally{await app.close();}
  }finally{await Promise.all([fixture.cleanup(),other.cleanup()]);}

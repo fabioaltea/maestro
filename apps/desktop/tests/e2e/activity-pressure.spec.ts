@@ -16,8 +16,8 @@ test('separate real core stream load reports reference pipe availability to visi
    const available:{seq:string;availableAt:number}[]=[];let pending='';child=spawn(process.execPath,[join(repositoryRoot,'dist/cli/main.js'),'daemon','events','--follow','--json',`--after=${after}`,`--state-dir=${f.archive}`],{stdio:['ignore','pipe','pipe']});
    let started=false;child.stdout!.on('data',chunk=>{pending+=String(chunk);for(;;){const n=pending.indexOf('\n');if(n<0)break;const frame=JSON.parse(pending.slice(0,n));pending=pending.slice(n+1);if(frame.kind==='subscription.started')started=true;if(frame.kind==='event')available.push({seq:frame.event.seq,availableAt:Date.now()});}});
    await expect.poll(()=>started).toBe(true);await page.getByRole('button',{name:'Segui attività',exact:true}).click();await expect(page.getByText('Osservazione live',{exact:true})).toBeVisible();const begin=Date.now();
-   const settings=page.getByRole('navigation',{name:'Sezioni principali'}).getByRole('button',{name:'Impostazioni',exact:true});
-   for(let i=0;i<10;i++){await settings.focus();await expect(settings).toBeFocused();const repo=await f.repository(`real-${i}`);await f.cli(['project','add',repo.path]);}
+   const recent=page.getByRole('navigation',{name:'Sezioni repository'}).getByRole('button',{name:'Recenti',exact:true});
+   for(let i=0;i<10;i++){await recent.focus();await expect(recent).toBeFocused();const repo=await f.repository(`real-${i}`);await f.cli(['project','add',repo.path]);}
    await expect.poll(()=>page.locator('.event-row').count()).toBeGreaterThan(history.data.events.records.length+19);
    const visible=await visibleSamples(page),bySeq=new Map(visible.map(s=>[s.seq,s.visibleAt]));const samples=available.map(s=>({...s,visibleAt:bySeq.get(s.seq),signedLatencyMs:(bySeq.get(s.seq)??Infinity)-s.availableAt}));
    expect(samples.length).toBeGreaterThanOrEqual(20);expect(samples.every(s=>Number.isFinite(s.signedLatencyMs))).toBe(true);

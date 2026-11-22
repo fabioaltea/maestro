@@ -24,10 +24,9 @@ test('one hundred real projects remain reachable live and offline without archiv
       await expect(page.getByRole('article')).toBeVisible();
       expect((await f.cli(['daemon', 'stop'])).result.outcome).toBe('SUCCEEDED');
       const snapshot = await f.snapshot(f.archive);
-      await page.getByRole('button', { name: 'Aggiorna repository', exact: true }).click();
-      await expect(page.getByText('Ultimo stato noto · servizio fermo', { exact: true })).toBeVisible();
-      await page.getByRole('button', { name: 'Home', exact: true }).click();
+      await page.getByRole('button', { name: 'Chiudi repository', exact: true }).click();
       await page.locator('.project-row').first().click(); await expect(page.getByRole('article')).toBeVisible();
+      await expect(page.getByText('Ultimo stato noto · servizio fermo', { exact: true })).toBeVisible();
       expect(await f.snapshot(f.archive)).toEqual(snapshot);
     } finally { await app.close(); }
   } finally { await f.cleanup(); }

@@ -15,6 +15,7 @@ test('repository picker and opening display the actual registered project withou
       expect(await f.snapshot(repo.path)).toEqual(before);
       const { writeFile, rename } = await import('node:fs/promises'); const { join } = await import('node:path');
       await writeFile(join(repo.path, 'untracked.txt'), 'local work'); const changed = await f.snapshot(repo.path);
+      await page.getByRole('button', { name: 'Impostazioni repository', exact: true }).click();
       await page.getByRole('button', { name: 'Verifica repository', exact: true }).click();
       await expect(page.getByText('Non tracciati: Sì', { exact: true })).toBeVisible();
       await expect(page.getByText('Osservazione salvata. Disponibilità ed eventuali errori sono riportati sopra.', { exact: true })).toBeVisible();
@@ -35,7 +36,9 @@ test('stale configuration approval is rejected and a new explicit review can cle
     const projectId = added.data.projectId as string, before = await f.snapshot(repo.path);
     const { app, page } = await launchDesktop(f);
     try {
-      await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Modifica progetto', exact: true }).click();
+      await page.locator('.project-row').first().click();
+      await page.getByRole('button', { name: 'Impostazioni repository', exact: true }).click();
+      await page.getByRole('button', { name: 'Modifica progetto', exact: true }).click();
       await page.getByLabel('Nome progetto', { exact: true }).fill('Proposta');
       await page.getByLabel('Configurazione branch base', { exact: true }).selectOption('clear');
       await page.getByRole('button', { name: 'Rivedi modifica', exact: true }).click();
@@ -54,7 +57,8 @@ test('stale configuration approval is rejected and a new explicit review can cle
       await expect(page.getByRole('dialog')).toBeVisible();
       await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Proposta', exact: true })).toBeVisible();
-      await page.getByRole('button', { name: 'Home', exact: true }).click();
+      await page.getByRole('button', { name: 'Panoramica', exact: true }).click();
+      await page.getByRole('button', { name: 'Chiudi repository', exact: true }).click();
       await expect(page.locator('.project-row strong').first()).toHaveText('Proposta');
       const final = (await f.cli(['project', 'show', projectId])).result.data.project;
       expect(final.configRevision).toBe('3'); expect(final.baseBranch).toBeNull(); expect(await f.snapshot(repo.path)).toEqual(before);
@@ -70,6 +74,7 @@ test('remove touches only registration and a UI reimport gets a new UUID', async
     const { app, page } = await launchDesktop(f);
     try {
       await page.locator('.project-row').first().click();
+      await page.getByRole('button', { name: 'Impostazioni repository', exact: true }).click();
       await page.getByRole('button', { name: 'Rimuovi dal registro', exact: true }).click();
       await expect(page.getByText('Viene rimossa soltanto la registrazione. Repository e file conservati.', { exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'Annulla', exact: true }).click();
@@ -102,6 +107,7 @@ test('twenty complete UI open verify update remove sequences agree with CLI and 
         await chooseDirectory(app, repository.path);
         await page.getByRole('button', { name: 'Apri repository', exact: true }).click();
         await expect(page.getByRole('heading', { name: `repo-${i}`, exact: true })).toBeVisible();
+        await page.getByRole('button', { name: 'Impostazioni repository', exact: true }).click();
         await page.getByRole('button', { name: 'Verifica repository', exact: true }).click();
         await expect(page.getByText('Osservazione salvata. Disponibilità ed eventuali errori sono riportati sopra.', { exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Modifica progetto', exact: true }).click();

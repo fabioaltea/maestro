@@ -7,7 +7,7 @@ import {FEATURE_BRIDGE_METHODS} from './feature-contract.ts';
 import {WORKSPACE_BRIDGE_METHODS} from './workspace-contract.ts';
 import { DISCOVERY_BRIDGE_METHODS } from './discovery-contract.ts';
 export const CODEX_ACCOUNT_METHODS = ['codexStatus', 'codexLogin', 'cancelCodexLogin'] as const;
-export const METHODS = [...CODEX_ACCOUNT_METHODS, 'checkCodexDiscovery',...REVIEW_BRIDGE_METHODS,...SCHEDULER_BRIDGE_METHODS,...EXECUTION_BRIDGE_METHODS,...PROFILE_BRIDGE_METHODS,...ENVIRONMENT_BRIDGE_METHODS,...WORKSPACE_BRIDGE_METHODS, ...FEATURE_BRIDGE_METHODS, ...DISCOVERY_BRIDGE_METHODS, 'releaseViewReads', 'openRepository', 'createRepository', 'selectProject', 'closeProject', 'recoverArchive', 'chooseArchive', 'context', 'status', 'diagnostics', 'listProjects', 'getProject', 'chooseRepository', 'prepareAction', 'confirmAction', 'cancelAction', 'reconcileOperation', 'listReceipts', 'dismissReceipt', 'selectReceiptArchive', 'readEvents', 'startEvents', 'stopEvents', 'ackEvents'] as const;
+export const METHODS = [...CODEX_ACCOUNT_METHODS, 'checkCodexDiscovery',...REVIEW_BRIDGE_METHODS,...SCHEDULER_BRIDGE_METHODS,...EXECUTION_BRIDGE_METHODS,...PROFILE_BRIDGE_METHODS,...ENVIRONMENT_BRIDGE_METHODS,...WORKSPACE_BRIDGE_METHODS, ...FEATURE_BRIDGE_METHODS, ...DISCOVERY_BRIDGE_METHODS, 'releaseViewReads', 'openRepository', 'createRepository', 'selectProject', 'closeProject', 'recoverArchive', 'chooseArchive', 'context', 'status', 'diagnostics', 'listProjects', 'getProject', 'getRepositoryDocuments', 'chooseRepository', 'prepareAction', 'confirmAction', 'cancelAction', 'reconcileOperation', 'listReceipts', 'dismissReceipt', 'selectReceiptArchive', 'readEvents', 'startEvents', 'stopEvents', 'ackEvents'] as const;
 export type BridgeMethod = typeof METHODS[number];
 export type Params = Record<string, unknown>;
 export interface BridgeRequest extends Params { bridgeVersion: 1; callId: string; selectionEpoch: number }
@@ -27,6 +27,8 @@ export interface BridgeResponse {
 export interface ActivityMessage { kind: string; [key: string]: unknown }
 export type DesktopApi = { [K in BridgeMethod]: (input: BridgeRequest) => Promise<BridgeResponse> } & {
   onActivity: (callback: (message: ActivityMessage) => void) => () => void;
+  onOpenTool: (callback: (tool: GlobalTool) => void) => () => void;
 };
 export const CHANNEL = 'maestro.desktop.v1';
 export const ACTIVITY_CHANNEL = 'maestro.activity.v1';
+import type { GlobalTool } from './tool-menu.ts';

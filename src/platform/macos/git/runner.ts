@@ -16,6 +16,8 @@ const MAX_STDERR = 16 * 1024;
 export type GitQuery = { readonly kind: 'top-level' | 'common-dir' | 'git-dir'
   | 'object-format' | 'head-symbolic' | 'head-commit' | 'any-commit' | 'status' | 'inventory' | 'initialize' }
   | { readonly kind: 'check-branch' | 'local-branch' | 'branch-exists'; readonly branch: string }
+  | { readonly kind: 'spec-index'; readonly oid: string }
+  | { readonly kind: 'readme-log'; readonly oid: string; readonly name: string }
   | { readonly kind: 'config-file'; readonly path: string };
 
 export interface GitRunOptions {
@@ -73,6 +75,14 @@ function argumentsFor(query: unknown): readonly string[] | InspectionFailure {
   if (!query || typeof query !== 'object' || Array.isArray(query)) return inspectionFailure('INVALID_REQUEST');
   const q = query as Record<string, unknown>;
   const keys = Object.keys(q).sort().join(',');
+  if (q.kind === 'spec-index' || q.kind === 'readme-log') {
+    if (typeof q.oid !== 'string' || !/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(q.oid)) return inspectionFailure('INVALID_REQUEST');
+    if (q.kind === 'spec-index' && keys === 'kind,oid') return ['ls-tree', '-r', '-z', '--name-only', q.oid, '--', 'specs/'];
+    if (q.kind === 'readme-log' && keys === 'kind,name,oid' && typeof q.name === 'string' && /^readme(?:\.(?:md|markdown|txt))?$/i.test(q.name)) {
+      return ['--literal-pathspecs', 'log', '-1', '--format=%H%x00%aI%x00%an%x00%s', q.oid, '--', q.name];
+    }
+    return inspectionFailure('INVALID_REQUEST');
+  }
   if (q.kind === 'local-branch' || q.kind === 'check-branch' || q.kind === 'branch-exists') {
     if (keys !== 'branch,kind') return inspectionFailure('INVALID_REQUEST');
     if (!validBranch(q.branch)) return inspectionFailure('INVALID_BASE_BRANCH');

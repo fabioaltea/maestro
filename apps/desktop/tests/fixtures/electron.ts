@@ -3,6 +3,9 @@ import type { Page } from '@playwright/test';
 import { access, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { repositoryRoot, createScratch } from './desktop.ts';
+import { globalTools } from '../../src/shared/tool-menu.ts';
+
+const desktopApps = new WeakMap<Page, Awaited<ReturnType<typeof _electron.launch>>>();
 export async function launchDesktop(f: Awaited<ReturnType<typeof createScratch>>, archive: string | null = f.archive,
   options: { home?: string; node?: string } = {}) {
   const appPath = join(repositoryRoot, 'dist-desktop');
@@ -14,19 +17,31 @@ export async function launchDesktop(f: Awaited<ReturnType<typeof createScratch>>
   await page.waitForURL('maestro://app/index.html');
   await page.waitForLoadState('domcontentloaded');
   await page.getByRole('heading', { name: 'Maestro', exact: true }).waitFor();
+  desktopApps.set(page, app);
   return { app, page, launchStarted };
 }
 export async function chooseDirectory(app: Awaited<ReturnType<typeof launchDesktop>>['app'], path: string) {
   await app.evaluate(({ dialog }, selected) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] }); }, path);
 }
 
-export async function openSettings(page: Page) {
-  await page.getByRole('navigation', { name: 'Sezioni principali' }).getByRole('button', { name: 'Impostazioni', exact: true }).click();
-  return page.getByRole('navigation', { name: 'Sezioni impostazioni' });
+export function repositoryNavigation(page: Page) {
+  return page.getByRole('navigation', { name: 'Sezioni repository' });
 }
 
 export async function openSetting(page: Page, name: string) {
-  await (await openSettings(page)).getByRole('button', { name, exact: true }).click();
+  const tool = Object.entries(globalTools).find(([, label]) => label === name);
+  if (!tool) {
+    await repositoryNavigation(page).getByRole('button', { name: 'Impostazioni repository', exact: true }).click();
+    await page.getByRole('navigation', { name: 'Impostazioni repository' }).getByRole('button', { name, exact: true }).click();
+    return;
+  }
+  const app = desktopApps.get(page);
+  if (!app) throw new Error('Electron application unavailable for native menu selection');
+  await app.evaluate(({ Menu }, id) => {
+    const item = Menu.getApplicationMenu()?.getMenuItemById(id);
+    if (!item?.enabled) throw new Error(`Native menu item unavailable: ${id}`);
+    item.click();
+  }, `tool-${tool[0]}`);
 }
 
 /** Exercises the legacy transport contract without exposing archive selection in the normal renderer. */

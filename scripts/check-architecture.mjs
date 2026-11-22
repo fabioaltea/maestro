@@ -76,7 +76,7 @@ async function inspectDesktop(directory) {
           allowed = (zone === 'shared' ? ['shared/'] : [zone + '/', 'shared/']).some(prefix => target.startsWith(prefix));
         } else if (zone === 'main') allowed = specifier === 'electron' || specifier.startsWith('node:');
         else if (zone === 'preload') allowed = specifier === 'electron';
-        else if (zone === 'renderer') allowed = ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'].includes(specifier);
+        else if (zone === 'renderer') allowed = ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', 'react-markdown', 'remark-gfm', '@radix-ui/react-icons'].includes(specifier);
         if (!allowed) violations.push(`${local}: forbidden dependency ${specifier}`);
       }
       function visit(node) {

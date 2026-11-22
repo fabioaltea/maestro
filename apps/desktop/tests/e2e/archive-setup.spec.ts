@@ -37,7 +37,7 @@ test('diagnostics adopts the stopped original and exposes its projects in an emp
      await app.evaluate(({dialog})=>{dialog.showMessageBox=async()=>({response:0,checkboxChecked:false});});
      await page.getByRole('button',{name:'Recupera storico'}).click();
      await expect(page.getByRole('alert')).toContainText('Storico recuperato');
-     await page.getByRole('button',{name:'Repository',exact:true}).click();
+     await page.getByRole('navigation',{name:'Sezioni repository'}).getByRole('button',{name:'Recenti',exact:true}).click();
      await page.getByRole('button',{name:/^Storico /}).click();
      await expect(page.getByRole('article',{name:'Dettaglio Storico'})).toBeVisible();
      await expect(page.getByText('Ultimo stato noto · servizio fermo')).toBeVisible();

@@ -7,6 +7,8 @@ import { requireUuid } from '../domain/identifiers.js';
 import { requireProjectRevision } from '../domain/projects/model.js';
 import { randomUUID } from 'node:crypto';
 import type { PublicResult } from '../protocol/messages.js';
+import { inspectProjectDocuments } from '../core/inspect-main.js';
+import { defaultArchiveDirectory } from '../platform/macos/paths.js';
 
 const write = (text: string) => new Promise<void>((resolve, reject) => process.stdout.write(text, error => error ? reject(error) : resolve()));
 
@@ -64,11 +66,11 @@ export async function runProjectCli(args: readonly string[]): Promise<number> {
       'request-id': { type: 'string' }, 'timeout-ms': { type: 'string' }, name: { type: 'string' }, 'base-branch': { type: 'string' }, limit: { type: 'string' }, cursor: { type: 'string' }, 'expected-revision': { type: 'string' }, 'clear-base-branch': { type: 'boolean' },
     } });
     if (values.help) {
-      await write('maestro project add PATH [--name NAME] [--base-branch BRANCH]\nmaestro project open|create PATH\nmaestro project list [--limit N] [--cursor CURSOR]\nmaestro project verify PROJECT_ID\nmaestro project update PROJECT_ID --expected-revision REV [--name NAME] [--base-branch BRANCH | --clear-base-branch]\nmaestro project remove PROJECT_ID --expected-revision REV\nmaestro project show PROJECT_ID\nmaestro project operation REQUEST_ID\n--state-dir ABSOLUTE_PATH --json --request-id UUID --timeout-ms MILLISECONDS\n');
+      await write('maestro project add PATH [--name NAME] [--base-branch BRANCH]\nmaestro project open|create PATH\nmaestro project list [--limit N] [--cursor CURSOR]\nmaestro project verify PROJECT_ID\nmaestro project update PROJECT_ID --expected-revision REV [--name NAME] [--base-branch BRANCH | --clear-base-branch]\nmaestro project remove PROJECT_ID --expected-revision REV\nmaestro project show PROJECT_ID\nmaestro project documents PROJECT_ID\nmaestro project operation REQUEST_ID\n--state-dir ABSOLUTE_PATH --json --request-id UUID --timeout-ms MILLISECONDS\n');
       return 0;
     }
     const command = positionals[0];
-    if (!command || !['add', 'open', 'create', 'show', 'operation', 'list', 'verify', 'update', 'remove'].includes(command) || positionals.length !== (command === 'list' ? 1 : 2)) throw new Error('INVALID_REQUEST');
+    if (!command || !['add', 'open', 'create', 'show', 'documents', 'operation', 'list', 'verify', 'update', 'remove'].includes(command) || positionals.length !== (command === 'list' ? 1 : 2)) throw new Error('INVALID_REQUEST');
     if (values['state-dir'] !== undefined && (!values['state-dir'] || !isAbsolute(values['state-dir']))) throw new Error('INVALID_REQUEST');
     if (!['add', 'update'].includes(command) && (values.name !== undefined || values['base-branch'] !== undefined)) throw new Error('INVALID_REQUEST');
     if (command !== 'list' && (values.limit !== undefined || values.cursor !== undefined)) throw new Error('INVALID_REQUEST');
@@ -81,6 +83,16 @@ export async function runProjectCli(args: readonly string[]): Promise<number> {
     if (mutation) requestId = values['request-id'] === undefined ? randomUUID() : requireUuid(values['request-id']);
     const timeout = values['timeout-ms'] === undefined ? undefined : Number(values['timeout-ms']);
     if (values['timeout-ms'] !== undefined && (!/^[1-9][0-9]*$/.test(values['timeout-ms']) || !Number.isSafeInteger(timeout))) throw new Error('INVALID_REQUEST');
+    if (command === 'documents') {
+      if (timeout !== undefined && timeout > 2000) throw new Error('INVALID_REQUEST');
+      result = await inspectProjectDocuments(values['state-dir'] ?? defaultArchiveDirectory(), requireUuid(positionals[1]), timeout);
+      if (json) await write(render(result, true));
+      else {
+        const { readme, analysis, lastCommit, specifications } = result.data;
+        await write(JSON.stringify({ readme, analysis, lastCommit, specifications }, null, 2) + '\n');
+      }
+      return 0;
+    }
     const params = command === 'add' || command === 'open' || command === 'create' ? { path: resolve(positionals[1]!),
       ...(values.name === undefined ? {} : { name: values.name }),
       ...(values['base-branch'] === undefined ? {} : { baseBranch: values['base-branch'] }) }

@@ -13,6 +13,27 @@ import { isEntrypoint, readBootstrap } from './entrypoint.js';
 import { projectOperationStatus, projectOperationView } from './projects/dispatch.js';
 import { requireUuid } from '../domain/identifiers.js';
 import { readProject, readProjects, ProjectRemovedError } from './projects/read.js';
+import { makeDeadline, systemClock } from '../ports/clock.js';
+import { readRepositoryDocuments } from '../platform/macos/git/repository-documents.js';
+
+export async function inspectProjectDocuments(directory: string, projectId: string, timeoutMs = 2000): Promise<PublicResult> {
+  const deadline = makeDeadline(systemClock, timeoutMs);
+  const paths = await createPlatformPaths().resolveArchive(directory, 'read');
+  if (!paths) throw new Error('STATE_ABSENT');
+  const store = await openStorage({ path: paths.stateFile, readonly: true });
+  try {
+    const snapshot = await store.readSnapshot();
+    if (!snapshot) throw new Error('STATE_ABSENT');
+    const state = await store.getProject(projectId);
+    if (!state) throw new Error('PROJECT_NOT_FOUND');
+    if (state.project.removedAt !== null) throw new Error('PROJECT_REMOVED');
+    const data = await readRepositoryDocuments(state, deadline);
+    const latest = await store.getProject(projectId);
+    if (!latest || latest.project.removedAt !== null || latest.project.configRevision !== data.configRevision) throw new Error('REVISION_CONFLICT');
+    return { protocolVersion: 1, requestId: null, storeId: snapshot.store.storeId, instanceId: snapshot.instance?.instanceId ?? null,
+      result: 'OK', outcome: null, freshness: 'LIVE', liveness: 'UNKNOWN', data, error: null };
+  } finally { await store.close(); }
+}
 
 export async function inspectProjectList(directory: string, options: { readonly limit?: number; readonly cursor?: string } = {}): Promise<PublicResult> {
   const paths = await createPlatformPaths().resolveArchive(directory, 'read');

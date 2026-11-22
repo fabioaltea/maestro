@@ -3,12 +3,9 @@ import type { Page, Locator } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop, chooseDirectory, openSetting, repositoryNavigation } from '../fixtures/electron.ts';
 async function activate(page:Page,target:Locator){await expect(target).toBeEnabled();await target.focus();await expect(target).toBeFocused();await page.keyboard.press('Enter');}
-async function activateSetting(page:Page,name:string){
- await activate(page,page.getByRole('navigation',{name:'Sezioni principali'}).getByRole('button',{name:'Impostazioni',exact:true}));
- await activate(page,page.getByRole('navigation',{name:'Sezioni impostazioni'}).getByRole('button',{name,exact:true}));
-}
+const activateSetting = openSetting;
 async function type(page:Page,target:Locator,value:string){await target.focus();await page.keyboard.press('Meta+A');await page.keyboard.insertText(value);}
 async function contrast(page:Page){return page.evaluate(()=>{
  const rgb=(s:string)=>s.match(/[\d.]+/g)!.slice(0,3).map(Number);const lum=(s:string)=>rgb(s).map(x=>{x/=255;return x<=.04045?x/12.92:((x+.055)/1.055)**2.4;}).reduce((a,x,i)=>a+x*[.2126,.7152,.0722][i]!,0);
@@ -24,22 +21,18 @@ test('primary flows accept keyboard activation, dialog trap/focus return, inert 
  test.setTimeout(120000);const f=await createScratch(),screens=testInfo.outputPath('screenshots');await mkdir(screens,{recursive:true});
  try{const repo=await f.repository('tastiera');const {app,page}=await launchDesktop(f);try{
   const bounds=await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0]!.getBounds());expect([bounds.width,bounds.height]).toEqual([1280,800]);
-  const navigation=page.getByRole('navigation',{name:'Sezioni principali'});
-  await activate(page,navigation.getByRole('button',{name:'Impostazioni',exact:true}));
-  const settings=page.getByRole('navigation',{name:'Sezioni impostazioni'});
-  await expect(settings.getByRole('button')).toHaveCount(11);
-  await expect(settings.getByRole('button',{name:'Workspace',exact:true})).toBeDisabled();
-  await page.screenshot({path:join(screens,'settings.png')});const results=[{view:'settings',...await contrast(page)}];
-  await activateSetting(page,'Servizio');
-  await activate(page,page.getByRole('navigation',{name:'Percorso impostazioni'}).getByRole('button',{name:'Impostazioni',exact:true}));
-  await expect(settings).toBeVisible();
+  const navigation=repositoryNavigation(page);
+  const recent=navigation.getByRole('button',{name:'Recenti',exact:true});
+  await expect(navigation.getByRole('button',{name:'Impostazioni repository',exact:true})).toBeDisabled();
+  await page.screenshot({path:join(screens,'recent.png')});const results=[{view:'recent',...await contrast(page)}];
   await activateSetting(page,'Servizio');
   const start=page.getByRole('button',{name:'Avvia servizio',exact:true});await activate(page,start);await expect(page.getByRole('button',{name:'Annulla',exact:true})).toBeFocused();
   await page.keyboard.press('Shift+Tab');await expect(page.getByRole('button',{name:'Conferma operazione',exact:true})).toBeFocused();await page.keyboard.press('Escape');await expect(start).toBeFocused();
   await activate(page,start);await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByText('Attivo',{exact:true})).toBeVisible();
-  await activate(page,page.getByRole('button',{name:'Repository',exact:true}));
+  await activate(page,recent);
   await chooseDirectory(app,repo.path);await activate(page,page.getByRole('button',{name:'Apri repository',exact:true}));
   await expect(page.getByRole('heading',{name:'tastiera',exact:true})).toBeVisible();
+  await activate(page,navigation.getByRole('button',{name:'Impostazioni repository',exact:true}));
   await activate(page,page.getByRole('button',{name:'Verifica repository',exact:true}));await expect(page.getByText('Osservazione salvata. Disponibilità ed eventuali errori sono riportati sopra.',{exact:true})).toBeVisible();
   await activate(page,page.getByRole('button',{name:'Modifica progetto',exact:true}));await type(page,page.getByLabel('Nome progetto',{exact:true}),'<img src=x onerror=alert(1)>');await activate(page,page.getByRole('button',{name:'Rivedi modifica',exact:true}));await activate(page,page.getByRole('button',{name:'Conferma operazione',exact:true}));await expect(page.getByRole('heading',{name:'<img src=x onerror=alert(1)>',exact:true})).toBeVisible();expect(await page.locator('.detail img').count()).toBe(0);
   await page.screenshot({path:join(screens,'projects.png')});results.push({view:'projects',...await contrast(page)});

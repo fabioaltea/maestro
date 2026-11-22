@@ -5,6 +5,8 @@ import type { PublicResult } from '../../shared/bridge-contract.ts';
 import { record } from '../../shared/validation.ts';
 import { decodeProject, type Project } from '../state/project-view.ts';
 import { ProjectDetail } from './ProjectDetail.tsx';
+import { RepositoryGeneral } from './RepositoryGeneral.tsx';
+import type { DetailRoute } from '../components/RepositoryNavigation.tsx';
 
 const recentKey = 'maestro.recent-projects';
 const activeKey = 'maestro.active-project';
@@ -31,9 +33,9 @@ function forgetProject() {
   try { localStorage.removeItem(activeKey); } catch { /* Preference storage is optional. */ }
 }
 
-export function Projects({ desktop, onWorkspace, discoveryId, home, onHome, onOpened }: {
-  desktop: Desktop; onWorkspace(source: WorkspaceSource): void; discoveryId?: string;
-  home: boolean; onHome(): void; onOpened(): void;
+export function Projects({ desktop, onWorkspace, route, onNavigate, showGeneral }: {
+  desktop: Desktop; onWorkspace(source: WorkspaceSource): void;
+  route: DetailRoute; onNavigate(route: DetailRoute): void; showGeneral: boolean;
 }) {
   const { context, core, invoke, setNotice } = desktop, projectId = context?.activeProjectId;
   const [projects, setProjects] = useState<Project[]>([]), [project, setProject] = useState<Project | null>(null);
@@ -62,7 +64,7 @@ export function Projects({ desktop, onWorkspace, discoveryId, home, onHome, onOp
       if (revision.current !== token || status?.result !== 'OK') return;
       setLive(status.liveness === 'LIVE_VERIFIED');
       if (status.data.status === 'ABSENT') return;
-      if (projectId && !home) {
+      if (projectId) {
         const detail = await core('getProject', { projectId });
         if (revision.current !== token || detail?.result !== 'OK') return;
         setProject(decodeProject(detail.data.project));
@@ -84,7 +86,7 @@ export function Projects({ desktop, onWorkspace, discoveryId, home, onHome, onOp
     } finally {
       if (revision.current === token) setLoading(false);
     }
-  }, [context, projectId, home, core, invoke, readRecent]);
+  }, [context, projectId, core, invoke, readRecent]);
   useEffect(() => {
     void refresh();
     return () => { revision.current++; };
@@ -107,7 +109,6 @@ export function Projects({ desktop, onWorkspace, discoveryId, home, onHome, onOp
         const next = record(reply.context);
         if (typeof next.activeProjectId === 'string' && typeof next.storeId === 'string') {
           remember(next.activeProjectId, next.storeId);
-          onOpened();
         }
       }
     } finally { setBusy(false); }
@@ -132,26 +133,14 @@ export function Projects({ desktop, onWorkspace, discoveryId, home, onHome, onOp
   const rank = (id: string) => order.includes(id) ? order.indexOf(id) : order.length;
   const ordered = [...projects].sort((a, b) => rank(a.projectId) - rank(b.projectId));
   return <section className="repository-view" aria-label="Repository locali">
-    {!context && desktop.runtimeReady && <p className="hint" role="status">Dati locali di Maestro non disponibili. Consulta Diagnostica.</p>}
-    {!home ? <>
-      <header className="repository-topbar">
-        <nav aria-label="Percorso repository">
-          <ol>
-            <li><button className="text-button" onClick={onHome}>Home</button></li>
-            <li aria-hidden="true">›</li>
-            <li aria-current="page" title={project?.displayName}>{project?.displayName ?? 'Repository'}</li>
-          </ol>
-        </nav>
-        <div className="row-actions">
-          <button className="text-button" disabled={loading} onClick={() => void refresh()}>Aggiorna repository</button>
-          <button className="text-button" onClick={() => void close()}>Chiudi repository</button>
-        </div>
-      </header>
-      {project && project.projectId === projectId
-        ? <ProjectDetail project={project} desktop={desktop} live={live} onWorkspace={onWorkspace}
-            onUpdated={refresh} onRemoved={close} {...(discoveryId ? {discoveryId} : {})} />
-        : <p className="hint" role="status">{loading ? 'Caricamento repository…' : 'Dettaglio repository non disponibile.'}</p>}
-    </> : <div className="repository-start">
+    {!context && desktop.runtimeReady && <p className="hint" role="status">Dati locali di Maestro non disponibili. Consulta Strumenti → Diagnostica.</p>}
+    {projectId ? (project && project.projectId === projectId
+        ? showGeneral
+          ? <RepositoryGeneral key={project.projectId} project={project} desktop={desktop} live={live} onUpdated={refresh} onRemoved={close} />
+          : <ProjectDetail key={project.projectId} project={project} desktop={desktop} live={live} onWorkspace={onWorkspace}
+              route={route} onNavigate={onNavigate} onClose={close} />
+        : <p className="hint" role="status">{loading ? 'Caricamento repository…' : 'Dettaglio repository non disponibile.'}</p>)
+      : <div className="repository-start">
       <section className="repository-picker" aria-labelledby="recent-repositories-title">
         <h2 id="recent-repositories-title">Recenti</h2>
         {context && (loading ? <p className="hint" role="status">Caricamento repository…</p>

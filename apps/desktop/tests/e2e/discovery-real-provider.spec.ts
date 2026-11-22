@@ -27,7 +27,7 @@ test('G1 SC-001 official Codex login: UI interview, correction, exact approval a
       await writeFile(join(repositoryRoot, 'specs/004-project-discovery/reports/real-provider-status.json'), JSON.stringify({ schemaVersion: 1, phase: 'LOGIN_PRECHECK', checkedAt: new Date().toISOString(), modelId: model, configuredBinaryVersion: provider.configuration?.binaryVersion, configuredBinarySha256: provider.configuration?.binarySha256, availability: provider.check?.state ?? 'UNKNOWN', code: provider.check?.code ?? null, inferenceStarted: false, fixtureRepositoryUnchanged: JSON.stringify(await f.snapshot(repo.path)) === JSON.stringify(before) }, null, 2) + '\n');
       test.skip(['PROVIDER_AUTH_REQUIRED', 'PROVIDER_UNAVAILABLE'].includes(provider.check?.code), `NOT_RUN: official login unavailable (${provider.check?.code ?? 'UNKNOWN'})`);
       expect(provider.check?.state, `BLOCKED: qualified official login check rejected (${provider.check?.code ?? 'UNKNOWN'})`).toBe('AVAILABLE');
-      await page.getByRole('button', { name: 'Repository', exact: true }).click();
+      await page.getByRole('navigation', { name: 'Sezioni repository' }).getByRole('button', { name: 'Recenti', exact: true }).click();
       await page.locator('.project-row').first().click();
       await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
       await page.getByLabel('Percorsi da analizzare', { exact: true }).fill('README.md'); await page.getByRole('button', { name: 'Prepara anteprima', exact: true }).click(); await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Anteprima dei contenuti', exact: true })).toBeVisible({ timeout: 15000 });

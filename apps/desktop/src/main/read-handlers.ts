@@ -11,9 +11,11 @@ export class ArchiveReader {
   constructor(context: ArchiveContext, client: CorePort) { this.context = context; this.client = client; }
   async read(method: string, params: Params = {}) {
     const c = this.context.capture();
-    const project = ['listProjects', 'getProject'].includes(method), scheduler=method==='listScheduledJobs',review=Object.hasOwn(reviewActions,method);
-    const action = method === 'listProjects' ? 'list' : method === 'getProject' ? 'get' : method === 'readEvents' ? 'events' : scheduler?'queue.list':review?reviewActions[method]!:method;
-    if (!review&&!['status', 'diagnostics', 'listProjects', 'getProject', 'readEvents', 'listScheduledJobs'].includes(method)) throw new Error('INVALID_INPUT');
+    const projectActions: Record<string, string> = { listProjects: 'list', getProject: 'get', getRepositoryDocuments: 'documents' };
+    const project = Object.hasOwn(projectActions, method), scheduler=method==='listScheduledJobs',review=Object.hasOwn(reviewActions,method);
+    const action = project ? projectActions[method]! : method === 'readEvents' ? 'events' : scheduler?'queue.list':review?reviewActions[method]!:method;
+    if (!project&&!review&&!['status', 'diagnostics', 'readEvents', 'listScheduledJobs'].includes(method)) throw new Error('INVALID_INPUT');
+    if (method === 'getRepositoryDocuments' && c.view.activeProjectId !== params.projectId) throw new Error('STALE_CONTEXT');
     for (let attempt = 0; attempt < 5; attempt++) {
       if (attempt) await new Promise(resolve => setTimeout(resolve, attempt * 50));
       if (this.context.capture().view.selectionEpoch !== c.view.selectionEpoch) throw new Error('STALE_CONTEXT');
@@ -40,7 +42,7 @@ export function installReads(router: BridgeRouter, context = new ArchiveContext(
       return { context: selected.view, canceled: false };
     } finally { choosing = false; }
   });
-  for (const method of ['status', 'diagnostics', 'listProjects', 'getProject', 'readEvents'] as BridgeMethod[]) router.register(method, async request => {
+  for (const method of ['status', 'diagnostics', 'listProjects', 'getProject', 'getRepositoryDocuments', 'readEvents'] as BridgeMethod[]) router.register(method, async request => {
     if (!router.services.core) throw new Error(router.services.runtimeError ?? 'RUNTIME_UNAVAILABLE');
     const params: Params = {};
     for (const key of ['cursor', 'limit', 'projectId', 'after']) if (request[key] !== undefined) params[key] = request[key];

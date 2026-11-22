@@ -21,6 +21,7 @@ import type { CliCommand } from './ports.ts';
 import type { Runtime } from './runtime.ts';
 import { buildDiscoveryCliArgs, discoveryCliInput } from './discovery-cli.ts';
 import { DISCOVERY_MUTATIONS, validateDiscoveryData } from '../shared/discovery-contract.ts';
+import { validateRepositoryDocuments } from '../shared/repository-documents.ts';
 export type { CliCommand } from './ports.ts';
 export function isMutation(c: CliCommand) { return c.namespace==='review'?(REVIEW_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='execution'?(EXECUTION_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='profile'?(PROFILE_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='environment'?(ENVIRONMENT_MUTATIONS as readonly string[]).includes(c.action):c.namespace==='workspace'?(WORKSPACE_MUTATIONS as readonly string[]).includes(c.action):c.namespace === 'feature' ? (FEATURE_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'discovery' ? (DISCOVERY_MUTATIONS as readonly string[]).includes(c.action) : c.namespace === 'daemon' ? ['start', 'stop', 'restart'].includes(c.action) : ['register', 'open', 'create', 'verify', 'update', 'remove'].includes(c.action); }
 export function reviewCliInput(c:CliCommand){
@@ -64,7 +65,7 @@ export function buildCliArgs(c: CliCommand): string[] {
   if(c.namespace==='environment')return buildEnvironmentCliArgs(c);
   if (c.namespace === 'workspace') return buildWorkspaceCliArgs(c);
   if (c.namespace === 'discovery') return buildDiscoveryCliArgs(c);
-  const allowed = c.namespace === 'daemon' ? ['start', 'stop', 'restart', 'status', 'diagnostics', 'events', 'operation'] : c.namespace === 'project' ? ['register', 'open', 'create', 'list', 'get', 'verify', 'update', 'remove', 'operation'] : [];
+  const allowed = c.namespace === 'daemon' ? ['start', 'stop', 'restart', 'status', 'diagnostics', 'events', 'operation'] : c.namespace === 'project' ? ['register', 'open', 'create', 'list', 'get', 'documents', 'verify', 'update', 'remove', 'operation'] : [];
   if (!allowed.includes(c.action)) throw new Error('INVALID_INPUT');
   const p = c.params ?? {}, args = [c.namespace, c.action === 'register' ? 'add' : c.action === 'get' ? 'show' : c.action, `--state-dir=${c.archive}`, '--json'];
   const positional: string[] = [];
@@ -112,7 +113,9 @@ export function decodeResult(json: string, c: CliCommand): PublicResult {
     for (const k of ['requestId', 'storeId', 'instanceId']) if (p[k] !== null) uuid(p[k]);
     if (c.requestId && p.requestId !== c.requestId) throw new Error();
     const reviewResult=c.namespace==='review'&&(p.result==='OK'||c.action==='operation'||isMutation(c));
-    const data = c.namespace==='review'?(reviewResult?validateReviewData(c.action,p.data,{...c.params,...(c.requestId?{requestId:c.requestId}:{})}):{}):c.namespace==='scheduler'?(p.result==='OK'?validateSchedulerQueue(p.data,c.params?.projectId):{}):c.namespace==='execution'?validateExecutionData(c.action,p.data):c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
+    const data = c.namespace === 'project' && c.action === 'documents' && p.result === 'OK'
+      ? validateRepositoryDocuments(p.data, c.params?.projectId)
+      : c.namespace==='review'?(reviewResult?validateReviewData(c.action,p.data,{...c.params,...(c.requestId?{requestId:c.requestId}:{})}):{}):c.namespace==='scheduler'?(p.result==='OK'?validateSchedulerQueue(p.data,c.params?.projectId):{}):c.namespace==='execution'?validateExecutionData(c.action,p.data):c.namespace==='profile'?validateProfileData(c.action,p.data):c.namespace==='environment'?validateEnvironmentData(c.action,p.data):c.namespace==='workspace'?validateWorkspaceData(c.action,p.data):c.namespace === 'feature' ? validateFeatureData(c.action,p.data) : c.namespace === 'discovery' ? validateDiscoveryData(c.action, p.data) : projectSafe(record(p.data)) as Params;
     if(c.namespace==='review'&&c.action==='operation'&&p.requestId!==c.params?.requestId)throw new Error();
     if(c.namespace==='review'&&c.action==='cleanup.preview'&&data.eligible===true&&(p.freshness!=='LIVE'||p.liveness!=='LIVE_VERIFIED'))throw new Error();
     if(c.namespace==='execution'){

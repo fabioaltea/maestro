@@ -4,8 +4,16 @@ Al primo avvio usa **Collega Codex** se Maestro rileva una CLI compatibile e l�
 
 Apri **Analizza codebase** per far verificare a Maestro la disponibilità di Codex per Discovery. Il primo setup usa il modello `gpt-6.1-sol` se l’archivio non ha un provider configurato. **Diagnostica** mostra versione, percorso e configurazione avanzata. Prima dell’invio, rivedi e conferma l’anteprima delle fonti.
 
+La prima icona della barra laterale apre **Panoramica** nel repository o **Recenti** nella schermata di selezione. Le altre icone sono abilitate solo nella vista del repository. L’ingranaggio in fondo alla barra apre **Impostazioni repository → Generali**, dove puoi verificare il repository, modificare la configurazione o rimuovere il progetto dal registro. Le altre schede sono **Workspace**, **Ambiente**, **Sessioni**, **Coda** e **Revisioni**. Da **Panoramica**, scegli **Chiudi repository** per tornare a **Recenti**: il repository rimane nell’elenco, ma non viene riaperto automaticamente al prossimo avvio.
+
+Le funzioni globali, tra cui **Diagnostica**, **Servizio** e **Profili agente**, sono disponibili nel menu nativo **Strumenti** anche senza un repository aperto.
+
+In **Panoramica**, il README occupa la colonna principale e mostra direttamente il contenuto, senza un titolo aggiunto da Maestro. La data dell’ultima modifica locale e l’ultimo commit del README (se presente) si trovano sotto il documento.
+
+Per rileggere lo stato del repository dopo modifiche esterne, chiudilo da **Panoramica** e riaprilo da **Recenti**.
+
 1. Con un profilo isolato, avviare Desktop e verificare «Apri repository» e «Crea repository». Aprire un checkout locale e verificare il progetto. Ripetere su una cartella vuota con creazione e controllare il checkout senza commit.
-2. Selezionare «Analizza codebase». Con il provider di fixture confermare fonti, svolgere la revisione, approvare e aprire «Nuova feature». Ripetere con approvazione obsoleta e verificare il blocco.
+2. Selezionare «Analizza codebase». Con il provider di fixture confermare fonti, svolgere la revisione e approvare. Aprire «Feature» e verificare che «Prepara creazione» sia disponibile. Ripetere con approvazione obsoleta e verificare il blocco.
 3. Alternare due repository omonimi, riaprire Desktop e confrontare recenti e storico. Interrogare un’operazione anche via CLI. Provare l’annullamento e una risposta tardiva.
 4. Con il default isolato e vuoto, recuperare da Diagnostica un archivio precedente compatibile e inattivo. Verificare stessa identità e stessi esiti. Ripetere con default pieno o archivio sorgente in uso e verificare il blocco.
 

@@ -18,7 +18,7 @@ test('SC001/002: thirty actual window openings and thirty live/offline detail se
     await expect(page.locator('.project-row')).toHaveCount(25);
     const elapsed=performance.now()-launchStarted;openings.push(elapsed);
     if(i===29){
-     const home=page.getByRole('button',{name:'Home',exact:true});
+     const home=page.getByRole('button',{name:'Chiudi repository',exact:true});
      for(let n=0;n<30;n++){
       if(n>0)await home.click();
       const row=page.locator('.project-row').nth(n%25),name=await row.locator('strong').textContent();const begin=performance.now();await row.click();await expect(page.getByRole('article',{name:`Dettaglio ${name}`})).toBeVisible();live.push(performance.now()-begin);await expect(page.getByText('Ultimo stato noto',{exact:false}).last()).toBeVisible();observed.push({mode:'live',name,historicalObservation:true});

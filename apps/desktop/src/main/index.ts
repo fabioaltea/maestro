@@ -2,7 +2,8 @@ import {installReview} from './review.ts';
 import {installScheduler} from './scheduler.ts';
 import {installExecution} from './execution.ts';
 import {installProfile} from './profile.ts';
-import { app, BrowserWindow, dialog, protocol, session } from 'electron';
+import { app, BrowserWindow, dialog, Menu, protocol, session } from 'electron';
+import { globalTools, isGlobalTool, TOOL_MENU_CHANNEL } from '../shared/tool-menu.ts';
 import { fileURLToPath } from 'node:url';
 import { SafeLog } from './safe-log.ts';
 import { join, isAbsolute } from 'node:path';
@@ -50,6 +51,17 @@ else {
     window = new BrowserWindow({ width: 1280, height: 800, minWidth: 1024, minHeight: 700, title: 'Maestro', backgroundColor: '#17191c',
       webPreferences: { preload: fileURLToPath(new URL('../preload/index.cjs', import.meta.url)), sandbox: true, contextIsolation: true, nodeIntegration: false, webSecurity: true, webviewTag: false } });
     secureWindow(window);
+    Menu.setApplicationMenu(Menu.buildFromTemplate([
+      ...(process.platform === 'darwin' ? [{ role: 'appMenu' as const }] : []),
+      { role: 'fileMenu' },
+      { role: 'editMenu' },
+      { role: 'viewMenu' },
+      { label: 'Strumenti', submenu: Object.entries(globalTools).flatMap(([id, label]) =>
+        isGlobalTool(id) ? [{ id: `tool-${id}`, label, click: () => {
+          window?.webContents.send(TOOL_MENU_CHANNEL, id);
+        } }] : []) },
+      { role: 'windowMenu' },
+    ]));
     const router = installBridge(window, { core, runtimeError, log: new SafeLog(join(app.getPath('userData'), 'logs')), dialogs: { async chooseDirectory(title) {
       const result = await dialog.showOpenDialog(window!, { title, properties: ['openDirectory', 'createDirectory'] });
       return result.canceled ? null : result.filePaths[0] ?? null;

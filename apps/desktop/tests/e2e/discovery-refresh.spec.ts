@@ -12,7 +12,10 @@ test('G4 desktop shows stale knowledge, preserves approval and requires a fresh 
       await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
       const review = page.locator('.discovery-review'); await expect(review.getByRole('checkbox')).toHaveCount(3); for (const box of await review.getByRole('checkbox').all()) await box.check();
       await page.getByRole('button', { name: 'Approva questa revisione', exact: true }).click(); await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click(); await expect(review).toContainText('Approvazione storica:', { timeout: 15000 });
-      await expect(page.getByRole('button', { name: 'Nuova feature', exact: true })).toBeEnabled();
+      await page.getByRole('button', { name: 'Feature', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Prepara creazione', exact: true })).toBeEnabled();
+      await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
+      await expect(review).toContainText('Approvazione storica:');
       const old = (await f.cli(['discovery', 'show', seed.discoveryId])).result.data.discovery.latestDocumentRevisionId;
       await writeFile(join(seed.repo.path, 'file.txt'), 'intentional user change\n'); const changed = await f.snapshot(seed.repo.path);
       await page.getByRole('button', { name: 'Verifica idoneità attuale', exact: true }).click(); await expect(review).toContainText('Idoneità non confermata'); await expect(review).toContainText('Da aggiornare:');
