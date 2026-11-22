@@ -27,11 +27,14 @@ test('opens and creates repositories from a fresh Desktop profile',async({},test
      await create.click();
      await expect(page.getByRole('article',{name:'Dettaglio nuovo'})).toBeVisible();
      expect((await readFile(join(target,'.git','HEAD'),'utf8')).trim()).toEqual('ref: refs/heads/main');
+     const switchRepository = page.getByRole('button',{name:'Cambia repository',exact:true});
+     await switchRepository.click();
      await page.getByRole('button',{name:/checkout esistente/}).click();
      await expect(page.getByRole('article',{name:'Dettaglio checkout esistente'})).toBeVisible();
      const samples=[];
      for(let index=0;index<10;index++){
        const name=index%2===0?'nuovo':'checkout esistente';
+       await switchRepository.click();
        const started=performance.now();
        await page.getByRole('button',{name:new RegExp(`^${name} `)}).click();
        await expect(page.getByRole('article',{name:`Dettaglio ${name}`})).toBeVisible();

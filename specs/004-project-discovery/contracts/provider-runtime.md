@@ -36,6 +36,8 @@ G0: vero binario e fixture inferenza locale sintetica, catalogo reale, tentativi
 
 NDJSON UTF-8 incrementale rigoroso, linea≤1MiB, totale≤8MiB/run e stderr≤64KiB (mai esposto). Eventi consentiti dalla build pin mappati in DTO neutri; messaggi liberi trattati come testo inerte. Exit0 non prova successo: serve final result conforme allo schema, hash/contesto e cessazione verificata. Malformato/overflow/timeout/error/quota → safe code, output utile parziale e nessuna bozza approvabile.
 
+Il terminale Discovery del Desktop legge lo stesso output normalizzato della CLI. Le righe di avvio e fine turno derivano dagli eventi Codex validati e sono registrate come PROGRESS. La fine del turno attesta l’evento del provider. L’esito della Discovery segue la verifica separata del processo e del risultato.
+
 Il final result è QUESTIONS oppure DOCUMENT, chiavi chiuse. Nessuna esecuzione di comandi proposti nel testo, apertura URL, installazione skill o richiesta di permessi implementata da output. Intervista: ogni risposta crea intenzionalmente un run nuovo con materiale locale persistito; non chiamarlo resume nativo Codex.
 
 ## Host per-run e ownership

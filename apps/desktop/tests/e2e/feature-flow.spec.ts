@@ -6,7 +6,7 @@ import {createScratch} from '../fixtures/desktop.ts';
 import {seedWaitingDiscovery} from '../fixtures/discovery-session.ts';
 import {launchDesktop} from '../fixtures/electron.ts';
 async function openApprovedProject(app:Awaited<ReturnType<typeof launchDesktop>>['app'],page:Awaited<ReturnType<typeof launchDesktop>>['page'],archive:string){
- await page.locator('.project-row').first().click();await page.getByRole('button',{name:'Analizza codebase',exact:true}).click();const review=page.locator('.discovery-review');await expect(review.getByRole('checkbox')).toHaveCount(3);for(const b of await review.getByRole('checkbox').all())await b.check();await page.getByRole('button',{name:'Approva questa revisione',exact:true}).click();await page.getByRole('button',{name:'Conferma operazione',exact:true}).click();await expect(review).toContainText('Approvazione storica:',{timeout:15000});await page.getByRole('button',{name:'Analizza codebase',exact:true}).click();
+ await page.locator('.project-row').first().click();await page.getByRole('button',{name:'Analizza codebase',exact:true}).click();const review=page.locator('.discovery-review');await expect(review.getByRole('checkbox')).toHaveCount(3);for(const b of await review.getByRole('checkbox').all())await b.check();await page.getByRole('button',{name:'Approva questa revisione',exact:true}).click();await page.getByRole('button',{name:'Conferma operazione',exact:true}).click();await expect(review).toContainText('Approvazione storica:',{timeout:15000});await page.getByRole('button',{name:'Panoramica',exact:true}).click();
 }
 test('US1 and US2 author, approve and hand off a specific revision with offline history',async()=>{
  test.setTimeout(100000);
@@ -40,7 +40,7 @@ test('US1 and US2 author, approve and hand off a specific revision with offline 
  await expect(panel.getByText(/^Handoff [a-f0-9-]{36} · Digest [a-f0-9]{64}$/)).toBeVisible({timeout:15000});
  await panel.getByRole('button',{name:'Archivia feature',exact:true}).click();await page.getByRole('button',{name:'Conferma operazione',exact:true}).click();await expect(panel).toContainText('ARCHIVED',{timeout:15000});await panel.getByRole('button',{name:'Feature sintetica',exact:true}).click();await expect(panel.getByRole('button',{name:'Prepara nuova revisione',exact:true})).toBeDisabled();
  }finally{await app.close();}
- expect(await f.snapshot(seed.repo.path)).toEqual(before);await f.cli(['daemon','stop']);const offline=await launchDesktop(f);try{await offline.page.locator('.project-row').first().click();await offline.page.getByRole('button',{name:'Feature',exact:true}).click();await expect(offline.page.locator('.feature-planning')).toContainText('Ultimo stato noto');await offline.page.getByRole('button',{name:'Feature sintetica',exact:true}).click();await expect(offline.page.locator('.feature-planning')).toContainText('Approvazione storica:');await expect(offline.page.getByRole('button',{name:'Prepara handoff',exact:true})).toBeDisabled();}finally{await offline.app.close();}
+ expect(await f.snapshot(seed.repo.path)).toEqual(before);await f.cli(['daemon','stop']);const offline=await launchDesktop(f);try{await expect(offline.page.getByRole('article',{name:'Dettaglio Intervista UI'})).toBeVisible();await offline.page.getByRole('button',{name:'Feature',exact:true}).click();await expect(offline.page.locator('.feature-planning')).toContainText('Ultimo stato noto');await offline.page.getByRole('button',{name:'Feature sintetica',exact:true}).click();await expect(offline.page.locator('.feature-planning')).toContainText('Approvazione storica:');await expect(offline.page.getByRole('button',{name:'Prepara handoff',exact:true})).toBeDisabled();}finally{await offline.app.close();}
  }finally{await f.cleanup();}
 });
 
@@ -86,7 +86,7 @@ test('US3 qualified fixture creates a turn, confirms an answer and reads the res
    expect((await f.cli(['daemon','stop'])).result.outcome).toBe('SUCCEEDED');
    const offline=await launchDesktop(f);
    try{
-     await offline.page.locator('.project-row').first().click();
+     await expect(offline.page.getByRole('article',{name:'Dettaglio Intervista UI'})).toBeVisible();
      await offline.page.getByRole('button',{name:'Feature',exact:true}).click();
      await offline.page.getByRole('button',{name:'Piano assistito fixture',exact:true}).click();
      await expect(offline.page.getByLabel('Specifica e piano JSON')).toHaveValue(/Piano del turno: Stato locale visibile/);

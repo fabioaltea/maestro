@@ -54,6 +54,7 @@ test('stale configuration approval is rejected and a new explicit review can cle
       await expect(page.getByRole('dialog')).toBeVisible();
       await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Proposta', exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Cambia repository', exact: true }).click();
       await expect(page.locator('.project-row strong').first()).toHaveText('Proposta');
       const final = (await f.cli(['project', 'show', projectId])).result.data.project;
       expect(final.configRevision).toBe('3'); expect(final.baseBranch).toBeNull(); expect(await f.snapshot(repo.path)).toEqual(before);

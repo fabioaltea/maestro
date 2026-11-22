@@ -18,9 +18,12 @@ test('SC001/002: thirty actual window openings and thirty live/offline detail se
     await expect(page.locator('.project-row')).toHaveCount(25);
     const elapsed=performance.now()-launchStarted;openings.push(elapsed);
     if(i===29){
+     const switchRepository=page.getByRole('button',{name:'Cambia repository',exact:true});
      for(let n=0;n<30;n++){
+      if(n>0)await switchRepository.click();
       const row=page.locator('.project-row').nth(n%25),name=await row.locator('strong').textContent();const begin=performance.now();await row.click();await expect(page.getByRole('article',{name:`Dettaglio ${name}`})).toBeVisible();live.push(performance.now()-begin);await expect(page.getByText('Ultimo stato noto',{exact:false}).last()).toBeVisible();observed.push({mode:'live',name,historicalObservation:true});
      }
+     await switchRepository.click();
      for(let p=1;p<=4;p++){
       await expect(page.locator('.project-row')).toHaveCount(p*25);
       if(p<4)await page.getByRole('button',{name:'Altri repository',exact:true}).click();
@@ -30,6 +33,7 @@ test('SC001/002: thirty actual window openings and thirty live/offline detail se
      const before=await f.snapshot(f.archive);
      await page.getByRole('button',{name:'Aggiorna repository',exact:true}).click();
      for(let n=0;n<30;n++){
+      if(n>0)await switchRepository.click();
       const row=page.locator('.project-row').nth(n%25),name=await row.locator('strong').textContent(),begin=performance.now();await row.click();await expect(page.getByRole('article',{name:`Dettaglio ${name}`})).toBeVisible();offline.push(performance.now()-begin);await expect(page.getByText('Ultimo stato noto · servizio fermo',{exact:true})).toBeVisible();await expect(page.getByText('Ultimo stato noto',{exact:false}).last()).toBeVisible();observed.push({mode:'offline',name,historicalObservation:true});
      }expect(await f.snapshot(f.archive)).toEqual(before);
     }

@@ -8,6 +8,33 @@ export interface DiscoverySnapshot {
   selectors: string[]; fileCount: number; byteCount: number; omissions: string[]; expiresAtMs: number;
 }
 export interface DiscoverySummary { discoveryId: string; sessionId: string; currentRunId: string | null; state: string; updatedAt: string; error: string | null }
+export const discoveryStateLabels: Record<string, string> = {
+  PREPARING: 'In preparazione', READY_TO_START: 'Pronta per l’avvio', RUNNING: 'In corso',
+  WAITING_USER: 'Attende risposta', READY_FOR_REVIEW: 'Da approvare', APPROVED: 'Approvata',
+  STALE: 'Da aggiornare', UPDATING: 'Aggiornamento in corso', RECONCILING: 'Esito incerto',
+  FAILED: 'Non riuscita', INTERRUPTED: 'Interrotta', CANCELLED: 'Annullata', CANCELLING: 'Annullamento in corso',
+};
+export function discoveryIsRunning(state: string) {
+  return ['RUNNING', 'UPDATING', 'CANCELLING'].includes(state);
+}
+export function currentDiscovery(items: DiscoverySummary[]) {
+  return items.findLast(item => discoveryIsRunning(item.state) || item.state === 'RECONCILING')
+    ?? items.findLast(item => ['WAITING_USER', 'READY_FOR_REVIEW'].includes(item.state)) ?? items.at(-1);
+}
+export async function readDiscoveryHistory(core: Desktop['core'], projectId: string, active: () => boolean) {
+  const items: DiscoverySummary[] = [];
+  let cursor: string | null = null, live = false;
+  do {
+    const page = await core('listDiscoveries', { projectId, limit: 20, ...(cursor ? { cursor } : {}) });
+    if (!active() || page?.result !== 'OK') return null;
+    const batch = page.data.items as DiscoverySummary[];
+    items.push(...batch);
+    live = page.liveness === 'LIVE_VERIFIED';
+    cursor = page.data.nextCursor as string | null;
+    if (items.length > 100 || (cursor && (items.length >= 100 || !batch.length))) return null;
+  } while (cursor);
+  return { items, live };
+}
 export function parseDiscoveryScope(value: string): string[] {
   const selectors = value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
   if (!selectors.length || selectors.length > 16 || new Set(selectors).size !== selectors.length || selectors.some(s => s.normalize('NFC') !== s || s !== '.' && (s.startsWith('/') || /[\x00-\x1f\x7f\\]/.test(s) || s.split('/').some(p => !p || p === '.' || p === '..')))) throw new Error('Indica da 1 a 16 percorsi relativi distinti, uno per riga.');
@@ -30,11 +57,9 @@ export function useDiscovery(desktop: Desktop, projectId: string, configRevision
   const refresh = useCallback(async () => {
     const p = await core('getDiscoveryProvider'); if (!active.current) return;
     if (p?.result === 'OK') setProvider(p.data);
-    const history: DiscoverySummary[] = []; let cursor: string | null = null;
-    do { const list = await core('listDiscoveries', { projectId, ...(cursor ? { cursor } : {}) }); if (!active.current) return;
-      if (!list || list.result !== 'OK') return; history.push(...list.data.items as DiscoverySummary[]); if (history.length > 100) throw new Error('CLIENT_PROTOCOL_ERROR'); cursor = list.data.nextCursor as string | null;
-    } while (cursor);
-    setItems(history);
+    const history = await readDiscoveryHistory(core, projectId, () => active.current);
+    if (!active.current) return;
+    if (history) setItems(history.items);
     setLoading(false);
   }, [core, projectId]);
   useEffect(() => { active.current = true; void refresh(); return () => { active.current = false; }; }, [refresh]);
@@ -117,9 +142,10 @@ export function appendDiscoveryOutput(current: DiscoveryRing, chunks: Params[], 
 }
 export interface DiscoverySession extends DiscoverySummary { projectId: string; stateRevision: string; configRevision: string; snapshotId: string; latestDocumentRevisionId: string | null }
 export interface InterviewQuestion { questionId: string; discoveryId: string; revision: string; text: string; reason: string; status: string; answer: { revision: string; kind: string; text: string } | null }
-export function useDiscoverySession(desktop: Desktop, projectId: string, discoveryId: string, paused: boolean, live: boolean) {
+export function useDiscoverySession(desktop: Desktop, projectId: string, discoveryId: string, paused: boolean, live: boolean, withQuestions = true) {
   const [session, setSession] = useState<DiscoverySession | null>(null), [questions, setQuestions] = useState<InterviewQuestion[]>([]), [ring, setRing] = useState<DiscoveryRing>({ text: '', lastSeq: '0', truncated: false });
   const [failure, setFailure] = useState<string | null>(null), [refresh, setRefresh] = useState(0);
+  const [freshness, setFreshness] = useState<'LIVE' | 'LAST_KNOWN' | 'VOLATILE' | null>(null);
   const state = useRef<{ runId: string | null; cursor: string | null; ring: DiscoveryRing }>({ runId: null, cursor: null, ring: { text: '', lastSeq: '0', truncated: false } });
   const { core, invoke } = desktop;
   useEffect(() => () => { void invoke('releaseViewReads'); }, [invoke]);
@@ -127,21 +153,23 @@ export function useDiscoverySession(desktop: Desktop, projectId: string, discove
     if (paused) return;
     let disposed = false, timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
+      let more = false;
       try {
         if (document.visibilityState !== 'visible') return;
         const result = await core('getDiscovery', { discoveryId }); if (disposed || !result) return;
         if (result.result !== 'OK') { setFailure(result.error?.message ?? 'Stato non disponibile.'); return; }
         const d = result.data.discovery as DiscoverySession;
-        if (d.discoveryId !== discoveryId || d.projectId !== projectId) throw new Error('STALE_CONTEXT'); setSession(d);
-        if (state.current.runId !== d.currentRunId) { state.current = { runId: d.currentRunId, cursor: null, ring: { text: '', lastSeq: '0', truncated: false } }; setRing(state.current.ring); }
+        if (d.discoveryId !== discoveryId || d.projectId !== projectId) throw new Error('STALE_CONTEXT');
+        let nextFailure: string | null = null;
+        if (state.current.runId !== d.currentRunId) state.current = { runId: d.currentRunId, cursor: null, ring: { text: '', lastSeq: '0', truncated: false } };
         if (d.currentRunId) {
           const page = await core('getDiscoveryOutput', { runId: d.currentRunId, ...(state.current.cursor ? { cursor: state.current.cursor } : {}) }); if (disposed) return;
           if (page?.result === 'OK') {
-            const next = appendDiscoveryOutput(state.current.ring, page.data.items as Params[], d.currentRunId); state.current.ring = next; setRing(next);
-            if (page.data.nextCursor) state.current.cursor = String(page.data.nextCursor);
-          } else setFailure(page?.error?.message ?? 'Output non disponibile.');
+            state.current.ring = appendDiscoveryOutput(state.current.ring, page.data.items as Params[], d.currentRunId);
+            if (page.data.nextCursor) { state.current.cursor = String(page.data.nextCursor); more = true; }
+          } else nextFailure = page?.error?.message ?? 'Output non disponibile.';
         }
-        if (d.state === 'WAITING_USER' || d.state === 'CANCELLED' || d.state === 'INTERRUPTED') {
+        if (withQuestions && !more && ['WAITING_USER', 'CANCELLED', 'INTERRUPTED'].includes(d.state)) {
           let cursor: string | null = null; const all: InterviewQuestion[] = [];
           do {
             const page = await core('getDiscoveryQuestions', { discoveryId, ...(cursor ? { cursor } : {}) }); if (disposed) return;
@@ -150,10 +178,16 @@ export function useDiscoverySession(desktop: Desktop, projectId: string, discove
           } while (cursor);
           setQuestions(all);
         }
+        setSession(d); setRing(state.current.ring); setFreshness(result.freshness); setFailure(nextFailure);
       } catch { if (!disposed) setFailure('Dati non utilizzabili per questa sessione. Consulta lo stato originale.'); }
-      finally { if (!disposed && live) timer = setTimeout(() => void tick(), 1000); }
+      finally { if (!disposed && (more || live)) timer = setTimeout(() => void tick(), more ? 0 : 1000); }
     };
-    timer = setTimeout(() => void tick(), 1000); return () => { disposed = true; clearTimeout(timer); };
-  }, [core, projectId, discoveryId, paused, live, refresh]);
-  return { session, questions, ring, failure, refresh: () => setRefresh(v => v + 1) };
+    const wake = () => {
+      if (document.visibilityState === 'visible') setRefresh(value => value + 1);
+    };
+    document.addEventListener('visibilitychange', wake);
+    timer = setTimeout(() => void tick(), withQuestions ? 1000 : 0);
+    return () => { disposed = true; clearTimeout(timer); document.removeEventListener('visibilitychange', wake); };
+  }, [core, projectId, discoveryId, paused, live, refresh, withQuestions]);
+  return { session, questions, ring, failure, freshness, refresh: () => setRefresh(v => v + 1) };
 }

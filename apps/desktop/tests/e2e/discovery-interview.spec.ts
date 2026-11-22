@@ -9,7 +9,8 @@ test('a durable interview reopens, renders inert output and confirms UNKNOWN wit
     for (const reopen of [false, true]) {
       const { app, page } = await launchDesktop(f);
       try {
-        await page.locator('.project-row').first().click(); await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
+        if (!reopen) await page.locator('.project-row').first().click();
+        await page.getByRole('button', { name: 'Analizza codebase', exact: true }).click();
         await expect(page.getByRole('heading', { name: 'Quale distribuzione è prevista?', exact: true })).toBeVisible();
         await expect(page.getByLabel('Output Discovery', { exact: true })).toContainText('<img src=x onerror=alert(1)>'); expect(await page.locator('img[src=x]').count()).toBe(0);
         if (!reopen) { await page.getByRole('button', { name: 'Invia e continua', exact: true }).click(); await expect(page.getByRole('alert').filter({ hasText: 'Scrivi una risposta' })).toBeVisible(); }

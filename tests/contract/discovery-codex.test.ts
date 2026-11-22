@@ -23,6 +23,8 @@ test('pinned JSONL is decoded across byte/UTF-8 boundaries into a portable resul
   const bytes = Buffer.from(begin + message(question) + complete); const events: ProviderEvent[] = [];
   for (const byte of bytes) events.push(...value(decoder.feed(new Uint8Array([byte]))));
   const result = value(decoder.finish(0)); assert.deepEqual(result, { kind: 'QUESTIONS', questions: question.questions });
+  assert.deepEqual(events[0], { kind: 'PROGRESS', text: '[Codex] Turno avviato\n' });
+  assert.deepEqual(events.at(-1), { kind: 'PROGRESS', text: '[Codex] Turno completato\n' });
   assert.equal(events.filter(event => event.kind === 'RESULT').length, 0, 'unverified process output is not a final result event');
 });
 test('exit zero, partial JSON, missing turn completion, wrong event order and trailing records cannot complete Discovery', async () => {
@@ -58,6 +60,9 @@ test('line/run byte caps, malformed UTF-8 and duplicate final messages fail with
   const lineOverflow = createCodexOutputDecoder(); assert.deepEqual(lineOverflow.feed(Buffer.alloc(1024 * 1024 + 1, 0x61)), { ok: false, code: 'PROVIDER_OUTPUT_LIMIT' });
   const invalid = createCodexOutputDecoder(); assert.equal(invalid.feed(new Uint8Array([0xff])).ok, false);
   const duplicate = createCodexOutputDecoder(); duplicate.feed(Buffer.from(begin + message(question) + message(question) + complete)); assert.equal(duplicate.finish(0).ok, false);
+  const emptyAfterFinal = createCodexOutputDecoder();
+  const empty = line({ type: 'item.completed', item: { id: 'empty', type: 'agent_message', text: '' } });
+  assert.equal(emptyAfterFinal.feed(Buffer.from(begin + message(question) + empty + complete)).ok, false);
   const runOverflow = createCodexOutputDecoder(); value(runOverflow.feed(Buffer.from(begin)));
   const progress = Buffer.from(line({ type: 'item.completed', item: { id: 'reasoning', type: 'reasoning', text: 'x'.repeat(4000) } }));
   let result: DiscoveryResult<readonly ProviderEvent[]> = { ok: true, value: [] };

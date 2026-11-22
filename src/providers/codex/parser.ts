@@ -58,7 +58,8 @@ export function decodeCodexArchitectResult(raw: unknown): ArchitectResult {
   return { kind: 'DOCUMENT', sections };
 }
 function chunks(kind: 'PROGRESS' | 'AGENT_TEXT', value: string): ProviderEvent[] {
-  const bytes = Buffer.from(value), events: ProviderEvent[] = [];
+  if (!value.length) return [];
+  const bytes = Buffer.from(value.endsWith('\n') ? value : value + '\n'), events: ProviderEvent[] = [];
   for (let offset = 0; offset < bytes.length;) {
     let end = Math.min(offset + limits.chunkBytes, bytes.length);
     while (end < bytes.length && (bytes[end]! & 0xc0) === 0x80) end--;
@@ -88,12 +89,14 @@ export function createCodexOutputDecoder(): ProviderOutputDecoder {
       object(event, ['type', 'thread_id']); text(event.thread_id, 128); if (thread || started) return invalid(); thread = true; return [];
     }
     if (event.type === 'turn.started') {
-      object(event, ['type']); if (!thread || started) return invalid(); started = true; return [];
+      object(event, ['type']); if (!thread || started) return invalid(); started = true;
+      return [{ kind: 'PROGRESS', text: '[Codex] Turno avviato\n' }];
     }
     if (event.type === 'turn.completed') {
       object(event, ['type', 'usage']); if (!started || !result) return invalid();
       const usage = object(event.usage, ['input_tokens', 'cached_input_tokens', 'output_tokens'], ['reasoning_output_tokens']);
-      if (Object.values(usage).some(n => !Number.isSafeInteger(n) || Number(n) < 0)) return invalid(); completed = true; return [];
+      if (Object.values(usage).some(n => !Number.isSafeInteger(n) || Number(n) < 0)) return invalid(); completed = true;
+      return [{ kind: 'PROGRESS', text: '[Codex] Turno completato\n' }];
     }
     if (!['item.started', 'item.updated', 'item.completed'].includes(String(event.type))) return invalid();
     object(event, ['type', 'item']);
