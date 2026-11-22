@@ -1,0 +1,115 @@
+✖ remove dirty registration preserves all repository files, other checkouts and other projects (3403.051416ms)
+✖ remove conflicted registration preserves all repository files, other checkouts and other projects (3260.88825ms)
+✖ remove linked registration preserves all repository files, other checkouts and other projects (3217.585958ms)
+✖ remove absent registration preserves all repository files, other checkouts and other projects (3149.717459ms)
+✖ unknown/stale IDs never remove another project; reimport allocates a new UUID immune to the old removal retry (2229.141667ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15358.85625
+
+✖ failing tests:
+
+test at dist-tests/tests/integration/project-remove.test.js:9:5
+✖ remove dirty registration preserves all repository files, other checkouts and other projects (3403.051416ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"11af7d2a-f217-442a-8e4d-355e05979c61","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"11af7d2a-f217-442a-8e4d-355e05979c61"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove.test.js:22:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove.test.js:9:5
+✖ remove conflicted registration preserves all repository files, other checkouts and other projects (3260.88825ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"11ec4182-fe1e-43e3-a217-a0e57cfa589d","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"11ec4182-fe1e-43e3-a217-a0e57cfa589d"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove.test.js:22:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove.test.js:9:5
+✖ remove linked registration preserves all repository files, other checkouts and other projects (3217.585958ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"8079818e-f18d-4f84-a583-72d23e291553","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"8079818e-f18d-4f84-a583-72d23e291553"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove.test.js:22:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove.test.js:9:5
+✖ remove absent registration preserves all repository files, other checkouts and other projects (3149.717459ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"12c701fd-0aae-4e80-b887-9b7929f3853f","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"12c701fd-0aae-4e80-b887-9b7929f3853f"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove.test.js:22:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-remove.test.js:32:1
+✖ unknown/stale IDs never remove another project; reimport allocates a new UUID immune to the old removal retry (2229.141667ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"53b080a4-9940-4089-b73e-b5173b48931a","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"53b080a4-9940-4089-b73e-b5173b48931a"},"data":{}}
+  + actual - expected
+  
+  + 'UNSUPPORTED_VERSION'
+  - 'PROJECT_NOT_FOUND'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-remove.test.js:37:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'UNSUPPORTED_VERSION',
+    expected: 'PROJECT_NOT_FOUND',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

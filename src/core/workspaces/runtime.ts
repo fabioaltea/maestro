@@ -1,0 +1,76 @@
+import type {StoragePort} from '../../ports/storage.js';
+import type {Deadline} from '../../ports/clock.js';
+import type {AuthenticatedPeer} from '../../ports/platform.js';
+import {WORKSPACE_READ_METHODS} from '../../protocol/workspace.js';
+import {createWorkspaceDispatch} from './dispatch.js';
+import {createWorkspaceCleanup} from './remove.js';
+import {createWorkspaceRecovery} from './recovery.js';
+import {createWorkspaceProvisioning,type WorkspaceProvisionOptions} from './provision.js';
+import {createWorkspaceMutator} from '../../platform/macos/git/workspace-mutator.js';
+import {createOwnedWorkspaceFiles} from '../../platform/macos/git/workspace-files.js';
+
+export function nativeWorkspaceServices(options:Omit<WorkspaceProvisionOptions,keyof WorkspaceRuntimeContext|'mutator'|'files'>&{files?:WorkspaceProvisionOptions['files']}){
+ return (runtime:WorkspaceRuntimeContext)=>{
+   const settings={...options,...runtime,mutator:createWorkspaceMutator(),files:options.files??createOwnedWorkspaceFiles()};
+   const provisioning=createWorkspaceProvisioning(settings),recovery=createWorkspaceRecovery(settings),cleanup=createWorkspaceCleanup(settings);
+   return{actions:{...provisioning.actions,...recovery.actions,...cleanup.actions},leases:recovery.leases,files:settings.files,
+     async recover(){await provisioning.recover();await recovery.recover();await cleanup.recover();}};
+ };
+}
+
+type Action=(params:Readonly<Record<string,unknown>>,peer:AuthenticatedPeer)=>Promise<Record<string,unknown>>;
+export interface WorkspaceRuntimeServices {
+ readonly actions:Readonly<Record<string,Action>>;
+ recover():Promise<void>;
+ readonly leases?:ReturnType<typeof createWorkspaceRecovery>['leases'];
+ readonly files?:WorkspaceProvisionOptions['files'];
+}
+export interface WorkspaceRuntimeContext {
+ accepting():boolean;
+ schedule(job:()=>Promise<void>):void;
+}
+
+/** A single daemon-owned queue. Disconnection cannot cancel accepted mutations. */
+export function createWorkspaceRuntime(storage:StoragePort,
+ compose?:(runtime:WorkspaceRuntimeContext)=>WorkspaceRuntimeServices){
+ let accepting=false;
+ const jobs=new Set<Promise<void>>();
+ function schedule(work:()=>Promise<void>){
+   const job=Promise.resolve().then(work);
+   jobs.add(job);
+   void job.finally(()=>jobs.delete(job)).catch(()=>{});
+ }
+ const service=compose?.({accepting:()=>accepting,schedule});
+ const actions:Record<string,Action>={};
+ for(const [method,action] of Object.entries(service?.actions??{})){
+   actions[method]=async(params,peer)=>{
+     if(!accepting)throw new Error('BLOCKED');
+     return action(params,peer);
+   };
+ }
+ const methods=[...new Set([...WORKSPACE_READ_METHODS,...Object.keys(actions)])];
+ return{
+   methods,
+   leases:service?.leases,
+   files:service?.files,
+   dispatch:createWorkspaceDispatch({storage,composed:actions}),
+   fence(){accepting=false;},
+   async recover(){
+     accepting=false;
+     if(((await storage.readSnapshot())?.store.schemaVersion??0)<6)return;
+     await service?.recover();
+     accepting=true;
+   },
+   async idle(){while(jobs.size)await Promise.all([...jobs]);},
+   async stop(deadline:Deadline){
+     accepting=false;
+     if(!jobs.size)return;
+     let timer:ReturnType<typeof setTimeout>|undefined;
+     try{
+       await Promise.race([Promise.all([...jobs]),new Promise<never>((_resolve,reject)=>{
+         timer=setTimeout(()=>reject(new Error('RESOURCE_IDENTITY_UNKNOWN')),Math.max(1,deadline.remainingMs()));
+       })]);
+     }finally{clearTimeout(timer);}
+   },
+ };
+}

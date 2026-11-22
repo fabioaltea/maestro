@@ -1,0 +1,19 @@
+
+> @maestro/core@0.1.0 typecheck
+> tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit
+
+
+> @maestro/core@0.1.0 lint
+> node scripts/check-architecture.mjs
+
+Architecture boundaries verified
+✔ domain and client reject OS, SQLite and core policy imports across syntax forms (263.938542ms)
+✔ actual production sources obey the architecture boundaries (143.999459ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 449.898708

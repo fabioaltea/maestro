@@ -1,0 +1,35 @@
+✔ Git runner builds a fresh allowlisted environment instead of inheriting executable configuration (1.48ms)
+✔ missing confinement capability fails closed without an unconfined fallback (2.61175ms)
+✔ compiled runner uses the shipped profile from an external cwd and preserves the real repository (306.34625ms)
+✔ runner only accepts structured read queries, never shell text or revision expressions (0.686458ms)
+✔ output limits and expired/aborted calls never return partial output as a successful observation (135.015667ms)
+✔ Git nonzero exit is bounded metadata, never raw stderr in a public failure or result (26.939875ms)
+✔ only a proven partial pending tail is repaired; complete checksum damage preserves bytes (21.938084ms)
+✔ oldest-first rotation respects physical allocation and cannot prune a pending batch (195.927041ms)
+✔ outbox is bounded, failed drain preserves the committed intent, and pinned WAL blocks new writes (625.402708ms)
+✔ short writes are completed and zero-progress writes cannot be acknowledged (0.849041ms)
+✔ read-only pages ignore incomplete temporary retention metadata without modifying it (9.309ms)
+✔ temporary excess is available only to reconcile an existing outbox, without raising steady limits (82.446791ms)
+✔ a reader validates only the committed high-water prefix while another writer appends (12.118875ms)
+✔ reopened journal computes the pending floor after refreshing existing history for an empty drain (161.273ms)
+✔ V1 four owned probes and 32 pending bound admission; 33rd is rejected without a ledger row while reads/status remain available (3163.462958ms)
+✔ V1 a blocked outbox prevents both valid and failing verifies from bypassing admission, while authoritative data stays readable (55.467458ms)
+✔ V1 oversized outbox and pinned WAL cannot rotate project configuration or operation outcomes (616.747834ms)
+✔ real owned inspection publishes a complete result only after verified worker exit (374.8125ms)
+✔ deadline interrupts a real Git process blocked on hostile index metadata without retaining it (2668.976125ms)
+✔ owner crash closes the lifeline and removes a real active Git descendant without PID-based cleanup (378.432792ms)
+✔ oversized config and changes to config or Git topology fail closed without claiming coherent evidence (486.108708ms)
+✔ real SQLITE_FULL during project allocation rolls back project, observation, terminal outcome and event (50.30525ms)
+✔ injected IO failure immediately before registration commit rolls back every effect and never leaks the driver message (36.662541ms)
+✔ injected SQLITE_FULL after REMOVE tombstone write rolls back config, terminal result and success event together (61.116875ms)
+✔ injected SQLITE_IOERR_FSYNC after REMOVE tombstone write rolls back config, terminal result and success event together (59.851ms)
+✔ injected SQLITE_FULL after UPDATE row write rolls back config, terminal result and success event together (63.198375ms)
+✔ injected SQLITE_IOERR_FSYNC after UPDATE row write rolls back config, terminal result and success event together (50.478583ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10021.762208

@@ -1,185 +1,213 @@
 # Maestro
 
-Maestro is the conductor for your AI agent team: it keeps specialists aligned, coordinates execution, and helps turn ideas into shipped software with clarity.
+Local headless daemon, CLI and first Electron desktop client, with durable lifecycle,
+a project registry and bounded replayable events. CLI clients can disconnect without stopping accepted
+work. The current implementation is qualified on macOS 26.3 arm64/APFS, Node
+26.13.0, TypeScript 6.0.3 and better-sqlite3 13.0.3. Other platforms are not qualified.
 
-CLI orchestrator for AI agents that build software collaboratively.
+Full release acceptance remains gated: a real second UID/separate-machine access
+check and complete IP-denied acceptance must have real passing evidence. A skipped
+external check is NOT_RUN, not PASS. See the [002 readiness report](specs/002-project-registry/reports/release-readiness.md).
 
-Maestro helps you go from idea to implementation with a structured workflow:
-1. Architect-led discovery and planning (ARCH-001 to ARCH-005)
-2. Backlog generation with dependencies and acceptance criteria
-3. Agent-driven task execution with persistent project state
-
-## Highlights
-
-- Structured orchestration model designed for collaborative software delivery
-- Structured architecture and planning phases before coding
-- Backlog with prerequisites, task statuses, and assignees
-- Provider support for Claude, Copilot, and Codex modes
-- Persistent runtime state in SQLite plus JSON/YAML artifacts
-- VS Code extension auto-install (when bundled and editor CLI is available)
-
-## Requirements
-
-- Node.js 22+
-- tmux
-- One provider CLI, depending on selected mode:
-  - Claude mode: Claude Code CLI (`claude`)
-  - Copilot mode: GitHub Copilot CLI (`copilot`)
-  - Codex mode: OpenAI Codex CLI (`codex`)
-
-During `maestro init`, prerequisites are checked automatically.
-
-## Installation
-
-Install from source in this repository:
-
-```bash
-npm install
+```sh
+npm ci
 npm run build
-npm link
+node dist/cli/main.js --help
+node dist/cli/main.js project --help
 ```
 
-Then verify:
+Run commands from the repository root (or use an absolute path to the compiled
+entrypoint). A relative `dist/cli/main.js` from your home directory points elsewhere.
 
-```bash
-maestro --version
+## Desktop dal checkout
+
+Dalla radice del repository, con Node26.13.0 e dipendenze root installate:
+
+```sh
+cd /Users/fabioaltea/Repository/maestro
+npm ci
+npm run desktop
 ```
 
-## Quick Start
+Il comando compila core e UI e avvia Electron con il Node esterno corrente verificato.
+Non avvia il daemon. **Un archivio dati Maestro può raccogliere più progetti**,
+ciascuno collegato a un repository Git locale che resta nella propria cartella.
+Al primo avvio usa **Configura archivio Maestro**; per dati già esistenti usa
+**Apri archivio**. Il setup prepara il percorso e apre il controllo del servizio.
+Per inizializzarlo/avviarlo usa
+**Servizio → Avvia servizio → Conferma**. Chiudere l’app lascia attivo il daemon.
+Alla riapertura scegli nuovamente l’archivio; non si conserva una selezione implicita.
 
-Inside your project directory:
+La UI espone progetti live/offline, importazione di repository esistenti, verifica,
+nome/base, rimozione della sola registrazione, lifecycle, operazioni e attività.
+Il pannello Discovery aggiunge analisi, intervista, review e approvazione locale.
+Il provider reale resta bloccato dal precheck Keychain descritto nelle evidenze004.
+Terminale, gestione worktree e implementazione di feature restano fuori ambito.
+Le osservazioni Git restano datate anche quando il registro è live.
 
-```bash
-maestro init
-maestro backlog
-maestro start
+Conferme monouso precedono ogni mutazione. Ricevute private conservano l’UUID originale
+prima dell’invio: dopo crash/timeout usa **Operazioni → Aggiorna esito**, senza reinvio.
+Un’operazione non trovata resta incerta. Sono rimovibili soltanto ricevute terminali;
+limite100. Le ricevute non sono comandi accodati. La rimozione dal registro conserva
+repository e file. Offline si legge; non si accodano scritture.
+
+**Attività** legge la storia disponibile. Segui attività apre un solo client;
+Riconnetti riprende esplicitamente dal cursore confermato. Un gap richiede Rileggi
+stato e storia; il cursore non è conservato fra aperture dell’app. Limiti e test
+funzionali proteggono il client; benchmark di volume/durata rinviati per questa UI.
+
+Electron è una dipendenza di sviluppo root. Se l’installazione ha saltato il suo
+script e manca il binario, installarlo esplicitamente in fase di setup con
+`node node_modules/electron/install.js`; il launcher non scarica nulla. Non ricompilare
+better-sqlite3 per Electron: SQLite è usato soltanto dalla CLI con Node26 esterno.
+Questa versione si esegue dal checkout; non è un installer firmato/notarizzato.
+
+Vedi [quickstart UI](specs/003-desktop-core-ui/quickstart.md),
+[evidenze e limiti](specs/003-desktop-core-ui/reports/validation.md) e
+[review manuale da completare](specs/003-desktop-core-ui/reports/manual-review.md).
+
+## Local lifecycle
+
+Choose a new absolute archive path and retain it to inspect/stop the instance:
+
+```sh
+state_dir="/private/tmp/maestro-demo-$(uuidgen)"
+node dist/cli/main.js daemon start --state-dir "$state_dir" --json
+node dist/cli/main.js daemon status --state-dir "$state_dir" --json
+node dist/cli/main.js daemon diagnostics --state-dir "$state_dir" --json
+node dist/cli/main.js daemon events --state-dir "$state_dir" --limit 100 --json
+node dist/cli/main.js daemon stop --state-dir "$state_dir" --json
 ```
 
-What happens on init:
+Restart is an explicit durable stop/start. Stop uses the existing Foundation budget;
+uncertain ownership never authorizes termination of a saved PID. There is no force
+reset. Read-only commands do not initialize an absent archive or repair storage.
+Historical RUNNING is not liveness: inspect freshness, liveness and ready.
 
-- Creates project docs folder
-- Creates provider-native agents folder
-- Creates runtime state folder and seeds ARCH tasks
-- Appends `.maestro/` to `.gitignore`
+## Project registry
 
-Default flow:
+Start the daemon explicitly, then use an existing local checkout. `project add PATH`
+accepts optional `--name NAME` and `--base-branch BRANCH`. Save the returned projectId,
+configRevision and requestId; names need not be unique and are not selectors.
 
-1. `maestro init` initializes project state and ARCH-001 as ready
-2. `maestro start` (or `maestro run`) executes the next ready task
-3. `maestro mark-done <taskId>` validates artifacts, marks done, and promotes successors
-4. Repeat until all tasks are complete
+- `project list [--limit 1..100] [--cursor CURSOR]`: stable whole-record pages. If
+  REGISTRY_CHANGED is reported, restart the list rather than combining revisions.
+- `project show PROJECT_ID`: confirmed configuration and dated observation.
+- `project verify PROJECT_ID`: save an explicit new observation of the original
+  reference checkout without changing configuration. SUCCEEDED/OBSERVED can mean a
+  saved UNAVAILABLE/UNVERIFIED observation; it is not a claim of Git readiness.
+- `project update PROJECT_ID --expected-revision REV [--name NAME] [--base-branch BRANCH | --clear-base-branch]`:
+  atomically update configuration. At least one field is required. Rename/clear do
+  not require an accessible repository. Explicit base requires a valid local commit
+  ref and never checks out a branch. A no-op preserves configuration revision/date.
+- `project remove PROJECT_ID --expected-revision REV`: remove only that registration.
+  Files, Git objects, refs, index, local changes and other worktrees are preserved.
+  Get returns PROJECT_REMOVED with a dated tombstone. Reimport creates a new UUID;
+  an old removal retry cannot affect it. No force/cleanup flags exist.
+- `project operation REQUEST_ID`: query the original pending/terminal outcome,
+  including offline and after subsequent mutations.
 
-## CLI Commands
+Every command accepts `--state-dir ABSOLUTE_PATH --json`. Mutations accept
+`--request-id UUID` and `--timeout-ms` up to 30,000; reads up to 2,000. Omission of a
+request ID generates one. After timeout, inspect/retry the same immutable intent/ID;
+do not generate another ID to guess whether a mutation committed. A disconnected
+client never cancels admitted work. No project mutation automatically starts a daemon.
 
-### Project setup and status
+Exit codes: 0 successful read/confirmed mutation; 2 invalid input/revision/idempotency
+conflict; 3 BUSY; 4 blocked/interrupted/unavailable project; 5 timeout/unknown outcome
+or unavailable daemon; 6 denied access; 7 persistence/integrity/runtime failure.
+Errors include safe cause, retryable and nextAction. BUSY accepted=false has no ledger
+promise. UNKNOWN_OUTCOME retains the original request ID. A stale configuration
+revision requires rereading and an explicit new intent, not an automatic retry.
 
-```bash
-maestro init [--force] [--provider claude|copilot|codex]
-maestro status
-maestro reset [--hard]
+Schema 4 upgrades known schema 2→3→4 only on explicit
+start with exclusive leases; storeId, journal and outcome history remain intact.
+Read-only schema 2 registry requests return REGISTRY_NOT_INITIALIZED without upgrade.
+Unknown versions/corrupt or uncertain storage fail explicitly; there is no migration
+from the earlier Maestro product and no automatic rebind/recreation of a checkout.
+
+## Project Discovery
+
+Il flusso locale comprende anteprima delle fonti, consenso all’invio, analisi,
+intervista con risposte persistenti, revisioni, correzioni e approvazione precisa.
+Documenti e output risiedono nell’archivio Maestro; il repository rimane in sola
+lettura. Una nuova Discovery richiede una nuova anteprima e conferma dalla UI.
+Lo storico resta associato al progetto originale anche dopo remove/reimport.
+
+Codex CLI0.167.0 nativa è il provider previsto, con login ufficiale nel profilo
+Keychain dedicato. Modello scelto: `gpt-6.1-sol`. **G1/SC-001 reale BLOCKED**:
+il precheck autorizzato del2026-11-18 restituisce `PROVIDER_UNSAFE` prima
+dell’inferenza. Le prove locali G0/G2/G3/G4 non chiudono questa qualifica.
+Vedi [procedura Discovery](specs/004-project-discovery/quickstart.md),
+[stato reale redatto](specs/004-project-discovery/reports/real-provider-status.json)
+e [readiness](specs/004-project-discovery/reports/release-readiness.md).
+
+```sh
+node dist/cli/main.js discovery --help
 ```
 
-- `init`: bootstraps Maestro in current directory
-- `status`: shows backlog summary, per-agent breakdown, total LLM cost
-- `reset`: removes runtime state; `--hard` also removes docs and agents artifacts
+Letture: `provider get`, `list PROJECT`, `show DISCOVERY`, `questions DISCOVERY`,
+`output RUN`, `revisions DISCOVERY`, `document REVISION`, `operation REQUEST`.
+Le pagine sono limitate; `document` restituisce chunk≤8KiB con cursore, oppure
+metadata con `--metadata`. Queste letture funzionano anche offline.
+`eligibility PROJECT [--check-id UUID]` restituisce prima CHECKING/false e poi
+la stessa fotografia verificata, valida30s; offline/restart non riusano true.
 
-### Backlog and execution
+Le mutazioni `configure`, `start`, `answer`, `correct`, `approve` e `cancel`
+richiedono un grant esatto ottenuto da `prepare --intent-file FILE`; ogni richiesta
+ha un UUID durevole. Scope, risposte e correzioni entrano da file/pipe bounded,
+mai da argomenti testuali liberi. In caso di esito incerto consulta l’operazione
+originale. Cancel dimostra la terminazione locale posseduta; la cancellazione
+remota non è verificata. Nessuna approvazione avvia implementazione di codice.
 
-```bash
-maestro backlog [taskId]
-maestro start
-maestro run [taskId]
-maestro next-task
-maestro task-context <taskId>
-maestro mark-done <taskId>
-```
+## Observations and events
 
-- `backlog`: list all tasks or show details for one task
-- `start`: run next ready task
-- `run`: legacy one-shot execution entrypoint
-- `next-task`: pick next runnable task and print execution context
-- `task-context`: print full context for a specific runnable task
-- `mark-done`: verify expected artifacts, mark task complete, promote dependents
+A repository shared by main/linked checkouts has one active registration; the first
+confirmed reference remains fixed. File status refers to that checkout's direct
+entries, excluding submodule contents. Nullable facts mean unverified, never clean.
+Empty/unborn/detached repositories can be registered with no configured base; a
+first external commit does not select one. Stored observations are LAST_KNOWN even
+when the registry envelope is LIVE. Changing configuration keeps older evidence dated.
 
-### Agent interaction and observability
+`daemon events --after CURSOR` replays the same Foundation/registry journal;
+`--follow` observes replay/live events. A cursor advances only after successful
+application; a gap requires reread-status and an explicit resync. Client failure
+never silently reconnects or repeats a mutation. Names, paths, contents, environment,
+credentials and raw stderr do not enter diagnostic payloads. Limits remain 16 KiB/event,
+64 KiB/outbox, 60 KiB/page and 1 MiB/client. Pressure diagnostics expose bounded queue,
+probe and failure counts. At most four probes and 32 admitted pending operations run.
 
-```bash
-maestro agents
-maestro agent <name>
-maestro chat <agent>
-maestro stop <agent>
-maestro docs
-maestro logs <taskId>
-maestro cost [--since <ISO_DATE>]
-```
+## Verification and scope
 
-- `agents`: list agent profiles and metadata
-- `agent`: print one agent definition file
-- `chat`: open an interactive session with an agent
-- `stop`: stop an agent session and mark in-progress task(s) as failed
-- `docs`: list generated docs files
-- `logs`: show transcript for a task session
-- `cost`: show per-task/model token and USD usage
-
-## Project Layout (after init)
-
-```text
-<project>/
-├── docs/
-├── .maestro/
-│   ├── config.yaml
-│   ├── state.db
-│   ├── backlog.json
-│   ├── events.log
-│   └── sessions/
-├── .agents/
-│   ├── _base/
-│   └── _archive/
-├── .claude/agents/           # provider=claude
-├── .github/agents/           # provider=copilot
-└── .codex/agents/            # provider=codex
-```
-
-Notes:
-
-- Runtime data lives in `.maestro/` and is intended to be gitignored
-- Agent templates for staffing live in `.agents/_base/`
-- Active provider determines where runtime agent persona files are created
-
-## Provider Modes
-
-Configured in `.maestro/config.yaml` as `provider_mode`.
-
-Resolution order used by Maestro:
-
-1. Agent frontmatter
-2. Project config
-3. Global config (`~/.maestro/config.yaml`)
-4. Hardcoded defaults
-
-## Development
-
-Useful commands in this repository:
-
-```bash
-npm run dev
-npm run build
+```sh
 npm run typecheck
+npm run lint
 npm test
-npm run build:vsix
+npm run test:contract
+npm run test:integration
+npm run test:acceptance
+npm run bench:foundation
+
+# Desktop: suite separate; il core si verifica senza Electron
+npm run typecheck:desktop
+npm run build:desktop
+npm run test:desktop:unit
+npm run test:desktop:integration
+npm run test:desktop:e2e
 ```
 
-## Troubleshooting
+Ordinary tests exclude acceptance. Acceptance includes a real ten-minute idle test;
+benchmark is a separate ten-minute observation. Keep the host awake and run load,
+idle and benchmark campaigns separately. The 500 ms/2 s read, 5 s/30 s inspection,
+150 MiB/1% idle targets are not blanket guarantees. Current raw measurements and
+errors are in [performance](specs/002-project-registry/reports/performance.md).
 
-- Not in a Maestro project:
-  - Run `maestro init` in your project root first
-- No ready tasks:
-  - Check `maestro backlog` for blocked/pending prerequisites
-- Provider CLI not found:
-  - Install and authenticate the corresponding CLI (`claude`, `copilot`, or `codex`)
-- Native module issues (`better-sqlite3`):
-  - Rebuild with your current Node version (`npm rebuild better-sqlite3`)
-
-## License
-
-MIT
+All four user stories and E1/E2/E3 have separate evidence in
+[002 reports](specs/002-project-registry/reports/), with bounded-pressure and final
+acceptance status recorded separately. Discovery and Agent Runtime are feature004, with local fixture evidence and
+real-provider qualification still blocked. Git/worktree management and dependency
+execution remain future scope. The first Electron client is feature003, with its own evidence
+and pending human review. No registration declares a project ready or approves future work.
+See [quickstart](specs/002-project-registry/quickstart.md),
+[contracts](specs/002-project-registry/contracts/) and
+[real local-access runner](tests/fixtures/multi-user-runner.md).

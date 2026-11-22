@@ -1,0 +1,10 @@
+(version 1)
+(deny default)
+(allow process-exec (literal (param "EXECUTABLE")))
+(allow file-read*)
+(allow sysctl-read)
+(allow file-write-data (literal "/dev/null"))
+
+; Discovery uses the same native write/fork/network confinement. The trusted
+; readonly entrypoint accepts only closed reads; object paths come from UUID
+; records and owner/no-follow/hash validation, never from a client path.

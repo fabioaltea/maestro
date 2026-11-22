@@ -1,0 +1,13 @@
+✔ configuration-only update {"name":"Renamed"} never calls Git or filesystem (167.0585ms)
+✔ configuration-only update {"baseBranch":null} never calls Git or filesystem (143.381209ms)
+✔ configuration-only update {"name":"Renamed","baseBranch":null} never calls Git or filesystem (132.951875ms)
+✔ rename changes only confirmed config; no-op preserves revisions and dates; historical observations are not invented (217.409292ms)
+✔ stale revisions and invalid explicit base reject the whole patch with no partial rename or success event (210.732375ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 541.838459

@@ -1,0 +1,75 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { makeDeadline, systemClock } from '../../src/ports/clock.js';
+import { readRepositoryCode } from '../../src/platform/macos/git/repository-code.js';
+import { createGitRunner } from '../../src/platform/macos/git/runner.js';
+import { repositoryReadFixture } from './helpers/repository-read-fixture.js';
+
+test('Code reads a pinned main, never the dirty checkout', async t => {
+  const runner = createGitRunner();
+  if ((await runner.capabilities()).status !== 'AVAILABLE') return t.skip('Qualified Git is not available');
+  const fixture = repositoryReadFixture();
+  t.after(fixture.dispose);
+  const options = { cwd: fixture.root, deadline: makeDeadline(systemClock, 5000) };
+  const opened = await readRepositoryCode(runner, options, { kind: 'open' });
+  assert.equal(opened.oid, fixture.main);
+  fixture.git('update-ref', 'refs/heads/main', fixture.base);
+  const before = fixture.snapshot();
+  const blob = await readRepositoryCode(runner, options, { kind: 'blob', oid: fixture.main, path: 'code.ts', offset: 0 });
+  assert.ok('chunk' in blob && typeof blob.chunk === 'string');
+  assert.equal(Buffer.from(blob.chunk, 'base64').toString(), 'export const branch = "main";\n');
+  const old = await readRepositoryCode(runner, options, { kind: 'tree', oid: fixture.main, path: '', offset: 0 });
+  assert.ok('entries' in old && old.entries?.some(entry => entry.name === 'topic.txt'));
+  const fresh = await readRepositoryCode(runner, options, { kind: 'open' });
+  assert.equal(fresh.oid, fixture.base);
+  assert.ok('entries' in fresh && !fresh.entries?.some(entry => entry.name === 'topic.txt'));
+  assert.deepEqual(fixture.snapshot(), before);
+});
+
+test('tree pages and size/type checks stay inside the selected commit', async t => {
+  const runner = createGitRunner();
+  if ((await runner.capabilities()).status !== 'AVAILABLE') return t.skip('Qualified Git is not available');
+  const fixture = repositoryReadFixture();
+  t.after(fixture.dispose);
+  mkdirSync(join(fixture.root, 'src'));
+  for (let i = 0; i < 105; i++) writeFileSync(join(fixture.root, 'src', `${i}.txt`), 'fixture');
+  writeFileSync(join(fixture.root, 'src', 'a*.ts'), 'literal path');
+  writeFileSync(join(fixture.root, 'binary'), Buffer.from([0, 255]));
+  writeFileSync(join(fixture.root, 'exact'), Buffer.alloc(1024 * 1024, 65));
+  writeFileSync(join(fixture.root, 'oversize'), Buffer.alloc(1024 * 1024 + 1, 65));
+  symlinkSync('/var/empty', join(fixture.root, 'link'));
+  fixture.git('add', '--', 'src', 'binary', 'exact', 'oversize', 'link');
+  fixture.git('update-index', '--add', '--cacheinfo', `160000,${fixture.main},module`);
+  fixture.git('commit', '-m', 'Reader edge cases');
+  const oid = fixture.git('rev-parse', 'HEAD');
+  const run = (input: Parameters<typeof readRepositoryCode>[2]) =>
+    readRepositoryCode(runner, { cwd: fixture.root, deadline: makeDeadline(systemClock, 5000) }, input);
+  const tree = (offset: number) => run({ kind: 'tree', oid, path: 'src', offset });
+  const blob = (path: string, offset = 0) => run({ kind: 'blob', oid, path, offset });
+  const before = fixture.snapshot();
+  const first = await tree(0);
+  const second = await tree(100);
+  assert.ok('entries' in first && first.entries?.length === 100 && first.nextOffset === 100);
+  assert.ok('entries' in second && second.entries?.length === 6 && second.nextOffset === null);
+  assert.equal(new Set([...first.entries, ...second.entries].map(entry => entry.path)).size, 106);
+  assert.equal((await blob('link')).status, 'SYMLINK');
+  assert.equal((await blob('module')).status, 'GITLINK');
+  assert.equal((await blob('link/content')).status, 'NOT_FOUND');
+  assert.equal((await blob('binary')).status, 'NOT_TEXT');
+  assert.equal((await blob('oversize')).status, 'TOO_LARGE');
+  const literal = await blob('src/a*.ts');
+  assert.ok('chunk' in literal && typeof literal.chunk === 'string');
+  assert.equal(Buffer.from(literal.chunk, 'base64').toString(), 'literal path');
+  const exact = await blob('exact');
+  assert.ok('size' in exact && exact.size === 1024 * 1024 && exact.nextOffset === 32768);
+  assert.equal((await blob('exact', 31 * 32768)).nextOffset, null);
+  const aborted = new AbortController();
+  aborted.abort();
+  await assert.rejects(readRepositoryCode(runner, { cwd: fixture.root, signal: aborted.signal, deadline: makeDeadline(systemClock, 5000) },
+    { kind: 'open' }), { message: 'INTERRUPTED' });
+  assert.deepEqual(fixture.snapshot(), before);
+  fixture.git('update-ref', '-d', 'refs/heads/main');
+  assert.equal((await run({ kind: 'open' })).status, 'MAIN_MISSING');
+});

@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { reviewFixture, reviewDraft } from '../fixtures/discovery-review.js';
+import { value } from '../fixtures/discovery-artifacts.js';
+import { createDiscoveryReader } from '../../src/core/discovery/read.js';
+import { sealDiscoveryContext } from '../../src/core/discovery/context.js';
+import { makeDeadline, systemClock } from '../../src/ports/clock.js';
+import type { StoragePort } from '../../src/ports/storage.js';
+test('explicit new Discovery preserves original identity/history and a reimport/archive cannot inherit approvals', async t => {
+  const f = await reviewFixture(t); await f.service.publishDocument(await f.exit(), reviewDraft());
+  const first = f.discovery(), r = value(f.store.readDiscoveryMetadata({ kind: 'revision', id: first.latestDocumentRevisionId! })).data!;
+  value(await f.service.approve(f.peer, await f.command('approve', { revisionId: r.revisionId, bundleDigest: r.bundleDigest, acceptedUnknownIds: reviewDraft().sections.map(s => `${s.id}:0`) }))); await f.service.idle();
+  const original = value(f.store.readDiscoveryMetadata({ kind: 'approval', id: r.revisionId })).data;
+  const snapshot = value(await sealDiscoveryContext({ storeId: f.storeId, projectId: f.projectId, configRevision: '1', checkoutPath: f.repo, selectors: ['tracked.txt'], excludedRoots: [f.directory, f.paths.runtimeDirectory, f.configuration.authProfileRef] }, { context: f.context, artifacts: f.artifacts, saveSnapshot: async value => f.store.commitDiscoveryMetadata({ kind: 'snapshot', value }) }, { deadline: makeDeadline(systemClock, 30000) }));
+  const grant = value(await f.service.prepare(f.peer, f.startIntent({ snapshotId: snapshot.snapshotId, contextDigest: snapshot.contextDigest, payload: { snapshotId: snapshot.snapshotId } })));
+  value(await f.service.start(f.peer, f.startInput(grant))); await f.service.idle();
+  const next = f.launches.at(-1)!; assert.notEqual(next.discoveryId, first.discoveryId); assert.notEqual(next.runId, first.currentRunId);
+  assert.notEqual(value(f.store.readDiscoveryMetadata({ kind: 'discovery', id: next.discoveryId })).data!.snapshotId, first.snapshotId);
+  f.database.prepare('UPDATE projects SET removed_at=? WHERE project_id=?').run(new Date().toISOString(), f.projectId);
+  const reimport = randomUUID(); f.database.prepare("INSERT INTO projects(project_id,display_name,repository_key,repository_identity,reference_checkout,base_branch,config_revision,created_at,updated_at) SELECT ?,display_name,repository_key,repository_identity,reference_checkout,base_branch,1,created_at,updated_at FROM projects WHERE project_id=?").run(reimport, f.projectId);
+  const check = await f.service.eligibility(f.peer, reimport); await f.service.idle(); assert.equal((await f.service.eligibility(f.peer, reimport, check.checkId!)).eligible, false);
+  assert.equal(value(f.store.readDiscoveryMetadata({ kind: 'discoveries', id: reimport })).data.items.length, 0);
+  assert.deepEqual(value(f.store.readDiscoveryMetadata({ kind: 'approval', id: r.revisionId })).data, original);
+  const reader = createDiscoveryReader({ storage: f.store as unknown as StoragePort, storeId: f.storeId, offline: true });
+  const page = await reader('discovery.revisions.list', { discoveryId: first.discoveryId }); assert.equal((page.items as unknown[]).length, 1);
+  const other = await reviewFixture(t); const foreignReader = createDiscoveryReader({ storage: other.store as unknown as StoragePort, storeId: other.storeId, offline: true }); await assert.rejects(foreignReader('discovery.document.get', { revisionId: r.revisionId }));
+});

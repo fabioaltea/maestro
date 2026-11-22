@@ -1,0 +1,13 @@
+✔ project names trim outside whitespace and count Unicode scalar values rather than UTF-16 units (2.440875ms)
+✔ canonical intent ignores object insertion order but retains store, action and explicit original fields (1.040166ms)
+✔ intent rejects unsupported, ambiguous, oversized and malformed input before hashing (0.303666ms)
+✔ configuration and observation revisions increment independently with exact integer bounds (0.14275ms)
+✔ only IN_PROGRESS is pending for registry; BLOCKED and every terminal outcome forbid replay transitions (0.145333ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 51.383875

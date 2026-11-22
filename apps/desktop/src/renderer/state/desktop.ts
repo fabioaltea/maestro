@@ -1,0 +1,47 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { CODEX_ACCOUNT_METHODS } from '../../shared/bridge-contract.ts';
+import { useCodexAccount } from './codex.ts';
+import type { ArchiveView, BridgeMethod, Params, PublicResult } from '../../shared/bridge-contract.ts';
+import { record } from '../../shared/validation.ts';
+export function useDesktop() {
+  const [context, setContext] = useState<ArchiveView | null>(null);
+  const current = useRef<ArchiveView | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [runtimeReady, setRuntimeReady] = useState(false);
+  const invoke = useCallback(async (method: BridgeMethod, params: Params = {}): Promise<unknown> => {
+    const epoch = current.current?.selectionEpoch ?? 0;
+    const transitions: readonly BridgeMethod[] = ['chooseArchive', 'selectReceiptArchive', 'context', 'openRepository', 'createRepository', 'selectProject', 'closeProject', 'recoverArchive'];
+    try {
+      const response = await window.maestro[method]({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch, ...params });
+      if (!(CODEX_ACCOUNT_METHODS as readonly string[]).includes(method) && !transitions.includes(method) && ((current.current?.selectionEpoch ?? 0) !== epoch || response.selectionEpoch !== epoch)) {
+        if ((current.current?.selectionEpoch ?? 0) === epoch && response.selectionEpoch !== epoch) {
+          const latest = await window.maestro.context({ bridgeVersion: 1, callId: crypto.randomUUID(), selectionEpoch: epoch });
+          if (!latest.error && (current.current?.selectionEpoch ?? 0) === epoch) {
+            const selected = record(latest.result).context as ArchiveView | null;
+            current.current = selected; setContext(selected); setNotice('L’identità dell’archivio è cambiata. Riesamina lo stato aggiornato.');
+          }
+        }
+        return null;
+      }
+      if (response.error?.code === 'CLIENT_READ_CANCELLED') return null;
+      if (response.error) { setNotice(response.error.message); return null; }
+      if (transitions.includes(method) && (current.current?.selectionEpoch ?? 0) === epoch) {
+        const data = record(response.result), selected = data.context as ArchiveView | null;
+        current.current = selected; setContext(selected);
+        if (method === 'context') { setRuntimeReady(data.runtimeReady === true); if (data.error) setNotice(String(record(data.error).message)); }
+      }
+      return response.result;
+    } catch { setNotice('Client locale non disponibile. Consulta lo stato prima di riprovare.'); return null; }
+  }, []);
+  useEffect(() => { void invoke('context'); }, [invoke]);
+  const core = useCallback(async (method: BridgeMethod, params: Params = {}): Promise<PublicResult | null> => {
+    const value = await invoke(method, params);
+    if (!value) return null;
+    const result = value as PublicResult;
+    if (result.error) setNotice(`${result.error.message} ${result.error.nextAction}`);
+    return result;
+  }, [invoke]);
+  const codex = useCodexAccount(invoke, runtimeReady);
+  return { context, runtimeReady, notice, setNotice, invoke, core, codex };
+}
+export type Desktop = ReturnType<typeof useDesktop>;

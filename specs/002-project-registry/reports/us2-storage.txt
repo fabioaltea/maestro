@@ -1,0 +1,11 @@
+✔ observation CAS preserves config, nullable facts, base states and reference-only limitations (193.474167ms)
+✔ a superseded verify cannot overwrite config or observation and cannot emit a success event (65.8045ms)
+✔ page validation binds store/revision, never exposes private anchors and verify invalidates old cursors (147.675209ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 430.507791

@@ -1,0 +1,57 @@
+{
+  "date": "2026-11-15",
+  "environment": {
+    "os": "macOS26.3.1",
+    "arch": "arm64",
+    "filesystem": "APFS",
+    "node": "26.13.0",
+    "electron": "45.3.0",
+    "react": "19.3.1"
+  },
+  "checks": {
+    "coreBuild": "PASS",
+    "coreTypecheck": "PASS",
+    "desktopBuild": "PASS",
+    "desktopTypecheck": "PASS",
+    "architectureLint": "PASS"
+  },
+  "suites": {
+    "core": {
+      "tests": 368,
+      "pass": 368,
+      "fail": 0,
+      "skipped": 0,
+      "durationMs": 137208.114416
+    },
+    "desktopUnitContract": {
+      "tests": 26,
+      "pass": 26,
+      "fail": 0,
+      "skipped": 0,
+      "durationMs": 4005.703542
+    },
+    "desktopIntegration": {
+      "tests": 22,
+      "pass": 22,
+      "fail": 0,
+      "skipped": 0,
+      "durationMs": 29069.902375
+    },
+    "electronFunctional": {
+      "pass": 22,
+      "fail": 0,
+      "skipped": 0,
+      "command": "npm run test:desktop:e2e -- --grep-invert 'SC001/002'",
+      "note": "Performance campaign separately qualified; not repeated without reason"
+    },
+    "electronViewPerformance": {
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0,
+      "samples": "view-performance-samples.json"
+    }
+  },
+  "manualReview": "NOT_RUN",
+  "volumeDurationEventBenchmarks": "DEFERRED_BY_USER",
+  "externalReleaseGates": "BLOCKED_UNCHANGED"
+}

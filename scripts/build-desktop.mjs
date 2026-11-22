@@ -1,0 +1,10 @@
+import { build } from 'esbuild';
+import { mkdir, copyFile } from 'node:fs/promises';
+const output = 'dist-desktop';
+await mkdir(output, { recursive: true });
+await build({ entryPoints: ['apps/desktop/src/main/index.ts'], bundle: true, platform: 'node', target: 'node24', format: 'esm', external: ['electron'], outfile: `${output}/main/index.js`, sourcemap: true });
+await build({ entryPoints: ['apps/desktop/src/preload/index.cts'], bundle: true, platform: 'node', target: 'node24', format: 'cjs', external: ['electron'], outfile: `${output}/preload/index.cjs`, sourcemap: true });
+await build({ entryPoints: ['apps/desktop/src/renderer/index.tsx'], bundle: true, platform: 'browser', target: 'chrome156', format: 'esm', outfile: `${output}/renderer/index.js`, jsx: 'automatic', sourcemap: true, define: { 'process.env.NODE_ENV': '"production"' } });
+await copyFile('apps/desktop/src/renderer/index.html', `${output}/renderer/index.html`);
+await copyFile('apps/desktop/package.json', `${output}/package.json`);
+console.log('Desktop bundles built independently of core');

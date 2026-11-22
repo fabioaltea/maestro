@@ -1,0 +1,20 @@
+✔ registry ledger coexists with lifecycle pending and resolves cross-scope requestId collisions (108.955292ms)
+✔ original normalized intent and terminal snapshot survive restart; changed payload never changes them (99.908833ms)
+✔ BLOCKED is terminal only for registry and retained beyond event journal retention (92.838875ms)
+✔ ledger projectId refers to retained tombstones and never cascades away with removal (51.479208ms)
+✔ readonly registry query on known schema 2 reports uninitialized without upgrading or writing (24.269583ms)
+✔ registry reads remain available during writer BUSY retry and after a classified mutation failure (216.741958ms)
+✔ daemon startup interrupts an abandoned durable registry intent before RUNNING without a Git probe (1899.92725ms)
+✔ registry stop shares the existing drain budget and never turns uncertain ownership into absence (21.592625ms)
+✔ registry client sends one immutable intent, polls with the same requestId and preserves its terminal result (54.89275ms)
+✔ client deadline preserves request identity and never repeats a mutation when its observation hangs (27.51725ms)
+✔ queue rejection is not polled and explicit operation query does not wait for terminal completion (0.394792ms)
+✔ registry client refuses missing capability support, malformed responses and invalid deadlines (0.501208ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1986.405833

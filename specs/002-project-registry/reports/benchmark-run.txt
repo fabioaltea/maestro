@@ -1,0 +1,21 @@
+
+> @maestro/core@0.1.0 bench:foundation
+> npm run build && npm run build:test && node dist-tests/tests/acceptance/benchmark-foundation.js
+
+
+> @maestro/core@0.1.0 build
+> tsc -p tsconfig.json && node scripts/build-assets.mjs dist
+
+
+> @maestro/core@0.1.0 build:test
+> tsc -p tsconfig.test.json && node scripts/build-assets.mjs dist-tests
+
+✔ SC-008/SC-009: same detached instance for ten client-free minutes, RSS <=150 MiB and CPU <=1% of one core (600999.66075ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 601052.820208

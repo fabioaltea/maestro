@@ -1,0 +1,149 @@
+{
+  "measuredAt": "2026-11-11T15:54:44.893Z",
+  "projectId": "77587f19-92e4-449c-a106-23453394c382",
+  "originalRequestId": "3d902e83-6be2-443e-9be2-64cdb3867d63",
+  "originalResult": {
+    "requestId": "3d902e83-6be2-443e-9be2-64cdb3867d63",
+    "action": "UPDATE",
+    "projectId": "77587f19-92e4-449c-a106-23453394c382",
+    "outcome": "SUCCEEDED",
+    "effect": "UPDATED",
+    "configRevision": "2",
+    "observationRevision": "1",
+    "completedAt": "2026-11-11T15:54:43.458Z",
+    "error": null
+  },
+  "currentConfigRevision": "4",
+  "twoClientResults": [
+    {
+      "exitCode": 0,
+      "result": {
+        "protocolVersion": 1,
+        "requestId": "99cdc18b-981d-4901-a323-1551c467bed7",
+        "storeId": "3f56db3a-f0a2-4a6a-95fe-699e5483b5b4",
+        "instanceId": "3a87be70-b687-4a74-9e38-f81cb9044e9b",
+        "result": "OK",
+        "outcome": "SUCCEEDED",
+        "freshness": "LIVE",
+        "liveness": "LIVE_VERIFIED",
+        "data": {
+          "storeId": "3f56db3a-f0a2-4a6a-95fe-699e5483b5b4",
+          "operation": {
+            "requestId": "99cdc18b-981d-4901-a323-1551c467bed7",
+            "action": "UPDATE",
+            "projectId": "77587f19-92e4-449c-a106-23453394c382",
+            "phase": "FINALIZED",
+            "outcome": "SUCCEEDED",
+            "acceptedAt": "2026-11-11T15:54:43.796Z",
+            "deadlineAt": "2026-11-11T15:55:11.796Z",
+            "completedAt": "2026-11-11T15:54:43.804Z",
+            "result": {
+              "requestId": "99cdc18b-981d-4901-a323-1551c467bed7",
+              "action": "UPDATE",
+              "projectId": "77587f19-92e4-449c-a106-23453394c382",
+              "outcome": "SUCCEEDED",
+              "effect": "UPDATED",
+              "configRevision": "3",
+              "observationRevision": "1",
+              "completedAt": "2026-11-11T15:54:43.804Z",
+              "error": null
+            }
+          },
+          "observabilityDegraded": false,
+          "requestId": "99cdc18b-981d-4901-a323-1551c467bed7",
+          "action": "UPDATE",
+          "projectId": "77587f19-92e4-449c-a106-23453394c382",
+          "outcome": "SUCCEEDED",
+          "effect": "UPDATED",
+          "configRevision": "3",
+          "observationRevision": "1",
+          "completedAt": "2026-11-11T15:54:43.804Z",
+          "error": null,
+          "accepted": true
+        },
+        "error": null
+      }
+    },
+    {
+      "exitCode": 2,
+      "result": {
+        "protocolVersion": 1,
+        "requestId": "13883830-8c90-4438-980f-66ce6c2aa6c4",
+        "storeId": "3f56db3a-f0a2-4a6a-95fe-699e5483b5b4",
+        "instanceId": "3a87be70-b687-4a74-9e38-f81cb9044e9b",
+        "result": "ERROR",
+        "outcome": "FAILED",
+        "freshness": "LIVE",
+        "liveness": "LIVE_VERIFIED",
+        "data": {
+          "storeId": "3f56db3a-f0a2-4a6a-95fe-699e5483b5b4",
+          "operation": {
+            "requestId": "13883830-8c90-4438-980f-66ce6c2aa6c4",
+            "action": "UPDATE",
+            "projectId": "77587f19-92e4-449c-a106-23453394c382",
+            "phase": "FINALIZED",
+            "outcome": "FAILED",
+            "acceptedAt": "2026-11-11T15:54:43.813Z",
+            "deadlineAt": "2026-11-11T15:55:11.813Z",
+            "completedAt": "2026-11-11T15:54:43.821Z",
+            "result": {
+              "action": "UPDATE",
+              "requestId": "13883830-8c90-4438-980f-66ce6c2aa6c4",
+              "projectId": "77587f19-92e4-449c-a106-23453394c382",
+              "outcome": "FAILED",
+              "effect": "NONE",
+              "configRevision": null,
+              "observationRevision": null,
+              "completedAt": "2026-11-11T15:54:43.821Z",
+              "error": {
+                "code": "REVISION_CONFLICT",
+                "category": "CONCURRENCY",
+                "message": "Revisione configurazione non più corrente.",
+                "nextAction": "Rileggere il progetto prima di una nuova richiesta.",
+                "retryable": false,
+                "cause": null,
+                "persisted": true,
+                "operationId": "13883830-8c90-4438-980f-66ce6c2aa6c4"
+              }
+            }
+          },
+          "observabilityDegraded": false,
+          "action": "UPDATE",
+          "requestId": "13883830-8c90-4438-980f-66ce6c2aa6c4",
+          "projectId": "77587f19-92e4-449c-a106-23453394c382",
+          "outcome": "FAILED",
+          "effect": "NONE",
+          "configRevision": null,
+          "observationRevision": null,
+          "completedAt": "2026-11-11T15:54:43.821Z",
+          "error": {
+            "code": "REVISION_CONFLICT",
+            "category": "CONCURRENCY",
+            "message": "Revisione configurazione non più corrente.",
+            "nextAction": "Rileggere il progetto prima di una nuova richiesta.",
+            "retryable": false,
+            "cause": null,
+            "persisted": true,
+            "operationId": "13883830-8c90-4438-980f-66ce6c2aa6c4"
+          },
+          "accepted": true
+        },
+        "error": {
+          "code": "REVISION_CONFLICT",
+          "category": "CONCURRENCY",
+          "message": "Revisione configurazione non più corrente.",
+          "nextAction": "Rileggere il progetto prima di una nuova richiesta.",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "13883830-8c90-4438-980f-66ce6c2aa6c4"
+        }
+      }
+    }
+  ],
+  "unavailableReferenceUpdate": true,
+  "restartPreserved": true,
+  "originalRetryPreserved": true,
+  "repositoryUnchanged": true,
+  "offlineWrites": 0
+}

@@ -1,0 +1,10 @@
+✔ 20 equivalent concurrent imports and 100 identical retries preserve one project and original immutable results (7117.541667ms)
+✔ closing the mutation transport after durable acceptance does not cancel the registration (2127.8875ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9344.071291

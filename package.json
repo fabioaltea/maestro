@@ -1,45 +1,56 @@
 {
-  "name": "maestro-orchestrator",
+  "name": "@maestro/core",
   "version": "0.1.0",
-  "description": "Local CLI orchestrator for AI agents that build software collaboratively",
-  "license": "MIT",
+  "private": true,
   "type": "module",
+  "description": "Local headless development orchestration foundation",
   "engines": {
-    "node": ">=22"
+    "node": "26.13.0"
   },
+  "packageManager": "npm@11.20.0",
   "bin": {
-    "maestro": "./bin/maestro"
-  },
-  "files": [
-    "bin",
-    "dist",
-    "templates",
-    "scripts/postinstall.js",
-    "vscode-extension/dist/*.vsix",
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "build:vsix": "cd vscode-extension && npm install --no-audit --no-fund && npm run compile && npx --yes @vscode/vsce package --out dist/ --skip-license",
-    "dev": "tsx src/cli/index.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "prepublishOnly": "npm run build && npm run build:vsix",
-    "postinstall": "node scripts/postinstall.js || true"
+    "maestro": "dist/cli/main.js"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.92.0",
-    "commander": "^12.1.0",
-    "gray-matter": "^4.0.3",
-    "yaml": "^2.6.1",
-    "zod": "^3.23.8"
+    "@lezer/css": "^1.0.0",
+    "@lezer/highlight": "^1.0.0",
+    "@lezer/html": "^1.0.0",
+    "@lezer/javascript": "^1.0.0",
+    "@lezer/json": "^1.0.0",
+    "@lezer/markdown": "^1.0.0",
+    "better-sqlite3": "13.0.3"
   },
   "devDependencies": {
-    "@types/node": "^22.9.0",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "vitest": "^2.1.8"
+    "@playwright/test": "1.65.0",
+    "@radix-ui/react-icons": "1.3.2",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "electron": "45.3.0",
+    "esbuild": "0.28.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1",
+    "typescript": "6.0.3"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build-assets.mjs dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "build:test": "tsc -p tsconfig.test.json && node scripts/build-assets.mjs dist-tests",
+    "test": "npm run build && npm run build:test && node scripts/run-tests.mjs",
+    "test:contract": "npm run build && npm run build:test && node scripts/run-tests.mjs contract",
+    "test:integration": "npm run build && npm run build:test && node scripts/run-tests.mjs integration",
+    "test:discovery:boundary": "npm run build && npm run build:test && MAESTRO_DISCOVERY_G0=1 node --test dist-tests/tests/integration/discovery-provider-boundary.test.js",
+    "test:acceptance": "npm run build && npm run build:test && node scripts/run-tests.mjs acceptance",
+    "bench:foundation": "npm run build && npm run build:test && node dist-tests/tests/acceptance/benchmark-foundation.js",
+    "lint": "node scripts/check-architecture.mjs",
+    "build:desktop": "node scripts/build-desktop.mjs",
+    "typecheck:desktop": "tsc -p apps/desktop/tsconfig.main.json --noEmit && tsc -p apps/desktop/tsconfig.renderer.json --noEmit && tsc -p apps/desktop/tsconfig.test.json --noEmit",
+    "test:desktop:unit": "node --test apps/desktop/tests/unit/*.test.ts apps/desktop/tests/contract/*.test.ts",
+    "test:desktop:integration": "npm run build && node --test --test-concurrency=1 apps/desktop/tests/integration/*.test.ts",
+    "test:desktop:e2e": "npm run build && npm run build:desktop && playwright test -c apps/desktop/playwright.config.ts",
+    "desktop": "npm run build && npm run build:desktop && node scripts/run-desktop.mjs"
   }
 }

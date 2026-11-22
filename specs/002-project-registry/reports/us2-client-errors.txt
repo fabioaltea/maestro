@@ -1,0 +1,16 @@
+✔ live registry pages are bounded and store/revision bound; observations remain LAST_KNOWN (7124.616666ms)
+✔ verify persists OBSERVED with stable configuration; CLI list and offline operation use the same archive (3946.0755ms)
+✔ verify of an unknown project is a durable PROJECT_NOT_FOUND outcome rather than invalid input (1156.482167ms)
+✔ registry client sends one immutable intent, polls with the same requestId and preserves its terminal result (55.268583ms)
+✔ client deadline preserves request identity and never repeats a mutation when its observation hangs (26.866ms)
+✔ queue rejection is not polled and explicit operation query does not wait for terminal completion (0.503542ms)
+✔ registry client refuses missing capability support, malformed responses and invalid deadlines (0.787458ms)
+✔ failure to read an admitted result preserves UNKNOWN_OUTCOME rather than reporting a rejected mutation (52.9445ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12546.575791

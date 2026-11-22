@@ -1,0 +1,28 @@
+✔ registry ledger coexists with lifecycle pending and resolves cross-scope requestId collisions (176.311375ms)
+✔ original normalized intent and terminal snapshot survive restart; changed payload never changes them (247.186916ms)
+✔ BLOCKED is terminal only for registry and retained beyond event journal retention (108.799292ms)
+✔ ledger projectId refers to retained tombstones and never cascades away with removal (67.721792ms)
+✔ readonly registry query on known schema 2 reports uninitialized without upgrading or writing (98.329291ms)
+✔ registry reads remain available during writer BUSY retry and after a classified mutation failure (226.268667ms)
+✔ probe intent records capture their first owned PID once and uncertain exit never permits PID adoption (82.76225ms)
+✔ registration core uses real confined probes and commits through the storage worker without a public UI or Git mutation (1284.107208ms)
+✔ bounded admission persists 32 intents, runs at most four probes and refuses the 33rd before acceptance (14.014333ms)
+✔ concurrent admissions cannot race capacity, duplicate execution or authorization (4.537625ms)
+✔ deadline includes queue time; Git budget is 26s and the server finishes within 28s without starting expired work (1.306959ms)
+✔ accepted work survives the client session; identical retry returns its terminal result without execution (0.755667ms)
+✔ shutdown fences immediately, interrupts queued/owned work and uncertainty stays BLOCKED (1.845334ms)
+✔ startup recovery terminalizes old pending once and never reruns it; identical retry stays INTERRUPTED (2.128917ms)
+✔ shutdown retains storage until resource bookkeeping settles even after physical process exit is verified (0.5135ms)
+✔ core normalizes absolute input paths lexically before idempotency without resolving filesystem aliases (0.414042ms)
+✔ registration computes a valid default name from the checkout root and validates explicit names without mutating evidence (2.690667ms)
+✔ unborn, detached and absent base remain complete registrations without inventing a branch or approval (0.265292ms)
+✔ explicit invalid or changed base is rejected even when a repository would be a duplicate (0.3275ms)
+✔ only the winning registration allocates a project UUID; duplicate import preserves config, reference and observation (320.370958ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1382.026666

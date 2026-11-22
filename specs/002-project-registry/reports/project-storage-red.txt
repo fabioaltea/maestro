@@ -1,0 +1,50 @@
+✖ registry ledger coexists with lifecycle pending and resolves cross-scope requestId collisions (26.886667ms)
+✖ original normalized intent and terminal snapshot survive restart; changed payload never changes them (15.511917ms)
+✖ BLOCKED is terminal only for registry and retained beyond event journal retention (13.769292ms)
+✖ ledger projectId refers to retained tombstones and never cascades away with removal (14.264042ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 127.729167
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/project-storage.test.js:40:1
+✖ registry ledger coexists with lifecycle pending and resolves cross-scope requestId collisions (26.886667ms)
+  Error: INVALID_REQUEST
+      at Worker.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/src/storage/worker.js:114:29)
+      at Worker.emit (node:events:514:20)
+      at MessagePort.<anonymous> (node:internal/worker:354:14)
+      at [nodejs.internal.kHybridDispatch] (node:internal/event_target:872:20)
+      at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)
+
+test at dist-tests/tests/contract/project-storage.test.js:61:1
+✖ original normalized intent and terminal snapshot survive restart; changed payload never changes them (15.511917ms)
+  Error: INVALID_REQUEST
+      at Worker.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/src/storage/worker.js:114:29)
+      at Worker.emit (node:events:514:20)
+      at MessagePort.<anonymous> (node:internal/worker:354:14)
+      at [nodejs.internal.kHybridDispatch] (node:internal/event_target:872:20)
+      at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)
+
+test at dist-tests/tests/contract/project-storage.test.js:87:1
+✖ BLOCKED is terminal only for registry and retained beyond event journal retention (13.769292ms)
+  Error: INVALID_REQUEST
+      at Worker.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/src/storage/worker.js:114:29)
+      at Worker.emit (node:events:514:20)
+      at MessagePort.<anonymous> (node:internal/worker:354:14)
+      at [nodejs.internal.kHybridDispatch] (node:internal/event_target:872:20)
+      at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)
+
+test at dist-tests/tests/contract/project-storage.test.js:109:1
+✖ ledger projectId refers to retained tombstones and never cascades away with removal (14.264042ms)
+  Error: INVALID_REQUEST
+      at Worker.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/src/storage/worker.js:114:29)
+      at Worker.emit (node:events:514:20)
+      at MessagePort.<anonymous> (node:internal/worker:354:14)
+      at [nodejs.internal.kHybridDispatch] (node:internal/event_target:872:20)
+      at MessagePort.<anonymous> (node:internal/per_context/messageport:23:28)

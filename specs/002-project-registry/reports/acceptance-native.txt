@@ -1,0 +1,75 @@
+
+> @maestro/core@0.1.0 test:acceptance
+> npm run build && npm run build:test && node scripts/run-tests.mjs acceptance
+
+
+> @maestro/core@0.1.0 build
+> tsc -p tsconfig.json && node scripts/build-assets.mjs dist
+
+
+> @maestro/core@0.1.0 build:test
+> tsc -p tsconfig.test.json && node scripts/build-assets.mjs dist-tests
+
+✔ SC-003: 100 rounds of ten simultaneous starts and 100 identical restart retries (100163.101625ms)
+✔ SC-003: lost controller preserves the successor and a delayed cancelled candidate is fenced (1721.945333ms)
+✔ SC-001: 30 ordinary control cycles, verified old exit and zero live Foundation residue (28923.391792ms)
+✔ diagnostics: every error code has a safe actionable result; disk faults never invent persistence (1.53175ms)
+✔ diagnostics: core exit before acceptance is explicit, unpersisted and does not initialize state (40.233708ms)
+✔ diagnostics: denied major/internal requests, sentinel redaction and byte-identical offline reads (2083.879209ms)
+✔ US4 load: ten observers, 100 events/s for 60s and 1000 concurrent status reads (61846.342417ms)
+✔ E1 saturation: physical budgets, stable authoritative history, closed readers and bounded redacted pages (36305.784958ms)
+✔ diagnostics expose journal corruption without rewriting it or confirming damaged events (1286.6485ms)
+✔ E3: known history survives partial replay, reconnect and restart; rotation gives an explicit recoverable gap (5832.276833ms)
+✔ E2: a stalled observer is evicted while the healthy observer and concurrent status clients progress (26646.602833ms)
+✔ SC-008/SC-009: same detached instance for ten client-free minutes, RSS <=150 MiB and CPU <=1% of one core (600912.598292ms)
+✔ local access: private archive, credentials and UDS; daemon has no TCP listener (897.093083ms)
+﹣ local access: real second UID cannot read capabilities, connect or inspect the owner archive (0.1525ms) # NOT_RUN: run under a preconfigured second UID with owner archive and endpoint
+✔ V1 SC-002/003: 100 projects, 1000 full paginated reads/10 clients, 30 bounded inspections including inaccessible/slow reference (100222.996333ms)
+✔ US2: independent CLI clients preserve all confirmed projects/config/dates across verify, restart and zero-write offline reads (4610.158791ms)
+✔ 20 equivalent concurrent imports and 100 identical retries preserve one project and original immutable results (3913.940584ms)
+✔ closing the mutation transport after durable acceptance does not cancel the registration (1167.371583ms)
+✔ independent CLI clients register all supported fixture kinds, retain IDs across restart and read offline without writes (12273.284875ms)
+✔ US4 CLI: dirty/absent removal, reimport and old retry preserve all Git data and durable correlated history (5354.543416ms)
+✔ US3 CLI: two clients, explicit local base, unavailable reference rename/clear and durable original retry preserve Git (3293.3955ms)
+▶ SC-004/005: thirty distributed crash scenarios preserve outcomes and never duplicate a successor
+  ✔ 1: control.beforeAccept (951.159ms)
+  ✔ 2: control.accepted (957.745291ms)
+  ✔ 3: control.ticketIssued (989.870584ms)
+  ✔ 4: control.spawned (897.862458ms)
+  ✔ 5: control.ready (1001.690875ms)
+  ✔ 6: control.completed (991.043458ms)
+  ✔ 7: control.stopRequested (1262.529542ms)
+  ✔ 8: control.stopObserved (1251.3075ms)
+  ✔ 9: recovery.beforeCleanup (1105.398ms)
+  ✔ 10: recovery.afterCleanup (1113.178625ms)
+  ✔ 11: daemon.claimed (972.771083ms)
+  ✔ 12: daemon.recorded (1002.30325ms)
+  ✔ 13: daemon.recovering (1176.972709ms)
+  ✔ 14: daemon.running (1014.65425ms)
+  ✔ 15: control.beforeAccept (942.569584ms)
+  ✔ 16: control.accepted (957.797292ms)
+  ✔ 17: control.ticketIssued (967.043125ms)
+  ✔ 18: control.spawned (891.573583ms)
+  ✔ 19: control.ready (1007.848458ms)
+  ✔ 20: control.completed (982.87625ms)
+  ✔ 21: control.stopRequested (1281.240959ms)
+  ✔ 22: control.stopObserved (1222.978083ms)
+  ✔ 23: recovery.beforeCleanup (1136.441709ms)
+  ✔ 24: recovery.afterCleanup (1110.206042ms)
+  ✔ 25: daemon.claimed (982.313167ms)
+  ✔ 26: daemon.recorded (981.886166ms)
+  ✔ 27: daemon.recovering (1192.209792ms)
+  ✔ 28: daemon.running (1017.788041ms)
+  ✔ 29: control.beforeAccept (939.60025ms)
+  ✔ 30: control.accepted (952.516708ms)
+✔ SC-004/005: thirty distributed crash scenarios preserve outcomes and never duplicate a successor (31258.029917ms)
+✔ recovery with 1,000 confirmed operations and ten surviving auxiliaries completes within 30s (19435.824125ms)
+✔ uncertain live resource remains blocked and preserved until explicit fixture shutdown (1197.169792ms)
+ℹ tests 54
+ℹ suites 0
+ℹ pass 53
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 1050211.790667

@@ -1,0 +1,11 @@
+✔ first external commit never configures an absent base; deleted configured branch becomes INVALID (4868.169709ms)
+✔ two verifies capture one observation revision; a delayed result cannot overwrite the winner (85.521083ms)
+✔ ref or topology changed between the first probe and commit publishes uncertainty rather than stale positive evidence (80.467625ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5153.403334

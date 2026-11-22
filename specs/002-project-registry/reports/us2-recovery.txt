@@ -1,0 +1,22 @@
+✔ a client deadline/disconnection does not cancel an admitted verify (3317.055792ms)
+✔ stop interrupts queued/probing verifies without occupying status RPC or publishing an observation (3637.19575ms)
+✔ a failed journal drain preserves the committed observation/result, blocks new admissions and replays once (76.152042ms)
+✔ actual daemon storage worker failure fences verify without inventing a durable success or releasing daemon ownership (3802.713292ms)
+✔ native SQLite cannot create a WAL during a writer-close race; Node and native file writes are denied (206.295459ms)
+✔ quiescent readonly observation holds both existing leases without creating or releasing another owner lock (49.336709ms)
+✔ readonly port releases each observation fence and sees later durable writes without a stale immutable connection (129.582041ms)
+✔ exact readonly policy denies real writes, fork and spawn of its own allowed executable (823.141708ms)
+✔ registry client sends one immutable intent, polls with the same requestId and preserves its terminal result (56.125042ms)
+✔ client deadline preserves request identity and never repeats a mutation when its observation hangs (26.793625ms)
+✔ queue rejection is not polled and explicit operation query does not wait for terminal completion (0.439666ms)
+✔ registry client refuses missing capability support, malformed responses and invalid deadlines (0.73925ms)
+✔ page validation binds store/revision, never exposes private anchors and verify invalidates old cursors (86.030042ms)
+✔ large records force multiple whole-record pages below 60 KiB even with limit 100 (67.198875ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12703.584167

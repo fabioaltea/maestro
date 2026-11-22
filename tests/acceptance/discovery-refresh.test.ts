@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { reviewFixture, reviewDraft } from '../fixtures/discovery-review.js';
+import { value } from '../fixtures/discovery-artifacts.js';
+import { sealDiscoveryContext } from '../../src/core/discovery/context.js';
+import { makeDeadline, systemClock } from '../../src/ports/clock.js';
+test('G4 refresh requires new snapshot/consent/revision/approval and never transports the old approval', async t => {
+  const f = await reviewFixture(t); const firstIdentity = await f.exit(); await f.service.publishDocument(firstIdentity, reviewDraft());
+  const old = f.discovery(), oldRevision = value(f.store.readDiscoveryMetadata({ kind: 'revision', id: old.latestDocumentRevisionId! })).data!;
+  value(await f.service.approve(f.peer, await f.command('approve', { revisionId: oldRevision.revisionId, bundleDigest: oldRevision.bundleDigest, acceptedUnknownIds: reviewDraft().sections.map(s => `${s.id}:0`) }))); await f.service.idle();
+  const historical = value(f.store.readDiscoveryMetadata({ kind: 'approval', id: oldRevision.revisionId })).data;
+  await writeFile(join(f.repo, 'tracked.txt'), 'intentional user change\n');
+  const check = await f.service.eligibility(f.peer, f.projectId); await f.service.idle(); assert.equal((await f.service.eligibility(f.peer, f.projectId, check.checkId!)).eligible, false); assert.equal(f.discovery().state, 'STALE');
+  const snapshot = value(await sealDiscoveryContext({ storeId: f.storeId, projectId: f.projectId, configRevision: '1', checkoutPath: f.repo, selectors: ['tracked.txt'], excludedRoots: [f.directory, f.paths.runtimeDirectory, f.configuration.authProfileRef] }, { context: f.context, artifacts: f.artifacts, saveSnapshot: async value => f.store.commitDiscoveryMetadata({ kind: 'snapshot', value }) }, { deadline: makeDeadline(systemClock, 30000) }));
+  const grant = value(await f.service.prepare(f.peer, f.startIntent({ snapshotId: snapshot.snapshotId, contextDigest: snapshot.contextDigest, payload: { snapshotId: snapshot.snapshotId } })));
+  value(await f.service.start(f.peer, f.startInput(grant))); await f.service.idle(); const id = f.launches.at(-1)!.discoveryId;
+  await f.service.publishDocument(await f.exit(id), reviewDraft()); const d = value(f.store.readDiscoveryMetadata({ kind: 'discovery', id })).data!, r = value(f.store.readDiscoveryMetadata({ kind: 'revision', id: d.latestDocumentRevisionId! })).data!;
+  assert.equal(value(f.store.readDiscoveryMetadata({ kind: 'approval', id: r.revisionId })).data, null);
+  await assert.rejects(f.service.publishDocument(firstIdentity, reviewDraft()));
+  const approval = value(await f.service.prepare(f.peer, f.startIntent({ action: 'approve', targetId: id, stateRevision: d.stateRevision, snapshotId: snapshot.snapshotId, contextDigest: snapshot.contextDigest, payload: { revisionId: r.revisionId, bundleDigest: r.bundleDigest, acceptedUnknownIds: reviewDraft().sections.map(s => `${s.id}:0`) } })));
+  value(await f.service.approve(f.peer, { requestId: randomUUID(), grantId: approval.grantId, canonicalIntent: approval.canonicalIntent })); await f.service.idle();
+  const current = await f.service.eligibility(f.peer, f.projectId); await f.service.idle(); assert.equal((await f.service.eligibility(f.peer, f.projectId, current.checkId!)).eligible, true);
+  assert.deepEqual(value(f.store.readDiscoveryMetadata({ kind: 'approval', id: oldRevision.revisionId })).data, historical);
+  assert.equal(await f.repositories.git(f.repo, ['status', '--porcelain']), ' M tracked.txt\n');
+});

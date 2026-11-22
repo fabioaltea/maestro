@@ -1,0 +1,93 @@
+✖ registration computes a valid default name from the checkout root and validates explicit names without mutating evidence (2.315208ms)
+✖ unborn, detached and absent base remain complete registrations without inventing a branch or approval (0.381917ms)
+✖ explicit invalid or changed base is rejected even when a repository would be a duplicate (0.25425ms)
+✖ only the winning registration allocates a project UUID; duplicate import preserves config, reference and observation (85.496958ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 192.114083
+
+✖ failing tests:
+
+test at dist-tests/tests/unit/project-register.test.js:18:1
+✖ registration computes a valid default name from the checkout root and validates explicit names without mutating evidence (2.315208ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/register.js:registrationConfiguration is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-register.test.js:19:43)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-register.test.js:29:1
+✖ unborn, detached and absent base remain complete registrations without inventing a branch or approval (0.381917ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/register.js:registrationConfiguration is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-register.test.js:30:43)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-register.test.js:39:1
+✖ explicit invalid or changed base is rejected even when a repository would be a duplicate (0.25425ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/register.js:registrationConfiguration is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-register.test.js:40:43)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-register.test.js:48:1
+✖ only the winning registration allocates a project UUID; duplicate import preserves config, reference and observation (85.496958ms)
+  AssertionError [ERR_ASSERTION]: atomic registration commit is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-register.test.js:52:12)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,24 @@
+✔ ten duplicate restarts retain one operation and successor; old process exits before finalization (2497.116917ms)
+✔ restart from STOPPED starts once and lost client response can be queried offline (1671.313167ms)
+✔ ten concurrent starts create at most one owner and never report unverified readiness (1883.560541ms)
+✔ separate archives keep independent daemon identities and stop does not affect the other (1845.530459ms)
+✔ Foundation drain cooperative: release only proven resources; never terminate foreign process (1905.088583ms)
+✔ Foundation drain noncooperative: release only proven resources; never terminate foreign process (1545.30275ms)
+✔ Foundation drain foreign: release only proven resources; never terminate foreign process (1120.047ms)
+✔ daemon startup interrupts an abandoned durable registry intent before RUNNING without a Git probe (2794.888958ms)
+✔ registry stop shares the existing drain budget and never turns uncertain ownership into absence (19.937458ms)
+✔ bounded admission persists 32 intents, runs at most four probes and refuses the 33rd before acceptance (80.40375ms)
+✔ concurrent admissions cannot race capacity, duplicate execution or authorization (6.402792ms)
+✔ deadline includes queue time; Git budget is 26s and the server finishes within 28s without starting expired work (7.660958ms)
+✔ accepted work survives the client session; identical retry returns its terminal result without execution (17.549625ms)
+✔ shutdown fences immediately, interrupts queued/owned work and uncertainty stays BLOCKED (10.793458ms)
+✔ startup recovery terminalizes old pending once and never reruns it; identical retry stays INTERRUPTED (7.348ms)
+✔ shutdown retains storage until resource bookkeeping settles even after physical process exit is verified (4.806333ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4638.653208

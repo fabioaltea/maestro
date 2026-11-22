@@ -1,0 +1,44 @@
+{
+  "measuredAt": "2026-11-11T15:42:05.092Z",
+  "platform": {
+    "node": "26.13.0",
+    "os": "darwin",
+    "arch": "arm64"
+  },
+  "generatedEvents": 960,
+  "storeId": "049a3931-b1b8-4815-9ae9-089c535304be",
+  "initial": "5",
+  "beforeInstanceId": "a1aa8443-4e28-42dc-ac8c-ee3c3823fa5d",
+  "afterRestartInstanceId": "1157a75f-a1cc-4829-a209-d219ca6a4c00",
+  "partialReplay": {
+    "delivered": 80,
+    "lastAccepted": "84",
+    "savedCheckpoint": "75"
+  },
+  "reconnect": {
+    "delivered": 897,
+    "duplicates": 10,
+    "stableIdentities": true,
+    "reconstructed": 967,
+    "reference": 967,
+    "pages": 5,
+    "highWater": "972"
+  },
+  "rotation": {
+    "fixtureBudgetBytes": 131072,
+    "productionBudgetBytes": 41943040,
+    "segmentsBefore": 5,
+    "firstAvailable": "630",
+    "highWater": "981",
+    "offlineGap": "CURSOR_EXPIRED",
+    "liveGap": "CURSOR_EXPIRED",
+    "nextAction": "reread-status"
+  },
+  "explicitResume": {
+    "after": "629",
+    "delivered": 352,
+    "highWater": "981",
+    "ordered": true
+  },
+  "anomalies": []
+}

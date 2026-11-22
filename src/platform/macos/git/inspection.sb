@@ -1,0 +1,22 @@
+(version 1)
+(deny default)
+
+; Parameters are supplied separately by the trusted runner, never interpolated.
+(allow process-exec (literal (param "EXECUTABLE")))
+(allow file-read-metadata)
+(allow file-read-data
+  (literal "/")
+  (subpath "/usr")
+  (subpath "/System")
+  (subpath "/Library/Developer")
+  (subpath "/Applications/Xcode.app")
+  (subpath (param "ROOT1"))
+  (subpath (param "ROOT2"))
+  (subpath (param "ROOT3"))
+  (literal "/dev/null")
+  (literal "/dev/random")
+  (literal "/dev/urandom"))
+; Git opens /dev/null read/write during startup; this cannot persist data.
+(allow file-write-data (literal "/dev/null"))
+(allow sysctl-read)
+; No process-fork, network, persistent file write, or user-configured helper.

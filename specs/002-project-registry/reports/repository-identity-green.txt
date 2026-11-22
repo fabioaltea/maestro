@@ -1,0 +1,12 @@
+✔ canonical APFS anchors preserve Unicode, spaces and newlines without trimming and match symlink aliases (4.674417ms)
+✔ common repository and per-worktree admin/root evidence are distinct and do not follow remote or HEAD (486.163333ms)
+✔ same path replacement and moved paths never become verified rebindings (1.656208ms)
+✔ missing, unreadable, invalid and wrong-kind evidence returns safe errors rather than raw filesystem paths (1.590959ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 561.49675

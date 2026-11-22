@@ -1,0 +1,10 @@
+✔ remove persists an immutable tombstone with one config/registry increment and retains every historical observation/operation (90.560708ms)
+✔ stale revision, mismatched target and a second distinct remove leave all project data intact (91.773083ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 282.170041

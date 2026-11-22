@@ -1,0 +1,36 @@
+✔ update requires a nonempty closed patch and exact revision; CLI base/clear flags are exclusive (2875.046417ms)
+✔ identical update retry returns its original snapshot before checking current revision or repository (2337.416125ms)
+✔ UPDATE actual SIGKILL at project.beforeAccept/clean preserves intent/result/project/event atomically (4459.974541ms)
+✔ UPDATE actual SIGKILL at project.accepted/clean preserves intent/result/project/event atomically (3634.472917ms)
+✔ UPDATE actual SIGKILL at project.probing/clean preserves intent/result/project/event atomically (4032.618917ms)
+✔ UPDATE actual SIGKILL at project.update.probed/clean preserves intent/result/project/event atomically (3837.739917ms)
+✔ UPDATE actual SIGKILL at project.update.beforeWrite/clean preserves intent/result/project/event atomically (4236.484333ms)
+✔ UPDATE actual SIGKILL at project.update.written/clean preserves intent/result/project/event atomically (4174.533209ms)
+✔ UPDATE actual SIGKILL at project.beforeCommit/clean preserves intent/result/project/event atomically (4587.186583ms)
+✔ UPDATE actual SIGKILL at project.committed/clean preserves intent/result/project/event atomically (4650.105334ms)
+✔ UPDATE actual SIGKILL at project.beforeAck/client-deadline preserves intent/result/project/event atomically (5017.267625ms)
+✔ UPDATE actual SIGKILL at project.beforeDrain/clean preserves intent/result/project/event atomically (4993.506083ms)
+✔ two real clients updating the same revision confirm exactly one change (2676.036625ms)
+✔ verify completed after update cannot publish evidence against the previous configuration (1042.892625ms)
+✔ a completed verify does not consume configuration revision or invalidate an admitted rename (1032.444541ms)
+✔ set-base rechecks delete-base during probe and never commits a partial name/base patch (1209.024583ms)
+✔ set-base rechecks move-base during probe and never commits a partial name/base patch (1917.290209ms)
+✔ set-base rechecks concurrent-rename during probe and never commits a partial name/base patch (1266.152375ms)
+✔ a controller role cannot authorize UPDATE or reach the admission/private lookup (526.860917ms)
+✔ local branch configuration persists on detached dirty checkout without changing any Git file (3876.23675ms)
+✔ remote-only, missing and unborn branch values reject an atomic name/base patch (5514.312333ms)
+✔ rename/clear work with an unavailable reference and never require a Git probe or change the saved identity (2671.645875ms)
+✔ explicit first base selection is separate from verify; deleting it never substitutes another branch (4576.08725ms)
+✔ configuration-only update {"name":"Renamed"} never calls Git or filesystem (86.206833ms)
+✔ configuration-only update {"baseBranch":null} never calls Git or filesystem (76.545375ms)
+✔ configuration-only update {"name":"Renamed","baseBranch":null} never calls Git or filesystem (69.216417ms)
+✔ rename changes only confirmed config; no-op preserves revisions and dates; historical observations are not invented (113.66475ms)
+✔ stale revisions and invalid explicit base reject the whole patch with no partial rename or success event (105.460708ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 76146.835833

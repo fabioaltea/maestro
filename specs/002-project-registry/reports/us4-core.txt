@@ -1,0 +1,12 @@
+✔ registration-only removal requires no Git capability, repository filesystem or probe (156.221166ms)
+✔ unknown IDs fail explicitly before removal and stale revisions cannot authorize a different target (122.207041ms)
+✔ remove persists an immutable tombstone with one config/registry increment and retains every historical observation/operation (154.004083ms)
+✔ stale revision, mismatched target and a second distinct remove leave all project data intact (146.086125ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 395.985584

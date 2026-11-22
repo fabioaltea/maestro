@@ -1,0 +1,23 @@
+✔ ten concurrent starts create at most one owner and never report unverified readiness (1106.048125ms)
+✔ separate archives keep independent daemon identities and stop does not affect the other (1472.991416ms)
+✔ fresh schema is 3, with separate registry pending and active identity uniqueness (4.178084ms)
+✔ exclusive 2→3 upgrade preserves every Foundation row, cursor, outbox and lifecycle hash (77.162792ms)
+✔ upgrade is not a readonly query and requires matching ownership and both exclusive lease scopes (196.469459ms)
+▶ failure injection before commit rolls back FULL/IO completely; postcommit remains a valid schema 3
+  ✔ SQLITE_FULL (44.517292ms)
+  ✔ SQLITE_IOERR (23.028125ms)
+  ✔ SQLITE_BUSY (39.438209ms)
+✔ failure injection before commit rolls back FULL/IO completely; postcommit remains a valid schema 3 (125.274ms)
+✔ unknown versions, expired budget and a conflicting live writer never trigger migration (76.025666ms)
+▶ owned process crash pre/post upgrade commit leaves one complete valid schema
+  ✔ registry.upgrade.beforeCommit (90.332875ms)
+  ✔ registry.upgrade.committed (68.29275ms)
+✔ owned process crash pre/post upgrade commit leaves one complete valid schema (159.065041ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2632.143917

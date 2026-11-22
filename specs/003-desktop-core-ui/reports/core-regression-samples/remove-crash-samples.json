@@ -1,0 +1,441 @@
+{
+  "measuredAt": "2026-11-15T17:51:53.520Z",
+  "required": 10,
+  "completed": 10,
+  "samples": [
+    {
+      "point": "project.beforeAccept",
+      "variant": "clean",
+      "requestId": "351cd4af-a279-45b0-823c-5e2a0bb04459",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": false,
+      "originalOutcome": null,
+      "originalResult": null,
+      "retryOutcome": "SUCCEEDED",
+      "expectedConfigRevision": "2",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 2,
+        "removed_at": "2026-11-15T17:50:44.538Z"
+      },
+      "completedEvents": [],
+      "confirmedProjects": 0,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.accepted",
+      "variant": "clean",
+      "requestId": "7a07d82d-4868-4afb-a895-4292051aa026",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "REMOVE",
+        "requestId": "7a07d82d-4868-4afb-a895-4292051aa026",
+        "projectId": "149fd8be-5dc5-416f-a8c8-0e772b441a3c",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-15T17:50:50.842Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "7a07d82d-4868-4afb-a895-4292051aa026"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1,
+        "removed_at": null
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.remove.prepared",
+      "variant": "clean",
+      "requestId": "e12d45f7-67fe-49e3-a624-2a62fc0c71f5",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "REMOVE",
+        "requestId": "e12d45f7-67fe-49e3-a624-2a62fc0c71f5",
+        "projectId": "93109e24-4335-4349-9727-53cae93f6d7b",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-15T17:50:58.175Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "e12d45f7-67fe-49e3-a624-2a62fc0c71f5"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1,
+        "removed_at": null
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.remove.beforeWrite",
+      "variant": "dirty",
+      "requestId": "4e209bdc-3e83-40ce-bc7b-f041f7c29bdd",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "REMOVE",
+        "requestId": "4e209bdc-3e83-40ce-bc7b-f041f7c29bdd",
+        "projectId": "9594027e-abf7-4311-8ef2-9fa920b1ec26",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-15T17:51:05.330Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "4e209bdc-3e83-40ce-bc7b-f041f7c29bdd"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1,
+        "removed_at": null
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.remove.written",
+      "variant": "dirty",
+      "requestId": "ef6254a5-83ab-440c-8de1-05c971303a36",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "REMOVE",
+        "requestId": "ef6254a5-83ab-440c-8de1-05c971303a36",
+        "projectId": "00d4b990-d017-41c5-92ca-0c41f2810deb",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-15T17:51:14.640Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "ef6254a5-83ab-440c-8de1-05c971303a36"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1,
+        "removed_at": null
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.remove.beforeFinalize",
+      "variant": "clean",
+      "requestId": "8e4b7881-26db-4c13-90af-fb20e851e9f5",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "REMOVE",
+        "requestId": "8e4b7881-26db-4c13-90af-fb20e851e9f5",
+        "projectId": "8fb4f433-542b-4aff-972f-75036546d234",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-15T17:51:22.560Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "8e4b7881-26db-4c13-90af-fb20e851e9f5"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1,
+        "removed_at": null
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeCommit",
+      "variant": "conflicted",
+      "requestId": "a568c8ae-6b0d-47fc-81e6-46058f598a87",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "INTERRUPTED",
+      "originalResult": {
+        "action": "REMOVE",
+        "requestId": "a568c8ae-6b0d-47fc-81e6-46058f598a87",
+        "projectId": "76ad9bd9-52fd-48ae-b5eb-58df1d1c7be4",
+        "outcome": "INTERRUPTED",
+        "effect": "NONE",
+        "configRevision": null,
+        "observationRevision": null,
+        "completedAt": "2026-11-15T17:51:30.595Z",
+        "error": {
+          "code": "INTERRUPTED",
+          "category": "RUNTIME",
+          "message": "Operazione interrotta senza riesecuzione automatica.",
+          "nextAction": "read-project-then-new-request",
+          "retryable": false,
+          "cause": null,
+          "persisted": true,
+          "operationId": "a568c8ae-6b0d-47fc-81e6-46058f598a87"
+        }
+      },
+      "retryOutcome": "INTERRUPTED",
+      "expectedConfigRevision": "1",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 1,
+        "removed_at": null
+      },
+      "completedEvents": [],
+      "confirmedProjects": 1,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.committed",
+      "variant": "clean",
+      "requestId": "d3c262a7-d1db-4e97-a177-737a82ac7b61",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "requestId": "d3c262a7-d1db-4e97-a177-737a82ac7b61",
+        "action": "REMOVE",
+        "projectId": "1da0e48b-ff5d-42cd-a639-7b2207885243",
+        "outcome": "SUCCEEDED",
+        "effect": "REMOVED",
+        "configRevision": "2",
+        "observationRevision": "1",
+        "completedAt": "2026-11-15T17:51:36.964Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "expectedConfigRevision": "2",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 2,
+        "removed_at": "2026-11-15T17:51:36.964Z"
+      },
+      "completedEvents": [
+        {
+          "protocolVersion": 1,
+          "storeId": "9e1099cf-0a1a-401d-9574-976cab376e46",
+          "eventId": "6622b047-8b78-4f38-a325-7a6de907c0f2",
+          "seq": "18",
+          "occurredAt": "2026-11-15T17:51:36.965Z",
+          "type": "operation.completed",
+          "instanceId": "cda17623-7403-4bf4-b92e-1db83500c486",
+          "operationId": "d3c262a7-d1db-4e97-a177-737a82ac7b61",
+          "payload": {
+            "scope": "project",
+            "action": "REMOVE",
+            "projectId": "1da0e48b-ff5d-42cd-a639-7b2207885243",
+            "outcome": "SUCCEEDED",
+            "effect": "REMOVED",
+            "configRevision": "2",
+            "observationRevision": "1"
+          }
+        }
+      ],
+      "confirmedProjects": 0,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeAck",
+      "variant": "client-deadline",
+      "requestId": "da220ed6-a826-4c6a-9beb-c7b06af48e1c",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "requestId": "da220ed6-a826-4c6a-9beb-c7b06af48e1c",
+        "action": "REMOVE",
+        "projectId": "f54109e5-61d1-45f4-89bc-6d6b550c924b",
+        "outcome": "SUCCEEDED",
+        "effect": "REMOVED",
+        "configRevision": "2",
+        "observationRevision": "1",
+        "completedAt": "2026-11-15T17:51:45.021Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "expectedConfigRevision": "2",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 2,
+        "removed_at": "2026-11-15T17:51:45.021Z"
+      },
+      "completedEvents": [
+        {
+          "protocolVersion": 1,
+          "storeId": "adc00eb4-6902-4194-a8fc-41c422e1f189",
+          "eventId": "368c54d3-0b35-4b07-9222-fc0bc2755062",
+          "seq": "18",
+          "occurredAt": "2026-11-15T17:51:45.023Z",
+          "type": "operation.completed",
+          "instanceId": "8379f3b2-0124-4797-86eb-99065a2e11c5",
+          "operationId": "da220ed6-a826-4c6a-9beb-c7b06af48e1c",
+          "payload": {
+            "scope": "project",
+            "action": "REMOVE",
+            "projectId": "f54109e5-61d1-45f4-89bc-6d6b550c924b",
+            "outcome": "SUCCEEDED",
+            "effect": "REMOVED",
+            "configRevision": "2",
+            "observationRevision": "1"
+          }
+        }
+      ],
+      "confirmedProjects": 0,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    },
+    {
+      "point": "project.beforeDrain",
+      "variant": "clean",
+      "requestId": "4badeac7-eba0-4a65-ab53-659542f1f8d3",
+      "faultReported": true,
+      "mainExitSignal": "SIGKILL",
+      "accepted": true,
+      "originalOutcome": "SUCCEEDED",
+      "originalResult": {
+        "requestId": "4badeac7-eba0-4a65-ab53-659542f1f8d3",
+        "action": "REMOVE",
+        "projectId": "e69ae13d-faf4-4ac9-9965-c62ab4be6f96",
+        "outcome": "SUCCEEDED",
+        "effect": "REMOVED",
+        "configRevision": "2",
+        "observationRevision": "1",
+        "completedAt": "2026-11-15T17:51:51.349Z",
+        "error": null
+      },
+      "retryOutcome": "SUCCEEDED",
+      "expectedConfigRevision": "2",
+      "atomicTombstoneAndResult": true,
+      "confirmedConfiguration": {
+        "display_name": "crash-source",
+        "base_branch": "fixture-base",
+        "config_revision": 2,
+        "removed_at": "2026-11-15T17:51:51.349Z"
+      },
+      "completedEvents": [
+        {
+          "protocolVersion": 1,
+          "storeId": "fd43dcfe-10ad-407a-a500-bc2e6b88d981",
+          "eventId": "9d625339-17cb-4378-b3c0-3fc017c9f1f9",
+          "seq": "18",
+          "occurredAt": "2026-11-15T17:51:51.351Z",
+          "type": "operation.completed",
+          "instanceId": "4658713d-e35f-42e9-8834-a80d23528d2e",
+          "operationId": "4badeac7-eba0-4a65-ab53-659542f1f8d3",
+          "payload": {
+            "scope": "project",
+            "action": "REMOVE",
+            "projectId": "e69ae13d-faf4-4ac9-9965-c62ab4be6f96",
+            "outcome": "SUCCEEDED",
+            "effect": "REMOVED",
+            "configRevision": "2",
+            "observationRevision": "1"
+          }
+        }
+      ],
+      "confirmedProjects": 0,
+      "repositoryUnchanged": true,
+      "ownedProbeAbsenceVerified": true
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+(version 1)
+(deny default)
+
+; Initial native executable only. No fork/spawn of shells, Git, helpers or tools.
+(allow process-exec (literal (param "EXECUTABLE")))
+(allow file-read-metadata)
+(allow file-read-data
+  (literal "/")
+  (literal (param "EXECUTABLE"))
+  ; Non-secret UUID created during explicit provider configuration/login.
+  ; No auth.json/config/token file access. Only the installation UUID is writable.
+  (literal (param "INSTALLATION_ID"))
+  (subpath "/usr")
+  (subpath "/System")
+  (literal "/private/etc/hosts")
+  (literal "/private/etc/resolv.conf")
+  (literal "/private/etc/services")
+  (literal "/private/etc/localtime")
+  (literal "/Library/Application Support/Codex/requirements.toml")
+  (literal "/Library/Application Support/Codex/config.toml")
+  (subpath (param "RUNTIME"))
+  (literal "/dev/null") (literal "/dev/random") (literal "/dev/urandom"))
+; Trusted schema/runtime root are read-only; only non-sensitive scratch is writable.
+(allow file-write* (subpath (param "SCRATCH")))
+(allow file-write-data (literal "/dev/null"))
+; The pinned CLI opens its existing non-secret UUID for writing at startup.
+; It may not create other CODEX_HOME files or read/write credential files.
+(allow file-write* (literal (param "INSTALLATION_ID")))
+(allow sysctl-read)
+; Native credential/TLS/DNS APIs for the trusted CLI, never offered as model tools.
+; No filesystem credential access or general mach-lookup exception.
+(allow mach-lookup
+  (global-name "com.apple.securityd.xpc")
+  (global-name "com.apple.trustd")
+  (global-name "com.apple.trustd.agent")
+  (global-name "com.apple.system.opendirectoryd.libinfo")
+  (global-name "com.apple.networkd")
+  (global-name "com.apple.dnssd.service"))
+; CLI production invocation has only the official provider configuration. The test
+; fixture substitutes a loopback backend with synthetic data; no production URL input.
+(allow network-outbound (remote tcp "*:443") (remote tcp "localhost:*"))
+(allow network-outbound (remote udp "*:53"))

@@ -1,0 +1,13 @@
+✔ registry reads remain available during writer BUSY retry and after a classified mutation failure (363.8335ms)
+✔ registry admission and terminal events share the existing journal and never inherit a concurrent lifecycle requestId (162.787042ms)
+✔ a precommit failure rolls back both terminal ledger state and its event (129.331ms)
+✔ postcommit drain failure preserves durable outcome and bounded outbox; replay drain never duplicates it (129.936917ms)
+✔ only the winning registration allocates a project UUID; duplicate import preserves config, reference and observation (372.972541ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 525.232

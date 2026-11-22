@@ -1,0 +1,35 @@
+{
+  "measuredAt": "2026-11-11T16:00:14.925799+00:00",
+  "criterion": "SC-005 mutation crash campaign",
+  "result": "PASS",
+  "totalCases": 30,
+  "distinctRequestIds": 30,
+  "campaigns": [
+    {
+      "action": "REGISTER",
+      "source": "register-crash-samples.json",
+      "sourceMeasuredAt": "2026-11-11T15:37:43.910Z",
+      "completed": 10,
+      "requiredMinimum": 10,
+      "result": "PASS"
+    },
+    {
+      "action": "UPDATE",
+      "source": "update-crash-samples.json",
+      "sourceMeasuredAt": "2026-11-11T15:37:56.893Z",
+      "completed": 10,
+      "requiredMinimum": 10,
+      "result": "PASS"
+    },
+    {
+      "action": "REMOVE",
+      "source": "remove-crash-samples.json",
+      "sourceMeasuredAt": "2026-11-11T15:37:48.861Z",
+      "completed": 10,
+      "requiredMinimum": 10,
+      "result": "PASS"
+    }
+  ],
+  "verifyCasesExcluded": true,
+  "finalReleaseAcceptance": "T093 BLOCKED; separate gates remain open"
+}

@@ -1,0 +1,184 @@
+✖ US1.1: registration is complete, dated and available to another client without changing any repository file (1739.309167ms)
+✖ US1.2: equivalent paths, subdirectories and Unicode/newline aliases deduplicate without implicit configuration changes (1289.391625ms)
+✖ US1.3: two concurrent first imports produce exactly one project and one initial observation (1259.530125ms)
+✖ US1.4: invalid, inaccessible and non-Git paths return safe errors with no partial project (1084.923333ms)
+✖ US1.5: dirty, untracked, conflicts and unsafe filters remain untouched and are never reported as clean (1476.767083ms)
+✖ US1.6: unborn and detached repositories register completely; explicit invalid base is rejected even on duplicates (1217.348ms)
+✖ US1.7: linked checkout is fixed as first reference; main/other worktrees and common bare repository deduplicate correctly (1484.541458ms)
+✖ clones with the same remote, nested repositories and submodules retain separate repository identities (1734.436875ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 0
+ℹ fail 8
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 11391.215583
+
+✖ failing tests:
+
+test at dist-tests/tests/integration/project-register.test.js:7:1
+✖ US1.1: registration is complete, dated and available to another client without changing any repository file (1739.309167ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"62a56ffe-a091-4c48-bd2f-943380b6b61c","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"62a56ffe-a091-4c48-bd2f-943380b6b61c"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at Object.register (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-client.js:13:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register.test.js:11:24)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register.test.js:28:1
+✖ US1.2: equivalent paths, subdirectories and Unicode/newline aliases deduplicate without implicit configuration changes (1289.391625ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"d63a16b6-c1b1-4982-b53e-c2e782b9fa8f","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"d63a16b6-c1b1-4982-b53e-c2e782b9fa8f"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at Object.register (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-client.js:13:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register.test.js:36:22)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register.test.js:46:1
+✖ US1.3: two concurrent first imports produce exactly one project and one initial observation (1259.530125ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"c3e9366c-4cd2-4a5e-9537-8932d7dbd5e8","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"c3e9366c-4cd2-4a5e-9537-8932d7dbd5e8"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at Object.register (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-client.js:13:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Promise.all (index 0)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register.test.js:50:24)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register.test.js:59:1
+✖ US1.4: invalid, inaccessible and non-Git paths return safe errors with no partial project (1084.923333ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  null !== 'FAILED'
+  
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register.test.js:65:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'FAILED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register.test.js:89:1
+✖ US1.5: dirty, untracked, conflicts and unsafe filters remain untouched and are never reported as clean (1476.767083ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"8496cc8b-c4e9-4812-94ef-d1063ae07b3f","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"8496cc8b-c4e9-4812-94ef-d1063ae07b3f"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at Object.register (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-client.js:13:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register.test.js:97:28)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register.test.js:117:1
+✖ US1.6: unborn and detached repositories register completely; explicit invalid base is rejected even on duplicates (1217.348ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"15ad3fd8-c7fc-4364-98f3-fb0de06080be","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"15ad3fd8-c7fc-4364-98f3-fb0de06080be"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at Object.register (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-client.js:13:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register.test.js:121:24)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register.test.js:146:1
+✖ US1.7: linked checkout is fixed as first reference; main/other worktrees and common bare repository deduplicate correctly (1484.541458ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"1b049fa6-b46c-4384-af9f-edf6d95575d7","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"1b049fa6-b46c-4384-af9f-edf6d95575d7"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at Object.register (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-client.js:13:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register.test.js:152:19)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/integration/project-register.test.js:171:1
+✖ clones with the same remote, nested repositories and submodules retain separate repository identities (1734.436875ms)
+  AssertionError [ERR_ASSERTION]: {"protocolVersion":1,"requestId":"9675cb8f-75b6-4d36-9166-926f7dacfaa6","storeId":null,"instanceId":null,"result":"ERROR","outcome":null,"freshness":"LAST_KNOWN","liveness":"UNKNOWN","error":{"code":"UNSUPPORTED_VERSION","category":"VALIDATION","message":"Versione del protocollo non supportata.","nextAction":"Usare un client compatibile.","retryable":false,"cause":null,"persisted":false,"operationId":"9675cb8f-75b6-4d36-9166-926f7dacfaa6"},"data":{}}
+  + actual - expected
+  
+  + null
+  - 'SUCCEEDED'
+  
+      at Object.register (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/project-client.js:13:16)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/integration/project-register.test.js:186:22)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: 'SUCCEEDED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

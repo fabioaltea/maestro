@@ -1,0 +1,14 @@
+✔ Git runner builds a fresh allowlisted environment instead of inheriting executable configuration (2.277042ms)
+✔ missing confinement capability fails closed without an unconfined fallback (4.331209ms)
+✔ compiled runner uses the shipped profile from an external cwd and preserves the real repository (624.636792ms)
+✔ runner only accepts structured read queries, never shell text or revision expressions (1.172333ms)
+✔ output limits and expired/aborted calls never return partial output as a successful observation (231.671792ms)
+✔ Git nonzero exit is bounded metadata, never raw stderr in a public failure or result (45.359625ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 997.212792

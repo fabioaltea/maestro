@@ -1,0 +1,92 @@
+# Validazione 011
+
+## T001 — baseline
+
+Base `0f9a9be`, schema 10. La 010 ha concluso 20/36 task e verificato 24 test core, 58 Desktop unit/contract e 1 E2E. La coda conserva reservation incerte e usa fixture per il dispatch. 009 fornisce checkpoint portabili e stato di quiescenza di fixture. Il commit core 009 e il runtime di produzione restano aperti.
+
+001/T082 NOT_RUN, 001/T085 FAIL/OPEN, 002/T093 BLOCKED, 003/T054 REVIEW_PENDING, 004/T028 e T050 PROVIDER_UNSAFE e 005 G1 BLOCKED. La qualifica G1 di 009 e le review umane restano pendenti. La 011 usa il pin Git esistente e checkout temporanei posseduti dalla suite. Scope locale, nessuna campagna di volume o durata.
+
+## Ripresa T011
+
+`npm run build:test`, `npm run lint` e 4 test di integrazione in `review-store.test` e `review-us1.test` PASS. Le conferme di snapshot e feedback usano grant del daemon corrente. Un retry concorrente con gli stessi identificativi condivide l'operazione in corso. Il drain impedisce di confermare dopo la chiusura dell'ammissione. Il rigetto conserva il grant e la query dei risultati precedenti rimane disponibile. Il recovery marca come interrotto un intento di snapshot pendente e preserva l'esito terminale a un ulteriore riavvio simulato. La riconciliazione del cambio ref è coperta dal task T024.
+
+## Ripresa T012
+
+Tre test core mirati (`review-limits.test`, `review-us1.test`), due contratti Desktop e typecheck Desktop PASS. Il commit dello snapshot emette `review.changed` e, se il diff ha parti sigillate, `review.output.available` con il numero delle parti. Il journal e Desktop ricevono solo metadati. A outbox saturo la conferma del feedback lascia intatti grant e ledger, con query dello snapshot precedente disponibile. Alla quota ordinaria il nuovo grant è rifiutato, mentre il discard del feedback ancora senza riferimenti e il recovery dello snapshot usano la riserva terminale.
+
+## Ripresa T013
+
+Sette test unitari e di contratto mirati PASS. Il checkpoint rifiuta modifiche staged/unstaged e file untracked, patch fuori schema e incoerenze di tree, digest e piano. Una prova 007 con comando o input discordante, output incompleto, exit non verificata o tree superato resta BLOCKED. Un criterio con prove discordanti resta bloccato anche quando una prova risulta PASS.
+
+## Ripresa T015
+
+La fixture US1 esegue Git e il job host 007 sul worktree posseduto. Prima dell'avvio e dopo l'uscita, il job verifica l'impronta del checkpoint. I criteri provengono dalla revisione 005 sigillata e l'esito riporta job, comando, tree e output. Un edit dopo la preparazione invalida la conferma. I fault prima e dopo il commit dello snapshot verificano rispettivamente il rilascio delle parti senza riferimenti e il recupero dello snapshot con UUID originale. Un fault dopo l'ammissione di una validazione, prima del job, lascia la richiesta interrogabile e il riavvio la chiude con CHECKS_NOT_RUN. Retry concorrenti conservano lo stesso esito. Il feedback arriva al solo host 009 di fixture dopo un nuovo grant di esecuzione.
+
+Build core e test, typecheck Desktop, lint e nove prove mirate 011/007 PASS. Cinque ulteriori prove mirate 011/009 PASS dopo il collegamento del feedback.
+
+## Ripresa T017
+
+Build core e test, lint e 12 prove d'integrazione 011 PASS. Copertura di snapshot con target già in checkout, validazione sul checkpoint, recovery pre-job, sigilli, offline e limiti. Il preflight per la mutazione rifiuta lo stesso target occupato.
+
+## Ripresa T019
+
+Build e typecheck Desktop, lint, 61 test unit/contract e 2 E2E Electron PASS. I comandi review passano da prepare e conferma scoped, con ricevuta salvata prima della mutation. In Electron il feedback è sigillato, Escape ripristina il focus, la conferma produce lo stesso UUID interrogabile dalla CLI e il fermo del daemon disabilita le mutation. La navigazione tra archivi conserva lo scope di consultazione. La fixture E2E prepara lo snapshot nello storico, mentre gli effetti Git e i job 007 sono provati nelle integrazioni core.
+
+## Ripresa T020
+
+Quattro test unitari mirati PASS. Il confronto di candidate, riserva, target e prove di validazione blocca scope alterato, guard sporco e conflitti. Il recovery richiede attribuzione al requestId e agli OID esatti.
+
+## Ripresa T021
+
+Otto test unitari e di contratto mirati PASS. Le richieste prepare di candidate, approvazione e integrazione vincolano revisioni, identificativi e digest. Campi extra come `force` e selettori di ref su confirm sono rifiutati.
+
+## Ripresa T022
+
+Undici test di regressione core PASS. Il percorso Git divergente lascia entrambi i parent e il conflitto resta in staging detached. La fixture completa registra guard e staging in 006, prepara 007 sullo staging, blocca il candidate senza prove, consuma grant distinti per approvazione e integrazione e recupera dopo il CAS. Dieci retry con UUID originale restituiscono l’integrazione già registrata. L’iniezione di un file nel guard blocca il sync e conserva il file.
+
+## Ripresa T024
+
+Build, lint e cinque prove native/contratto mirate PASS. Il writer registra `REF_INTENT`, riconosce il CAS tramite la riga di reflog dell’UUID, persiste `REF_UPDATED` e la prova `GUARD_SYNCED`, quindi finalizza il ledger. La build standard compone il servizio quando sono disponibili il mutatore Git, le risorse possedute 006 e la validazione 007. I conflitti e le attribuzioni incerte conservano i worktree.
+
+## Ripresa T025
+
+Cinque contratti CLI/client PASS. L’help espone candidate, approvazione e integrazione. La consultazione dell’UUID originale riporta la fase del cambio ref e la relativa prova. Un reply loss porta a una query dell’operazione senza ripetere `integrate`.
+
+## Ripresa T026
+
+Build e typecheck Desktop, cinque contratti Review e due E2E Electron PASS. Il bridge prepara candidate, approvazione e integrazione con scope chiuso su stdin e grant conservati nel main. Electron conferma la preparazione Git del candidate su fixture, verifica ricevuta e UUID con la CLI e mostra il candidate offline. Senza approvazione l’integrazione è disabilitata. I fault e il CAS sono provati nelle integrazioni core.
+
+## Ripresa T029
+
+Cinque integrazioni 011/006 PASS. Il fault prima del commit lascia la Discovery e il ledger invariati. Il reply loss dopo il commit restituisce con l’UUID originale una sola ricevuta, il commit integrato e i blob dei documenti. La prova porta a STALE la Discovery toccata dal merge. Il commit aggiunto successivamente nel worktree blocca sia l’anteprima sia un cleanup 006 già autorizzato, preservando il file.
+
+## Ripresa T031
+
+La ricevuta identifica il blob esatto della documentazione nel commit integrato. La transazione porta a STALE la Discovery interessata e conserva il numero di run e corpus. Stesso UUID e intento recuperano la ricevuta dopo un reply loss. Lo stesso UUID con un'integrazione diversa è rifiutato. Build test, lint e quattro prove US3 core PASS.
+
+## Ripresa T032
+
+Tre contratti headless PASS. La CLI usa identificativi e revisione per la chiusura, consulta ricevuta e anteprima del cleanup e rifiuta `force` e grant estranei. Alla perdita della risposta il client interroga l'UUID originale senza reinviare la chiusura. L'anteprima offline non abilita rimozioni.
+
+## Ripresa T033
+
+Tre contratti Desktop e due E2E Electron PASS. Electron recupera l'esito asincrono del candidate, conferma la chiusura con l'OID visibile e mostra ricevuta e documenti anche dopo l'arresto del daemon. La CLI restituisce lo stesso UUID. L'anteprima live apre una conferma 006 separata. Escape ripristina il focus e l'anteprima è disabilitata offline. Le risposte di un archivio deselezionato sono scartate. L'E2E ricostruisce l'integrazione storica nel Git di fixture e poi esegue la chiusura attraverso il daemon. Approvazione, CAS e recovery effettivi sono esercitati dalle integrazioni core.
+
+## T034 — verifica locale
+
+Build, build test, typecheck core e Desktop, build Electron e lint architetturale PASS. La suite mirata `node --test --test-concurrency=1 dist-tests/tests/{unit,contract,integration}/review-*.test.js` ha dato 37 PASS prima dell'ultimo contratto headless T032. Desktop unit/contract ha dato 66 PASS e Playwright `review-flow.spec.ts` ha dato 2 PASS. Zero failure o skip in queste esecuzioni.
+
+Il ricontrollo finale di 12 casi tra US1–US3, contratto US3 e cleanup 006 ha dato 11 PASS e un errore nell'ordine della fixture US1. Dopo l'installazione 007, gli ignored rendevano la sorgente non quiescente per creare altri snapshot. Gli snapshot sono ora creati prima dell'installazione. Il rerun US1 ha dato 1 PASS e ha letto tutti e dieci gli snapshot. Le regressioni 006 includono la rimozione effettiva di un worktree pulito e integrato e il recovery dopo un esito incerto.
+
+| Requisito | Evidenza locale |
+| --- | --- |
+| FR-001–003 | Checkpoint 009 pulito, snapshot sigillato e criteri 005. Un edit invalida il grant e la prova 007 è attribuita al tree. Il feedback è consegnato al solo host di fixture dopo un nuovo grant `execution.start`. |
+| FR-004–006 | Guard/staging registrati in 006, fast-forward, merge a due parent, conflitto conservato, check 007 sul candidate, approvazione e integrazione con grant distinti, CAS e guard sync durevoli. |
+| FR-007–009 | Ricevuta con OID e prove, blob della documentazione, Discovery STALE per il selettore toccato e cleanup 006 con prova corrente. Un nuovo commit blocca anche il cleanup già autorizzato. |
+| FR-010–012 | DTO chiusi, pagine, chunk fino a 8 KiB, outbox atomica con metadati, rollback su quota, UUID originale tramite CLI e Desktop, storico offline e risposte tardive scartate. |
+| SC-001 | Criteri letti dai dieci snapshot locali. Il criterio con prova 007 sul tree corretto risulta PASS e i nove senza prova risultano NOT_RUN. L'approvazione candidate senza prova risulta CHECKS_NOT_RUN. |
+| SC-002 | Le prove con target sporco/in uso, sorgente mutata e conflitto preservano checkout e commit di fixture. |
+| SC-003 | Fault prima e dopo il CAS, ripresa del daemon e dieci retry dell'UUID originale. Una sola voce di reflog attribuita all'integrazione. |
+| SC-004 | Electron e CLI mostrano l'OID integrato e i documenti. L'anteprima live delega a una conferma 006 distinta. Il caso con lavoro sopravvenuto preserva il file e blocca la rimozione. |
+
+Nessuna misura generale di latenza. Acceptance e benchmark Foundation di volume o durata non sono stati rilanciati.

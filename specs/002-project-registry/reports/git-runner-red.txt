@@ -1,0 +1,108 @@
+✖ Git runner builds a fresh allowlisted environment instead of inheriting executable configuration (2.48525ms)
+✖ missing confinement capability fails closed without an unconfined fallback (4.099333ms)
+✖ compiled runner uses the shipped profile from an external cwd and preserves the real repository (589.491584ms)
+✖ runner only accepts structured read queries, never shell text or revision expressions (1.304167ms)
+✖ output limits and expired/aborted calls never return partial output as a successful observation (191.718917ms)
+✖ Git nonzero exit is bounded metadata, never raw stderr in a public failure or result (1.04475ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 0
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 882.748042
+
+✖ failing tests:
+
+test at dist-tests/tests/contract/git-runner.test.js:12:1
+✖ Git runner builds a fresh allowlisted environment instead of inheriting executable configuration (2.48525ms)
+  AssertionError [ERR_ASSERTION]: required confined Git runner capability has not been implemented
+      at loadRunner (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:13:26)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/git-runner.test.js:32:1
+✖ missing confinement capability fails closed without an unconfined fallback (4.099333ms)
+  AssertionError [ERR_ASSERTION]: required confined Git runner capability has not been implemented
+      at loadRunner (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:34:27)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/git-runner.test.js:42:1
+✖ compiled runner uses the shipped profile from an external cwd and preserves the real repository (589.491584ms)
+  AssertionError [ERR_ASSERTION]: required confined Git runner capability has not been implemented
+      at loadRunner (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:46:27)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/git-runner.test.js:60:1
+✖ runner only accepts structured read queries, never shell text or revision expressions (1.304167ms)
+  AssertionError [ERR_ASSERTION]: required confined Git runner capability has not been implemented
+      at loadRunner (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:62:27)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/git-runner.test.js:74:1
+✖ output limits and expired/aborted calls never return partial output as a successful observation (191.718917ms)
+  AssertionError [ERR_ASSERTION]: required confined Git runner capability has not been implemented
+      at loadRunner (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:77:27)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/contract/git-runner.test.js:91:1
+✖ Git nonzero exit is bounded metadata, never raw stderr in a public failure or result (1.04475ms)
+  AssertionError [ERR_ASSERTION]: required confined Git runner capability has not been implemented
+      at loadRunner (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:9:12)
+      at TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/contract/git-runner.test.js:93:27)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

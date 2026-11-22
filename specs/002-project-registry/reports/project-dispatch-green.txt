@@ -1,0 +1,16 @@
+✔ registry dispatch authorizes before private lookup, projects only public fields and refuses unfinished methods (83.793458ms)
+✔ registry methods extend the existing Foundation v1 envelope with closed typed params (3.272041ms)
+✔ registry codec rejects coercion, extra authority, malformed Unicode and payloads outside limits (0.781334ms)
+✔ client role and actual registry capability are required without granting internal authority (0.132958ms)
+✔ admission separates durable accepted work from BUSY rejection without claiming a terminal result (0.133458ms)
+✔ all registry errors have deterministic allowlisted categories and safe next actions (0.572958ms)
+✔ daemon startup interrupts an abandoned durable registry intent before RUNNING without a Git probe (1796.79875ms)
+✔ registry stop shares the existing drain budget and never turns uncertain ownership into absence (21.531125ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1885.4515

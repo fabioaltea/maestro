@@ -1,0 +1,31 @@
+[
+  {
+    "command": [
+      "npm",
+      "run",
+      "typecheck"
+    ],
+    "exitCode": 0,
+    "durationMs": 4763.47,
+    "output": "specs/002-project-registry/reports/npm-run-typecheck.txt"
+  },
+  {
+    "command": [
+      "npm",
+      "run",
+      "lint"
+    ],
+    "exitCode": 0,
+    "durationMs": 535.47,
+    "output": "specs/002-project-registry/reports/npm-run-lint.txt"
+  },
+  {
+    "command": [
+      "npm",
+      "test"
+    ],
+    "exitCode": 0,
+    "durationMs": 43830.99,
+    "output": "specs/002-project-registry/reports/npm-test.txt"
+  }
+]

@@ -1,0 +1,10 @@
+✔ rename changes only confirmed config; no-op preserves revisions and dates; historical observations are not invented (152.86425ms)
+✔ stale revisions and invalid explicit base reject the whole patch with no partial rename or success event (113.051916ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 356.66775

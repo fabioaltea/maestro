@@ -1,0 +1,35 @@
+{
+  "measuredAt": "2026-11-15T18:13:10.638Z",
+  "viewport": [
+    1280,
+    800
+  ],
+  "results": [
+    {
+      "view": "projects",
+      "checked": 55,
+      "failures": []
+    },
+    {
+      "view": "activity",
+      "checked": 74,
+      "failures": []
+    },
+    {
+      "view": "diagnostics",
+      "checked": 22,
+      "failures": []
+    },
+    {
+      "view": "service",
+      "checked": 28,
+      "failures": []
+    },
+    {
+      "view": "operations",
+      "checked": 48,
+      "failures": []
+    }
+  ],
+  "manualNativePicker": "NOT_RUN; automated tests stub only dialog results"
+}

@@ -1,0 +1,12 @@
+✔ E2 mixed Foundation/registry history keeps original envelope, exact revisions and correlation across pages (113.096458ms)
+✔ E2 cursor rejects foreign store, malformed or future sequence without advancing, rewriting or draining history (94.597792ms)
+✔ E2 redacted mixed pages remain at most 60 KiB with whole records and exact decimal revisions (866.118958ms)
+✔ E2 expired retained history reports a store-bound gap instead of silently resuming at a newer event (1245.694333ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2376.985208

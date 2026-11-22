@@ -1,0 +1,674 @@
+{
+  "measuredAt": "2026-11-11T15:40:17.531Z",
+  "platform": {
+    "macOS": "26.3.1",
+    "kernel": "25.3.0",
+    "arch": "arm64",
+    "node": "26.13.0",
+    "cpu": "Apple M3",
+    "logicalCpus": 8,
+    "memoryBytes": 8589934592,
+    "filesystem": "APFS"
+  },
+  "workload": "sequential compiled CLI; 30 start/restart/stop cycles; no auxiliaries; one client; 90 operations accumulated; isolated local archive",
+  "completedCycles": 30,
+  "measurements": {
+    "start": {
+      "targetMs": 5000,
+      "count": 30,
+      "p50Ms": 295.73,
+      "p95Ms": 306.41,
+      "maxMs": 314.07,
+      "withinTarget": 30
+    },
+    "stop": {
+      "targetMs": 10000,
+      "count": 30,
+      "p50Ms": 265.33,
+      "p95Ms": 270.09,
+      "maxMs": 270.21,
+      "withinTarget": 30
+    },
+    "restart": {
+      "targetMs": 15000,
+      "count": 30,
+      "p50Ms": 371.79,
+      "p95Ms": 381.59,
+      "maxMs": 386.74,
+      "withinTarget": 30
+    }
+  },
+  "anomalies": [],
+  "samples": [
+    {
+      "cycle": 1,
+      "action": "start",
+      "elapsedMs": 296.82,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 1,
+      "action": "restart",
+      "elapsedMs": 370.99,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 1,
+      "action": "stop",
+      "elapsedMs": 265.89,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 2,
+      "action": "start",
+      "elapsedMs": 295.72,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 2,
+      "action": "restart",
+      "elapsedMs": 371.6,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 2,
+      "action": "stop",
+      "elapsedMs": 264.15,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 3,
+      "action": "start",
+      "elapsedMs": 292.39,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 3,
+      "action": "restart",
+      "elapsedMs": 374.31,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 3,
+      "action": "stop",
+      "elapsedMs": 262.67,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 4,
+      "action": "start",
+      "elapsedMs": 299.3,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 4,
+      "action": "restart",
+      "elapsedMs": 368.6,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 4,
+      "action": "stop",
+      "elapsedMs": 266.37,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 5,
+      "action": "start",
+      "elapsedMs": 296,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 5,
+      "action": "restart",
+      "elapsedMs": 369.65,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 5,
+      "action": "stop",
+      "elapsedMs": 264.79,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 6,
+      "action": "start",
+      "elapsedMs": 292.69,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 6,
+      "action": "restart",
+      "elapsedMs": 370.76,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 6,
+      "action": "stop",
+      "elapsedMs": 262.06,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 7,
+      "action": "start",
+      "elapsedMs": 295.55,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 7,
+      "action": "restart",
+      "elapsedMs": 372.38,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 7,
+      "action": "stop",
+      "elapsedMs": 268.91,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 8,
+      "action": "start",
+      "elapsedMs": 294.42,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 8,
+      "action": "restart",
+      "elapsedMs": 371.99,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 8,
+      "action": "stop",
+      "elapsedMs": 267.31,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 9,
+      "action": "start",
+      "elapsedMs": 293.63,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 9,
+      "action": "restart",
+      "elapsedMs": 375.8,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 9,
+      "action": "stop",
+      "elapsedMs": 268.34,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 10,
+      "action": "start",
+      "elapsedMs": 297.97,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 10,
+      "action": "restart",
+      "elapsedMs": 386.74,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 10,
+      "action": "stop",
+      "elapsedMs": 266.58,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 11,
+      "action": "start",
+      "elapsedMs": 306.41,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 11,
+      "action": "restart",
+      "elapsedMs": 372.05,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 11,
+      "action": "stop",
+      "elapsedMs": 260.67,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 12,
+      "action": "start",
+      "elapsedMs": 295.73,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 12,
+      "action": "restart",
+      "elapsedMs": 373.22,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 12,
+      "action": "stop",
+      "elapsedMs": 265.2,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 13,
+      "action": "start",
+      "elapsedMs": 295.02,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 13,
+      "action": "restart",
+      "elapsedMs": 372.05,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 13,
+      "action": "stop",
+      "elapsedMs": 267.38,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 14,
+      "action": "start",
+      "elapsedMs": 294.43,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 14,
+      "action": "restart",
+      "elapsedMs": 372.14,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 14,
+      "action": "stop",
+      "elapsedMs": 264.62,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 15,
+      "action": "start",
+      "elapsedMs": 296.91,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 15,
+      "action": "restart",
+      "elapsedMs": 381.59,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 15,
+      "action": "stop",
+      "elapsedMs": 265.85,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 16,
+      "action": "start",
+      "elapsedMs": 298.48,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 16,
+      "action": "restart",
+      "elapsedMs": 360.18,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 16,
+      "action": "stop",
+      "elapsedMs": 264.75,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 17,
+      "action": "start",
+      "elapsedMs": 295.81,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 17,
+      "action": "restart",
+      "elapsedMs": 364.65,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 17,
+      "action": "stop",
+      "elapsedMs": 263.82,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 18,
+      "action": "start",
+      "elapsedMs": 295.59,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 18,
+      "action": "restart",
+      "elapsedMs": 369.78,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 18,
+      "action": "stop",
+      "elapsedMs": 265.06,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 19,
+      "action": "start",
+      "elapsedMs": 297.64,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 19,
+      "action": "restart",
+      "elapsedMs": 370.25,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 19,
+      "action": "stop",
+      "elapsedMs": 270.09,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 20,
+      "action": "start",
+      "elapsedMs": 294.49,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 20,
+      "action": "restart",
+      "elapsedMs": 370.13,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 20,
+      "action": "stop",
+      "elapsedMs": 266.65,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 21,
+      "action": "start",
+      "elapsedMs": 293.26,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 21,
+      "action": "restart",
+      "elapsedMs": 373.69,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 21,
+      "action": "stop",
+      "elapsedMs": 265.33,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 22,
+      "action": "start",
+      "elapsedMs": 293.09,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 22,
+      "action": "restart",
+      "elapsedMs": 372.44,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 22,
+      "action": "stop",
+      "elapsedMs": 262.78,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 23,
+      "action": "start",
+      "elapsedMs": 305.05,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 23,
+      "action": "restart",
+      "elapsedMs": 375.38,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 23,
+      "action": "stop",
+      "elapsedMs": 263.16,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 24,
+      "action": "start",
+      "elapsedMs": 296.07,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 24,
+      "action": "restart",
+      "elapsedMs": 371.79,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 24,
+      "action": "stop",
+      "elapsedMs": 261.69,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 25,
+      "action": "start",
+      "elapsedMs": 299.03,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 25,
+      "action": "restart",
+      "elapsedMs": 367.31,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 25,
+      "action": "stop",
+      "elapsedMs": 267.48,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 26,
+      "action": "start",
+      "elapsedMs": 294.81,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 26,
+      "action": "restart",
+      "elapsedMs": 369.23,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 26,
+      "action": "stop",
+      "elapsedMs": 265.3,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 27,
+      "action": "start",
+      "elapsedMs": 297.13,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 27,
+      "action": "restart",
+      "elapsedMs": 375.67,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 27,
+      "action": "stop",
+      "elapsedMs": 270.21,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 28,
+      "action": "start",
+      "elapsedMs": 314.07,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 28,
+      "action": "restart",
+      "elapsedMs": 380.94,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 28,
+      "action": "stop",
+      "elapsedMs": 265.73,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 29,
+      "action": "start",
+      "elapsedMs": 288.35,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 29,
+      "action": "restart",
+      "elapsedMs": 371.38,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 29,
+      "action": "stop",
+      "elapsedMs": 266.64,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 30,
+      "action": "start",
+      "elapsedMs": 295.86,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 30,
+      "action": "restart",
+      "elapsedMs": 367.22,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    },
+    {
+      "cycle": 30,
+      "action": "stop",
+      "elapsedMs": 266.77,
+      "exitCode": 0,
+      "outcome": "SUCCEEDED"
+    }
+  ]
+}

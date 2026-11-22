@@ -1,0 +1,142 @@
+✖ bounded admission persists 32 intents, runs at most four probes and refuses the 33rd before acceptance (0.973292ms)
+✖ concurrent admissions cannot race capacity, duplicate execution or authorization (0.186417ms)
+✖ deadline includes queue time; Git budget is 26s and the server finishes within 28s without starting expired work (0.413333ms)
+✖ accepted work survives the client session; identical retry returns its terminal result without execution (0.141458ms)
+✖ shutdown fences immediately, interrupts queued/owned work and uncertainty stays BLOCKED (0.153042ms)
+✖ startup recovery terminalizes old pending once and never reruns it; identical retry stays INTERRUPTED (0.146917ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 0
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 51.986917
+
+✖ failing tests:
+
+test at dist-tests/tests/unit/project-operations.test.js:86:1
+✖ bounded admission persists 32 intents, runs at most four probes and refuses the 33rd before acceptance (0.973292ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/operations.js:createProjectOperations is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async fixture (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:10:41)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:87:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-operations.test.js:106:1
+✖ concurrent admissions cannot race capacity, duplicate execution or authorization (0.186417ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/operations.js:createProjectOperations is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async fixture (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:10:41)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:107:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-operations.test.js:122:1
+✖ deadline includes queue time; Git budget is 26s and the server finishes within 28s without starting expired work (0.413333ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/operations.js:createProjectOperations is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async fixture (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:10:41)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:123:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-operations.test.js:137:1
+✖ accepted work survives the client session; identical retry returns its terminal result without execution (0.141458ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/operations.js:createProjectOperations is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async fixture (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:10:41)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:138:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-operations.test.js:156:1
+✖ shutdown fences immediately, interrupts queued/owned work and uncertainty stays BLOCKED (0.153042ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/operations.js:createProjectOperations is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async fixture (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:10:41)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:157:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist-tests/tests/unit/project-operations.test.js:178:1
+✖ startup recovery terminalizes old pending once and never reruns it; identical retry stays INTERRUPTED (0.146917ms)
+  AssertionError [ERR_ASSERTION]: Required contract core/projects/operations.js:createProjectOperations is not implemented
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at loadContract (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/fixtures/load-contract.js:10:16)
+      at async fixture (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:10:41)
+      at async TestContext.<anonymous> (file:///Users/fabioaltea/Repository/maestro/dist-tests/tests/unit/project-operations.test.js:179:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

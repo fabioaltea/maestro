@@ -1,0 +1,106 @@
+{
+  "sequences": 20,
+  "coreParity": true,
+  "results": [
+    {
+      "sequence": 1,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 2,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 3,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 4,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 5,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 6,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 7,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 8,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 9,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 10,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 11,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 12,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 13,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 14,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 15,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 16,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 17,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 18,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 19,
+      "configRevision": "2",
+      "filesPreserved": true
+    },
+    {
+      "sequence": 20,
+      "configRevision": "2",
+      "filesPreserved": true
+    }
+  ]
+}

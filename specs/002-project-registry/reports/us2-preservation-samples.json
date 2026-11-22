@@ -1,0 +1,35 @@
+{
+  "measuredAt": "2026-11-11T15:54:18.695Z",
+  "confirmed": 3,
+  "preserved": 3,
+  "configurationsPreservedPercent": 100,
+  "referenceFallbacks": 0,
+  "offlineWrites": 0,
+  "sourceUnchanged": true,
+  "projects": [
+    {
+      "projectId": "ae0228d4-8c52-448c-951c-d987edda49bb",
+      "configRevision": "1",
+      "baseBranch": "fixture-base",
+      "observationRevision": "1",
+      "completedAt": "2026-11-11T15:54:15.482Z",
+      "freshness": "LAST_KNOWN"
+    },
+    {
+      "projectId": "73e313c4-f7bd-4cdd-93d5-5bcd7e686965",
+      "configRevision": "1",
+      "baseBranch": null,
+      "observationRevision": "1",
+      "completedAt": "2026-11-11T15:54:16.113Z",
+      "freshness": "LAST_KNOWN"
+    },
+    {
+      "projectId": "b180af3c-e5fb-4c68-823f-1b2a56e4229f",
+      "configRevision": "1",
+      "baseBranch": "fixture-linked",
+      "observationRevision": "2",
+      "completedAt": "2026-11-11T15:54:17.194Z",
+      "freshness": "LAST_KNOWN"
+    }
+  ]
+}

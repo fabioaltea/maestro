@@ -1,0 +1,14 @@
+import { spawn } from 'node:child_process';
+import { realpath, access } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+if (process.version !== 'v26.13.0') throw new Error('RUNTIME_UNAVAILABLE: use Node 26.13.0');
+const electron = await realpath(fileURLToPath(new URL('../node_modules/electron/dist/Electron.app/Contents/MacOS/Electron', import.meta.url))).catch(() => { throw new Error('BUILD_UNAVAILABLE: install the Electron development binary explicitly before launch'); });
+const app = fileURLToPath(new URL('../dist-desktop', import.meta.url));
+await access(`${app}/main/index.js`);
+const env = {};
+for (const k of ['HOME', 'USER', 'LOGNAME', 'TMPDIR', 'LANG', 'LC_ALL', 'PATH']) if (process.env[k]) env[k] = process.env[k];
+env.MAESTRO_NODE_BINARY = await realpath(process.execPath);
+const child = spawn(electron, [app], { env, stdio: 'inherit', shell: false });
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));
+child.on('error', () => { console.error('Desktop launch failed.'); process.exitCode = 1; });
+child.on('exit', code => { process.exitCode = code ?? 1; });

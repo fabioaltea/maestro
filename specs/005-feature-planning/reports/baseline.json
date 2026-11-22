@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-19",
+  "sourceBase": "d798a94",
+  "implementationBranch": "005-feature-planning-implementation",
+  "node": "26.13.0",
+  "npm": "11.20.0",
+  "command": "npm test",
+  "tests": 583,
+  "pass": 576,
+  "fail": 1,
+  "skip": 6,
+  "durationMs": 122673.073542,
+  "failure": {
+    "name": "UPDATE actual SIGKILL at project.probing/clean",
+    "assertion": "store revision after replay",
+    "actual": "61",
+    "expected": "60",
+    "isolated": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "durationMs": 3065.367125
+    },
+    "cause": "UNRESOLVED; comparison covers global store revision, which may include independent lifecycle/recovery writes; no assertion weakened"
+  },
+  "sourceChangesBeforeBaseline": false,
+  "gate004": "PROVIDER_UNSAFE/BLOCKED",
+  "gatesExternal": "001/T082,T085;002/T093;003/T054 unchanged"
+}
