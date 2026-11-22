@@ -1,4 +1,5 @@
 import { DISCOVERY_LIMITS as limits } from '../../domain/discovery/model.js';
+import type { DiscoveryRecord } from '../../domain/discovery/model.js';
 import { requireUuid } from '../../domain/identifiers.js';
 import type { StoragePort } from '../../ports/storage.js';
 import type { DiscoveryMetadataData, DiscoveryMetadataQuery } from '../../ports/discovery.js';
@@ -32,6 +33,13 @@ export function createDiscoveryReader(options: { storage: Pick<StoragePort, 'rea
     const result = await storage.readDiscoveryArtifact(id, start, limits.chunkBytes); if (!result.ok) throw new Error(result.code);
     if (result.value.sha256 !== sha) throw new Error('ARTIFACT_CORRUPT'); return result.value;
   }
+  async function agentRun(discovery: DiscoveryRecord) {
+    if (!discovery.currentRunId) return null;
+    const run = await meta({ kind: 'run', id: discovery.currentRunId });
+    if (!run || run.discoveryId !== discovery.discoveryId) throw new Error('STATE_CORRUPT');
+    const { runId, providerId, modelId, phase, turnIndex } = run;
+    return { runId, providerId, modelId, phase, turnIndex };
+  }
   return async (method: string, params: Readonly<Record<string, unknown>>): Promise<Record<string, unknown>> => {
     if (!(DISCOVERY_READ_METHODS as readonly string[]).includes(method) && method !== 'discovery.eligibility.get') throw new Error('UNSUPPORTED_VERSION');
     validateDiscoveryParams(method, params);
@@ -45,7 +53,7 @@ export function createDiscoveryReader(options: { storage: Pick<StoragePort, 'rea
       result = { operation: publicDiscoveryOperation(operation) };
     } else if (method === 'discovery.get') {
       const discovery = await meta({ kind: 'discovery', id: params.discoveryId as string }); if (!discovery) throw new Error('INVALID_REQUEST');
-      result = { discovery };
+      result = { discovery: { ...discovery, agentRun: await agentRun(discovery) } };
     } else if (method === 'discovery.eligibility.get') {
       if (!options.offline) throw new Error('UNSUPPORTED_VERSION');
       if (params.checkId !== undefined) throw new Error('CHECK_EXPIRED');
@@ -92,7 +100,12 @@ export function createDiscoveryReader(options: { storage: Pick<StoragePort, 'rea
       for (const entry of page.items) {
         if (query === 'revisions') { const { artifactId: _private, ...view } = entry as import('../../domain/discovery/documents.js').DiscoveryDocumentRevision; items.push(view); continue; }
         let item: unknown = entry;
-        if (query === 'questions') {
+        if (query === 'discoveries') {
+          const discovery = entry as DiscoveryRecord;
+          if (['RUNNING', 'UPDATING', 'WAITING_USER', 'CANCELLING', 'RECONCILING'].includes(discovery.state)) {
+            item = { ...discovery, agentRun: await agentRun(discovery) };
+          }
+        } else if (query === 'questions') {
           const question = entry as import('../../domain/discovery/model.js').DiscoveryQuestion;
           item = { ...question, answer: await meta({ kind: 'lastAnswer', id: question.questionId }) };
         } else if (query === 'output') {

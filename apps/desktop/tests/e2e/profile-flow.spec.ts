@@ -4,7 +4,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {createScratch} from '../fixtures/desktop.ts';
-import {chooseDirectory,launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
+import {chooseDirectory,launchDesktop, switchArchiveForRegression, openSetting } from '../fixtures/electron.ts';
 
 test('agent profiles create revisioned catalogue entries with confirmed receipts and offline history',async()=>{
  const f=await createScratch(),other=await createScratch();
@@ -12,7 +12,7 @@ test('agent profiles create revisioned catalogue entries with confirmed receipts
    expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
    const {app,page}=await launchDesktop(f);
    try{
-     await page.getByRole('button',{name:'Profili agente',exact:true}).click();
+     await openSetting(page, 'Profili agente');
      const panel=page.getByRole('region',{name:'Catalogo profili agente'});
      await expect(panel.getByRole('button',{name:'project-architect',exact:true})).toBeVisible();
      await panel.getByRole('button',{name:'Nuovo profilo'}).click();
@@ -27,8 +27,8 @@ test('agent profiles create revisioned catalogue entries with confirmed receipts
      await expect(panel.getByRole('heading',{name:'Revisione fixture'})).toBeVisible();
      await expect(panel.getByText(/Operazione [a-f0-9-]{36}/)).toContainText('TERMINAL');
      expect((await f.cli(['daemon','stop'])).result.outcome).toBe('SUCCEEDED');
-     await page.getByRole('button',{name:'Servizio',exact:true}).click();
-     await page.getByRole('button',{name:'Profili agente',exact:true}).click();
+     await openSetting(page, 'Servizio');
+     await openSetting(page, 'Profili agente');
      await expect(panel.getByText(/Ultimo stato noto/)).toBeVisible();
      await expect(panel.getByRole('button',{name:'fixture-review',exact:true})).toBeVisible();
      await expect(panel.getByRole('button',{name:'Nuovo profilo'})).toBeDisabled();
@@ -46,7 +46,7 @@ test('desktop previews and binds a local skill after explicit review',async()=>{
    expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
    const {app,page}=await launchDesktop(f);
    try{
-     await page.getByRole('button',{name:'Profili agente',exact:true}).click();
+     await openSetting(page, 'Profili agente');
      const panel=page.getByRole('region',{name:'Catalogo profili agente'});
      await panel.getByRole('button',{name:'Skill',exact:true}).click();
      await chooseDirectory(app,source);
@@ -79,7 +79,7 @@ test('desktop reviews, enables and revokes a local tool manifest as catalogue da
    expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
    const {app,page}=await launchDesktop(f);
    try{
-     await page.getByRole('button',{name:'Profili agente',exact:true}).click();
+     await openSetting(page, 'Profili agente');
      const panel=page.getByRole('region',{name:'Catalogo profili agente'}),confirm=page.getByRole('button',{name:'Conferma operazione',exact:true});
      await panel.getByRole('button',{name:'Tool',exact:true}).click();
      await panel.getByLabel('Manifest JSON').fill(JSON.stringify({alias:'fixture-tool',title:'Tool fixture',version:'1.0.0',

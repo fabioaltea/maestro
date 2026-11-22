@@ -71,9 +71,26 @@ export function validateDiscoveryBridge(method: string, input: Params): void {
 }
 export function discoveryReceiptAction(action: string): string { return action === 'provider.configure' ? 'configure' : action === 'provider.check' ? 'check' : action === 'preview.discard' ? 'discard' : action; }
 
-const safeKeys = new Set(('answer answerId confirmedAt configuration check requirements providerId revision binaryVersion binarySha256 modelId policyVersion qualificationDigest state checkedAt capabilities code readOnlyAnalysis portableTurns nativeResume localCancellation verifiedRemoteCancellation quotaResetInfo snapshot snapshotId projectId configRevision selectors fileCount byteCount omissions createdAt expiresAtMs pinned items nextCursor sourceId relativePath sha256 byteLength lineCount discovery storeId discoveryId sessionId stateRevision contextDigest providerRevision currentRunId latestDocumentRevisionId updatedAt error operation requestId action phase outcome acceptedAt completedAt result runId revisionId approvalId questionId text reason section status originatingRunId questionRevision run generation seq kind data bytes truncated unavailable revisionNumber parentRevisionId bundleDigest provenanceValidated approval approvedAt acceptedUnknownIds ownerUid chunk offset totalBytes eligible freshness checkId observabilityDegraded').split(' '));
+const safeKeys = new Set(('answer answerId confirmedAt configuration check requirements providerId revision binaryVersion binarySha256 modelId policyVersion qualificationDigest state checkedAt capabilities code readOnlyAnalysis portableTurns nativeResume localCancellation verifiedRemoteCancellation quotaResetInfo snapshot snapshotId projectId configRevision selectors fileCount byteCount omissions createdAt expiresAtMs pinned items nextCursor sourceId relativePath sha256 byteLength lineCount discovery storeId discoveryId sessionId stateRevision contextDigest providerRevision currentRunId latestDocumentRevisionId updatedAt error operation requestId action phase outcome acceptedAt completedAt result runId revisionId approvalId questionId text reason section status originatingRunId questionRevision run generation seq kind data bytes truncated unavailable revisionNumber parentRevisionId bundleDigest provenanceValidated approval approvedAt acceptedUnknownIds ownerUid chunk offset totalBytes eligible freshness checkId observabilityDegraded agentRun turnIndex').split(' '));
 const idKeys = new Set(('answerId snapshotId projectId discoveryId sessionId currentRunId latestDocumentRevisionId storeId requestId runId revisionId approvalId questionId parentRevisionId checkId generation originatingRunId').split(' '));
 const revisionKeys = new Set(['revision', 'configRevision', 'stateRevision', 'providerRevision', 'revisionNumber', 'questionRevision']);
+export interface DiscoveryAgentRun {
+  runId: string; providerId: string; modelId: string; phase: string; turnIndex: number;
+}
+
+function validateAgentRun(value: Params) {
+  if (value.agentRun === undefined) return;
+  uuid(value.discoveryId);
+  if (value.agentRun === null) { if (value.currentRunId !== null) invalid(); return; }
+  const run = record(value.agentRun);
+  fields(run, ['runId', 'providerId', 'modelId', 'phase', 'turnIndex']);
+  uuid(run.runId);
+  if (run.runId !== value.currentRunId ||
+    !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/.test(text(run.providerId, 64)) ||
+    !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/.test(text(run.modelId, 128)) ||
+    !['SPAWN_INTENT', 'HOST_READY', 'SPAWN_AUTHORIZED', 'PROVIDER_RUNNING', 'EXIT_OBSERVED', 'FINALIZED'].includes(String(run.phase)) ||
+    !Number.isInteger(run.turnIndex) || Number(run.turnIndex) < 1 || Number(run.turnIndex) > 20) invalid();
+}
 function safe(value: unknown, depth = 0, key = ''): unknown {
   if (depth > 12) return invalid();
   if (key === 'error' && value !== null) {
@@ -91,6 +108,7 @@ function safe(value: unknown, depth = 0, key = ''): unknown {
   }
   if (Array.isArray(value)) { if (value.length > (key === 'selectors' ? 16 : key === 'omissions' ? 32 : key === 'acceptedUnknownIds' ? 220 : 20)) return invalid(); if (key === 'selectors') value.forEach(relative); return value.map(v => safe(v, depth + 1)); }
   const p = record(value), result: Params = {};
+  validateAgentRun(p);
   for (const [field, v] of Object.entries(p)) { if (!safeKeys.has(field)) return invalid(); result[field] = safe(v, depth + 1, field); }
   return result;
 }

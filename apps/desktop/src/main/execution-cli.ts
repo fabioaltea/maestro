@@ -9,7 +9,13 @@ export function buildExecutionCliArgs(c:CliCommand){
  if(c.action==='authorize'||observed)args.push('--input-stdin');
  else if(mutation){keys(p,['grantId']);args.push(`--grant=${uuid(p.grantId)}`);}
  else switch(c.action){
-   case 'list':keys(p,['projectId','cursor']);positional.push(uuid(p.projectId));break;
+   case 'list':
+     keys(p,['projectId','cursor','activeOnly']);positional.push(uuid(p.projectId));
+     if(p.activeOnly!==undefined){
+       if(p.activeOnly!==true||p.cursor!==undefined)throw new Error('INVALID_INPUT');
+       args.push('--active-only');
+     }
+     break;
    case 'get':keys(p,['sessionId']);positional.push(uuid(p.sessionId));break;
    case 'output.list':keys(p,['runId','cursor']);positional.push(uuid(p.runId));break;
    case 'artifact':keys(p,['artifactId','cursor']);positional.push(uuid(p.artifactId));break;

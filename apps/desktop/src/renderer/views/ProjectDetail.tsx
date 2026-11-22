@@ -8,6 +8,7 @@ import { dateLabel } from '../format.ts';
 import { ProjectObservation } from '../components/ProjectObservation.tsx';
 import { FeaturePlanning } from './FeaturePlanning.tsx';
 import { Discovery } from './Discovery.tsx';
+import { ProjectAgents } from './ProjectAgents.tsx';
 import type { Desktop } from '../state/desktop.ts';
 import type { PublicResult } from '../../shared/bridge-contract.ts';
 
@@ -22,7 +23,9 @@ export function ProjectDetail({ project, desktop, live, onUpdated, onRemoved, on
   onWorkspace(source: WorkspaceSource): void; discoveryId?: string;
 }) {
   const [editing, setEditing] = useState(false);
-  const [section, setSection] = useState<'overview' | 'discovery' | 'features'>(discoveryId ? 'discovery' : 'overview');
+  const [section, setSection] = useState<'overview' | 'discovery' | 'features' | 'agents'>(discoveryId ? 'discovery' : 'overview');
+  const [selectedDiscovery, setSelectedDiscovery] = useState(discoveryId);
+  const [followDiscovery, setFollowDiscovery] = useState<string | null>(null);
   const [editor, setEditor] = useState(0), [verification, setVerification] = useState(0);
   const [eligibility, setEligibility] = useState<{ eligible: boolean; reason: string } | null>(null);
   const { invoke } = desktop;
@@ -60,7 +63,7 @@ export function ProjectDetail({ project, desktop, live, onUpdated, onRemoved, on
   return <article className="detail repository-detail" aria-label={`Dettaglio ${project.displayName}`}>
     <header className="repository-heading">
       <div>
-        <h3>{project.displayName}</h3>
+        <h2>{project.displayName}</h2>
         <p className="repository-path mono muted">{project.referenceCheckout}</p>
         {!live && <p className="hint">Ultimo stato noto · servizio fermo</p>}
       </div>
@@ -71,8 +74,12 @@ export function ProjectDetail({ project, desktop, live, onUpdated, onRemoved, on
       <button aria-current={section === 'overview' ? 'page' : undefined} onClick={() => setSection('overview')}>Panoramica</button>
       <button aria-current={section === 'discovery' ? 'page' : undefined} onClick={() => setSection('discovery')}>Analizza codebase</button>
       <button aria-current={section === 'features' ? 'page' : undefined} onClick={() => setSection('features')}>Feature</button>
+      <button aria-current={section === 'agents' ? 'page' : undefined} onClick={() => { setFollowDiscovery(null); setSection('agents'); }}>Agenti</button>
     </nav>
     {!canCreate && <p className="hint repository-next-step" id="feature-next-step">{next} {live && <button className="text-button" onClick={refreshEligibility}>Verifica contesto</button>}</p>}
+    {(section === 'overview' || section === 'agents') && <ProjectAgents key={`${section}:${followDiscovery ?? ''}`}
+      desktop={desktop} projectId={project.projectId} initialDiscoveryId={section === 'agents' ? followDiscovery : null}
+      onDiscovery={id => { setSelectedDiscovery(id); setSection('discovery'); }} />}
     {section === 'overview' && <>
       <div className="repository-overview">
         <ProjectObservation project={project} desktop={desktop} live={live} onUpdated={onUpdated} />
@@ -95,6 +102,7 @@ export function ProjectDetail({ project, desktop, live, onUpdated, onRemoved, on
     </>}
     {section === 'features' && <FeaturePlanning key={`${project.configRevision}:${editor}`} project={project} desktop={desktop} live={live} canCreate={canCreate} onWorkspace={onWorkspace} />}
     {section === 'discovery' && <Discovery key={project.configRevision} project={project} desktop={desktop} live={live} onApproved={refreshEligibility}
-      {...(discoveryId ? { initialDiscoveryId: discoveryId } : {})} />}
+      onFollow={id => { setFollowDiscovery(id); setSection('agents'); }}
+      {...(selectedDiscovery ? { initialDiscoveryId: selectedDiscovery } : {})} />}
   </article>;
 }

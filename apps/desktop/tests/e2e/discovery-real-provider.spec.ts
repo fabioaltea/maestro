@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createScratch, repositoryRoot } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop, chooseDirectory, openSetting } from '../fixtures/electron.ts';
 const optedIn = process.env.MAESTRO_DISCOVERY_REAL === '1' && process.env.MAESTRO_DISCOVERY_REAL_CONSENT === 'synthetic-scratch-readonly';
 test.use({ trace: 'off', screenshot: 'off', video: 'off' });
 test('G1 SC-001 official Codex login: UI interview, correction, exact approval and headless observation', async () => {
@@ -18,7 +18,7 @@ test('G1 SC-001 official Codex login: UI interview, correction, exact approval a
     const projectId = (await f.cli(['project', 'add', repo.path, '--name=SC001 sintetico'])).result.data.projectId;
     const before = await f.snapshot(repo.path), { app, page } = await launchDesktop(f);
     try {
-      await page.getByRole('button', { name: 'Diagnostica', exact: true }).click();
+      await openSetting(page, 'Diagnostica');
       await page.getByText('Configurazione avanzata di Codex', { exact: true }).click(); await chooseDirectory(app, binary!); await page.getByRole('button', { name: 'Scegli binario Codex', exact: true }).click(); await page.getByLabel('Modello Codex', { exact: true }).fill(model!);
       await page.getByRole('button', { name: 'Configura provider', exact: true }).click(); await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click(); await expect(page.locator('details.discovery-provider')).toContainText(model!, { timeout: 15000 });
       await page.getByRole('button', { name: 'Verifica provider e login', exact: true }).click(); await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();

@@ -1,27 +1,29 @@
 import { useEffect, useState } from 'react';
 import type { Desktop } from '../state/desktop.ts';
-import { currentDiscovery, discoveryIsRunning, discoveryStateLabels, readDiscoveryHistory, useDiscoverySession, type DiscoverySummary } from '../state/discovery.ts';
-import { DiscoveryTerminal } from '../components/DiscoveryTerminal.tsx';
+import { currentDiscovery, discoveryAgentStatus, discoveryIsRunning, discoveryStateLabels, readDiscoveryHistory, useDiscoverySession, type DiscoverySummary } from '../state/discovery.ts';
+import { AgentTerminal } from '../components/AgentTerminal.tsx';
 import { dateLabel } from '../format.ts';
 
-function DiscoveryActivity({ desktop, projectId, discovery, live, onDiscovery }: {
+export function DiscoveryActivity({ desktop, projectId, discovery, live, onDiscovery }: {
   desktop: Desktop; projectId: string; discovery: DiscoverySummary; live: boolean; onDiscovery(id: string): void;
 }) {
   const view = useDiscoverySession(desktop, projectId, discovery.discoveryId, false, live, false);
   const session = view.session ?? discovery;
-  const streaming = live && view.freshness !== 'LAST_KNOWN' && discoveryIsRunning(session.state);
+  const run = session.agentRun;
+  const current = live && view.freshness !== 'LAST_KNOWN' && !view.failure;
+  const streaming = current && run?.phase === 'PROVIDER_RUNNING' && discoveryIsRunning(session.state);
   return <section className="agent-discovery" aria-label="Esecuzione Discovery">
     <div className="agent-run-heading">
       <div>
         <h3>Discovery del progetto</h3>
-        <p className="hint" role="status">{discoveryStateLabels[session.state] ?? session.state}
-          {(!live || view.freshness === 'LAST_KNOWN') && ' · Ultimo stato noto'}</p>
+        {run && <p className="hint">Project Architect · {run.providerId === 'codex' ? 'Codex' : run.providerId} · {run.modelId} · Turno {run.turnIndex}</p>}
+        <p className="hint" role="status">{discoveryAgentStatus(session, current)}</p>
       </div>
       <button className="button subtle" onClick={() => onDiscovery(discovery.discoveryId)}>Apri Discovery</button>
     </div>
     {session.error && <p className="field-error">{session.error}</p>}
     {view.failure && <p className="field-error" role="alert">{view.failure}</p>}
-    <DiscoveryTerminal key={session.currentRunId ?? 'pending'} ring={view.ring} live={streaming} />
+    <AgentTerminal key={session.currentRunId ?? 'pending'} ring={view.ring} live={streaming} />
     <details className="agent-run-details"><summary>Identificativi della sessione</summary>
       <dl><dt>Sessione</dt><dd className="mono">{session.sessionId}</dd>
         <dt>Esecuzione</dt><dd className="mono">{session.currentRunId ?? 'In attesa'}</dd></dl>

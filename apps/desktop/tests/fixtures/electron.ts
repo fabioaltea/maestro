@@ -1,4 +1,5 @@
 import { _electron } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { access, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { repositoryRoot, createScratch } from './desktop.ts';
@@ -17,6 +18,15 @@ export async function launchDesktop(f: Awaited<ReturnType<typeof createScratch>>
 }
 export async function chooseDirectory(app: Awaited<ReturnType<typeof launchDesktop>>['app'], path: string) {
   await app.evaluate(({ dialog }, selected) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [selected] }); }, path);
+}
+
+export async function openSettings(page: Page) {
+  await page.getByRole('navigation', { name: 'Sezioni principali' }).getByRole('button', { name: 'Impostazioni', exact: true }).click();
+  return page.getByRole('navigation', { name: 'Sezioni impostazioni' });
+}
+
+export async function openSetting(page: Page, name: string) {
+  await (await openSettings(page)).getByRole('button', { name, exact: true }).click();
 }
 
 /** Exercises the legacy transport contract without exposing archive selection in the normal renderer. */

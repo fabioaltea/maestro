@@ -40,7 +40,9 @@ export function validateExecutionBridge(method:string,p:Params){
  const common=['bridgeVersion','callId','selectionEpoch'];
  switch(method){
    case 'listExecutionSessions':
-     keys(p,[...common,'projectId','cursor']);uuid(p.projectId);break;
+     keys(p,[...common,'projectId','cursor','activeOnly']);uuid(p.projectId);
+     if(p.activeOnly!==undefined&&(p.activeOnly!==true||p.cursor!==undefined))throw new Error('INVALID_INPUT');
+     break;
    case 'getExecutionSession':
      keys(p,[...common,'sessionId']);uuid(p.sessionId);break;
    case 'listExecutionOutput':
@@ -72,6 +74,19 @@ function session(value:unknown){
  idFields(p,['sessionId','featureId','workspaceId','projectId','profileResolutionId','envelopeId','runId']);
  if(p.checkpointId!==null)uuid(p.checkpointId);
  revision(p.stateRevision);enumValue(p.state,sessionStates);text(p.createdAt,64);text(p.updatedAt,64);return p;
+}
+export interface ExecutionAgentRun {
+  runId: string; providerId: 'codex' | 'claude'; modelId: string | null; phase: string; featureTitle: string | null;
+}
+function agent(value:unknown,runId:unknown,providerId?:unknown,phase?:unknown){
+ const r=record(value);
+ keys(r,['runId','providerId','modelId','phase','featureTitle']);
+ if(uuid(r.runId)!==runId || providerId!==undefined&&r.providerId!==providerId || phase!==undefined&&r.phase!==phase)
+   throw new Error('CLIENT_PROTOCOL_ERROR');
+ executionProvider(r.providerId);
+ if(r.modelId!==null&&!/^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(text(r.modelId,96)))throw new Error('CLIENT_PROTOCOL_ERROR');
+ if(r.featureTitle!==null)text(r.featureTitle,512);
+ enumValue(r.phase,['PREPARED','HOST_READY','START_AUTHORIZED','RUNNING','EXIT_OBSERVED','FINALIZED']);
 }
 export function validateExecutionData(action:string,value:unknown):Params{
  const p=record(value);
@@ -125,15 +140,22 @@ export function validateExecutionData(action:string,value:unknown):Params{
      }
      break;
    }
-   case 'list':
-     keys(rest,['items','nextCursor']);page(rest.items,20).forEach(session);break;
+   case 'list':{
+     keys(rest,['items','nextCursor','agent']);const items=page(rest.items,20).map(session);
+     if(rest.agent!==undefined){
+       if(items.length>1||rest.nextCursor!==null||((rest.agent===null)!==(items.length===0)))throw new Error('CLIENT_PROTOCOL_ERROR');
+       if(rest.agent!==null)agent(rest.agent,items[0]?.runId);
+     }
+     break;
+   }
    case 'get':{
-     keys(rest,['session','run','checkpoint','interactions','checkedAt']);
+     keys(rest,['session','run','checkpoint','interactions','checkedAt','agent']);
      const s=session(rest.session),r=record(rest.run);
      keys(r,['runId','sessionId','generation','providerId','configRevision','phase','outcome','requested','outputWatermark','truncated']);
      idFields(r,['runId','sessionId','generation']);executionProvider(r.providerId);revision(r.configRevision);decimal(r.outputWatermark);
      if(r.runId!==s.runId||r.sessionId!==s.sessionId||typeof r.truncated!=='boolean')throw new Error('CLIENT_PROTOCOL_ERROR');
      enumValue(r.phase,['PREPARED','HOST_READY','START_AUTHORIZED','RUNNING','EXIT_OBSERVED','FINALIZED']);enumValue(r.outcome,outcomes);
+     if(rest.agent!==undefined)agent(rest.agent,r.runId,r.providerId,r.phase);
      if(r.requested!==null)enumValue(r.requested,['PAUSE','CANCEL']);
      if(rest.checkpoint!==null){
        const c=record(rest.checkpoint);

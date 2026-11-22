@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import {executionRuntimeFixture,waitForExecution} from '../fixtures/execution-runtime.js';
 
 test('an independent client can read and answer a question, with stale answers rejected',async t=>{
@@ -7,6 +8,13 @@ test('an independent client can read and answer a question, with stale answers r
  const {requestId}=await f.mutate('start',await f.prepare('start',f.startIntent));
  await waitForExecution(()=>f.state(requestId)?.state==='WAITING_USER');
  const result=await f.send('get',{sessionId:requestId}),data=result.data as Record<string,unknown>;
+ const active=(await f.send('list',{projectId:f.projectId,activeOnly:true})).data as {items:{runId:string}[];agent:Record<string,unknown>};
+ assert.deepEqual(active.items.map(item=>item.runId),[requestId]);
+ assert.deepEqual(active.agent,data.agent);
+ assert.equal(active.agent.modelId,'fixture');
+ assert.equal(active.agent.phase,'RUNNING');
+ const other=(await f.send('list',{projectId:randomUUID(),activeOnly:true})).data as {agent:unknown};
+ assert.equal(other.agent,null);
  const [q]=(data.interactions as {interactionId:string;expectedRevision:string;textArtifactId:string}[]);
  assert.ok(q);
  const read=await f.send('artifact.get',{artifactId:q.textArtifactId});
@@ -19,11 +27,17 @@ test('an independent client can read and answer a question, with stale answers r
  await f.runtime.idle();
  assert.deepEqual(f.receivedAnswers,['Confermo il test locale.']);
  assert.equal(f.state(requestId)?.state,'READY_FOR_REVIEW');
+ const settled=(await f.send('list',{projectId:f.projectId,activeOnly:true})).data as {agent:unknown};
+ assert.equal(settled.agent,null);
  const stale=await f.mutate('answer',later);
  assert.equal((stale.reply.data as Record<string,unknown>).code,'PROCESS_UNKNOWN');
  assert.equal(f.counts().writes,1);
  const chunks=(await f.send('output.list',{runId:requestId})).data as {chunks:unknown[];watermark:string};
  assert.equal(chunks.chunks.length,1);assert.equal(chunks.watermark,'1');
+ const configure=await f.prepare('provider.configure',{providerId:'codex',binaryHandle:randomUUID(),authProfileRef:randomUUID(),modelId:'next-model'},{configRevision:'1'});
+ assert.equal((await f.mutate('provider.configure',configure)).operation?.outcome,'SUCCEEDED');
+ const historical=(await f.send('get',{sessionId:requestId})).data as {agent:{modelId:string}};
+ assert.equal(historical.agent.modelId,'fixture');
 });
 
 test('overflow remains queryable and cancellation preserves the result after owned exit',async t=>{

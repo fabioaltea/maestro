@@ -12,7 +12,7 @@ import {jsonFile,jsonStdin} from './json-input.js';
 import {projectExitCode} from './projects.js';
 import {uploadWorkflowBytes} from './workflow-upload.js';
 
-const HELP=`maestro execution list PROJECT [--limit 1..20] [--cursor CURSOR]
+const HELP=`maestro execution list PROJECT [--active-only | --limit 1..20 --cursor CURSOR]
 maestro execution get SESSION | provider.get codex|claude | operation REQUEST
 maestro execution output.list RUN | artifact ARTIFACT [--cursor CURSOR]
 maestro execution prepare --input-file FILE | --input-stdin
@@ -30,7 +30,7 @@ export async function runExecutionCli(args:readonly string[]):Promise<number>{
  try{
    const {values:v,positionals:p}=parseArgs({args:[...args],allowPositionals:true,strict:true,options:{
      'state-dir':{type:'string'},'timeout-ms':{type:'string'},'request-id':{type:'string'},grant:{type:'string'},
-     limit:{type:'string'},cursor:{type:'string'},'input-file':{type:'string'},'input-stdin':{type:'boolean'},
+     limit:{type:'string'},cursor:{type:'string'},'active-only':{type:'boolean'},'input-file':{type:'string'},'input-stdin':{type:'boolean'},
      json:{type:'boolean'},help:{type:'boolean',short:'h'},
    }});
    json=v.json??false;
@@ -46,7 +46,7 @@ export async function runExecutionCli(args:readonly string[]):Promise<number>{
    if(granted)allowed.add('grant');
    if(mutation){allowed.add('request-id');requestId=workspaceUuid(v['request-id']);}
    if(read&&['list','artifact','output.list'].includes(verb))allowed.add('cursor');
-   if(verb==='list')allowed.add('limit');
+   if(verb==='list'){allowed.add('limit');allowed.add('active-only');}
    if(Object.keys(v).some(key=>!allowed.has(key))||v['state-dir']!==undefined&&!isAbsolute(v['state-dir'])||
       v['timeout-ms']!==undefined&&!/^[1-9][0-9]{0,3}$/.test(v['timeout-ms']))throw new Error('INVALID_REQUEST');
    let params:Record<string,unknown>=granted?{grantId:v.grant}:read?{[read[1]]:id}:{};
@@ -63,6 +63,7 @@ export async function runExecutionCli(args:readonly string[]):Promise<number>{
    }
    if(v.limit!==undefined){if(!/^(?:[1-9]|1[0-9]|20)$/.test(v.limit))throw new Error('INVALID_REQUEST');params.limit=Number(v.limit);}
    if(v.cursor!==undefined)params.cursor=v.cursor;
+   if(v['active-only']!==undefined)params.activeOnly=v['active-only'];
    if(upload){
      const target=await client.runExecution('execution.get',{sessionId:workspaceUuid(id)},options);
      if(target.result!=='OK'||target.liveness!=='LIVE_VERIFIED')result={...target,requestId};

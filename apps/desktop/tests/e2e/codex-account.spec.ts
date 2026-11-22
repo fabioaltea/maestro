@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { lstat, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop, chooseDirectory, openSetting } from '../fixtures/electron.ts';
 
 test('Desktop links Codex before opening a repository and reuses the session on restart', async () => {
   const fixture = await createScratch();
@@ -32,6 +32,9 @@ if (args[1] === 'codex') {
     const commands = async () => (await readFile(log, 'utf8')).trim().split('\n');
     const { app, page } = await launchDesktop(fixture, fixture.archive, { node });
     try {
+      await expect(page.getByRole('button', { name: 'Apri repository', exact: true })).toBeEnabled();
+      await expect(page.getByRole('region', { name: 'Account Codex' })).toHaveCount(0);
+      await openSetting(page, 'Diagnostica');
       const link = page.getByRole('button', { name: 'Collega Codex', exact: true });
       await expect(link).toBeVisible();
       expect(await commands()).toEqual(['status']);
@@ -55,7 +58,7 @@ if (args[1] === 'codex') {
       await expect(page.getByRole('button', { name: 'Avvia Discovery', exact: true })).toBeDisabled();
       await expect(page.getByRole('button', { name: 'Scegli binario Codex', exact: true })).toHaveCount(0);
       await expect.poll(commands).toEqual(['status', 'login', 'status', 'configure']);
-      await page.getByRole('button', { name: 'Diagnostica', exact: true }).click();
+      await openSetting(page, 'Diagnostica');
       await expect(page.getByText('Account Codex collegato.')).toBeVisible();
       await expect(page.getByText('Versione Codex CLI 0.167.0')).toBeVisible();
     } finally { await restarted.app.close(); }

@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {createScratch} from '../fixtures/desktop.ts';
-import {launchDesktop} from '../fixtures/electron.ts';
+import {launchDesktop, openSetting} from '../fixtures/electron.ts';
 
 test('the queue is visible online and offline without pretending an executor is configured',async()=>{
  const f=await createScratch();
@@ -11,7 +11,7 @@ test('the queue is visible online and offline without pretending an executor is 
    const {app,page}=await launchDesktop(f);
    try{
      await page.locator('.project-row').first().click();
-     await page.getByRole('button',{name:'Coda',exact:true}).click();
+     await openSetting(page, 'Coda');
      const queue=page.getByRole('region',{name:'Coda sessioni'});
      await expect(queue.getByText('Nessun job in coda.')).toBeVisible();
      await expect(queue.getByText(/executor qualificato/)).toBeVisible();

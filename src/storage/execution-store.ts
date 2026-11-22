@@ -45,6 +45,16 @@ export function readExecutionState(db:Database.Database,query:ExecutionQuery):Ex
  };
  switch(query.kind){
    case 'provider':return{provider:row('SELECT * FROM execution_providers WHERE provider_id=?',provider,query.id)};
+   case 'model':{
+     const revision=requireDecimal(query.configRevision);
+     const current=readExecutionState(db,{kind:'provider',id:query.id}).provider;
+     if(current?.configRevision===revision)return{modelId:current.modelId};
+     const saved=db.prepare(`SELECT json_extract(canonical_intent,'$.payload.modelId') AS model
+       FROM workflow_operations WHERE namespace='EXECUTION' AND action='provider.configure' AND outcome='SUCCEEDED'
+       AND json_extract(result,'$.providerId')=? AND json_extract(result,'$.configRevision')=? LIMIT 1`)
+       .get(query.id,revision) as FeatureRow|undefined;
+     return{modelId:typeof saved?.model==='string'?saved.model:null};
+   }
    case 'session':return{session:row('SELECT * FROM execution_sessions WHERE session_id=?',session,requireUuid(query.id))};
    case 'run':return{run:row('SELECT * FROM execution_runs WHERE run_id=?',run,requireUuid(query.id))};
    case 'active':return{run:row("SELECT * FROM execution_runs WHERE phase<>'FINALIZED'",run)};

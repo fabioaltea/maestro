@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {createScratch} from '../fixtures/desktop.ts';
-import {launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
+import {launchDesktop, switchArchiveForRegression, openSetting } from '../fixtures/electron.ts';
 
 test('sessions stays available offline and does not enable unqualified start',async()=>{
  const first=await createScratch(),other=await createScratch();
@@ -11,8 +11,7 @@ test('sessions stays available offline and does not enable unqualified start',as
    const {app,page}=await launchDesktop(first);
    try{
      await page.locator('.project-row').first().click();
-     const nav=page.getByRole('button',{name:'Sessioni',exact:true});
-     await nav.click();
+     await openSetting(page, 'Sessioni');
      const panel=page.getByRole('region',{name:'Sessioni agente'});
      await expect(panel.getByText('Nessuna sessione per questo progetto.')).toBeVisible();
      await expect(panel.getByRole('button',{name:'Nuova sessione'})).toBeDisabled();
@@ -62,7 +61,7 @@ test('session reconciliation confirms the exact receipt and restores keyboard fo
        })();
      }finally{db.close();}
      expect((await f.cli(['daemon','start'])).result.outcome).toBe('SUCCEEDED');
-     await page.getByRole('button',{name:'Sessioni',exact:true}).click();
+     await openSetting(page, 'Sessioni');
      const session=page.getByRole('region',{name:'Sessioni agente'});
      await session.getByRole('button',{name:/Uscita da riconciliare/}).click();
      const reconcile=session.getByRole('button',{name:'Riconcilia',exact:true});

@@ -1,6 +1,6 @@
 import {test,expect} from '@playwright/test';
 import {createScratch} from '../fixtures/desktop.ts';
-import {launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
+import {launchDesktop, switchArchiveForRegression, openSetting } from '../fixtures/electron.ts';
 import {createHash,randomUUID} from 'node:crypto';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
@@ -26,7 +26,7 @@ test('review history is scoped to the selected archive and remains available off
    const {app,page}=await launchDesktop(f);
    try{
      await page.locator('.project-row').first().click();
-     await page.getByRole('button',{name:'Revisioni',exact:true}).click();
+     await openSetting(page, 'Revisioni');
      const panel=page.getByRole('region',{name:'Revisioni delle feature'});
      await expect(panel.getByText('Nessuna revisione per questo progetto.')).toBeVisible();
      await expect(panel.getByRole('button',{name:'Nuova revisione'})).toBeEnabled();
@@ -95,7 +95,7 @@ test('review feedback, candidate and completion preserve receipts and confirmati
      }finally{db.close();}
      const actor=fileURLToPath(new URL('../fixtures/workspace-daemon.ts',import.meta.url));
      await promisify(execFile)(process.execPath,[actor,f.archive],{timeout:35000,maxBuffer:16384});
-     await page.getByRole('button',{name:'Revisioni',exact:true}).click();
+     await openSetting(page, 'Revisioni');
      const panel=page.getByRole('region',{name:'Revisioni delle feature'});
      await panel.getByRole('button',{name:/review-target/}).click();
      const prepare=panel.getByRole('button',{name:'Prepara richiesta di modifiche'});

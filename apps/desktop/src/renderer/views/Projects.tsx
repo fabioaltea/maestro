@@ -5,7 +5,6 @@ import type { PublicResult } from '../../shared/bridge-contract.ts';
 import { record } from '../../shared/validation.ts';
 import { decodeProject, type Project } from '../state/project-view.ts';
 import { ProjectDetail } from './ProjectDetail.tsx';
-import { CodexAccount } from '../components/CodexAccount.tsx';
 
 const recentKey = 'maestro.recent-projects';
 const activeKey = 'maestro.active-project';
@@ -32,14 +31,14 @@ function forgetProject() {
   try { localStorage.removeItem(activeKey); } catch { /* Preference storage is optional. */ }
 }
 
-export function Projects({ desktop, onWorkspace, discoveryId }: {
+export function Projects({ desktop, onWorkspace, discoveryId, home, onHome, onOpened }: {
   desktop: Desktop; onWorkspace(source: WorkspaceSource): void; discoveryId?: string;
+  home: boolean; onHome(): void; onOpened(): void;
 }) {
   const { context, core, invoke, setNotice } = desktop, projectId = context?.activeProjectId;
   const [projects, setProjects] = useState<Project[]>([]), [project, setProject] = useState<Project | null>(null);
   const [live, setLive] = useState(false), [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
-  const [choosing, setChoosing] = useState(false);
   const revision = useRef(0), restored = useRef(false);
 
   const readRecent = useCallback(async (token: number) => {
@@ -63,15 +62,14 @@ export function Projects({ desktop, onWorkspace, discoveryId }: {
       if (revision.current !== token || status?.result !== 'OK') return;
       setLive(status.liveness === 'LIVE_VERIFIED');
       if (status.data.status === 'ABSENT') return;
-      if (projectId) {
+      if (projectId && !home) {
         const detail = await core('getProject', { projectId });
         if (revision.current !== token || detail?.result !== 'OK') return;
         setProject(decodeProject(detail.data.project));
         if (detail.storeId) remember(projectId, detail.storeId);
-        if (choosing) await readRecent(token);
         return;
       }
-      if (!restored.current && status.storeId) {
+      if (!projectId && !restored.current && status.storeId) {
         const saved = rememberedProject(status.storeId);
         if (saved) {
           const reply = await invoke('selectProject', { projectId: saved });
@@ -86,7 +84,7 @@ export function Projects({ desktop, onWorkspace, discoveryId }: {
     } finally {
       if (revision.current === token) setLoading(false);
     }
-  }, [context, projectId, choosing, core, invoke, readRecent]);
+  }, [context, projectId, home, core, invoke, readRecent]);
   useEffect(() => {
     void refresh();
     return () => { revision.current++; };
@@ -107,8 +105,10 @@ export function Projects({ desktop, onWorkspace, discoveryId }: {
         setNotice(`${result.error.message} ${result.error.nextAction}${recovery}`);
       } else if (reply.context) {
         const next = record(reply.context);
-        if (typeof next.activeProjectId === 'string' && typeof next.storeId === 'string') remember(next.activeProjectId, next.storeId);
-        setChoosing(false);
+        if (typeof next.activeProjectId === 'string' && typeof next.storeId === 'string') {
+          remember(next.activeProjectId, next.storeId);
+          onOpened();
+        }
       }
     } finally { setBusy(false); }
   }
@@ -131,45 +131,45 @@ export function Projects({ desktop, onWorkspace, discoveryId }: {
   const order = recentIds();
   const rank = (id: string) => order.includes(id) ? order.indexOf(id) : order.length;
   const ordered = [...projects].sort((a, b) => rank(a.projectId) - rank(b.projectId));
-  const picker = <section className="repository-picker" aria-labelledby="recent-repositories-title">
-    <h3 id="recent-repositories-title">Recenti</h3>
-    {loading ? <p className="hint" role="status">Caricamento repository…</p>
-      : ordered.length === 0 && <p className="hint">Nessun repository recente.</p>}
-    {ordered.length > 0 && <ul className="repository-recent">
-      {ordered.map(item => <li key={item.projectId}><button disabled={busy} className="project-row" aria-current={item.projectId === projectId || undefined}
-        title={item.referenceCheckout} onClick={() => void select('selectProject', item.projectId)}>
-        <strong>{item.displayName}</strong><small>{item.referenceCheckout}</small>
-      </button></li>)}
-    </ul>}
-    {cursor && <button className="text-button" disabled={busy} onClick={() => void more()}>Altri repository</button>}
-  </section>;
-  const entry = <div className="row-actions repository-entry">
-    <button className={projectId ? 'button subtle' : 'button primary'} disabled={busy || !context || loading} onClick={() => void select('openRepository')}>Apri repository</button>
-    <button className="button subtle" disabled={busy || !context || loading} onClick={() => void select('createRepository')}>Crea repository</button>
-  </div>;
-
   return <section className="repository-view" aria-label="Repository locali">
     {!context && desktop.runtimeReady && <p className="hint" role="status">Dati locali di Maestro non disponibili. Consulta Diagnostica.</p>}
-    {projectId ? <>
-      <div className="repository-toolbar">
+    {!home ? <>
+      <header className="repository-topbar">
+        <nav aria-label="Percorso repository">
+          <ol>
+            <li><button className="text-button" onClick={onHome}>Home</button></li>
+            <li aria-hidden="true">›</li>
+            <li aria-current="page" title={project?.displayName}>{project?.displayName ?? 'Repository'}</li>
+          </ol>
+        </nav>
         <div className="row-actions">
-          <button className="button subtle" aria-expanded={choosing} disabled={busy} onClick={() => setChoosing(value => !value)}>Cambia repository</button>
-          {entry}
+          <button className="text-button" disabled={loading} onClick={() => void refresh()}>Aggiorna repository</button>
+          <button className="text-button" onClick={() => void close()}>Chiudi repository</button>
         </div>
-        <div className="row-actions">
-          <button className="text-button" disabled={busy} onClick={() => void refresh()}>Aggiorna repository</button>
-          <button className="text-button" disabled={busy} onClick={() => void close()}>Chiudi repository</button>
-        </div>
-      </div>
-      {choosing && picker}
-      {project?.projectId === projectId
+      </header>
+      {project && project.projectId === projectId
         ? <ProjectDetail project={project} desktop={desktop} live={live} onWorkspace={onWorkspace}
             onUpdated={refresh} onRemoved={close} {...(discoveryId ? {discoveryId} : {})} />
         : <p className="hint" role="status">{loading ? 'Caricamento repository…' : 'Dettaglio repository non disponibile.'}</p>}
     </> : <div className="repository-start">
-      {context && picker}
-      {entry}
-      <CodexAccount codex={desktop.codex} />
+      <section className="repository-picker" aria-labelledby="recent-repositories-title">
+        <h2 id="recent-repositories-title">Recenti</h2>
+        {context && (loading ? <p className="hint" role="status">Caricamento repository…</p>
+          : ordered.length === 0 && <p className="hint">Nessun repository recente.</p>)}
+        {ordered.length > 0 && <ul className="repository-recent">
+          {ordered.map(item => <li key={item.projectId}>
+            <button disabled={busy} className="project-row" aria-current={item.projectId === projectId || undefined}
+              title={item.referenceCheckout} onClick={() => void select('selectProject', item.projectId)}>
+              <strong>{item.displayName}</strong><small>{item.referenceCheckout}</small>
+            </button>
+          </li>)}
+        </ul>}
+        {cursor && <button className="text-button" disabled={busy} onClick={() => void more()}>Altri repository</button>}
+      </section>
+      <div className="row-actions">
+        <button className="button primary" disabled={busy || !context || loading} onClick={() => void select('openRepository')}>Apri repository</button>
+        <button className="button subtle" disabled={busy || !context || loading} onClick={() => void select('createRepository')}>Crea repository</button>
+      </div>
     </div>}
   </section>;
 }

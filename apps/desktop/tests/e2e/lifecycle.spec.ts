@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop } from '../fixtures/electron.ts';
+import { launchDesktop, openSetting } from '../fixtures/electron.ts';
 test('service controls require a visible confirmation and expose original operation outcomes', async () => {
   const f = await createScratch();
   try {
     const { app, page } = await launchDesktop(f);
     try {
-      await page.getByRole('button', { name: 'Servizio', exact: true }).click();
+      await openSetting(page, 'Servizio');
       await page.getByRole('button', { name: 'Avvia servizio', exact: true }).click();
       await expect(page.getByRole('dialog')).toBeVisible();
       expect((await f.cli(['daemon', 'status'])).result.liveness).toBe('ABSENT_VERIFIED');
@@ -16,7 +16,7 @@ test('service controls require a visible confirmation and expose original operat
       await page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
       await expect(page.getByText('Operazione completata', { exact: true })).toBeVisible({ timeout: 15_000 });
       await expect(page.getByRole('button', { name: 'Arresta servizio', exact: true })).toBeEnabled();
-      await page.getByRole('button', { name: 'Operazioni', exact: true }).click();
+      await openSetting(page, 'Operazioni');
       await expect(page.getByText('Avvio servizio', { exact: true })).toBeVisible();
       await expect(page.getByText('Completata', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Rimuovi ricevuta conclusa', exact: true })).toBeVisible();
@@ -32,7 +32,7 @@ test('ten start close reopen stop cycles preserve daemon independence and finish
     for (let cycle = 0; cycle < 10; cycle++) {
       let session = await launchDesktop(f);
       try {
-        await session.page.getByRole('button', { name: 'Servizio', exact: true }).click();
+        await openSetting(session.page, 'Servizio');
         await session.page.getByRole('button', { name: 'Avvia servizio', exact: true }).click();
         await session.page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
         await expect(session.page.getByText('Operazione completata', { exact: true })).toBeVisible({ timeout: 15_000 });
@@ -40,7 +40,7 @@ test('ten start close reopen stop cycles preserve daemon independence and finish
       expect((await f.cli(['daemon', 'status'])).result.liveness).toBe('LIVE_VERIFIED');
       session = await launchDesktop(f);
       try {
-        await session.page.getByRole('button', { name: 'Servizio', exact: true }).click();
+        await openSetting(session.page, 'Servizio');
         await session.page.getByRole('button', { name: 'Arresta servizio', exact: true }).click();
         const started = performance.now();
         await session.page.getByRole('button', { name: 'Conferma operazione', exact: true }).click();
@@ -59,7 +59,7 @@ test('actual main SIGKILL after service acceptance leaves the daemon and origina
   const f = await createScratch();
   try {
     const first = await launchDesktop(f);
-    await first.page.getByRole('button', { name: 'Servizio', exact: true }).click();
+    await openSetting(first.page, 'Servizio');
     await first.page.getByRole('button', { name: 'Avvia servizio', exact: true }).click();
     const { readdir, readFile } = await import('node:fs/promises');
     const { join } = await import('node:path');
@@ -73,7 +73,7 @@ test('actual main SIGKILL after service acceptance leaves the daemon and origina
     expect((await f.cli(['daemon', 'status'])).result.liveness).toBe('LIVE_VERIFIED');
     const next = await launchDesktop(f);
     try {
-      await next.page.getByRole('button', { name: 'Operazioni', exact: true }).click();
+      await openSetting(next.page, 'Operazioni');
       await expect(next.page.getByText(original.requestId, { exact: true })).toBeVisible();
       expect((await f.cli(['daemon', 'operation', original.requestId])).result.outcome).toBe('SUCCEEDED');
       expect((await readdir(path)).filter(name => name.endsWith('.json')).length).toBe(1);
@@ -113,7 +113,7 @@ test('real reply lost while main is stopped and killed reconciles the original d
     const exited = once(child,'exit',{signal:AbortSignal.timeout(10000)}); child.kill('SIGKILL'); await exited; killed = true;
     const reopened = await launchDesktop(f);
     try {
-      await reopened.page.getByRole('button',{name:'Operazioni',exact:true}).click();
+      await openSetting(reopened.page, 'Operazioni');
       await expect(reopened.page.getByText(original.requestId,{exact:true})).toBeVisible();
       await expect.poll(async () => JSON.parse(await readFile(join(directory,`${original.requestId}.json`),'utf8')).phase).toBe('TERMINAL');
       await reopened.page.getByRole('button',{name:'Aggiorna operazioni',exact:true}).click();

@@ -11,6 +11,8 @@ Aggiungere al bridge003 (stesso envelope/owner/main frame/origine/epoch/store):
 - `prepareDiscoveryAction`, `confirmDiscoveryAction`, `cancelDiscoveryAction`: allowlist configure/preview/discard/start/answer/correct/approve/cancel, parametri e versioni chiusi; core grant distinto dalla conferma UI.
 - `listDiscoveries`, `getDiscovery`, `getDiscoveryPreview`, `getDiscoveryOutput`, `getDiscoveryQuestions`, `getDiscoveryDocument`, `getDiscoveryEligibility`, `getDiscoveryOperation`: pagine chiuse con IDs/cursor; niente contenuti arbitrari o path file.
 
+`getDiscovery` espone `agentRun` con ID del run corrente, provider, modello, fase e numero del turno. `listDiscoveries` include questi metadati nelle righe in corso, in attesa di risposta o da riconciliare. La UI mostra l’agente come attivo soltanto con dati live e fase `PROVIDER_RUNNING`. Il dettaglio riusa l’output in sola lettura associato alla sessione.
+
 La UI sceglie scope da percorsi relativi al progetto, massimo16, non full filesystem. Input bridge32KiB/envelope codificato, massimo8IPC pendenti e2read CLI esistenti; pagine raw8KiB. Il core resta l’autorità per scope/grant/CAS, anche per un client headless alternativo.
 
 ## Flusso

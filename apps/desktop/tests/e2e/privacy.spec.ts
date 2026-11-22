@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile, readdir, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
+import { launchDesktop, switchArchiveForRegression, openSetting } from '../fixtures/electron.ts';
 test('renderer cannot inject paths/argv or bypass approval; credentials and raw output stay out of diagnostics and logs',async()=>{
  const f=await createScratch();try{
   await f.cli(['daemon','start']);const repo=await f.repository('PRIVATE_PATH_SENTINEL');await f.cli(['project','add',repo.path,'--name=PRIVATE_NAME_SENTINEL']);
@@ -19,7 +19,7 @@ test('renderer cannot inject paths/argv or bypass approval; credentials and raw 
      window.maestro.ackEvents({...envelope(),subscriptionId:crypto.randomUUID(),batchId:crypto.randomUUID(),lastAppliedSeq:'-1'}),
     ]);
    });expect(replies.every(r=>r.error!==null)).toBe(true);expect((await f.cli(['daemon','status'])).result.liveness).toBe('LIVE_VERIFIED');
-   await page.getByRole('button',{name:'Diagnostica',exact:true}).click();await expect(page.locator('.diagnostics-data')).toBeVisible();expect(await page.locator('.diagnostics-data').textContent()).not.toMatch(/PRIVATE_PATH_SENTINEL|PRIVATE_NAME_SENTINEL|credentialRef|token|stderr/i);
+   await openSetting(page, 'Diagnostica');await expect(page.locator('.diagnostics-data')).toBeVisible();expect(await page.locator('.diagnostics-data').textContent()).not.toMatch(/PRIVATE_PATH_SENTINEL|PRIVATE_NAME_SENTINEL|credentialRef|token|stderr/i);
    const entries=await readdir(f.archive);for(const name of entries.filter(n=>/credential|token/i.test(n))){const path=join(f.archive,name),stat=await lstat(path),files=stat.isDirectory()?(await readdir(path)).map(child=>join(path,child)):[path];for(const file of files){if(!(await lstat(file)).isFile())continue;const secret=await readFile(file,'utf8');if(secret.trim().length>10)expect((await page.content()).includes(secret.trim())).toBe(false);}}
    await f.cli(['daemon','stop']);const before=await f.snapshot(f.archive);const denied=await page.evaluate(async()=>{const ctx=await window.maestro.context({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:0});return window.maestro.prepareAction({bridgeVersion:1,callId:crypto.randomUUID(),selectionEpoch:(ctx.result as {context:{selectionEpoch:number}}).context.selectionEpoch,action:'daemon.stop',params:{}});});expect(denied.error).not.toBeNull();expect(await f.snapshot(f.archive)).toEqual(before);
   }finally{await app.close();}

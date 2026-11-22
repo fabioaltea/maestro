@@ -40,7 +40,10 @@ export function validateExecutionParams(method:string,value:unknown){
  else if(executionMutation(method))featureFields(p,['requestId','grantId']);
  else switch(method){
    case 'execution.provider.get':featureFields(p,['providerId']);break;
-   case 'execution.list':featureFields(p,['projectId'],['limit','cursor']);break;
+   case 'execution.list':
+     featureFields(p,['projectId'],['limit','cursor','activeOnly']);
+     if(p.activeOnly!==undefined&&(p.activeOnly!==true||p.limit!==undefined||p.cursor!==undefined))throw new Error('INVALID_REQUEST');
+     break;
    case 'execution.get':featureFields(p,['sessionId']);break;
    case 'execution.operation.get':featureFields(p,['requestId']);break;
    case 'execution.artifact.get':featureFields(p,['artifactId'],['cursor']);break;

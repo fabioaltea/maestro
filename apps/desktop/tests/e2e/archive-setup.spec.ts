@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { access, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createScratch } from '../fixtures/desktop.ts';
-import { launchDesktop, chooseDirectory } from '../fixtures/electron.ts';
+import { launchDesktop, chooseDirectory, openSetting } from '../fixtures/electron.ts';
 
 test('launch and canceled repository picker leave the private archive untouched',async()=>{
  const f=await createScratch();
@@ -31,7 +31,7 @@ test('diagnostics adopts the stopped original and exposes its projects in an emp
    await mkdir(join(f.directory,'profile'),{mode:0o700});
    const archiveBefore=await f.snapshot(f.archive),{app,page}=await launchDesktop(f,null);
    try{
-     await page.getByRole('button',{name:'Diagnostica',exact:true}).click();
+     await openSetting(page, 'Diagnostica');
      await page.getByText('Recupero dello storico',{exact:true}).click();
      await chooseDirectory(app,f.archive);
      await app.evaluate(({dialog})=>{dialog.showMessageBox=async()=>({response:0,checkboxChecked:false});});

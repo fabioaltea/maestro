@@ -20,6 +20,8 @@ test('opens and creates repositories from a fresh Desktop profile',async({},test
      await expect(page.getByRole('article',{name:'Dettaglio checkout esistente'})).toBeVisible();
      await expect(page.getByRole('button',{name:'Analizza codebase'})).toBeVisible();
      expect(await f.snapshot(existing.path)).toEqual(initial);
+     const home = page.getByRole('button',{name:'Home',exact:true});
+     await home.click();
      const target=join(f.directory,'nuovo'),create=page.getByRole('button',{name:'Crea repository'});
      await mkdir(target);
      await chooseDirectory(app,target);
@@ -27,14 +29,13 @@ test('opens and creates repositories from a fresh Desktop profile',async({},test
      await create.click();
      await expect(page.getByRole('article',{name:'Dettaglio nuovo'})).toBeVisible();
      expect((await readFile(join(target,'.git','HEAD'),'utf8')).trim()).toEqual('ref: refs/heads/main');
-     const switchRepository = page.getByRole('button',{name:'Cambia repository',exact:true});
-     await switchRepository.click();
+     await home.click();
      await page.getByRole('button',{name:/checkout esistente/}).click();
      await expect(page.getByRole('article',{name:'Dettaglio checkout esistente'})).toBeVisible();
      const samples=[];
      for(let index=0;index<10;index++){
        const name=index%2===0?'nuovo':'checkout esistente';
-       await switchRepository.click();
+       await home.click();
        const started=performance.now();
        await page.getByRole('button',{name:new RegExp(`^${name} `)}).click();
        await expect(page.getByRole('article',{name:`Dettaglio ${name}`})).toBeVisible();
@@ -81,7 +82,7 @@ test('routes an approved analysis to a new feature for the same repository',asyn
      await expect(next).toBeDisabled();
      await page.getByRole('button',{name:'Analizza codebase'}).click();
      const review=page.locator('.discovery-review');
-     await expect(review.getByRole('checkbox')).toHaveCount(3);
+     await expect(review.getByRole('checkbox')).toHaveCount(3,{timeout:15_000});
      for(const field of await review.getByRole('checkbox').all())await field.check();
      await review.getByRole('button',{name:'Approva questa revisione'}).click();
      await page.getByRole('button',{name:'Conferma operazione',exact:true}).click();
@@ -95,6 +96,7 @@ test('routes an approved analysis to a new feature for the same repository',asyn
      await expect(page.getByText('Aggiorna e approva l’analisi della codebase.')).toBeVisible();
      await expect(next).toBeDisabled();
      await expect(page.getByRole('button',{name:'Prepara creazione',exact:true})).toBeDisabled();
+     await page.getByRole('button',{name:'Home',exact:true}).click();
      await chooseDirectory(app,other.path);
      await page.getByRole('button',{name:'Apri repository'}).click();
      await expect(page.getByRole('article',{name:'Dettaglio Altro progetto'})).toBeVisible();

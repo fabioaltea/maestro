@@ -1,7 +1,7 @@
 import {featureFields,featureObject} from '../../domain/features/bundle.js';
 import {requireDecimal} from '../../domain/identifiers.js';
 import {publicExecutionOperation,requireExecutionEnvelope,validateExecutionParams,executionProviderId} from '../../protocol/execution.js';
-import type {ExecutionProviderConfig,ExecutionRun} from '../../ports/execution.js';
+import type {ExecutionProviderConfig,ExecutionRun,ExecutionSession} from '../../ports/execution.js';
 import type {StoragePort} from '../../ports/storage.js';
 
 const encode=(value:unknown)=>Buffer.from(JSON.stringify(value)).toString('base64url');
@@ -37,6 +37,15 @@ export function createExecutionReader({storage,storeId,offline}:{storage:Storage
    if(!query||!storage.readFeatureState)throw new Error('EXECUTION_NOT_INITIALIZED');
    const cursor=(target:string)=>decode(p.cursor,storeId,method,target);
    const next=(target:string,revision:string,position:unknown)=>encode({kind:method,storeId,target,revision,position});
+   async function agent(session:ExecutionSession,run:ExecutionRun){
+     const [{modelId},{feature}]=await Promise.all([
+       query!({kind:'model',id:run.providerId,configRevision:run.configRevision}),
+       storage.readFeatureState!({kind:'feature',id:session.featureId}),
+     ]);
+     return{runId:run.runId,providerId:run.providerId,phase:run.phase,
+       modelId:modelId??null,
+       featureTitle:feature?.projectId===session.projectId?feature.title:null};
+   }
    let data:Record<string,unknown>;
    switch(method){
      case 'execution.provider.get':{
@@ -51,12 +60,25 @@ export function createExecutionReader({storage,storeId,offline}:{storage:Storage
          query({kind:'interactions',id:session.runId}),
        ]);
        if(!run||run.sessionId!==session.sessionId)throw new Error('STATE_CORRUPT');
+       const activity=await agent(session,run);
        const current=(await query({kind:'session',id:session.sessionId})).session;
        if(current?.stateRevision!==session.stateRevision)throw new Error('REVISION_CONFLICT');
-       data={session,run:publicRun(run),checkpoint,interactions,checkedAt:session.updatedAt};break;
+       data={session,run:publicRun(run),agent:activity,checkpoint,interactions,checkedAt:session.updatedAt};break;
      }
      case 'execution.list':{
-       const projectId=String(p.projectId),after=cursor(projectId),{sessions,nextOffset,revision}=await query({kind:'sessions',projectId,
+       const projectId=String(p.projectId);
+       if(p.activeOnly===true){
+         const {run}=await query({kind:'active'}),session=run?(await query({kind:'session',id:run.sessionId})).session:null;
+         if(!run||!session||session.projectId!==projectId||session.runId!==run.runId||
+            !['CREATED','RUNNING','WAITING_USER','PAUSING','CANCELLING','RECONCILING'].includes(session.state)){
+           data={items:[],nextCursor:null,agent:null};break;
+         }
+         const activity=await agent(session,run);
+         const current=(await query({kind:'session',id:session.sessionId})).session;
+         if(current?.stateRevision!==session.stateRevision)throw new Error('REVISION_CONFLICT');
+         data={items:[session],nextCursor:null,agent:activity};break;
+       }
+       const after=cursor(projectId),{sessions,nextOffset,revision}=await query({kind:'sessions',projectId,
          offset:after?offset(after.position):0,limit:Number(p.limit??20)});
        if(after&&after.revision!==revision)throw new Error('REVISION_CONFLICT');
        data={items:sessions,nextCursor:nextOffset==null?null:next(projectId,revision!,nextOffset)};break;

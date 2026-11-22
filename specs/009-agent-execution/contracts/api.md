@@ -10,6 +10,8 @@ CLI `maestro execution ... --state-dir ABS --json`; mutazioni con `--request-id 
 
 `list/get`, `operation.get {requestId}`, `artifact.get {artifactId,cursor?}` e `output.list` dove applicabile: pagine metadata≤20 ed envelope≤32KiB, chunk8KiB raw con hash/base64, cursori store/target/revision-bound. `get` restituisce entityId,state,stateRevision,configRevision quando applicabile,freshness,checkedAt,safeError; riferimento a artefatto privato non espone path. LIST offline LAST_KNOWN; controlli attuali richiedono daemon e operazione esplicita.
 
+`list {projectId, activeOnly:true}` restituisce al massimo una sessione del progetto associata al run ancora aperto. La CLI usa `execution list PROJECT --active-only`. Sia questa lista sia `get` espongono `agent` con ID e fase del run, provider, titolo della feature e modello associato alla revisione registrata. Il modello resta recuperabile dal ledger dopo una riconfigurazione e può essere assente se manca l’evidenza storica. Il dettaglio Desktop legge gli artefatti di output dello stesso run.
+
 ## Metodi e risultati
 
 Ogni metodo è sotto `execution.`; sottosezioni mantengono associazione esplicita alla storia. `requestId` è obbligatorio per ogni mutazione, incluso refresh/configure/reconcile. Dove non è indicato grant: lettura pura o osservazione locale/remote esplicitamente richiesta senza ulteriore effetto; start/install/merge/push/deploy restano sempre soggetti a grant/policy core. Progetti/entità bersaglio rimossi o store differente sono rifiutati.

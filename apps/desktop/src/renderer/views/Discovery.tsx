@@ -2,19 +2,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { record } from '../../shared/validation.ts';
 import type { Desktop } from '../state/desktop.ts';
 import type { Project } from '../state/project-view.ts';
-import { currentDiscovery, discoveryStateLabels, useDiscovery } from '../state/discovery.ts';
+import { currentDiscovery, discoveryIsRunning, discoveryStateLabels, useDiscovery } from '../state/discovery.ts';
 import { DiscoveryLaunch } from '../components/DiscoveryLaunch.tsx';
 import { ConfirmationDialog } from '../components/ConfirmationDialog.tsx';
 import { dateLabel } from '../format.ts';
 import { CodexAccount } from '../components/CodexAccount.tsx';
 import { DiscoveryInterview } from '../components/DiscoveryInterview.tsx';
-export function Discovery({ desktop, project, live, onApproved, initialDiscoveryId }: { desktop: Desktop; project: Project; live: boolean; onApproved: () => void; initialDiscoveryId?: string }) {
+export function Discovery({ desktop, project, live, onApproved, onFollow, initialDiscoveryId }: {
+  desktop: Desktop; project: Project; live: boolean; onApproved(): void; onFollow(id: string): void; initialDiscoveryId?: string;
+}) {
   const view = useDiscovery(desktop, project.projectId, project.configRevision, onApproved);
   const check = view.provider?.check ? record(view.provider.check) : null;
   const [showLaunch, setShowLaunch] = useState(false);
   useEffect(() => { if (showLaunch) document.getElementById('discovery-scope')?.focus(); }, [showLaunch]);
   const [selected, setSelected] = useState<string | null>(initialDiscoveryId ?? null);
-  const selectedId = view.items.find(item => item.discoveryId === selected)?.discoveryId ?? currentDiscovery(view.items)?.discoveryId;
+  const current = view.items.find(item => item.discoveryId === selected) ?? currentDiscovery(view.items);
+  const selectedId = current?.discoveryId;
   const { codex, invoke } = desktop;
   const connected = codex.account?.state === 'CONNECTED';
   const [checking, setChecking] = useState(false);
@@ -58,6 +61,7 @@ export function Discovery({ desktop, project, live, onApproved, initialDiscovery
       <h3 id="discovery-title">Discovery del progetto</h3>
       <div className="row-actions">
         <button className="text-button" disabled={view.busy || view.loading} onClick={() => void view.refresh()}>Aggiorna Discovery</button>
+        {current && discoveryIsRunning(current.state) && <button className="button subtle" onClick={() => onFollow(current.discoveryId)}>Segui agente</button>}
         {selectedId && <button className="button subtle" disabled={!live || view.busy} onClick={() => { setShowLaunch(true); view.newDiscovery(); }}>Nuova Discovery</button>}
       </div>
     </div>

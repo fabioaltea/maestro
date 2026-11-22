@@ -91,6 +91,9 @@ test('Discovery dispatch rejects non-client roles and unimplemented actions befo
   const request = { protocolVersion: 1 as const, correlationId: randomUUID(), method: 'discovery.get', params: { discoveryId: f.discovery.discoveryId } }, peer = { role: 'client' as const, identity: f.instanceId, credentialId: 'owned-fixture' };
   const unauthorized = await dispatch(request, { ...peer, role: 'controller' }, f.store.readSnapshot()!); assert.equal((unauthorized.data as { code: string }).code, 'UNAUTHORIZED');
   const ok = await dispatch(request, peer, f.store.readSnapshot()!); assert.equal(ok.result, 'OK'); assert.ok(Buffer.byteLength(JSON.stringify(ok)) <= 32768);
+  assert.deepEqual((ok.data as {discovery:{agentRun:unknown}}).discovery.agentRun, {
+    runId: f.run.runId, providerId: f.run.providerId, modelId: f.run.modelId, phase: f.run.phase, turnIndex: f.run.turnIndex,
+  });
   assert.equal(DISCOVERY_METHODS.includes('discovery.start'), false);
   const unsupported = await dispatch({ ...request, method: 'discovery.start', params: { discoveryId: f.discovery.discoveryId, approved: true } }, peer, f.store.readSnapshot()!); assert.equal((unsupported.data as { code: string }).code, 'UNSUPPORTED_VERSION');
 });

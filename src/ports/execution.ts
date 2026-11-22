@@ -55,11 +55,13 @@ export interface ExecutionInteraction {
 export type ExecutionQuery=
  |{readonly kind:'session'|'run'|'checkpoint'|'interaction'|'artifact';readonly id:string}
  |{readonly kind:'provider';readonly id:ExecutionProviderId}
+ |{readonly kind:'model';readonly id:ExecutionProviderId;readonly configRevision:string}
  |{readonly kind:'active'|'retained-leases'}
  |{readonly kind:'output';readonly id:string;readonly after?:string;readonly limit?:number}
  |{readonly kind:'sessions';readonly projectId:string;readonly offset?:number;readonly limit?:number}
  |{readonly kind:'interactions';readonly id:string};
 export interface ExecutionRead {
+ readonly modelId?:string|null;
  readonly session?:ExecutionSession|null;readonly run?:ExecutionRun|null;readonly checkpoint?:ExecutionCheckpoint|null;readonly provider?:ExecutionProviderConfig|null;
  readonly interaction?:ExecutionInteraction|null;readonly interactions?:readonly ExecutionInteraction[];
  readonly runs?:readonly ExecutionRun[];readonly sessions?:readonly ExecutionSession[];readonly output?:readonly ExecutionOutput[];

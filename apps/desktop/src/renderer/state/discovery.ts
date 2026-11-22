@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Desktop } from './desktop.ts';
 import type { Params, PublicResult } from '../../shared/bridge-contract.ts';
+import type { DiscoveryAgentRun } from '../../shared/discovery-contract.ts';
 import { record } from '../../shared/validation.ts';
 import type { PreparedAction } from '../components/ConfirmationDialog.tsx';
 export interface DiscoverySnapshot {
   snapshotId: string; projectId: string; configRevision: string; contextDigest: string; state: string;
   selectors: string[]; fileCount: number; byteCount: number; omissions: string[]; expiresAtMs: number;
 }
-export interface DiscoverySummary { discoveryId: string; sessionId: string; currentRunId: string | null; state: string; updatedAt: string; error: string | null }
+export interface DiscoverySummary {
+  discoveryId: string; sessionId: string; currentRunId: string | null; state: string; updatedAt: string; error: string | null;
+  agentRun?: DiscoveryAgentRun | null;
+}
 export const discoveryStateLabels: Record<string, string> = {
   PREPARING: 'In preparazione', READY_TO_START: 'Pronta per l’avvio', RUNNING: 'In corso',
   WAITING_USER: 'Attende risposta', READY_FOR_REVIEW: 'Da approvare', APPROVED: 'Approvata',
@@ -16,6 +20,14 @@ export const discoveryStateLabels: Record<string, string> = {
 };
 export function discoveryIsRunning(state: string) {
   return ['RUNNING', 'UPDATING', 'CANCELLING'].includes(state);
+}
+export function discoveryAgentStatus(item: DiscoverySummary, live: boolean) {
+  if (!live) return `${discoveryStateLabels[item.state] ?? 'Stato non verificato'} · Ultimo stato noto`;
+  if (item.state === 'RUNNING' || item.state === 'UPDATING') {
+    if (item.agentRun?.phase === 'PROVIDER_RUNNING') return 'Attivo';
+    return item.agentRun?.phase === 'EXIT_OBSERVED' || item.agentRun?.phase === 'FINALIZED' ? 'In chiusura' : 'In avvio';
+  }
+  return discoveryStateLabels[item.state] ?? 'Stato non verificato';
 }
 export function currentDiscovery(items: DiscoverySummary[]) {
   return items.findLast(item => discoveryIsRunning(item.state) || item.state === 'RECONCILING')

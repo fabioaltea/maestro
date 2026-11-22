@@ -6,7 +6,7 @@ import {readFile,unlink,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {createScratch} from '../fixtures/desktop.ts';
 import {seedWaitingDiscovery} from '../fixtures/discovery-session.ts';
-import {launchDesktop, switchArchiveForRegression } from '../fixtures/electron.ts';
+import {launchDesktop, switchArchiveForRegression, openSettings } from '../fixtures/electron.ts';
 
 test('workspace confirms an exact handoff, keeps the original receipt and reads offline',async()=>{
  test.setTimeout(100000);
@@ -100,7 +100,8 @@ test('workspace confirms an exact handoff, keeps the original receipt and reads 
      await workspaces.getByRole('button',{name:'Aggiorna elenco'}).click();
      await expect(workspaces.getByText('REMOVED',{exact:true})).toBeVisible();
      await switchArchiveForRegression(app,page,other.directory);
-     await expect(page.getByRole('button',{name:'Workspace',exact:true})).toHaveCount(0);
+     const settings = await openSettings(page);
+     await expect(settings.getByRole('button', {name:'Workspace',exact:true})).toBeDisabled();
      await expect(workspaces.getByText('REMOVED',{exact:true})).toHaveCount(0);
    }finally{await app.close();}
  }finally{await Promise.all([fixture.cleanup(),other.cleanup()]);}
